@@ -239,13 +239,6 @@ function TiltCard({ children }: { children: React.ReactNode }) {
   );
 }
 
-/* ─── Elegant Stats Ticker ─── */
-const STATS = [
-  { label: "Creadores", value: "3.2K" },
-  { label: "Juegos", value: "8.1K" },
-  { label: "Sin código", value: "100%" },
-];
-
 /* ─── Main ─── */
 function AuthPage() {
   const navigate = useNavigate();
@@ -435,16 +428,6 @@ function AuthPage() {
               </span>{' '}
               tus juegos desde cero. Sin instalaciones, sin código, sin límites.
             </p>
-
-            {/* Stats */}
-            <div className="flex items-center gap-6 lg:gap-8 mb-8">
-              {STATS.map((s) => (
-                <div key={s.label}>
-                  <div className="text-lg lg:text-xl font-display font-bold tracking-tight text-foreground">{s.value}</div>
-                  <div className="text-[10px] text-muted-foreground/50 font-medium tracking-wide uppercase mt-0.5">{s.label}</div>
-                </div>
-              ))}
-            </div>
 
             {/* Feature grid */}
             <div className="grid grid-cols-2 gap-2 max-w-sm">
