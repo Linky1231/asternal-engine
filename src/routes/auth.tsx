@@ -388,9 +388,9 @@ function AuthPage() {
       {/* ═══════ CENTER CONTENT ═══════ */}
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-5 py-10 lg:py-16">
 
-        {/* Brand — Logo always top-left */}
+        {/* Brand — Logo centered */}
         <div
-          className={`w-full max-w-lg transition-all duration-1000 ${loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
+          className={`w-full max-w-lg flex justify-center transition-all duration-1000 ${loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
           style={{ transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)" }}
         >
           <Link to="/" className="inline-flex items-center gap-2.5 group mb-8">
@@ -408,10 +408,10 @@ function AuthPage() {
 
           {/* ─── Brand column ─── */}
           <div
-            className={`flex-1 transition-all duration-1000 ${loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
+            className={`flex-1 flex flex-col items-center text-center transition-all duration-1000 ${loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
             style={{ transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)" }}
           >
-            <h1 className="text-[clamp(1.75rem,3.5vw,2.75rem)] font-display font-bold tracking-tight leading-[1.1] text-foreground mb-4">
+            <h1 className="text-[clamp(1.75rem,3.5vw,2.75rem)] font-display font-bold tracking-tight leading-[1.1] text-foreground mb-4 max-w-md mx-auto">
               El{' '}
               <span className="text-primary relative">
                 motor de juegos
@@ -420,7 +420,7 @@ function AuthPage() {
               {' '}que cabe en tu navegador.
             </h1>
 
-            <p className="text-base leading-relaxed text-muted-foreground/80 max-w-md mb-6">
+            <p className="text-base leading-relaxed text-muted-foreground/80 max-w-md mx-auto mb-6">
               Una plataforma social donde{' '}
               <span className="text-foreground font-medium">
                 {typedLine}
@@ -430,7 +430,7 @@ function AuthPage() {
             </p>
 
             {/* Feature grid */}
-            <div className="grid grid-cols-2 gap-2 max-w-sm">
+            <div className="grid grid-cols-2 gap-2 max-w-sm mx-auto">
               {[
                 { label: "Editor visual", desc: "Sprites y animaciones" },
                 { label: "Lógica con bloques", desc: "Sin código" },
