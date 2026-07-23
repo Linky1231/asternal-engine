@@ -1,3 +1,4 @@
+// @ts-nocheck — Local DB adapter (types differ from Supabase generics)
 import { supabase } from "@/integrations/supabase/client";
 
 export type SocialLinks = {

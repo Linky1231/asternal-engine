@@ -1,7 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Acceder · Asternal" }] }),
@@ -32,7 +31,6 @@ function AuthPage() {
         const { error } = await supabase.auth.signUp({
           email, password,
           options: {
-            emailRedirectTo: window.location.origin + "/",
             data: { username: username || email.split("@")[0] },
           },
         });
@@ -48,16 +46,7 @@ function AuthPage() {
   };
 
   const google = async () => {
-    setErr(null);
-    setBusy(true);
-    try {
-      const res = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
-      if (res.error) { setErr(String(res.error)); return; }
-      if (res.redirected) return;
-      navigate({ to: "/" });
-    } catch (e) {
-      setErr((e as Error).message);
-    } finally { setBusy(false); }
+    setErr("OAuth no disponible en modo local. Usa email y contraseña.");
   };
 
   return (
@@ -92,7 +81,7 @@ function AuthPage() {
               if (!email) { setErr("Escribe tu email arriba primero"); return; }
               setBusy(true); setErr(null);
               try {
-                const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + "/reset-password" });
+                const { error } = await supabase.auth.resetPasswordForEmail(email);
                 if (error) throw error;
                 setErr("✉️ Te enviamos un enlace para restablecer la contraseña");
               } catch (e) { setErr((e as Error).message); }
@@ -105,6 +94,7 @@ function AuthPage() {
           <button type="button" onClick={google} className="w-full py-2.5 rounded-lg border border-border text-sm font-display tracking-widest">
             CONTINUAR CON GOOGLE
           </button>
+          <div className="text-[9px] text-muted-foreground text-center mt-1">🔒 Sistema de cuentas local — datos guardados en tu navegador</div>
         </form>
       </div>
     </div>
