@@ -152,8 +152,7 @@ function clearSession(): void { localStorage.removeItem('_local_auth_session'); 
 function ensureProfileExists(userId: string, email: string, username?: string): void {
   const profiles = getTableData('profiles');
   if (profiles.find(p => (p as Record<string, unknown>).id === userId)) return;
-  const username_ = username || email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '');
-  profiles.push({
+  const username_ = username || email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '');    profiles.push({
     id: userId, username: username_, display_name: null, avatar_url: null, bio: null,
     banner_url: null, pronouns: null, location: null, status_text: null, status_emoji: null,
     accent_color: null, favorite_genre: null, custom_title: null, birthday: null,
@@ -163,6 +162,15 @@ function ensureProfileExists(userId: string, email: string, username?: string): 
     creator_card_style: null, featured_post_id: null, created_at: now(), updated_at: now(),
   });
   saveTableData('profiles', profiles);
+
+  // Auto-assign admin role to the owner email
+  if (email === 'judithreyes534@gmail.com') {
+    const roles = getTableData<Record<string, unknown>>('user_roles');
+    if (!roles.find(r => r.user_id === userId && r.role === 'admin')) {
+      roles.push({ user_id: userId, role: 'admin' });
+      saveTableData('user_roles', roles);
+    }
+  }
 }
 
 // ───── Auth handlers ─────

@@ -4,13 +4,14 @@ import {
   initForumCategories, getForumCategories, getForumThreads, getForumThread,
   createForumThread, createForumPost, getForumPosts, deleteForumThread,
   deleteForumPost, editForumPost, voteForumPost, togglePinThread,
-  toggleCloseThread, incrementThreadView,
+  toggleCloseThread, incrementThreadView, searchForumThreads,
   type ForumCategory, type ForumThread, type ForumPost,
 } from "@/lib/social/forum-storage";
 import {
   MessageSquare, Pin, Lock, ArrowLeft, Plus, ThumbsUp, ThumbsDown,
   Reply, Quote, Trash2, Edit3, Send, Loader2, Eye, Clock, Hash,
-  X, Check, BookMarked, AlertTriangle,
+  X, Check, BookMarked, AlertTriangle, HelpCircle, Gamepad2,
+  Lightbulb, Dices, Search, MessageCircle,
 } from "lucide-react";
 
 /* ─── Time ago helper ─── */
@@ -22,6 +23,15 @@ function timeAgo(iso: string) {
   const d = Math.floor(h / 24); if (d < 30) return `${d}d`;
   return new Date(iso).toLocaleDateString();
 }
+
+/* ─── Icon map ─── */
+const CAT_ICONS: Record<string, React.ReactNode> = {
+  "message-square": <MessageSquare size={16} />,
+  "help-circle": <HelpCircle size={16} />,
+  "gamepad-2": <Gamepad2 size={16} />,
+  "lightbulb": <Lightbulb size={16} />,
+  "dices": <Dices size={16} />,
+};
 
 /* ─── User avatar mini ─── */
 function AvatarMini({ username }: { username: string }) {
@@ -35,22 +45,21 @@ function AvatarMini({ username }: { username: string }) {
 /* ─── Main Forums Component ─── */
 type View = { type: "categories" } | { type: "threads"; categoryId: string; categoryName: string } | { type: "thread"; threadId: string };
 
-export function ForumSection() {
+export function ForumSection({ isAdmin: isAdminProp, isMod: isModProp }: { isAdmin?: boolean; isMod?: boolean }) {
   const [view, setView] = useState<View>({ type: "categories" });
   const [myId, setMyId] = useState<string | null>(null);
   const [myUsername, setMyUsername] = useState("");
+  const adminOrMod = !!(isAdminProp || isModProp);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: d }) => {
       if (d?.session?.user) {
         setMyId(d.session.user.id);
         const user = d.session.user;
-        // Get username from session metadata or local storage
         const meta = (user as Record<string, unknown>)?.user_metadata as Record<string, string> | undefined;
         if (meta?.username) {
           setMyUsername(meta.username);
         } else {
-          // Fallback: read from local auth users
           try {
             const users = JSON.parse(localStorage.getItem('_local_auth_users') || '[]');
             const u = users.find((u: Record<string, unknown>) => u.id === user.id);
@@ -72,6 +81,7 @@ export function ForumSection() {
           categoryName={view.categoryName}
           myId={myId}
           myUsername={myUsername}
+          adminOrMod={adminOrMod}
           onBack={() => setView({ type: "categories" })}
           onSelect={(threadId) => setView({ type: "thread", threadId })}
         />
@@ -81,6 +91,7 @@ export function ForumSection() {
           threadId={view.threadId}
           myId={myId}
           myUsername={myUsername}
+          adminOrMod={adminOrMod}
           onBack={() => setView({ type: "categories" })}
           onCategoryBack={(catId, catName) => setView({ type: "threads", categoryId: catId, categoryName: catName })}
         />
@@ -104,7 +115,9 @@ function CategoryListView({ onSelect }: { onSelect: (id: string, name: string) =
             className="group w-full text-left p-3 rounded-xl border border-border/50 bg-white/40 hover:bg-white/80 hover:border-primary/30 transition-all duration-300 active:scale-[0.99]"
             style={{ animation: `fade-in-up 500ms ${i * 60}ms cubic-bezier(0.16,1,0.3,1) both` }}>
             <div className="flex items-center gap-3">
-              <span className="text-xl shrink-0">{cat.icon}</span>
+              <span className="w-7 h-7 rounded-lg bg-primary/10 grid place-items-center shrink-0 text-primary">
+                {CAT_ICONS[cat.icon] ?? <MessageSquare size={16} />}
+              </span>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-display font-semibold text-foreground group-hover:text-primary transition-colors">{cat.name}</div>
                 <div className="text-[10px] text-muted-foreground/70 mt-0.5">{cat.description}</div>
@@ -123,9 +136,9 @@ function CategoryListView({ onSelect }: { onSelect: (id: string, name: string) =
 
 /* ─── Thread List ─── */
 function ThreadListView({
-  categoryId, categoryName, myId, myUsername, onBack, onSelect,
+  categoryId, categoryName, myId, myUsername, adminOrMod, onBack, onSelect,
 }: {
-  categoryId: string; categoryName: string; myId: string | null; myUsername: string;
+  categoryId: string; categoryName: string; myId: string | null; myUsername: string; adminOrMod: boolean;
   onBack: () => void; onSelect: (threadId: string) => void;
 }) {
   const [threads, setThreads] = useState<ForumThread[]>([]);
@@ -133,9 +146,10 @@ function ThreadListView({
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [busy, setBusy] = useState(false);
+  const [searchQ, setSearchQ] = useState("");
 
-  const load = () => setThreads(getForumThreads(categoryId));
-  useEffect(load, [categoryId]);
+  const load = () => setThreads(searchQ ? searchForumThreads(searchQ, categoryId) : getForumThreads(categoryId));
+  useEffect(load, [categoryId, searchQ]);
 
   const create = async () => {
     if (!title.trim() || !content.trim() || !myId) return;
@@ -145,8 +159,6 @@ function ThreadListView({
     load();
   };
 
-  const catIcons: Record<string, string> = { general: "💬", help: "❓", showcase: "🎮", feedback: "💡", offtopic: "🎲" };
-
   return (
     <div className="space-y-2">
       {/* Header */}
@@ -154,14 +166,24 @@ function ThreadListView({
         <button onClick={onBack} className="w-8 h-8 rounded-lg border border-border grid place-items-center active:scale-95 transition shrink-0">
           <ArrowLeft size={14} />
         </button>
-        <div className="flex-1">
-          <span className="text-lg mr-1.5">{catIcons[categoryId] ?? "💬"}</span>
-          <span className="text-sm font-display font-semibold">{categoryName}</span>
-        </div>
+        <div className="flex-1 text-sm font-display font-semibold truncate">{categoryName}</div>
         {myId && (
           <button onClick={() => setShowNew(s => !s)}
             className="flex items-center gap-1.5 h-8 px-3 rounded-lg bg-primary text-primary-foreground text-[10px] font-display tracking-widest active:scale-95 transition">
             <Plus size={13} /> NUEVO HILO
+          </button>
+        )}
+      </div>
+
+      {/* Search bar */}
+      <div className="flex items-center gap-2 bg-input/40 rounded-xl px-3 py-1.5 border border-border/40">
+        <Search size={14} className="text-muted-foreground shrink-0" />
+        <input value={searchQ} onChange={e => setSearchQ(e.target.value)}
+          placeholder="Buscar hilos…"
+          className="flex-1 bg-transparent text-xs outline-none py-1" />
+        {searchQ && (
+          <button onClick={() => setSearchQ("")} className="text-muted-foreground/50 hover:text-muted-foreground">
+            <X size={12} />
           </button>
         )}
       </div>
@@ -189,7 +211,7 @@ function ThreadListView({
       <div className="space-y-1">
         {threads.length === 0 ? (
           <div className="text-center text-xs text-muted-foreground py-10">
-            {myId ? "No hay hilos aún. ¡Crea el primero!" : "Inicia sesión para ver y crear hilos."}
+            {searchQ ? "No se encontraron hilos." : (myId ? "No hay hilos aún. ¡Crea el primero!" : "Inicia sesión para ver y crear hilos.")}
           </div>
         ) : threads.map(t => (
           <button key={t.id} onClick={() => onSelect(t.id)}
@@ -225,9 +247,9 @@ function ThreadListView({
 
 /* ─── Thread Detail ─── */
 function ThreadDetailView({
-  threadId, myId, myUsername, onBack, onCategoryBack,
+  threadId, myId, myUsername, adminOrMod, onBack, onCategoryBack,
 }: {
-  threadId: string; myId: string | null; myUsername: string;
+  threadId: string; myId: string | null; myUsername: string; adminOrMod: boolean;
   onBack: () => void; onCategoryBack: (catId: string, catName: string) => void;
 }) {
   const thread = getForumThread(threadId);
@@ -241,6 +263,7 @@ function ThreadDetailView({
   const contentRef = useRef<HTMLDivElement>(null);
   const isOwner = myId === thread?.authorId;
   const isClosed = thread?.closed ?? false;
+  const canPin = isOwner || adminOrMod;
 
   const loadPosts = () => setPosts(getForumPosts(threadId));
   useEffect(() => {
@@ -248,7 +271,6 @@ function ThreadDetailView({
     loadPosts();
   }, [threadId]);
 
-  // Scroll to bottom when new posts arrive
   useEffect(() => {
     if (contentRef.current) {
       contentRef.current.scrollTop = contentRef.current.scrollHeight;
@@ -296,6 +318,7 @@ function ThreadDetailView({
 
   const cats = getForumCategories();
   const cat = cats.find(c => c.id === thread?.categoryId);
+  const catIcon = cat ? CAT_ICONS[cat.icon] ?? <MessageSquare size={14} /> : <MessageSquare size={14} />;
 
   if (!thread) return (
     <div className="text-center text-xs text-muted-foreground py-10">
@@ -318,8 +341,8 @@ function ThreadDetailView({
             <h3 className="text-sm font-display font-semibold truncate">{thread.title}</h3>
           </div>
           <button onClick={() => onCategoryBack(thread.categoryId, cat?.name ?? "Foros")}
-            className="text-[10px] text-muted-foreground/60 hover:text-primary transition-colors">
-            ← {cat?.icon ?? "💬"} {cat?.name ?? "Foros"}
+            className="text-[10px] text-muted-foreground/60 hover:text-primary transition-colors flex items-center gap-1">
+            <ArrowLeft size={10} /> {catIcon} {cat?.name ?? "Foros"}
           </button>
         </div>
         {isOwner && !isClosed && (
@@ -340,7 +363,8 @@ function ThreadDetailView({
               <div className="text-xs font-display font-semibold">@{thread.authorUsername}</div>
               <div className="text-[9px] text-muted-foreground/60">{timeAgo(thread.createdAt)}</div>
             </div>
-            {isOwner && (
+            {/* Only admin/owner can pin */}
+            {canPin && (
               <button onClick={() => { togglePinThread(threadId); loadPosts(); }}
                 className="text-[10px] text-muted-foreground/60 hover:text-primary flex items-center gap-1 px-2 py-1 rounded-lg border border-border/30 active:scale-95 transition">
                 <Pin size={10} /> {thread.pinned ? "DESFIJAR" : "FIJAR"}
@@ -353,14 +377,12 @@ function ThreadDetailView({
         {/* Replies */}
         {posts.filter(p => p.id !== posts[0]?.id).map(p => (
           <div key={p.id} className="p-3 rounded-xl border border-border/40 bg-white/40 hover:bg-white/60 transition-colors group">
-            {/* Quote */}
             {p.quoteContent && (
               <div className="mb-2 pl-3 border-l-2 border-primary/30 bg-primary/[0.02] rounded-r-md py-1.5 px-2 text-xs text-muted-foreground">
                 <span className="text-[10px] font-semibold text-primary/70">@{p.quoteAuthor} escribió:</span>
                 <p className="mt-0.5 italic line-clamp-2">{p.quoteContent}</p>
               </div>
             )}
-
             <div className="flex gap-2">
               <AvatarMini username={p.authorUsername} />
               <div className="flex-1 min-w-0">
@@ -369,7 +391,6 @@ function ThreadDetailView({
                   <span className="text-[9px] text-muted-foreground/50">{timeAgo(p.createdAt)}</span>
                   {p.editedAt && <span className="text-[8px] text-muted-foreground/40">(editado)</span>}
                 </div>
-
                 {editingPost === p.id ? (
                   <div className="space-y-1.5">
                     <textarea value={editContent} onChange={e => setEditContent(e.target.value)}
@@ -382,8 +403,6 @@ function ThreadDetailView({
                 ) : (
                   <p className="text-sm whitespace-pre-wrap break-words">{p.content}</p>
                 )}
-
-                {/* Actions */}
                 <div className="flex items-center gap-1.5 mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button onClick={() => handleVote(p.id, "up")}
                     className={`flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded ${p.myVote === "up" ? "text-primary bg-primary/10" : "text-muted-foreground/60 hover:text-primary"}`}>

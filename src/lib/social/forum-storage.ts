@@ -79,11 +79,11 @@ function write<T>(key: string, data: T) {
 
 export function getDefaultCategories(): ForumCategory[] {
   return [
-    { id: "general",    name: "General",      description: "Charlas, anuncios y temas generales de la comunidad", icon: "💬", sortOrder: 0, threadCount: 0, createdAt: new Date(0).toISOString() },
-    { id: "help",       name: "Ayuda",         description: "Dudas sobre el editor, scripts, física y más",          icon: "❓", sortOrder: 1, threadCount: 0, createdAt: new Date(0).toISOString() },
-    { id: "showcase",   name: "Showcase",      description: "Comparte tus juegos, arte y creaciones",               icon: "🎮", sortOrder: 2, threadCount: 0, createdAt: new Date(0).toISOString() },
-    { id: "feedback",   name: "Feedback",       description: "Sugerencias y mejoras para Asternal",                  icon: "💡", sortOrder: 3, threadCount: 0, createdAt: new Date(0).toISOString() },
-    { id: "offtopic",   name: "Off-Topic",      description: "Todo lo demás: memes, música, charla libre",           icon: "🎲", sortOrder: 4, threadCount: 0, createdAt: new Date(0).toISOString() },
+    { id: "general",    name: "General",      description: "Charlas, anuncios y temas generales de la comunidad", icon: "message-square", sortOrder: 0, threadCount: 0, createdAt: new Date(0).toISOString() },
+    { id: "help",       name: "Ayuda",         description: "Dudas sobre el editor, scripts, física y más",          icon: "help-circle", sortOrder: 1, threadCount: 0, createdAt: new Date(0).toISOString() },
+    { id: "showcase",   name: "Showcase",      description: "Comparte tus juegos, arte y creaciones",               icon: "gamepad-2", sortOrder: 2, threadCount: 0, createdAt: new Date(0).toISOString() },
+    { id: "feedback",   name: "Feedback",       description: "Sugerencias y mejoras para Asternal",                  icon: "lightbulb", sortOrder: 3, threadCount: 0, createdAt: new Date(0).toISOString() },
+    { id: "offtopic",   name: "Off-Topic",      description: "Todo lo demás: memes, música, charla libre",           icon: "dices", sortOrder: 4, threadCount: 0, createdAt: new Date(0).toISOString() },
   ];
 }
 
@@ -105,8 +105,35 @@ export function getForumCategories(): ForumCategory[] {
 export function getForumThreads(categoryId?: string): ForumThread[] {
   const threads = read<ForumThread[]>(KEYS.threads, []);
   let filtered = categoryId ? threads.filter(t => t.categoryId === categoryId) : threads;
-  // Pinned first, then by lastPostAt desc
-  return filtered.sort((a, b) => (a.pinned === b.pinned ? 0 : a.pinned ? -1 : 1));
+  // Hot algorithm: score = postCount*3 + views*1 + upvotes_weighted, decayed by age
+  // Pinned always first
+  return filtered.sort((a, b) => {
+    if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+    return getThreadHotScore(b) - getThreadHotScore(a);
+  });
+}
+
+function getThreadHotScore(t: ForumThread): number {
+  const posts = read<ForumPost[]>(KEYS.posts, []);
+  const threadPosts = posts.filter(p => p.threadId === t.id);
+  const totalUpvotes = threadPosts.reduce((s, p) => s + p.upvotes, 0);
+  const totalDownvotes = threadPosts.reduce((s, p) => s + p.downvotes, 0);
+  const interactions = t.postCount * 5 + t.views + totalUpvotes * 3 - totalDownvotes;
+  const ageHours = Math.max(1, (Date.now() - new Date(t.createdAt).getTime()) / 3600000);
+  return Math.round(interactions / Math.pow(ageHours + 2, 0.6));
+}
+
+export function searchForumThreads(query: string, categoryId?: string): ForumThread[] {
+  if (!query.trim()) return getForumThreads(categoryId);
+  const q = query.toLowerCase().trim();
+  const threads = read<ForumThread[]>(KEYS.threads, []);
+  let filtered = categoryId ? threads.filter(t => t.categoryId === categoryId) : threads;
+  return filtered
+    .filter(t => t.title.toLowerCase().includes(q) || t.content.toLowerCase().includes(q))
+    .sort((a, b) => {
+      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+      return getThreadHotScore(b) - getThreadHotScore(a);
+    });
 }
 
 export function getForumThread(threadId: string): ForumThread | null {

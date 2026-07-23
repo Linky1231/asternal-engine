@@ -184,7 +184,7 @@ function HomePage() {
               <PostComposer onCreated={() => reload("feed")} />
               <FeedSubTabs value={feedSub} onChange={setFeedSub} />
               {feedSub === "forums" ? (
-                <ForumSection />
+                <ForumSection isAdmin={admin} isMod={mod} />
               ) : loading ? <SkeletonList /> : (() => {
                 const filtered = filterFeed(posts, feedSub, myId);
                 if (filtered.length === 0) {
