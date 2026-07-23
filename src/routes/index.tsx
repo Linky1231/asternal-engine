@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState, useCallback } from "react";
-import { Gamepad2, Newspaper, Search, LogOut, Wrench, Plus, ShieldCheck, User, MessageCircle, Sparkles, Star, Menu, Bell, X, Home, Users, Flame } from "lucide-react";
+import { Gamepad2, Newspaper, Search, LogOut, Wrench, Plus, ShieldCheck, User, MessageCircle, Sparkles, Star, Menu, Bell, X, Home, Users, Flame, MessageSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchFeed, fetchGames, getMyProfile, isMod, isAdmin, type PostWithMeta, type Profile } from "@/lib/social/api";
 import { PostComposer } from "@/components/social/PostComposer";
@@ -9,6 +9,7 @@ import { GamesHome } from "@/components/social/GamesHome";
 import { NotificationBell } from "@/components/social/NotificationBell";
 import { ProfilePanel } from "@/components/social/ProfilePanel";
 import { NotificationsInline } from "@/components/social/NotificationsInline";
+import { ForumSection } from "@/components/social/ForumSection";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -26,7 +27,7 @@ export const Route = createFileRoute("/")({
 });
 
 type Tab = "games" | "feed" | "profile";
-type FeedSub = "forYou" | "following" | "trending";
+type FeedSub = "forYou" | "following" | "trending" | "forums";
 
 function HomePage() {
   const navigate = useNavigate();
@@ -182,7 +183,9 @@ function HomePage() {
             <>
               <PostComposer onCreated={() => reload("feed")} />
               <FeedSubTabs value={feedSub} onChange={setFeedSub} />
-              {loading ? <SkeletonList /> : (() => {
+              {feedSub === "forums" ? (
+                <ForumSection />
+              ) : loading ? <SkeletonList /> : (() => {
                 const filtered = filterFeed(posts, feedSub, myId);
                 if (filtered.length === 0) {
                   return (
@@ -290,6 +293,7 @@ function FeedSubTabs({ value, onChange }: { value: FeedSub; onChange: (v: FeedSu
     { id: "forYou", label: "Para ti", icon: <Home size={13} /> },
     { id: "following", label: "Seguidos", icon: <Users size={13} /> },
     { id: "trending", label: "Tendencias", icon: <Flame size={13} /> },
+    { id: "forums", label: "Foros", icon: <MessageSquare size={13} /> },
   ];
   return (
     <div className="flex gap-2 py-2">

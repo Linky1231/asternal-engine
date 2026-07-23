@@ -408,7 +408,7 @@ function AuthPage() {
                 { label: "Publica al instante", desc: "Con un solo clic" },
                 { label: "Comunidad activa", desc: "Remixa y colabora" },
               ].map((f, i) => (
-                <div key={f.label} className="group/card" style={{ animation: loaded ? `fade-in-up 400ms ${600 + i * 120}ms cubic-bezier(0.22,1,0.36,1) both` : 'none' }}>
+                <div key={f.label} className="group/card" style={{ animation: loaded ? `fade-in-up 900ms ${1000 + i * 280}ms cubic-bezier(0.16,1,0.3,1) both` : 'none' }}>
                   <div className="p-2.5 rounded-xl border border-border/50 bg-white/40 backdrop-blur-sm transition-all duration-400 group-hover/card:bg-white/80 group-hover/card:border-primary/30 group-hover/card:shadow-lg group-hover/card:shadow-primary/5 group-hover/card:-translate-y-0.5">
                     <div className="text-[12px] font-display font-semibold text-foreground mb-0.5 group-hover/card:text-primary transition-colors duration-300">{f.label}</div>
                     <div className="text-[10px] text-muted-foreground/60 leading-snug">{f.desc}</div>
@@ -431,33 +431,6 @@ function AuthPage() {
           }}>
             <TiltCard>
               <div className="relative bg-white/70 backdrop-blur-2xl rounded-2xl border border-white/50 shadow-2xl shadow-primary/[0.08] p-7 overflow-hidden group/form-card">
-
-                {/* Procedural blue LED border */}
-                <div className="absolute -inset-[3px] rounded-2xl pointer-events-none opacity-0 group-hover/form-card:opacity-60 transition-all duration-700"
-                  style={{
-                    background: 'conic-gradient(from var(--angle, 0deg), transparent 0deg, #0066FF 30deg, transparent 60deg, #00D4FF 120deg, transparent 150deg, #4B00FF 200deg, transparent 230deg, #0066FF 290deg, transparent 320deg, transparent 360deg)',
-                    animation: 'led-rotate 5s linear infinite',
-                    filter: 'blur(2px) brightness(1.4)',
-                  }}
-                />
-                {/* LED inner ring */}
-                <div className="absolute -inset-[1.5px] rounded-2xl pointer-events-none opacity-0 group-hover/form-card:opacity-90 transition-all duration-500"
-                  style={{
-                    background: 'conic-gradient(from var(--angle, 0deg), transparent, #0066FF66, transparent, #00D4FFAA, transparent, #4B00FF88, transparent, #0066FF66, transparent)',
-                    animation: 'led-rotate 4s linear infinite reverse',
-                    mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-                    maskComposite: 'exclude',
-                    WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-                    WebkitMaskComposite: 'xor',
-                    padding: '1.5px',
-                  }}
-                />
-                {/* LED glow effect on card */}
-                <div className="absolute inset-0 rounded-2xl pointer-events-none opacity-0 group-hover/form-card:opacity-100 transition-all duration-700"
-                  style={{
-                    boxShadow: 'inset 0 0 30px rgba(0, 100, 255, 0.04), 0 0 40px rgba(0, 212, 255, 0.03)',
-                  }}
-                />
 
                 {/* Top bar */}
                 <div className="absolute top-0 left-6 right-6 h-px bg-gradient-to-r from-transparent via-primary/25 to-transparent" />
