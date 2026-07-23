@@ -16,7 +16,6 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
       new Headers(init.headers).forEach((value, key) => headers.set(key, value));
     }
 
-    // New Supabase API keys are opaque strings, not bearer JWTs.
     if (isNewSupabaseApiKey(supabaseKey) && headers.get('Authorization') === `Bearer ${supabaseKey}`) {
       headers.delete('Authorization');
     }
@@ -26,20 +25,79 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
   };
 }
 
+// ───── Mock client for when Supabase env vars are missing ─────
+
+const noop = () => Promise.resolve({ data: null, error: null });
+const noopArr = () => Promise.resolve({ data: [], error: null });
+const noopVoid = () => Promise.resolve();
+
+/** Returns a proxy that intercepts any property access / function call on a
+ *  Supabase query builder path and returns another chainable mock. */
+function queryMock(): unknown {
+  const handler: ProxyHandler<(...args: unknown[]) => Promise<{ data: unknown; error: unknown }>> = {
+    get(_target, prop) {
+      if (prop === 'then' || prop === 'catch' || prop === 'finally') return undefined;
+      if (typeof prop === 'symbol') return undefined;
+      // All chainable query-builder methods
+      return queryMock();
+    },
+    apply(_target, _thisArg, _args) {
+      return noopArr();
+    },
+  };
+  return new Proxy(noopArr, handler);
+}
+
+function createMockClient() {
+  const authMock = {
+    getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+    getUser: () => Promise.resolve({ data: { user: null }, error: null }),
+    signInWithPassword: () => Promise.resolve({ data: { user: null, session: null }, error: new Error('Supabase no configurado') }),
+    signUp: () => Promise.resolve({ data: { user: null, session: null }, error: new Error('Supabase no configurado') }),
+    signOut: () => Promise.resolve({ error: null }),
+    signInWithOAuth: () => Promise.resolve({ data: null, error: new Error('Supabase no configurado') }),
+    resetPasswordForEmail: () => Promise.resolve({ data: null, error: new Error('Supabase no configurado') }),
+    updateUser: () => Promise.resolve({ data: { user: null }, error: new Error('Supabase no configurado') }),
+    onAuthStateChange: () => ({ data: { subscription: { unsubscribe: noopVoid } } }),
+  };
+
+  const storageBucketMock = {
+    upload: () => Promise.resolve({ data: null, error: new Error('Supabase no configurado') }),
+    createSignedUrl: () => Promise.resolve({ data: null, error: new Error('Supabase no configurado') }),
+    getPublicUrl: () => ({ data: { publicUrl: '' } }),
+    list: noopArr,
+    remove: noopVoid,
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const mock: any = {
+    auth: authMock,
+    from: () => queryMock(),
+    storage: { from: () => storageBucketMock },
+    rpc: noop,
+    channel: () => ({ on: () => ({ subscribe: noopVoid }), unsubscribe: noopVoid }),
+    realtime: { channels: () => [] },
+    functions: { invoke: noop },
+  };
+  return mock as ReturnType<typeof createClient<Database>>;
+}
+
+// ───── Real client factory ─────
 
 function createSupabaseClient() {
-  // Client-side only — Vite replaces import.meta.env at build time
   const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
   const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
 
   if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
     const missing = [
-      ...(!SUPABASE_URL ? ['SUPABASE_URL'] : []),
-      ...(!SUPABASE_PUBLISHABLE_KEY ? ['SUPABASE_PUBLISHABLE_KEY'] : []),
+      ...(!SUPABASE_URL ? ['VITE_SUPABASE_URL'] : []),
+      ...(!SUPABASE_PUBLISHABLE_KEY ? ['VITE_SUPABASE_PUBLISHABLE_KEY'] : []),
     ];
-    const message = `Missing Supabase environment variable(s): ${missing.join(', ')}. Connect Supabase in Lovable Cloud.`;
-    console.error(`[Supabase] ${message}`);
-    throw new Error(message);
+    console.warn(
+      `[Supabase] Missing environment variable(s): ${missing.join(', ')}. ` +
+      `Auth and social features won't work. Set them in your project's API Keys tab.`,
+    );
+    return createMockClient();
   }
 
   return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
@@ -56,12 +114,9 @@ function createSupabaseClient() {
 
 let _supabase: ReturnType<typeof createSupabaseClient> | undefined;
 
-// Import the supabase client like this:
-// import { supabase } from "@/integrations/supabase/client";
 export const supabase = new Proxy({} as ReturnType<typeof createSupabaseClient>, {
   get(_, prop, receiver) {
     if (!_supabase) _supabase = createSupabaseClient();
     return Reflect.get(_supabase, prop, receiver);
   },
 });
-
