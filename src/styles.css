@@ -524,6 +524,15 @@
   animation-fill-mode: both;
 }
 
+/* ============ Auth page: subtle background drift ============ */
+@keyframes drift-slow {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%      { transform: translate(2%, 1.5%) scale(1.02); }
+  66%      { transform: translate(-1.5%, -1%) scale(0.98); }
+}
+
+.duration-400 { transition-duration: 400ms; }
+
 /* ============ Auth page: gentle rotation for shapes ============ */
 @keyframes rotate-gentle {
   0% { transform: rotate(0deg); }
