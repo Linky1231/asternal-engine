@@ -249,7 +249,7 @@ function AuthPage() {
       setAnimateIdx(i);
       if (i >= fields) clearInterval(t);
     }, 80);
-    setTimeout(() => emailRef.current?.focus(), fields * 80 + 50);
+    // No auto-focus — el usuario hace clic en el campo cuando quiera
     return () => clearInterval(t);
   }, [mode]);
 
@@ -340,9 +340,10 @@ function AuthPage() {
       {/* ═══════ CONTENT ─ Single column centered ═══════ */}
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-5 py-12 lg:py-16">
 
-        {/* Logo */}
-        <div className={`flex justify-center transition-all duration-1000 ${loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
-          style={{ transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)" }}>
+        {/* Logo — aparece primero */}
+        <div style={{
+          animation: loaded ? 'fade-in-up 700ms 0ms cubic-bezier(0.22,1,0.36,1) both' : 'none',
+        }}>
           <Link to="/" className="inline-flex items-center gap-2.5 group mb-10">
             <div className="relative">
               <div className="absolute inset-0 rounded-lg bg-primary/15 blur-md scale-150 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -359,34 +360,47 @@ function AuthPage() {
         {/* Two-column layout */}
         <div className="w-full max-w-4xl flex flex-col lg:flex-row items-center justify-center gap-10 lg:gap-16">
 
-          {/* ─── BRAND ─── */}
-          <div className={`flex-1 flex flex-col items-center text-center transition-all duration-1000 ${loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
-            style={{ transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)" }}>
+          {/* ─── BRAND ─── aparece segundo con hijos escalonados */}
+          <div className="flex-1 flex flex-col items-center text-center">
 
-            {/* Accent line above title */}
-            <div className="w-12 h-[2px] rounded-full bg-gradient-to-r from-primary/30 via-primary to-accent/30 mb-6 animate-pulse" style={{ animationDuration: '3s' }} />
+            {/* Accent line */}
+            <div style={{
+              animation: loaded ? 'fade-in-up 500ms 150ms cubic-bezier(0.22,1,0.36,1) both' : 'none',
+            }}>
+              <div className="w-12 h-[2px] rounded-full bg-gradient-to-r from-primary/30 via-primary to-accent/30 mb-6 animate-pulse" style={{ animationDuration: '3s' }} />
+            </div>
 
-            <h1 className="text-[clamp(1.75rem,3.5vw,2.75rem)] font-display font-bold tracking-tight leading-[1.1] text-foreground mb-4 max-w-md mx-auto">
-              El{' '}
-              <span className="text-primary relative">
-                <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent bg-[length:200%_100%] animate-shimmer-text">
-                  motor de juegos
+            {/* Título */}
+            <div style={{
+              animation: loaded ? 'fade-in-up 600ms 300ms cubic-bezier(0.22,1,0.36,1) both' : 'none',
+            }}>
+              <h1 className="text-[clamp(1.75rem,3.5vw,2.75rem)] font-display font-bold tracking-tight leading-[1.1] text-foreground mb-4 max-w-md mx-auto">
+                El{' '}
+                <span className="text-primary relative">
+                  <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent bg-[length:200%_100%] animate-shimmer-text">
+                    motor de juegos
+                  </span>
+                  <span className="absolute -bottom-1 left-0 right-0 h-[3px] bg-gradient-to-r from-primary/20 via-accent/20 to-primary/20 rounded-full" />
                 </span>
-                <span className="absolute -bottom-1 left-0 right-0 h-[3px] bg-gradient-to-r from-primary/20 via-accent/20 to-primary/20 rounded-full" />
-              </span>
-              {' '}que cabe en tu navegador.
-            </h1>
+                {' '}que cabe en tu navegador.
+              </h1>
+            </div>
 
-            <p className="text-base leading-relaxed text-muted-foreground/80 max-w-md mx-auto mb-8">
-              Una plataforma social donde{' '}
-              <span className="text-foreground font-medium">
-                {typedLine}
-                <span className="inline-block w-[2px] h-[1.05em] bg-primary/70 ml-0.5 align-middle rounded-sm animate-cursor-blink" />
-              </span>{' '}
-              tus juegos desde cero. Sin instalaciones, sin código, sin límites.
-            </p>
+            {/* Descripción */}
+            <div style={{
+              animation: loaded ? 'fade-in-up 600ms 450ms cubic-bezier(0.22,1,0.36,1) both' : 'none',
+            }}>
+              <p className="text-base leading-relaxed text-muted-foreground/80 max-w-md mx-auto mb-8">
+                Una plataforma social donde{' '}
+                <span className="text-foreground font-medium">
+                  {typedLine}
+                  <span className="inline-block w-[2px] h-[1.05em] bg-primary/70 ml-0.5 align-middle rounded-sm animate-cursor-blink" />
+                </span>{' '}
+                tus juegos desde cero. Sin instalaciones, sin código, sin límites.
+              </p>
+            </div>
 
-            {/* Feature cards with refined hover */}
+            {/* Feature cards con entrada escalonada individual */}
             <div className="grid grid-cols-2 gap-2.5 max-w-sm mx-auto w-full">
               {[
                 { label: "Editor visual", desc: "Sprites y animaciones" },
@@ -394,7 +408,7 @@ function AuthPage() {
                 { label: "Publica al instante", desc: "Con un solo clic" },
                 { label: "Comunidad activa", desc: "Remixa y colabora" },
               ].map((f, i) => (
-                <div key={f.label} className="group/card" style={{ animation: loaded ? `fade-in-up 400ms ${400 + i * 100}ms cubic-bezier(0.22,1,0.36,1) both` : 'none' }}>
+                <div key={f.label} className="group/card" style={{ animation: loaded ? `fade-in-up 400ms ${600 + i * 120}ms cubic-bezier(0.22,1,0.36,1) both` : 'none' }}>
                   <div className="p-2.5 rounded-xl border border-border/50 bg-white/40 backdrop-blur-sm transition-all duration-400 group-hover/card:bg-white/80 group-hover/card:border-primary/30 group-hover/card:shadow-lg group-hover/card:shadow-primary/5 group-hover/card:-translate-y-0.5">
                     <div className="text-[12px] font-display font-semibold text-foreground mb-0.5 group-hover/card:text-primary transition-colors duration-300">{f.label}</div>
                     <div className="text-[10px] text-muted-foreground/60 leading-snug">{f.desc}</div>
@@ -404,12 +418,17 @@ function AuthPage() {
             </div>
 
             {/* Bottom accent */}
-            <div className="mt-10 h-px w-24 bg-gradient-to-r from-transparent via-primary/15 to-transparent" />
+            <div style={{
+              animation: loaded ? 'fade-in-up 500ms 1100ms cubic-bezier(0.22,1,0.36,1) both' : 'none',
+            }}>
+              <div className="mt-10 h-px w-24 bg-gradient-to-r from-transparent via-primary/15 to-transparent" />
+            </div>
           </div>
 
-          {/* ─── AUTH ─── */}
-          <div className={`w-full max-w-sm shrink-0 transition-all duration-1000 delay-200 ${loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
-            style={{ transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)" }}>
+          {/* ─── AUTH ─── aparece al final, después del brand */}
+          <div style={{
+            animation: loaded ? 'fade-in-up 800ms 700ms cubic-bezier(0.22,1,0.36,1) both' : 'none',
+          }}>
             <TiltCard>
               <div className="relative bg-white/70 backdrop-blur-2xl rounded-2xl border border-white/50 shadow-2xl shadow-primary/[0.08] p-7 overflow-hidden group/form-card">
 
