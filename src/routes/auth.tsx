@@ -39,16 +39,6 @@ function FeatureCard({ icon: Icon, title, desc }: { icon: React.ElementType; tit
   );
 }
 
-/* ───────── Platform stats ───────── */
-function StatBadge({ value, label }: { value: string; label: string }) {
-  return (
-    <div className="text-center px-3 py-2">
-      <div className="text-lg font-display font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">{value}</div>
-      <div className="text-[9px] font-mono text-muted-foreground/60 uppercase tracking-wider mt-0.5">{label}</div>
-    </div>
-  );
-}
-
 /* ───────── Main component ───────── */
 function AuthPage() {
   const navigate = useNavigate();
@@ -117,15 +107,15 @@ function AuthPage() {
         <FloatIcon icon={Zap} className="bottom-[18%] right-[8%]" delay={1.8} />
         <FloatIcon icon={Star} className="top-[45%] left-[5%]" delay={2.4} />
 
-        {/* Header */}
-        <div className={`relative transition-all duration-700 ${loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+        {/* Header — centrado */}
+        <div className={`relative flex flex-col items-center text-center transition-all duration-700 ${loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <Link to="/" className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/5 border border-primary/10 text-[11px] font-display tracking-wider text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all mb-8">
             <Gamepad2 size={13} className="text-primary" />
             VOLVER AL MOTOR
           </Link>
 
           {/* Logo + Title */}
-          <div className="flex items-center gap-3 mb-5">
+          <div className="flex items-center justify-center gap-3 mb-5">
             <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-accent shadow-lg shadow-primary/25 grid place-items-center">
               <Gamepad2 size={24} className="text-white" />
             </div>
@@ -138,7 +128,7 @@ function AuthPage() {
           </div>
 
           {/* Platform description */}
-          <div className="space-y-4 mb-8 max-w-lg">
+          <div className="space-y-4 mb-8 max-w-lg mx-auto">
             <p className="text-base leading-relaxed text-foreground/85 font-display">
               Una <strong className="text-primary">plataforma social interactiva</strong> donde puedes{" "}
               <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent font-semibold">
@@ -154,7 +144,7 @@ function AuthPage() {
           </div>
 
           {/* Feature grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-8 max-w-lg">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-8 max-w-lg mx-auto">
             <FeatureCard
               icon={Palette}
               title="Editor visual"
@@ -177,12 +167,6 @@ function AuthPage() {
             />
           </div>
 
-          {/* Stats */}
-          <div className="flex items-center divide-x divide-border/40 border border-border/50 rounded-2xl bg-white/40 backdrop-blur-sm shadow-sm max-w-md">
-            <StatBadge value="10K+" label="Juegos creados" />
-            <StatBadge value="5K+" label="Creadores activos" />
-            <StatBadge value="∞" label="Sin límites" />
-          </div>
         </div>
       </div>
 
