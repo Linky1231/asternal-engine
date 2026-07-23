@@ -479,6 +479,59 @@
   animation: shimmer 1.6s linear infinite;
 }
 
+/* ============ Auth page: confetti ============ */
+@keyframes confetti-fall {
+  0% {
+    opacity: 1;
+    transform: translateY(0) translateX(0) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(400px) translateX(var(--drift, 40px)) rotate(720deg);
+  }
+}
+@keyframes confetti-flash {
+  0% { opacity: 0; transform: scale(0); }
+  30% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.5); }
+}
+@keyframes animate-coin-collect {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  50% { opacity: 0.8; transform: translateY(-20px) scale(1.5); }
+  100% { opacity: 0; transform: translateY(-40px) scale(0.5); }
+}
+.animate-coin-collect {
+  animation: animate-coin-collect 0.6s ease-out both;
+}
+
+/* ============ Auth page: slide transitions ============ */
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(20px) scale(0.98); filter: blur(4px); }
+  to   { opacity: 1; transform: translateX(0) scale(1); filter: blur(0); }
+}
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-20px) scale(0.98); filter: blur(4px); }
+  to   { opacity: 1; transform: translateX(0) scale(1); filter: blur(0); }
+}
+@keyframes slide-in-up {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); filter: blur(3px); }
+  to   { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+
+.animate-form-slide {
+  animation-duration: 350ms;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  animation-fill-mode: both;
+}
+
+/* ============ Auth page: gentle rotation for shapes ============ */
+@keyframes rotate-gentle {
+  0% { transform: rotate(0deg); }
+  25% { transform: rotate(2deg); }
+  75% { transform: rotate(-2deg); }
+  100% { transform: rotate(0deg); }
+}
+
 /* ============ Auth page animations ============ */
 @keyframes float-particle {
   0%, 100% { transform: translateY(0) scale(1); opacity: 0.4; }
@@ -524,4 +577,8 @@
 .animate-shimmer-text {
   background-size: 200% 100%;
   animation: shimmer-text 4s linear infinite;
+}
+
+.ease-out-expo {
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
 }
