@@ -79,11 +79,11 @@ function write<T>(key: string, data: T) {
 
 export function getDefaultCategories(): ForumCategory[] {
   return [
-    { id: "general",    name: "General",      description: "Charlas, anuncios y temas generales de la comunidad", icon: "message-square", sortOrder: 0, threadCount: 0, createdAt: new Date(0).toISOString() },
-    { id: "help",       name: "Ayuda",         description: "Dudas sobre el editor, scripts, física y más",          icon: "help-circle", sortOrder: 1, threadCount: 0, createdAt: new Date(0).toISOString() },
-    { id: "showcase",   name: "Showcase",      description: "Comparte tus juegos, arte y creaciones",               icon: "gamepad-2", sortOrder: 2, threadCount: 0, createdAt: new Date(0).toISOString() },
-    { id: "feedback",   name: "Feedback",       description: "Sugerencias y mejoras para Asternal",                  icon: "lightbulb", sortOrder: 3, threadCount: 0, createdAt: new Date(0).toISOString() },
-    { id: "offtopic",   name: "Off-Topic",      description: "Todo lo demás: memes, música, charla libre",           icon: "dices", sortOrder: 4, threadCount: 0, createdAt: new Date(0).toISOString() },
+    { id: "general",    name: "General",      description: "Charlas, anuncios y temas generales de la comunidad", icon: "globe", sortOrder: 0, threadCount: 0, createdAt: new Date(0).toISOString() },
+    { id: "help",       name: "Ayuda",         description: "Dudas sobre el editor, scripts, física y más",          icon: "life-buoy", sortOrder: 1, threadCount: 0, createdAt: new Date(0).toISOString() },
+    { id: "showcase",   name: "Showcase",      description: "Comparte tus juegos, arte y creaciones",               icon: "trophy", sortOrder: 2, threadCount: 0, createdAt: new Date(0).toISOString() },
+    { id: "feedback",   name: "Feedback",       description: "Sugerencias y mejoras para Asternal",                  icon: "message-circle-more", sortOrder: 3, threadCount: 0, createdAt: new Date(0).toISOString() },
+    { id: "offtopic",   name: "Off-Topic",      description: "Todo lo demás: memes, música, charla libre",           icon: "coffee", sortOrder: 4, threadCount: 0, createdAt: new Date(0).toISOString() },
   ];
 }
 

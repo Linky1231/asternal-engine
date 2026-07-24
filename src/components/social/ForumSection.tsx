@@ -10,8 +10,8 @@ import {
 import {
   MessageSquare, Pin, Lock, ArrowLeft, Plus, ThumbsUp, ThumbsDown,
   Reply, Quote, Trash2, Edit3, Send, Loader2, Eye, Clock, Hash,
-  X, Check, BookMarked, AlertTriangle, HelpCircle, Gamepad2,
-  Lightbulb, Dices, Search, MessageCircle,
+  X, Check, BookMarked, AlertTriangle, MessageCircle, Search,
+  Globe, LifeBuoy, Trophy, Coffee, MessageCircleMore,
 } from "lucide-react";
 
 /* ─── Time ago helper ─── */
@@ -26,11 +26,11 @@ function timeAgo(iso: string) {
 
 /* ─── Icon map ─── */
 const CAT_ICONS: Record<string, React.ReactNode> = {
-  "message-square": <MessageSquare size={16} />,
-  "help-circle": <HelpCircle size={16} />,
-  "gamepad-2": <Gamepad2 size={16} />,
-  "lightbulb": <Lightbulb size={16} />,
-  "dices": <Dices size={16} />,
+  "globe": <Globe size={16} />,
+  "life-buoy": <LifeBuoy size={16} />,
+  "trophy": <Trophy size={16} />,
+  "message-circle-more": <MessageCircleMore size={16} />,
+  "coffee": <Coffee size={16} />,
 };
 
 /* ─── User avatar mini ─── */
