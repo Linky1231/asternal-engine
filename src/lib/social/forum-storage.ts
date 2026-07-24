@@ -83,6 +83,46 @@ export const FORUM_TAGS = [
   "General",
 ] as const;
 
+/* ─── Auto-tagging ─── */
+
+const TAG_KEYWORDS: Record<string, string[]> = {
+  "Programación": ["código", "programar", "script", "javascript", "typescript", "función", "variable", "bucle", "condición", "lógica", "algoritmo", "depurar", "debug", "compilar", "api", "backend", "frontend", "librería"],
+  "IA": ["inteligencia artificial", "ai", "machine learning", "aprendizaje", "gpt", "claude", "gemini", "modelo", "red neuronal", "prompt", "entrenar", "clasificar", "predicción", "automático"],
+  "UI": ["interfaz", "botón", "menú", "pantalla", "diseño", "ui", "ux", "usuario", "layout", "componente", "responsive", "css", "html", "tema", "oscuro", "claro"],
+  "Pixel Art": ["pixel", "arte", "sprite", "gráfico", "dibujo", "spritesheet", "tileset", "resolución", "paleta", "color", "png", "animación sprite", "personaje pixel"],
+  "Música": ["música", "sonido", "audio", "melodía", "canción", "efecto de sonido", "sfx", "bso", "banda sonora", "instrumento", "nota", "volumen", "reproducir"],
+  "Física": ["física", "gravedad", "colisión", "movimiento", "velocidad", "aceleración", "fuerza", "impulso", "rebote", "detección", "hitbox", "cuerpo rígido", "simulación"],
+  "Animación": ["animación", "animar", "keyframe", "cuadro", "frame", "transición", "interpolación", "easing", "esqueleto", "rig", "walk", "idle", "run", "salto"],
+  "Assets": ["asset", "recurso", "imagen", "modelo", "pack", "kit", "descargar", "textura", "material", "fuente", "icono", "logos", "prefab"],
+  "Publicación": ["publicar", "lanzar", "subir", "compartir", "exportar", "build", "compilar", "distribuir", "app store", "google play", "itch", "steam", "web", "desplegar"],
+  "Render": ["render", "renderizar", "efecto", "visual", "shader", "iluminación", "sombra", "partícula", "postprocess", "glow", "blur", "filtro", "cámara", "3d", "perspectiva"],
+};
+
+const DEFAULT_TAGS = ["General"];
+
+function normalize(text: string): string {
+  return text.toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // remove accents
+    .replace(/[^a-z0-9\s]/g, " ");
+}
+
+export function autoDetectTags(title: string, content: string): string[] {
+  const combined = normalize(title + " " + content);
+  const found = new Set<string>();
+
+  for (const [tag, keywords] of Object.entries(TAG_KEYWORDS)) {
+    for (const kw of keywords) {
+      if (combined.includes(kw)) {
+        found.add(tag);
+        break;
+      }
+    }
+    if (found.size >= 4) break;
+  }
+
+  return found.size > 0 ? Array.from(found) : [...DEFAULT_TAGS];
+}
+
 /* ─── Keys ─── */
 
 const KEYS = {
@@ -215,8 +255,10 @@ export function createForumThread(
   title: string,
   content: string,
   author: { id: string; username: string },
-  tags: string[] = [],
+  tags?: string[],
 ): ForumThread {
+  const autoTags = autoDetectTags(title, content);
+  const finalTags = tags && tags.length > 0 ? tags.slice(0, 4) : autoTags;
   const now = new Date().toISOString();
   const thread: ForumThread = {
     id: uid(),
@@ -225,7 +267,7 @@ export function createForumThread(
     content: content.trim(),
     authorId: author.id,
     authorUsername: author.username,
-    tags: tags.slice(0, 4),
+    tags: finalTags,
     upvotes: 0,
     downvotes: 0,
     pinned: false,

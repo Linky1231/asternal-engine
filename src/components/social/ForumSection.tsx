@@ -1,19 +1,35 @@
 import { useEffect, useState, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import {
   initForumCategories, getForumCategories, getForumThreads, getForumThread,
   createForumThread, createForumPost, getForumPosts, deleteForumThread,
   deleteForumPost, editForumPost, voteForumPost, togglePinThread,
   toggleCloseThread, incrementThreadView, searchForumThreads,
-  voteForumThread, getForumThreadsWithVotes, FORUM_TAGS,
+  voteForumThread, getForumThreadsWithVotes,
   type ForumCategory, type ForumThread, type ForumPost,
 } from "@/lib/social/forum-storage";
 import {
   MessageSquare, Pin, Lock, ArrowLeft, Plus, ThumbsUp, ThumbsDown,
   Reply, Quote, Trash2, Edit3, Send, Loader2, Eye, Clock, Hash,
-  X, Check, BookMarked, AlertTriangle, MessageCircle, Search,
+  X, Check, MessageCircle, Search,
   Globe, LifeBuoy, Trophy, Coffee, MessageCircleMore, Tag,
 } from "lucide-react";
+
+/* ─── Motion variants ─── */
+const stagger = {
+  container: { initial: {}, animate: { transition: { staggerChildren: 0.07 } } },
+  item: {
+    initial: { opacity: 0, y: 20, scale: 0.97, filter: "blur(4px)" },
+    animate: { opacity: 1, y: 0, scale: 1, filter: "blur(0px)", transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as const } },
+  },
+};
+
+const fadeSlide = {
+  initial: { opacity: 0, y: 12, filter: "blur(2px)" },
+  animate: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.45, ease: [0.16, 1, 0.3, 1] as const } },
+  exit: { opacity: 0, y: -8, filter: "blur(2px)", transition: { duration: 0.25 } },
+};
 
 /* ─── Time ago helper ─── */
 function timeAgo(iso: string) {
@@ -122,29 +138,39 @@ export function ForumSection({ isAdmin: isAdminProp, isMod: isModProp }: { isAdm
   }, []);
 
   return (
-    <div className="space-y-3 animate-in fade-in duration-300">
-      {view.type === "categories" && <CategoryListView onSelect={(id, name) => setView({ type: "threads", categoryId: id, categoryName: name })} />}
-      {view.type === "threads" && (
-        <ThreadListView
-          categoryId={view.categoryId}
-          categoryName={view.categoryName}
-          myId={myId}
-          myUsername={myUsername}
-          adminOrMod={adminOrMod}
-          onBack={() => setView({ type: "categories" })}
-          onSelect={(threadId) => setView({ type: "thread", threadId })}
-        />
-      )}
-      {view.type === "thread" && (
-        <ThreadDetailView
-          threadId={view.threadId}
-          myId={myId}
-          myUsername={myUsername}
-          adminOrMod={adminOrMod}
-          onBack={() => setView({ type: "categories" })}
-          onCategoryBack={(catId, catName) => setView({ type: "threads", categoryId: catId, categoryName: catName })}
-        />
-      )}
+    <div className="space-y-3">
+      <AnimatePresence mode="wait">
+        {view.type === "categories" && (
+          <motion.div key="categories" {...fadeSlide}>
+            <CategoryListView onSelect={(id, name) => setView({ type: "threads", categoryId: id, categoryName: name })} />
+          </motion.div>
+        )}
+        {view.type === "threads" && (
+          <motion.div key="threads" {...fadeSlide}>
+            <ThreadListView
+              categoryId={view.categoryId}
+              categoryName={view.categoryName}
+              myId={myId}
+              myUsername={myUsername}
+              adminOrMod={adminOrMod}
+              onBack={() => setView({ type: "categories" })}
+              onSelect={(threadId) => setView({ type: "thread", threadId })}
+            />
+          </motion.div>
+        )}
+        {view.type === "thread" && (
+          <motion.div key="thread" {...fadeSlide}>
+            <ThreadDetailView
+              threadId={view.threadId}
+              myId={myId}
+              myUsername={myUsername}
+              adminOrMod={adminOrMod}
+              onBack={() => setView({ type: "categories" })}
+              onCategoryBack={(catId, catName) => setView({ type: "threads", categoryId: catId, categoryName: catName })}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -153,16 +179,15 @@ export function ForumSection({ isAdmin: isAdminProp, isMod: isModProp }: { isAdm
 function CategoryListView({ onSelect }: { onSelect: (id: string, name: string) => void }) {
   const cats = initForumCategories();
   return (
-    <div className="space-y-2">
-      <div className="text-[10px] font-display tracking-[0.2em] text-muted-foreground/60 flex items-center gap-2 px-1">
+    <motion.div initial="initial" animate="animate" variants={stagger.container} className="space-y-2">
+      <motion.div variants={stagger.item} className="text-[10px] font-display tracking-[0.2em] text-muted-foreground/60 flex items-center gap-2 px-1">
         <Hash size={12} /> CATEGORÍAS
-      </div>
+      </motion.div>
       <div className="grid gap-1.5 sm:grid-cols-2">
-        {cats.map((cat, i) => (
-          <button key={cat.id}
+        {cats.map(cat => (
+          <motion.button key={cat.id} variants={stagger.item}
             onClick={() => onSelect(cat.id, cat.name)}
-            className="group w-full text-left p-3.5 rounded-xl border border-border/40 bg-white/50 hover:bg-white/90 hover:border-primary/25 hover:shadow-sm hover:shadow-primary/5 transition-all duration-300 active:scale-[0.98]"
-            style={{ animation: `fade-in-up 500ms ${i * 80}ms cubic-bezier(0.16,1,0.3,1) both` }}>
+            className="group w-full text-left p-3.5 rounded-xl border border-border/40 bg-white/50 hover:bg-white/90 hover:border-primary/25 hover:shadow-sm hover:shadow-primary/5 transition-all duration-300 active:scale-[0.98]">
             <div className="flex items-center gap-3">
               <span className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary/[0.08] to-accent/[0.08] grid place-items-center shrink-0 text-primary group-hover:scale-110 transition-transform duration-300">
                 {CAT_ICONS[cat.icon] ?? <MessageSquare size={17} />}
@@ -176,10 +201,10 @@ function CategoryListView({ onSelect }: { onSelect: (id: string, name: string) =
                 <div className="text-[9px] text-muted-foreground/40 uppercase tracking-wider">hilos</div>
               </div>
             </div>
-          </button>
+          </motion.button>
         ))}
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -194,7 +219,6 @@ function ThreadListView({
   const [showNew, setShowNew] = useState(false);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [searchQ, setSearchQ] = useState("");
 
@@ -205,17 +229,11 @@ function ThreadListView({
     ? threads.filter(t => t.title.toLowerCase().includes(searchQ.toLowerCase()) || t.content.toLowerCase().includes(searchQ.toLowerCase()))
     : threads;
 
-  const toggleTag = (tag: string) => {
-    setSelectedTags(prev =>
-      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
-    );
-  };
-
   const create = async () => {
     if (!title.trim() || !content.trim() || !myId) return;
     setBusy(true);
-    createForumThread(categoryId, title, content, { id: myId, username: myUsername }, selectedTags);
-    setTitle(""); setContent(""); setSelectedTags([]); setShowNew(false); setBusy(false);
+    createForumThread(categoryId, title, content, { id: myId, username: myUsername });
+    setTitle(""); setContent(""); setShowNew(false); setBusy(false);
     load();
   };
 
@@ -258,60 +276,41 @@ function ThreadListView({
       </div>
 
       {/* New thread form */}
-      {showNew && (
-        <div className="p-4 rounded-xl border border-primary/20 bg-gradient-to-b from-primary/[0.02] to-transparent shadow-sm space-y-3">
-          <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Título del hilo…"
-            maxLength={120}
-            className="w-full bg-white/80 rounded-lg px-3.5 py-2.5 text-sm outline-none border border-border/50 focus:border-primary/40 focus:shadow-sm transition-all placeholder:text-muted-foreground/40" />
-          <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="Escribe tu mensaje…"
-            rows={4} maxLength={5000}
-            className="w-full bg-white/80 rounded-lg px-3.5 py-2.5 text-sm outline-none border border-border/50 focus:border-primary/40 resize-none transition-all placeholder:text-muted-foreground/40" />
-
-          {/* Tag selector */}
-          <div className="space-y-1.5">
-            <div className="text-[9px] uppercase tracking-widest text-muted-foreground/50 flex items-center gap-1.5">
-              <Tag size={10} /> ETIQUETAS <span className="text-muted-foreground/30">(máx 4)</span>
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {FORUM_TAGS.map(tag => {
-                const selected = selectedTags.includes(tag);
-                const disabled = !selected && selectedTags.length >= 4;
-                return (
-                  <button key={tag} type="button" onClick={() => toggleTag(tag)}
-                    disabled={disabled && !selected}
-                    className={`text-[10px] px-2.5 py-1 rounded-lg border font-medium transition-all duration-200 active:scale-95 ${
-                      selected
-                        ? (TAG_STYLES[tag] ?? DEFAULT_TAG_STYLE) + " ring-1 ring-current/30 shadow-sm"
-                        : "bg-white/50 border-border/40 text-muted-foreground/60 hover:border-border/70 hover:text-foreground/80"
-                    } ${disabled ? "opacity-30 cursor-not-allowed" : "cursor-pointer"}`}>
-                    {tag}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-2 pt-1">
-            <button onClick={() => { setShowNew(false); setSelectedTags([]); }} className="px-3.5 py-1.5 rounded-lg border border-border text-[11px] hover:bg-muted/20 transition-colors">Cancelar</button>
-            <button disabled={busy || !title.trim() || !content.trim()} onClick={create}
-              className="px-4 py-1.5 rounded-lg bg-primary text-primary-foreground text-[11px] font-display tracking-widest disabled:opacity-40 active:scale-95 transition flex items-center gap-1.5 shadow-sm shadow-primary/20">
-              {busy ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />} PUBLICAR
-            </button>
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {showNew && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden">
+            <motion.div initial={{ y: -10 }} animate={{ y: 0 }} exit={{ y: -10 }}
+              className="p-4 rounded-xl border border-primary/20 bg-gradient-to-b from-primary/[0.02] to-transparent shadow-sm space-y-3">
+              <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Título del hilo…"
+                maxLength={120} autoFocus
+                className="w-full bg-white/80 rounded-lg px-3.5 py-2.5 text-sm outline-none border border-border/50 focus:border-primary/40 focus:shadow-sm transition-all placeholder:text-muted-foreground/40" />
+              <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="Escribe tu mensaje…"
+                rows={4} maxLength={5000}
+                className="w-full bg-white/80 rounded-lg px-3.5 py-2.5 text-sm outline-none border border-border/50 focus:border-primary/40 resize-none transition-all placeholder:text-muted-foreground/40" />
+              <div className="flex justify-end gap-2 pt-1">
+                <button onClick={() => setShowNew(false)} className="px-3.5 py-1.5 rounded-lg border border-border text-[11px] hover:bg-muted/20 transition-colors">Cancelar</button>
+                <button disabled={busy || !title.trim() || !content.trim()} onClick={create}
+                  className="px-4 py-1.5 rounded-lg bg-primary text-primary-foreground text-[11px] font-display tracking-widest disabled:opacity-40 active:scale-95 transition flex items-center gap-1.5 shadow-sm shadow-primary/20">
+                  {busy ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />} PUBLICAR
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Thread list */}
-      <div className="space-y-1.5">
+      <motion.div initial="initial" animate="animate" variants={stagger.container} className="space-y-1.5">
         {filtered.length === 0 ? (
-          <div className="text-center text-xs text-muted-foreground/60 py-12">
+          <motion.div variants={stagger.item} className="text-center text-xs text-muted-foreground/60 py-12">
             <MessageSquare size={24} className="mx-auto mb-2 opacity-20" />
             {searchQ ? "No se encontraron hilos." : (myId ? "No hay hilos aún. ¡Crea el primero!" : "Inicia sesión para ver y crear hilos.")}
-          </div>
-        ) : filtered.map((t, idx) => (
-          <button key={t.id} onClick={() => onSelect(t.id)}
-            className="group w-full text-left p-3.5 rounded-xl border border-border/30 bg-white/50 hover:bg-white/90 hover:border-primary/15 hover:shadow-sm hover:shadow-primary/5 transition-all duration-200 active:scale-[0.99]"
-            style={{ animation: `fade-in-up 400ms ${idx * 50}ms cubic-bezier(0.16,1,0.3,1) both` }}>
+          </motion.div>
+        ) : filtered.map(t => (
+          <motion.button key={t.id} variants={stagger.item} layout
+            onClick={() => onSelect(t.id)}
+            className="group w-full text-left p-3.5 rounded-xl border border-border/30 bg-white/50 hover:bg-white/90 hover:border-primary/15 hover:shadow-sm hover:shadow-primary/5 transition-all duration-200 active:scale-[0.99]">
             <div className="flex items-start gap-3">
               {/* Vote column */}
               <div className="flex flex-col items-center gap-0.5 shrink-0 pt-0.5">
@@ -329,9 +328,10 @@ function ThreadListView({
 
                 {/* Tags row */}
                 {t.tags && t.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-1.5">
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
+                    className="flex flex-wrap gap-1 mt-1.5">
                     {t.tags.map(tag => <TagPill key={tag} tag={tag} small />)}
-                  </div>
+                  </motion.div>
                 )}
 
                 <div className="text-[10px] text-muted-foreground/60 mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5">
@@ -347,9 +347,9 @@ function ThreadListView({
                 <div className="tabular-nums mt-0.5">{timeAgo(t.lastPostAt)}</div>
               </div>
             </div>
-          </button>
+          </motion.button>
         ))}
-      </div>
+      </motion.div>
     </div>
   );
 }
@@ -481,9 +481,9 @@ function ThreadDetailView({
       </div>
 
       {/* Thread body */}
-      <div className="space-y-2 max-h-[65vh] overflow-y-auto pr-1 no-scrollbar">
+      <motion.div initial="initial" animate="animate" variants={stagger.container} className="space-y-2 max-h-[65vh] overflow-y-auto pr-1 no-scrollbar">
         {/* First post — thread content */}
-        <div className="p-4 rounded-xl border border-border/40 bg-white/60 shadow-sm">
+        <motion.div variants={stagger.item} className="p-4 rounded-xl border border-border/40 bg-white/60 shadow-sm">
           <div className="flex items-center gap-2.5 mb-3">
             <AvatarMini username={thread.authorUsername} />
             <div className="flex-1 min-w-0">
@@ -505,17 +505,15 @@ function ThreadDetailView({
           )}
 
           <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">{thread.content}</p>
-        </div>
+        </motion.div>
 
         {/* Replies */}
         {posts.filter(p => p.id !== posts[0]?.id).length === 0 ? (
-          <div className="text-center text-[10px] text-muted-foreground/40 py-8 border border-dashed border-border/30 rounded-xl">
+          <motion.div variants={stagger.item} className="text-center text-[10px] text-muted-foreground/40 py-8 border border-dashed border-border/30 rounded-xl">
             Sin respuestas aún. ¡Sé el primero en comentar!
-          </div>
-        ) : posts.filter(p => p.id !== posts[0]?.id).map((p, idx) => (
-          <div key={p.id}
-            className="p-3.5 rounded-xl border border-border/30 bg-white/50 hover:bg-white/70 hover:border-border/50 transition-all duration-200 group"
-            style={{ animation: `fade-in-up 350ms ${idx * 40}ms cubic-bezier(0.16,1,0.3,1) both` }}>
+          </motion.div>
+        ) : posts.filter(p => p.id !== posts[0]?.id).map(p => (
+          <motion.div key={p.id} variants={stagger.item} layout>
             {p.quoteContent && (
               <div className="mb-2.5 pl-3 border-l-2 border-primary/30 bg-primary/[0.02] rounded-r-md py-1.5 px-2.5 text-xs text-muted-foreground">
                 <span className="text-[9px] font-semibold text-primary/60 uppercase tracking-wider">@{p.quoteAuthor} escribió:</span>
@@ -578,9 +576,9 @@ function ThreadDetailView({
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
 
       {/* Reply box */}
       {myId && !isClosed ? (
