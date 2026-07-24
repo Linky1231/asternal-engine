@@ -25,6 +25,9 @@ export interface ForumThread {
   content: string;
   authorId: string;
   authorUsername: string;
+  tags: string[];
+  upvotes: number;
+  downvotes: number;
   pinned: boolean;
   closed: boolean;
   views: number;
@@ -33,6 +36,12 @@ export interface ForumThread {
   updatedAt: string;
   lastPostAt: string;
   lastPostAuthor: string;
+}
+
+export interface ForumThreadVote {
+  threadId: string;
+  userId: string;
+  vote: "up" | "down";
 }
 
 export interface ForumPost {
@@ -58,6 +67,22 @@ export interface ForumVote {
   vote: "up" | "down";
 }
 
+/* ─── Available tags ─── */
+
+export const FORUM_TAGS = [
+  "Programación",
+  "IA",
+  "UI",
+  "Pixel Art",
+  "Música",
+  "Física",
+  "Animación",
+  "Assets",
+  "Publicación",
+  "Render",
+  "General",
+] as const;
+
 /* ─── Keys ─── */
 
 const KEYS = {
@@ -65,6 +90,7 @@ const KEYS = {
   threads: "_forum_threads",
   posts: "_forum_posts",
   votes: "_forum_votes",
+  threadVotes: "_forum_thread_votes",
 };
 
 function read<T>(key: string, fallback: T): T {
@@ -116,9 +142,9 @@ export function getForumThreads(categoryId?: string): ForumThread[] {
 function getThreadHotScore(t: ForumThread): number {
   const posts = read<ForumPost[]>(KEYS.posts, []);
   const threadPosts = posts.filter(p => p.threadId === t.id);
-  const totalUpvotes = threadPosts.reduce((s, p) => s + p.upvotes, 0);
-  const totalDownvotes = threadPosts.reduce((s, p) => s + p.downvotes, 0);
-  const interactions = t.postCount * 5 + t.views + totalUpvotes * 3 - totalDownvotes;
+  const totalPostUpvotes = threadPosts.reduce((s, p) => s + p.upvotes, 0);
+  const totalPostDownvotes = threadPosts.reduce((s, p) => s + p.downvotes, 0);
+  const interactions = t.postCount * 5 + t.views + (totalPostUpvotes + t.upvotes) * 3 - (totalPostDownvotes + t.downvotes);
   const ageHours = Math.max(1, (Date.now() - new Date(t.createdAt).getTime()) / 3600000);
   return Math.round(interactions / Math.pow(ageHours + 2, 0.6));
 }
@@ -136,9 +162,52 @@ export function searchForumThreads(query: string, categoryId?: string): ForumThr
     });
 }
 
-export function getForumThread(threadId: string): ForumThread | null {
+export function getForumThreadsWithVotes(categoryId?: string, userId?: string | null): (ForumThread & { myVote: "up" | "down" | null })[] {
+  const threads = getForumThreads(categoryId);
+  const threadVotes = userId ? read<ForumThreadVote[]>(KEYS.threadVotes, []).filter(v => v.userId === userId) : [];
+  return threads.map(t => ({
+    ...t,
+    myVote: (threadVotes.find(v => v.threadId === t.id)?.vote ?? null) as "up" | "down" | null,
+  }));
+}
+
+export function getForumThread(threadId: string): (ForumThread & { myVote: "up" | "down" | null }) | null {
   const threads = read<ForumThread[]>(KEYS.threads, []);
-  return threads.find(t => t.id === threadId) ?? null;
+  const t = threads.find(th => th.id === threadId) ?? null;
+  if (!t) return null;
+  const threadVotes = read<ForumThreadVote[]>(KEYS.threadVotes, []);
+  return {
+    ...t,
+    myVote: (threadVotes.find(v => v.threadId === t.id)?.vote ?? null) as "up" | "down" | null,
+  };
+}
+
+export function voteForumThread(threadId: string, userId: string, vote: "up" | "down"): { upvotes: number; downvotes: number } {
+  const threads = read<ForumThread[]>(KEYS.threads, []);
+  const thread = threads.find(t => t.id === threadId);
+  if (!thread) return { upvotes: 0, downvotes: 0 };
+
+  let votes = read<ForumThreadVote[]>(KEYS.threadVotes, []);
+  const existing = votes.find(v => v.threadId === threadId && v.userId === userId);
+
+  if (existing) {
+    if (existing.vote === "up") thread.upvotes = Math.max(0, thread.upvotes - 1);
+    if (existing.vote === "down") thread.downvotes = Math.max(0, thread.downvotes - 1);
+    votes = votes.filter(v => !(v.threadId === threadId && v.userId === userId));
+  }
+
+  if (existing?.vote === vote) {
+    write(KEYS.threads, threads);
+    write(KEYS.threadVotes, votes);
+    return { upvotes: thread.upvotes, downvotes: thread.downvotes };
+  }
+
+  votes.push({ threadId, userId, vote });
+  if (vote === "up") thread.upvotes += 1;
+  if (vote === "down") thread.downvotes += 1;
+  write(KEYS.threads, threads);
+  write(KEYS.threadVotes, votes);
+  return { upvotes: thread.upvotes, downvotes: thread.downvotes };
 }
 
 export function createForumThread(
@@ -146,6 +215,7 @@ export function createForumThread(
   title: string,
   content: string,
   author: { id: string; username: string },
+  tags: string[] = [],
 ): ForumThread {
   const now = new Date().toISOString();
   const thread: ForumThread = {
@@ -155,6 +225,9 @@ export function createForumThread(
     content: content.trim(),
     authorId: author.id,
     authorUsername: author.username,
+    tags: tags.slice(0, 4),
+    upvotes: 0,
+    downvotes: 0,
     pinned: false,
     closed: false,
     views: 0,
