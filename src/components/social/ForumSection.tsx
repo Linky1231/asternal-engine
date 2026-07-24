@@ -320,9 +320,9 @@ function ThreadListView({
                   {mediaPreviews.map((url, i) => (
                     <div key={i} className="relative rounded-xl overflow-hidden bg-muted/30 border border-border/50">
                       {mediaFiles[i]?.type.startsWith("video") ? (
-                        <video src={url} className="w-full max-h-48 object-cover" muted />
+                        <video src={url} className="w-full rounded-lg" controls muted />
                       ) : (
-                        <img src={url} alt="" className="w-full max-h-48 object-cover" />
+                        <img src={url} alt="" className="w-full rounded-lg" loading="lazy" />
                       )}
                       <button onClick={() => {
                         setMediaFiles(f => f.filter((_, idx) => idx !== i));
@@ -520,7 +520,7 @@ function ThreadDetailView({
   const catIcon = cat ? CAT_ICONS[cat.icon] ?? <MessageSquare size={14} /> : <MessageSquare size={14} />;
   const isOwner = myId === thread?.authorId;
   const isClosed = thread?.closed ?? false;
-  const canPin = isOwner || adminOrMod;
+  const canPin = adminOrMod;
 
   if (!thread) return (
     <div className="text-center text-xs text-muted-foreground/60 py-12">
@@ -595,9 +595,9 @@ function ThreadDetailView({
             <div className={`grid gap-2 mt-3 ${thread.mediaUrls.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
               {thread.mediaUrls.map((url, i) => (
                 thread.mediaType === "video" ? (
-                  <video key={i} src={url} controls className="rounded-lg w-full max-h-64 bg-black" />
+                  <video key={i} src={url} controls className="rounded-lg w-full bg-black" />
                 ) : (
-                  <img key={i} src={url} alt="" className="rounded-lg w-full max-h-64 object-cover" loading="lazy" />
+                  <img key={i} src={url} alt="" className="rounded-lg w-full" loading="lazy" />
                 )
               ))}
             </div>
