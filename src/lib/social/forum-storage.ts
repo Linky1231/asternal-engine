@@ -28,6 +28,10 @@ export interface ForumThread {
   tags: string[];
   upvotes: number;
   downvotes: number;
+  mediaUrls: string[];
+  mediaType: "image" | "video" | "none";
+  documentUrls: string[];
+  documentNames: string[];
   pinned: boolean;
   closed: boolean;
   views: number;
@@ -256,6 +260,7 @@ export function createForumThread(
   content: string,
   author: { id: string; username: string },
   tags?: string[],
+  media?: { mediaUrls: string[]; mediaType: "image" | "video" | "none"; documentUrls: string[]; documentNames: string[] },
 ): ForumThread {
   const autoTags = autoDetectTags(title, content);
   const finalTags = tags && tags.length > 0 ? tags.slice(0, 4) : autoTags;
@@ -270,6 +275,10 @@ export function createForumThread(
     tags: finalTags,
     upvotes: 0,
     downvotes: 0,
+    mediaUrls: media?.mediaUrls ?? [],
+    mediaType: media?.mediaType ?? "none",
+    documentUrls: media?.documentUrls ?? [],
+    documentNames: media?.documentNames ?? [],
     pinned: false,
     closed: false,
     views: 0,

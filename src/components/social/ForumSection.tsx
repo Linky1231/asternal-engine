@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
+import { fileToDataURL } from "@/lib/engine/images";
 import {
   initForumCategories, getForumCategories, getForumThreads, getForumThread,
   createForumThread, createForumPost, getForumPosts, deleteForumThread,
@@ -14,21 +15,22 @@ import {
   Reply, Quote, Trash2, Edit3, Send, Loader2, Eye, Clock, Hash,
   X, Check, MessageCircle, Search,
   Globe, LifeBuoy, Trophy, Coffee, MessageCircleMore, Tag,
+  Image, FileText, Film,
 } from "lucide-react";
 
-/* ─── Motion variants ─── */
+/* ─── Motion variants (reduced timing) ─── */
 const stagger = {
-  container: { initial: {}, animate: { transition: { staggerChildren: 0.07 } } },
+  container: { initial: {}, animate: { transition: { staggerChildren: 0.04 } } },
   item: {
-    initial: { opacity: 0, y: 20, scale: 0.97, filter: "blur(4px)" },
-    animate: { opacity: 1, y: 0, scale: 1, filter: "blur(0px)", transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as const } },
+    initial: { opacity: 0, y: 12, scale: 0.98, filter: "blur(3px)" },
+    animate: { opacity: 1, y: 0, scale: 1, filter: "blur(0px)", transition: { duration: 0.3, ease: [0.16, 1, 0.3, 1] as const } },
   },
 };
 
 const fadeSlide = {
-  initial: { opacity: 0, y: 12, filter: "blur(2px)" },
-  animate: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.45, ease: [0.16, 1, 0.3, 1] as const } },
-  exit: { opacity: 0, y: -8, filter: "blur(2px)", transition: { duration: 0.25 } },
+  initial: { opacity: 0, y: 8, filter: "blur(1px)" },
+  animate: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.25, ease: [0.16, 1, 0.3, 1] as const } },
+  exit: { opacity: 0, y: -4, filter: "blur(1px)", transition: { duration: 0.15 } },
 };
 
 /* ─── Time ago helper ─── */
@@ -219,11 +221,22 @@ function ThreadListView({
   const [showNew, setShowNew] = useState(false);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [mediaFiles, setMediaFiles] = useState<File[]>([]);
+  const [mediaPreviews, setMediaPreviews] = useState<string[]>([]);
+  const [docFiles, setDocFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
   const [searchQ, setSearchQ] = useState("");
+  const mediaInputRef = useRef<HTMLInputElement>(null);
+  const docInputRef = useRef<HTMLInputElement>(null);
 
   const load = () => setThreads(getForumThreadsWithVotes(categoryId, myId));
   useEffect(load, [categoryId, myId]);
+
+  useEffect(() => {
+    const urls = mediaFiles.map(f => URL.createObjectURL(f));
+    setMediaPreviews(urls);
+    return () => { urls.forEach(URL.revokeObjectURL); };
+  }, [mediaFiles]);
 
   const filtered = searchQ.trim()
     ? threads.filter(t => t.title.toLowerCase().includes(searchQ.toLowerCase()) || t.content.toLowerCase().includes(searchQ.toLowerCase()))
@@ -232,9 +245,21 @@ function ThreadListView({
   const create = async () => {
     if (!title.trim() || !content.trim() || !myId) return;
     setBusy(true);
-    createForumThread(categoryId, title, content, { id: myId, username: myUsername });
-    setTitle(""); setContent(""); setShowNew(false); setBusy(false);
-    load();
+    try {
+      const processed: { mediaUrls: string[]; mediaType: "image" | "video" | "none"; documentUrls: string[]; documentNames: string[] } = {
+        mediaUrls: [], mediaType: "none", documentUrls: [], documentNames: [],
+      };
+      if (mediaFiles.length > 0) {
+        processed.mediaType = mediaFiles[0].type.startsWith("video") ? "video" : "image";
+        processed.mediaUrls = await Promise.all(mediaFiles.map(f => fileToDataURL(f)));
+      }
+      if (docFiles.length > 0) {
+        processed.documentUrls = await Promise.all(docFiles.map(f => fileToDataURL(f)));
+        processed.documentNames = docFiles.map(f => f.name);
+      }
+      createForumThread(categoryId, title, content, { id: myId, username: myUsername }, undefined, processed);
+      setTitle(""); setContent(""); setMediaFiles([]); setDocFiles([]); setShowNew(false);
+    } finally { setBusy(false); load(); }
   };
 
   const handleThreadVote = (threadId: string, vote: "up" | "down") => {
@@ -280,7 +305,7 @@ function ThreadListView({
         {showNew && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden">
-            <motion.div initial={{ y: -10 }} animate={{ y: 0 }} exit={{ y: -10 }}
+            <motion.div initial={{ y: -8 }} animate={{ y: 0 }} exit={{ y: -8 }}
               className="p-4 rounded-xl border border-primary/20 bg-gradient-to-b from-primary/[0.02] to-transparent shadow-sm space-y-3">
               <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Título del hilo…"
                 maxLength={120} autoFocus
@@ -288,8 +313,67 @@ function ThreadListView({
               <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="Escribe tu mensaje…"
                 rows={4} maxLength={5000}
                 className="w-full bg-white/80 rounded-lg px-3.5 py-2.5 text-sm outline-none border border-border/50 focus:border-primary/40 resize-none transition-all placeholder:text-muted-foreground/40" />
+
+              {/* Media previews */}
+              {mediaPreviews.length > 0 && (
+                <div className={`grid gap-2 ${mediaPreviews.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
+                  {mediaPreviews.map((url, i) => (
+                    <div key={i} className="relative rounded-xl overflow-hidden bg-muted/30 border border-border/50">
+                      {mediaFiles[i]?.type.startsWith("video") ? (
+                        <video src={url} className="w-full max-h-48 object-cover" muted />
+                      ) : (
+                        <img src={url} alt="" className="w-full max-h-48 object-cover" />
+                      )}
+                      <button onClick={() => {
+                        setMediaFiles(f => f.filter((_, idx) => idx !== i));
+                      }} className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/50 text-white grid place-items-center active:scale-90 transition">
+                        <X size={11} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Documents preview */}
+              {docFiles.length > 0 && (
+                <div className="space-y-1">
+                  {docFiles.map((d, i) => (
+                    <div key={i} className="flex items-center gap-2 bg-white/60 rounded-lg px-3 py-2 text-xs border border-border/40">
+                      <FileText size={13} className="text-primary shrink-0" />
+                      <span className="flex-1 truncate">{d.name}</span>
+                      <span className="text-muted-foreground tabular-nums">{(d.size / 1024).toFixed(0)}KB</span>
+                      <button onClick={() => setDocFiles(f => f.filter((_, idx) => idx !== i))} className="text-muted-foreground/50 hover:text-destructive">
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Upload bar */}
+              <div className="flex items-center gap-1.5">
+                <input ref={mediaInputRef} type="file" hidden accept="image/*,image/gif,video/*" multiple onChange={e => {
+                  const list = Array.from(e.target.files ?? []);
+                  if (list.length) { setMediaFiles(prev => [...prev, ...list]); }
+                  e.target.value = "";
+                }} />
+                <button onClick={() => mediaInputRef.current?.click()}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border/60 text-[10px] text-muted-foreground/70 hover:text-primary hover:border-primary/30 transition active:scale-95">
+                  <Image size={12} /> Imagen
+                </button>
+                <input ref={docInputRef} type="file" hidden multiple accept=".pdf,.doc,.docx,.txt,.zip,.json" onChange={e => {
+                  const list = Array.from(e.target.files ?? []);
+                  if (list.length) { setDocFiles(prev => [...prev, ...list]); }
+                  e.target.value = "";
+                }} />
+                <button onClick={() => docInputRef.current?.click()}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border/60 text-[10px] text-muted-foreground/70 hover:text-primary hover:border-primary/30 transition active:scale-95">
+                  <FileText size={12} /> Documento
+                </button>
+              </div>
+
               <div className="flex justify-end gap-2 pt-1">
-                <button onClick={() => setShowNew(false)} className="px-3.5 py-1.5 rounded-lg border border-border text-[11px] hover:bg-muted/20 transition-colors">Cancelar</button>
+                <button onClick={() => { setShowNew(false); setMediaFiles([]); setDocFiles([]); }} className="px-3.5 py-1.5 rounded-lg border border-border text-[11px] hover:bg-muted/20 transition-colors">Cancelar</button>
                 <button disabled={busy || !title.trim() || !content.trim()} onClick={create}
                   className="px-4 py-1.5 rounded-lg bg-primary text-primary-foreground text-[11px] font-display tracking-widest disabled:opacity-40 active:scale-95 transition flex items-center gap-1.5 shadow-sm shadow-primary/20">
                   {busy ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />} PUBLICAR
@@ -505,6 +589,33 @@ function ThreadDetailView({
           )}
 
           <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">{thread.content}</p>
+
+          {/* Media display */}
+          {thread.mediaUrls && thread.mediaUrls.length > 0 && (
+            <div className={`grid gap-2 mt-3 ${thread.mediaUrls.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
+              {thread.mediaUrls.map((url, i) => (
+                thread.mediaType === "video" ? (
+                  <video key={i} src={url} controls className="rounded-lg w-full max-h-64 bg-black" />
+                ) : (
+                  <img key={i} src={url} alt="" className="rounded-lg w-full max-h-64 object-cover" loading="lazy" />
+                )
+              ))}
+            </div>
+          )}
+
+          {/* Documents display */}
+          {thread.documentUrls && thread.documentUrls.length > 0 && (
+            <div className="space-y-1 mt-3">
+              {thread.documentUrls.map((url, i) => (
+                <a key={i} href={url} target="_blank" rel="noreferrer" download={thread.documentNames[i]}
+                  className="flex items-center gap-2 bg-muted/30 hover:bg-muted/50 rounded-lg px-3 py-2 text-xs transition border border-border/30">
+                  <FileText size={14} className="text-primary shrink-0" />
+                  <span className="flex-1 truncate">{thread.documentNames[i] ?? `Documento ${i + 1}`}</span>
+                  <span className="text-[10px] text-muted-foreground/60">Descargar</span>
+                </a>
+              ))}
+            </div>
+          )}
         </motion.div>
 
         {/* Replies */}
