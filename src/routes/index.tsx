@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Gamepad2, Newspaper, Search, LogOut, Wrench, Plus, ShieldCheck, User, MessageCircle, Sparkles, Star, Menu, Bell, X, Home, Users, Flame, MessageSquare } from "lucide-react";
+import { Gamepad2, Newspaper, Search, LogOut, Wrench, Plus, ShieldCheck, User, MessageCircle, Sparkles, Star, Menu, Bell, X, Home, Users, Flame, MessageSquare, Palette } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchFeed, fetchGames, getMyProfile, isMod, isAdmin, type PostWithMeta, type Profile } from "@/lib/social/api";
 import { PostComposer } from "@/components/social/PostComposer";
@@ -11,6 +11,7 @@ import { NotificationBell } from "@/components/social/NotificationBell";
 import { ProfilePanel } from "@/components/social/ProfilePanel";
 import { NotificationsInline } from "@/components/social/NotificationsInline";
 import { ForumSection } from "@/components/social/ForumSection";
+import { GallerySection } from "@/components/social/GallerySection";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -27,7 +28,7 @@ export const Route = createFileRoute("/")({
   component: HomePage,
 });
 
-type Tab = "games" | "feed" | "profile";
+type Tab = "games" | "feed" | "gallery" | "profile";
 type FeedSub = "forYou" | "following" | "trending" | "forums";
 
 function HomePage() {
@@ -160,14 +161,20 @@ function HomePage() {
               <Newspaper size={14} /> FEED
             </button>
             <button
+              onClick={() => setTab("gallery")}
+              className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-display tracking-widest transition-colors duration-200 ${tab === "gallery" ? "text-primary-foreground" : "text-muted-foreground"}`}
+            >
+              <Palette size={14} /> GALERÍA
+            </button>
+            <button
               onClick={() => setTab("profile")}
               className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-display tracking-widest transition-colors duration-200 ${tab === "profile" ? "text-primary-foreground" : "text-muted-foreground"}`}
             >
               <User size={14} /> PERFIL
             </button>
             <div
-              className="absolute top-1 bottom-1 w-[calc(33.333%-6px)] rounded-xl bg-gradient-to-r from-primary to-accent shadow-[0_4px_14px_-4px_oklch(0.68_0.21_250/0.55)] transition-transform duration-300 ease-out"
-              style={{ transform: `translateX(${tab === "games" ? "0%" : tab === "feed" ? "calc(100% + 8px)" : "calc(200% + 16px)"})` }}
+              className="absolute top-1 bottom-1 w-[calc(25%-5px)] rounded-xl bg-gradient-to-r from-primary to-accent shadow-[0_4px_14px_-4px_oklch(0.68_0.21_250/0.55)] transition-transform duration-300 ease-out"
+              style={{ transform: `translateX(${tab === "games" ? "0%" : tab === "feed" ? "calc(100% + 6.5px)" : tab === "gallery" ? "calc(200% + 13px)" : "calc(300% + 19.5px)"})` }}
             />
           </div>
         </div>
@@ -238,6 +245,8 @@ function HomePage() {
                   })()}
                 </motion.div>
               </>
+            ) : tab === "gallery" ? (
+              <GallerySection myId={myId} isMod={mod} />
             ) : (
               <motion.div
                 initial={{ opacity: 0, y: 12 }}

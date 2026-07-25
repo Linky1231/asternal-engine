@@ -1146,6 +1146,55 @@ export async function fetchMyGamesLite(): Promise<{ id: string; title: string }[
   }));
 }
 
+// ============ ARTWORK GALLERY ============
+export async function fetchArtworks(opts: { search?: string } = {}): Promise<PostWithMeta[]> {
+  return fetchFeed({ ...opts, category: "artwork" });
+}
+
+export async function publishArtwork(input: {
+  title: string;
+  imageDataUrl: string;
+  priceOrbes: number;
+}): Promise<PostRow> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  // Convert data URL to File and upload
+  const blob = dataUrlToBlob(input.imageDataUrl);
+  const file = new File([blob], `${input.title.replace(/[^a-z0-9]+/gi, "-").toLowerCase() || "artwork"}.png`, {
+    type: "image/png",
+  });
+  const path = await uploadMedia(file, user.id);
+
+  const content = `🎨 ${input.title}`;
+  const { data: post, error } = await supabase.from("posts").insert({
+    author_id: user.id,
+    content,
+    media_urls: [path],
+    media_type: "image",
+    category: "artwork",
+    price_orbes: Math.max(0, Math.floor(input.priceOrbes)),
+    cover_url: null,
+  } as never).select().single();
+  if (error) throw error;
+  return post as PostRow;
+}
+
+function dataUrlToBlob(dataUrl: string): Blob {
+  const parts = dataUrl.split(",");
+  const mime = parts[0].match(/:(.*?);/)?.[1] || "image/png";
+  const raw = atob(parts[1]);
+  const arr = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+  return new Blob([arr], { type: mime });
+}
+
+export async function purchaseArtwork(postId: string): Promise<{ ok: boolean; paid?: number; balance?: number; free?: boolean; already_owned?: boolean }> {
+  const { data, error } = await supabase.rpc("purchase_artwork" as never, { _post_id: postId } as never);
+  if (error) throw error;
+  return (data as { ok: boolean; paid?: number; balance?: number; free?: boolean; already_owned?: boolean }) ?? { ok: false };
+}
+
 // ============ DOCUMENT upload helper ============
 export async function uploadDocument(file: File): Promise<{ path: string; name: string }> {
   const { data: { user } } = await supabase.auth.getUser();

@@ -471,6 +471,43 @@ const localStorageBackend = { from: (bucket: string) => makeStorageBucket(bucket
 const localRpc = async (fn: string, _args?: Record<string, unknown>) => {
   switch (fn) {
     case 'purchase_game': return { data: { ok: true, free: true }, error: null };
+    case 'purchase_artwork': {
+      const postId = _args?._post_id as string;
+      if (!postId) return { data: { ok: false, paid: 0 }, error: null };
+      const posts = getTableData('posts');
+      const post = posts.find(p => (p as Record<string, unknown>).id === postId);
+      if (!post) return { data: { ok: false }, error: null };
+      const price = (post as Record<string, unknown>).price_orbes as number || 0;
+      const authorId = (post as Record<string, unknown>).author_id as string;
+      const { data: { user } } = await localAuth.getUser();
+      if (!user) return { data: { ok: false }, error: null };
+      if (user.id === authorId) return { data: { ok: true, free: true, paid: 0 }, error: null };
+      const profiles = getTableData('profiles');
+      const buyerIdx = profiles.findIndex(p => (p as Record<string, unknown>).id === user.id);
+      const sellerIdx = profiles.findIndex(p => (p as Record<string, unknown>).id === authorId);
+      if (buyerIdx === -1) return { data: { ok: false }, error: null };
+      const buyerOrbes = (profiles[buyerIdx] as Record<string, unknown>).orbes as number || 0;
+      if (buyerOrbes < price) return { data: { ok: false, paid: 0, balance: buyerOrbes }, error: null };
+      // Check if already owned
+      const purchases = getTableData('game_purchases');
+      if (purchases.find(p => (p as Record<string, unknown>).post_id === postId && (p as Record<string, unknown>).user_id === user.id)) {
+        return { data: { ok: false, already_owned: true }, error: null };
+      }
+      // Deduct from buyer
+      profiles[buyerIdx] = { ...profiles[buyerIdx], orbes: buyerOrbes - price } as Record<string, unknown>;
+      // Credit seller
+      if (sellerIdx !== -1) {
+        const sellerOrbes = (profiles[sellerIdx] as Record<string, unknown>).orbes as number || 0;
+        profiles[sellerIdx] = { ...profiles[sellerIdx], orbes: sellerOrbes + price } as Record<string, unknown>;
+      }
+      saveTableData('profiles', profiles);
+      // Record purchase
+      purchases.push({
+        id: uid(), post_id: postId, user_id: user.id, created_at: now(),
+      } as never);
+      saveTableData('game_purchases', purchases);
+      return { data: { ok: true, paid: price, balance: buyerOrbes - price }, error: null };
+    }
     case 'claim_plus_orbes': return { data: { ok: true, amount: 50, reason: 'Reclamo local' }, error: null };
     case 'activate_plus': return { data: { ok: true, expires_at: new Date(Date.now() + 30 * 86400000).toISOString() }, error: null };
     case 'can_play_game': return { data: true, error: null };
