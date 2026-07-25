@@ -5,32 +5,53 @@ import {
   isMod, isAdmin, listManagedUsers, setUserModerator, type ManagedUser,
   listBannedEmails, banEmail, unbanEmail, type BannedEmail,
 } from "@/lib/social/api";
-import { ArrowLeft, Shield, ShieldCheck, Loader2, Search, Ban, Trash2, Plus } from "lucide-react";
+import {
+  getForumThreads, getForumCategories, deleteForumThread,
+  createForumCategory, deleteForumCategory,
+  getForumPosts, type ForumThread, type ForumCategory,
+} from "@/lib/social/forum-storage";
+import {
+  ArrowLeft, Shield, ShieldCheck, Loader2, Search, Ban, Trash2, Plus,
+  MessageSquare, Hash, Globe, Edit3, X, Check,
+} from "lucide-react";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Admin · Asternal" }] }),
   component: AdminPage,
 });
 
+type Tab = "mods" | "bans" | "foros";
+
 function AdminPage() {
   const navigate = useNavigate();
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [admin, setAdmin] = useState(false);
-  const [tab, setTab] = useState<"mods" | "bans">("mods");
+  const [tab, setTab] = useState<Tab>("mods");
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [bans, setBans] = useState<BannedEmail[]>([]);
+  const [threads, setThreads] = useState<ForumThread[]>([]);
+  const [categories, setCategories] = useState<ForumCategory[]>([]);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [newEmail, setNewEmail] = useState("");
   const [newReason, setNewReason] = useState("");
   const [banErr, setBanErr] = useState<string | null>(null);
+  // New category form
+  const [showNewCat, setShowNewCat] = useState(false);
+  const [catName, setCatName] = useState("");
+  const [catDesc, setCatDesc] = useState("");
+  const [catIcon, setCatIcon] = useState("globe");
 
   const load = async (search?: string) => {
     setLoading(true);
     try {
       if (tab === "mods") setUsers(await listManagedUsers(search));
-      else setBans(await listBannedEmails());
+      else if (tab === "bans") setBans(await listBannedEmails());
+      else {
+        setThreads(getForumThreads());
+        setCategories(getForumCategories());
+      }
     } finally { setLoading(false); }
   };
 
@@ -67,6 +88,27 @@ function AdminPage() {
     try { await unbanEmail(id); await load(); } finally { setBusy(null); }
   };
 
+  const handleDeleteThread = (threadId: string) => {
+    if (!confirm("¿Borrar este hilo permanentemente? También se borrarán todas sus respuestas.")) return;
+    deleteForumThread(threadId);
+    load();
+  };
+
+  const handleDeleteCategory = (categoryId: string) => {
+    const cat = categories.find(c => c.id === categoryId);
+    if (!cat) return;
+    if (!confirm(`¿Borrar la categoría "${cat.name}"? También se borrarán TODOS los hilos dentro de ella.`)) return;
+    deleteForumCategory(categoryId);
+    load();
+  };
+
+  const handleNewCategory = () => {
+    if (!catName.trim()) return;
+    createForumCategory(catName.trim(), catDesc.trim(), catIcon);
+    setCatName(""); setCatDesc(""); setCatIcon("globe"); setShowNewCat(false);
+    load();
+  };
+
   if (allowed === null) return <div className="min-h-screen grid place-items-center text-sm text-muted-foreground">Cargando…</div>;
   if (!allowed) return (
     <div className="min-h-screen grid place-items-center px-6 text-center">
@@ -91,19 +133,22 @@ function AdminPage() {
         </div>
         <div className="max-w-2xl mx-auto px-3 pb-2">
           <div className="relative flex bg-muted/40 rounded-2xl p-1">
-            <button onClick={() => setTab("mods")}
-              className={`relative z-10 flex-1 py-2 rounded-xl text-[11px] font-display tracking-widest ${tab === "mods" ? "text-primary-foreground" : "text-muted-foreground"}`}>
-              MODERADORES
-            </button>
-            <button onClick={() => setTab("bans")}
-              className={`relative z-10 flex-1 py-2 rounded-xl text-[11px] font-display tracking-widest ${tab === "bans" ? "text-primary-foreground" : "text-muted-foreground"}`}>
-              EMAILS BANEADOS
-            </button>
-            <div className="absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-xl bg-gradient-to-r from-primary to-accent transition-transform duration-300"
-              style={{ transform: `translateX(${tab === "mods" ? "0%" : "calc(100% + 8px)"})` }} />
+            {(["mods", "bans", "foros"] as const).map(t => (
+              <button key={t} onClick={() => setTab(t)}
+                className={`relative z-10 flex-1 py-2 rounded-xl text-[11px] font-display tracking-widest transition-colors ${
+                  tab === t ? "text-primary-foreground" : "text-muted-foreground"
+                }`}>
+                {t === "mods" ? "MODS" : t === "bans" ? "BANEOS" : "FOROS"}
+              </button>
+            ))}
+            <div className="absolute top-1 bottom-1 w-[calc(33.333%-5px)] rounded-xl bg-gradient-to-r from-primary to-accent transition-transform duration-300"
+              style={{
+                transform: `translateX(${tab === "mods" ? "0%" : tab === "bans" ? "calc(100% + 7px)" : "calc(200% + 14px)"})`,
+              }}
+            />
           </div>
         </div>
-        {tab === "mods" && (
+        {tab === "mods" && admin && (
           <div className="max-w-2xl mx-auto px-3 pb-3 flex gap-2">
             <div className="flex-1 flex items-center gap-2 bg-input/50 rounded-xl px-3">
               <Search size={14} className="text-muted-foreground" />
@@ -143,20 +188,22 @@ function AdminPage() {
               )}
             </div>
           ))
-        ) : (
+        ) : tab === "bans" ? (
           <>
-            <div className="panel border border-border/50 rounded-xl p-3 space-y-2">
-              <div className="font-display text-[10px] tracking-widest text-primary-glow flex items-center gap-1"><Ban size={12}/> AÑADIR EMAIL</div>
-              <input value={newEmail} onChange={e => setNewEmail(e.target.value)} type="email" placeholder="usuario@ejemplo.com"
-                className="w-full bg-input/50 rounded-lg px-3 py-2 text-sm outline-none" />
-              <input value={newReason} onChange={e => setNewReason(e.target.value)} placeholder="Motivo (opcional)" maxLength={200}
-                className="w-full bg-input/50 rounded-lg px-3 py-2 text-sm outline-none" />
-              {banErr && <div className="text-xs text-destructive">{banErr}</div>}
-              <button onClick={addBan} disabled={!newEmail.trim()}
-                className="w-full py-2 rounded-lg bg-gradient-to-r from-destructive to-accent text-primary-foreground text-[10px] font-display tracking-widest disabled:opacity-50 flex items-center justify-center gap-1 active:scale-95">
-                <Plus size={12}/> BANEAR EMAIL
-              </button>
-            </div>
+            {admin && (
+              <div className="panel border border-border/50 rounded-xl p-3 space-y-2">
+                <div className="font-display text-[10px] tracking-widest text-primary-glow flex items-center gap-1"><Ban size={12}/> AÑADIR EMAIL</div>
+                <input value={newEmail} onChange={e => setNewEmail(e.target.value)} type="email" placeholder="usuario@ejemplo.com"
+                  className="w-full bg-input/50 rounded-lg px-3 py-2 text-sm outline-none" />
+                <input value={newReason} onChange={e => setNewReason(e.target.value)} placeholder="Motivo (opcional)" maxLength={200}
+                  className="w-full bg-input/50 rounded-lg px-3 py-2 text-sm outline-none" />
+                {banErr && <div className="text-xs text-destructive">{banErr}</div>}
+                <button onClick={addBan} disabled={!newEmail.trim()}
+                  className="w-full py-2 rounded-lg bg-gradient-to-r from-destructive to-accent text-primary-foreground text-[10px] font-display tracking-widest disabled:opacity-50 flex items-center justify-center gap-1 active:scale-95">
+                  <Plus size={12}/> BANEAR EMAIL
+                </button>
+              </div>
+            )}
             {bans.length === 0 ? (
               <div className="text-center text-xs text-muted-foreground py-10">No hay emails baneados.</div>
             ) : bans.map(b => (
@@ -170,6 +217,107 @@ function AdminPage() {
                   className="w-9 h-9 grid place-items-center rounded-lg border border-destructive/40 text-destructive active:scale-95 disabled:opacity-60">
                   {busy === b.id ? <Loader2 size={12} className="animate-spin"/> : <Trash2 size={13}/>}
                 </button>
+              </div>
+            ))}
+          </>
+        ) : (
+          /* ── FOROS TAB ── */
+          <>
+            {/* ── Categories management ── */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between px-1">
+                <div className="font-display text-[10px] tracking-widest text-primary/70 flex items-center gap-1">
+                  <Hash size={12} /> CATEGORÍAS
+                </div>
+                {admin && (
+                  <button onClick={() => setShowNewCat(s => !s)}
+                    className="flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-lg border border-border/50 hover:bg-muted/20 active:scale-95 transition">
+                    <Plus size={11} /> AÑADIR
+                  </button>
+                )}
+              </div>
+
+              {showNewCat && (
+                <div className="p-3 rounded-xl border border-primary/20 bg-primary/[0.03] space-y-2">
+                  <input value={catName} onChange={e => setCatName(e.target.value)} placeholder="Nombre de la categoría"
+                    maxLength={30} className="w-full bg-white/70 rounded-lg px-3 py-2 text-sm outline-none border border-border/50 focus:border-primary/40" />
+                  <input value={catDesc} onChange={e => setCatDesc(e.target.value)} placeholder="Descripción"
+                    maxLength={100} className="w-full bg-white/70 rounded-lg px-3 py-2 text-sm outline-none border border-border/50 focus:border-primary/40" />
+                  <div className="flex items-center gap-2">
+                    <select value={catIcon} onChange={e => setCatIcon(e.target.value)}
+                      className="flex-1 bg-white/70 rounded-lg px-3 py-2 text-xs outline-none border border-border/50">
+                      <option value="globe">🌍 General</option>
+                      <option value="life-buoy">🛟 Ayuda</option>
+                      <option value="trophy">🏆 Showcase</option>
+                      <option value="message-circle-more">💬 Feedback</option>
+                      <option value="coffee">☕ Off-Topic</option>
+                    </select>
+                    <button onClick={() => { setShowNewCat(false); setCatName(""); setCatDesc(""); }}
+                      className="px-3 py-2 rounded-lg border border-border/50 text-[10px] hover:bg-muted/20 transition-colors">
+                      <X size={13} />
+                    </button>
+                    <button onClick={handleNewCategory} disabled={!catName.trim()}
+                      className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-[10px] font-display tracking-wider disabled:opacity-40 active:scale-95 transition">
+                      <Check size={13} />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex flex-wrap gap-1.5">
+                {categories.map(cat => (
+                  <div key={cat.id}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border/30 bg-white/60 text-xs">
+                    <span className="font-display font-medium">{cat.name}</span>
+                    <span className="text-[10px] text-muted-foreground/50">{cat.threadCount} hilos</span>
+                    {admin && (
+                      <button onClick={() => handleDeleteCategory(cat.id)}
+                        className="text-muted-foreground/30 hover:text-destructive transition-colors p-0.5 active:scale-90"
+                        title="Eliminar categoría">
+                        <X size={11} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* ── Threads list ── */}
+            <div className="font-display text-[10px] tracking-widest text-primary/70 flex items-center gap-1 px-1 pt-2">
+              <MessageSquare size={12} /> TODOS LOS HILOS ({threads.length})
+            </div>
+
+            {threads.length === 0 ? (
+              <div className="text-center text-xs text-muted-foreground py-10">No hay hilos en el foro.</div>
+            ) : threads.map(t => (
+              <div key={t.id} className="panel border border-border/50 rounded-xl px-3 py-2.5 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-muted/40 to-muted/20 border border-border/30 grid place-items-center shrink-0 text-muted-foreground/60">
+                  <MessageSquare size={15} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-display truncate flex items-center gap-1.5">
+                    {t.pinned && <span className="text-[8px] text-primary uppercase tracking-wider font-semibold">📌</span>}
+                    {t.closed && <span className="text-[8px] text-rose-500 uppercase tracking-wider font-semibold">🔒</span>}
+                    {t.title}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground/60 mt-0.5 flex items-center gap-2">
+                    <span>@{t.authorUsername}</span>
+                    <span>{t.postCount} respuestas</span>
+                    <span>{t.views} vistas</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="text-[9px] px-2 py-0.5 rounded-full bg-muted/30 text-muted-foreground/60 border border-border/30">
+                    {categories.find(c => c.id === t.categoryId)?.name ?? "?"}
+                  </span>
+                  {admin && (
+                    <button onClick={() => handleDeleteThread(t.id)}
+                      className="w-8 h-8 grid place-items-center rounded-lg border border-destructive/30 text-destructive/70 hover:bg-destructive/10 hover:border-destructive/50 active:scale-90 transition"
+                      title="Eliminar hilo">
+                      <Trash2 size={12} />
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </>

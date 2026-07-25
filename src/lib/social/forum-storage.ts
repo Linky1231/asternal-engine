@@ -171,6 +171,41 @@ export function getForumCategories(): ForumCategory[] {
   return read<ForumCategory[]>(KEYS.categories, getDefaultCategories());
 }
 
+export function createForumCategory(name: string, description: string, icon: string): ForumCategory {
+  const cats = read<ForumCategory[]>(KEYS.categories, getDefaultCategories());
+  const maxOrder = cats.reduce((max, c) => Math.max(max, c.sortOrder), 0);
+  const cat: ForumCategory = {
+    id: uid(),
+    name: name.trim(),
+    description: description.trim(),
+    icon: icon || "globe",
+    sortOrder: maxOrder + 1,
+    threadCount: 0,
+    createdAt: new Date().toISOString(),
+  };
+  cats.push(cat);
+  write(KEYS.categories, cats);
+  return cat;
+}
+
+export function deleteForumCategory(categoryId: string): boolean {
+  const defaultIds = getDefaultCategories().map(c => c.id);
+  if (defaultIds.includes(categoryId)) return false; // can't delete defaults
+  let cats = read<ForumCategory[]>(KEYS.categories, getDefaultCategories());
+  cats = cats.filter(c => c.id !== categoryId);
+  write(KEYS.categories, cats);
+  // Delete all threads in this category
+  const threads = read<ForumThread[]>(KEYS.threads, []);
+  const deletedThreads = threads.filter(t => t.categoryId === categoryId);
+  const deletedIds = new Set(deletedThreads.map(t => t.id));
+  const remaining = threads.filter(t => t.categoryId !== categoryId);
+  write(KEYS.threads, remaining);
+  // Delete all posts in those threads
+  const posts = read<ForumPost[]>(KEYS.posts, []);
+  write(KEYS.posts, posts.filter(p => !deletedIds.has(p.threadId)));
+  return true;
+}
+
 /* ─── Threads ─── */
 
 export function getForumThreads(categoryId?: string): ForumThread[] {
