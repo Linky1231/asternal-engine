@@ -758,44 +758,40 @@ export function PaintEditor({ onSave, onClose, size: initialSize = 512 }: Props)
         </div>
       </div>
 
-      {/* Canvas area — fills all available space, canvas fills it while keeping 1:1 aspect ratio */}
-      <div className="flex-1 min-h-0 flex items-center justify-center overflow-hidden p-2">
-        <div key={`canvas-${size}`} className="relative w-full h-full flex items-center justify-center overflow-hidden">
+      {/* Canvas area — fills all available space while keeping 1:1 aspect ratio */}
+      <div className="flex-1 min-h-0 flex items-center justify-center overflow-hidden">
+        <div
+          key={`canvas-${size}`}
+          className="rounded-md p-[8px]"
+          style={{
+            maxWidth: "100%",
+            maxHeight: "100%",
+            aspectRatio: "1 / 1",
+            background: "linear-gradient(180deg, oklch(0.97 0.005 250), oklch(0.93 0.008 250))",
+            boxShadow:
+              "inset 0 1px 0 oklch(1 0 0 / 0.7), 0 12px 40px -18px oklch(0.4 0.05 258 / 0.28), 0 0 0 1px oklch(0.82 0.01 250 / 0.6)",
+            overflow: "hidden",
+          }}
+        >
           <div
-            className="rounded-md p-[8px]"
+            className="rounded-sm overflow-hidden w-full h-full"
             style={{
-              background: "linear-gradient(180deg, oklch(0.97 0.005 250), oklch(0.93 0.008 250))",
-              boxShadow:
-                "inset 0 1px 0 oklch(1 0 0 / 0.7), 0 12px 40px -18px oklch(0.4 0.05 258 / 0.28), 0 0 0 1px oklch(0.82 0.01 250 / 0.6)",
-              maxWidth: "100%",
-              maxHeight: "100%",
-              overflow: "hidden",
+              backgroundImage:
+                "linear-gradient(45deg, oklch(0.955 0.003 250) 25%, transparent 25%), linear-gradient(-45deg, oklch(0.955 0.003 250) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, oklch(0.955 0.003 250) 75%), linear-gradient(-45deg, transparent 75%, oklch(0.955 0.003 250) 75%)",
+              backgroundSize: "20px 20px",
+              backgroundPosition: "0 0, 0 10px, 10px -10px, -10px 0",
+              backgroundColor: "#ffffff",
             }}
           >
-            <div
-              className="rounded-sm overflow-hidden"
-              style={{
-                width: "100%",
-                aspectRatio: "1 / 1",
-                maxWidth: "100%",
-                maxHeight: "100%",
-                backgroundImage:
-                  "linear-gradient(45deg, oklch(0.955 0.003 250) 25%, transparent 25%), linear-gradient(-45deg, oklch(0.955 0.003 250) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, oklch(0.955 0.003 250) 75%), linear-gradient(-45deg, transparent 75%, oklch(0.955 0.003 250) 75%)",
-                backgroundSize: "20px 20px",
-                backgroundPosition: "0 0, 0 10px, 10px -10px, -10px 0",
-                backgroundColor: "#ffffff",
-              }}
-            >
-              <canvas
-                ref={canvasRef}
-                className="w-full h-full touch-none block"
-                style={{ touchAction: "none", background: "transparent" }}
-                onPointerDown={onDown}
-                onPointerMove={onMove}
-                onPointerUp={onUp}
-                onPointerCancel={onUp}
-              />
-            </div>
+            <canvas
+              ref={canvasRef}
+              className="w-full h-full touch-none block"
+              style={{ touchAction: "none", background: "transparent" }}
+              onPointerDown={onDown}
+              onPointerMove={onMove}
+              onPointerUp={onUp}
+              onPointerCancel={onUp}
+            />            </div>
           </div>
           {textInput?.open && (
             <div
@@ -823,7 +819,6 @@ export function PaintEditor({ onSave, onClose, size: initialSize = 512 }: Props)
               </div>
             </div>
           )}
-        </div>
       </div>
 
       {/* Bottom panel — compact, scrollable if needed */}
