@@ -11,7 +11,7 @@ import {
   getMyProfile, getMyOrbes,
 } from "@/lib/social/api";
 import type { SpriteAsset } from "@/lib/engine/core";
-import { PaintEditor } from "@/components/engine/PaintEditor";
+import { GalleryCanvasPanel } from "@/components/social/GalleryCanvasPanel";
 
 export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
   myId: string | null; isMod: boolean; onRefresh?: () => void;
@@ -280,14 +280,15 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
         </div>
       )}
 
-      {/* ====== PAINT EDITOR OVERLAY ====== */}
-      {canvasOpen && (
-        <PaintEditor
-          onSave={handleCanvasSave}
-          onClose={() => setCanvasOpen(false)}
-          size={512}
-        />
-      )}
+      {/* ====== DRAWING PANEL (slides down from top) ====== */}
+      <AnimatePresence>
+        {canvasOpen && (
+          <GalleryCanvasPanel
+            onSave={handleCanvasSave}
+            onClose={() => setCanvasOpen(false)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* ====== PUBLISH DIALOG ====== */}
       <AnimatePresence>
