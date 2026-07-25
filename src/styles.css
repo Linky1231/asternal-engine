@@ -340,35 +340,34 @@
     0 0 22px oklch(0.68 0.14 220 / 0.7);
 }
 
-/* ============ Plus: animated avatar frames ============ */
-@keyframes frame-spin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
+/* ============ Plus: avatar frames — elegant static gradient borders ============ */
+.plus-frame {
+  position: relative;
+  isolation: isolate;
 }
-@keyframes frame-pulse {
-  0%, 100% { box-shadow: 0 0 0 3px oklch(0.72 0.14 220 / 0.5), 0 0 18px 2px oklch(0.72 0.14 220 / 0.35); }
-  50%      { box-shadow: 0 0 0 4px oklch(0.72 0.14 220 / 0.9), 0 0 28px 6px oklch(0.72 0.14 220 / 0.6); }
-}
-.plus-frame { position: relative; isolation: isolate; }
 .plus-frame::before {
   content: "";
   position: absolute;
-  inset: -5px;
+  inset: -3px;
   border-radius: inherit;
-  padding: 3px;
   z-index: -1;
-  background: conic-gradient(from 0deg, #1AA6D6, #2FD9D2, #7BE7FF, #B8ECFF, #2FD9D2, #1AA6D6);
-  animation: frame-spin 5s linear infinite;
-  filter: blur(0.4px);
 }
-.plus-frame-aurora::before { background: conic-gradient(from 0deg, #1AA6D6, #2FD9D2, #7BE7FF, #B8ECFF, #2FD9D2, #1AA6D6); }
-.plus-frame-ocean::before  { background: conic-gradient(from 0deg, #0F6C9E, #1AA6D6, #2FD9D2, #1AA6D6, #0F6C9E); }
-.plus-frame-ice::before    { background: conic-gradient(from 0deg, #B8ECFF, #7BE7FF, #ffffff, #7BE7FF, #B8ECFF); }
-.plus-frame-neon::before   {
-  background: conic-gradient(from 0deg, #2FD9D2, #B8ECFF, #1AA6D6, #7BE7FF, #2FD9D2);
-  animation: frame-spin 3.5s linear infinite;
+.plus-frame-aurora::before {
+  background: linear-gradient(135deg, #1AA6D6, #2FD9D2, #7BE7FF, #2FD9D2);
+  box-shadow: 0 0 12px -2px rgba(26, 166, 214, 0.45);
 }
-.plus-frame-neon { animation: frame-pulse 2.2s ease-in-out infinite; }
+.plus-frame-ocean::before {
+  background: linear-gradient(135deg, #0F6C9E, #1AA6D6, #2FD9D2, #1AA6D6);
+  box-shadow: 0 0 12px -2px rgba(15, 108, 158, 0.45);
+}
+.plus-frame-ice::before {
+  background: linear-gradient(135deg, #B8ECFF, #ffffff, #7BE7FF, #B8ECFF);
+  box-shadow: 0 0 12px -2px rgba(184, 236, 255, 0.45);
+}
+.plus-frame-neon::before {
+  background: linear-gradient(135deg, #2FD9D2, #B8ECFF, #1AA6D6, #7BE7FF);
+  box-shadow: 0 0 14px -2px rgba(47, 217, 210, 0.5);
+}
 
 
 
