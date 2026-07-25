@@ -81,8 +81,8 @@ function AvatarMini({ username, size = "md" }: { username: string; size?: "sm" |
     <div
       className={`${sizeMap[size]} rounded-full grid place-items-center font-display font-semibold shrink-0`}
       style={{
-        background: `linear-gradient(135deg, hsl(${hue}, 55%, 75%), hsl(${(hue + 40) % 360}, 50%, 65%))`,
-        color: `hsl(${hue}, 30%, 20%)`,
+        background: `linear-gradient(135deg, hsl(${hue}, 60%, 45%), hsl(${(hue + 40) % 360}, 55%, 35%))`,
+        color: `hsl(0, 0%, 100%)`,
       }}
     >
       {letter}
