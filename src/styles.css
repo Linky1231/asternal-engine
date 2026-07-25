@@ -281,10 +281,6 @@
   0%, 100% { text-shadow: 0 0 6px oklch(0.72 0.15 245 / 0.55); }
   50%      { text-shadow: 0 0 14px oklch(0.72 0.15 245 / 0.95), 0 0 22px oklch(0.72 0.15 245 / 0.55); }
 }
-@keyframes name-sparkle-anim {
-  0%, 100% { opacity: 0.35; transform: translateY(0) scale(0.9); }
-  50%      { opacity: 1;    transform: translateY(-2px) scale(1.1); }
-}
 
 .name-fx { display: inline-block; position: relative; }
 
@@ -300,22 +296,6 @@
   color: transparent;
   animation: name-rainbow-anim 6s linear infinite;
 }
-.name-fx-sparkle {
-  color: oklch(0.4 0.05 260);
-}
-.name-fx-sparkle::before,
-.name-fx-sparkle::after {
-  content: "✦";
-  position: absolute;
-  top: -6px;
-  color: oklch(0.75 0.14 220);
-  font-size: 0.6em;
-  animation: name-sparkle-anim 1.8s ease-in-out infinite;
-  pointer-events: none;
-}
-.name-fx-sparkle::before { left: -10px; animation-delay: 0s; }
-.name-fx-sparkle::after  { right: -10px; animation-delay: 0.6s; }
-
 .name-fx-gradient {
   background: linear-gradient(90deg, oklch(0.58 0.19 258), oklch(0.75 0.18 320), oklch(0.68 0.14 220));
   background-size: 200% 100%;

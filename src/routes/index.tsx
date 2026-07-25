@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Gamepad2, Newspaper, Search, LogOut, Wrench, Plus, ShieldCheck, User, MessageCircle, Sparkles, Star, Menu, Bell, X, Home, Users, Flame, MessageSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchFeed, fetchGames, getMyProfile, isMod, isAdmin, type PostWithMeta, type Profile } from "@/lib/social/api";
@@ -174,37 +175,80 @@ function HomePage() {
 
       {/* Content */}
       <main className="flex-1 max-w-2xl mx-auto w-full px-3 py-3 space-y-3 pb-24">
-        <div key={tab} className="space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
-          {tab === "games" ? (
-            loading ? <SkeletonList /> : (
-              <GamesHome games={games} myId={myId} isMod={mod} onChange={() => reload("games")} />
-            )
-          ) : tab === "feed" ? (
-            <>
-              <PostComposer onCreated={() => reload("feed")} />
-              <FeedSubTabs value={feedSub} onChange={setFeedSub} />
-              {feedSub === "forums" ? (
-                <ForumSection isAdmin={admin} isMod={mod} />
-              ) : loading ? <SkeletonList /> : (() => {
-                const filtered = filterFeed(posts, feedSub, myId);
-                if (filtered.length === 0) {
-                  return (
-                    <div className="text-center text-xs text-muted-foreground py-10">
-                      {feedSub === "following"
-                        ? "Interactúa con publicaciones para poblar esta sección."
-                        : feedSub === "trending"
-                        ? "Aún no hay tendencias. ¡Publica algo!"
-                        : "Sé el primero en publicar."}
-                    </div>
-                  );
-                }
-                return filtered.map(p => <PostCard key={p.id} post={p} myId={myId} isMod={mod} onChange={() => reload("feed")} />);
-              })()}
-            </>
-          ) : (
-            myId && <ProfilePanel userId={myId} myId={myId} isMod={mod} viewingOwn={true} />
-          )}
-        </div>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={tab}
+            initial={{ opacity: 0, y: 12, filter: "blur(3px)" }}
+            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+            exit={{ opacity: 0, y: -8, filter: "blur(3px)" }}
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            className="space-y-3"
+          >
+            {tab === "games" ? (
+              loading ? <SkeletonList /> : (
+                <GamesHome games={games} myId={myId} isMod={mod} onChange={() => reload("games")} />
+              )
+            ) : tab === "feed" ? (
+              <>
+                <motion.div
+                  initial={{ opacity: 0, y: -8, filter: "blur(2px)" }}
+                  animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                  transition={{ duration: 0.3, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  <PostComposer onCreated={() => reload("feed")} />
+                </motion.div>
+                <motion.div
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.25, delay: 0.14, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  <FeedSubTabs value={feedSub} onChange={setFeedSub} />
+                </motion.div>
+                <motion.div
+                  key={feedSub}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  {feedSub === "forums" ? (
+                    <ForumSection isAdmin={admin} isMod={mod} />
+                  ) : loading ? <SkeletonList /> : (() => {
+                    const filtered = filterFeed(posts, feedSub, myId);
+                    if (filtered.length === 0) {
+                      return (
+                        <div className="text-center text-xs text-muted-foreground py-10">
+                          {feedSub === "following"
+                            ? "Interactúa con publicaciones para poblar esta sección."
+                            : feedSub === "trending"
+                            ? "Aún no hay tendencias. ¡Publica algo!"
+                            : "Sé el primero en publicar."}
+                        </div>
+                      );
+                    }
+                    return filtered.map((p, i) => (
+                      <motion.div
+                        key={p.id}
+                        initial={{ opacity: 0, y: 12, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        transition={{ duration: 0.3, delay: i * 0.04, ease: [0.22, 1, 0.36, 1] }}
+                      >
+                        <PostCard key={p.id} post={p} myId={myId} isMod={mod} onChange={() => reload("feed")} />
+                      </motion.div>
+                    ));
+                  })()}
+                </motion.div>
+              </>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              >
+                {myId && <ProfilePanel userId={myId} myId={myId} isMod={mod} viewingOwn={true} />}
+              </motion.div>
+            )}
+          </motion.div>
+        </AnimatePresence>
       </main>
 
       {/* Floating CTA to editor */}

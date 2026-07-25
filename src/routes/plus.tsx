@@ -48,7 +48,6 @@ const FRAMES = [
 const NAME_EFFECTS: { id: string; label: string }[] = [
   { id: "glow",     label: "Brillo" },
   { id: "rainbow",  label: "Arcoíris" },
-  { id: "sparkle",  label: "Destellos" },
   { id: "gradient", label: "Degradado" },
   { id: "pulse",    label: "Pulso" },
   { id: "shadow",   label: "Sombra" },
