@@ -21,6 +21,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProfileUserIdRouteImport } from './routes/profile.$userId'
 import { Route as ChatsChatIdRouteImport } from './routes/chats.$chatId'
+import { Route as PaintRouteImport } from './routes/paint'
 
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
@@ -83,6 +84,12 @@ const ChatsChatIdRoute = ChatsChatIdRouteImport.update({
   getParentRoute: () => ChatsRoute,
 } as any)
 
+const PaintRoute = PaintRouteImport.update({
+  id: '/paint',
+  path: '/paint',
+  getParentRoute: () => rootRouteImport,
+} as any)
+
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
@@ -91,6 +98,7 @@ export interface FileRoutesByFullPath {
   '/editor': typeof EditorRoute
   '/feed': typeof FeedRoute
   '/orbes': typeof OrbesRoute
+  '/paint': typeof PaintRoute
   '/plus': typeof PlusRoute
   '/profile': typeof ProfileRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
@@ -105,6 +113,7 @@ export interface FileRoutesByTo {
   '/editor': typeof EditorRoute
   '/feed': typeof FeedRoute
   '/orbes': typeof OrbesRoute
+  '/paint': typeof PaintRoute
   '/plus': typeof PlusRoute
   '/profile': typeof ProfileRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
@@ -120,6 +129,7 @@ export interface FileRoutesById {
   '/editor': typeof EditorRoute
   '/feed': typeof FeedRoute
   '/orbes': typeof OrbesRoute
+  '/paint': typeof PaintRoute
   '/plus': typeof PlusRoute
   '/profile': typeof ProfileRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
@@ -136,6 +146,7 @@ export interface FileRouteTypes {
     | '/editor'
     | '/feed'
     | '/orbes'
+    | '/paint'
     | '/plus'
     | '/profile'
     | '/reset-password'
@@ -150,6 +161,7 @@ export interface FileRouteTypes {
     | '/editor'
     | '/feed'
     | '/orbes'
+    | '/paint'
     | '/plus'
     | '/profile'
     | '/reset-password'
@@ -164,6 +176,7 @@ export interface FileRouteTypes {
     | '/editor'
     | '/feed'
     | '/orbes'
+    | '/paint'
     | '/plus'
     | '/profile'
     | '/reset-password'
@@ -179,6 +192,7 @@ export interface RootRouteChildren {
   EditorRoute: typeof EditorRoute
   FeedRoute: typeof FeedRoute
   OrbesRoute: typeof OrbesRoute
+  PaintRoute: typeof PaintRoute
   PlusRoute: typeof PlusRoute
   ProfileRoute: typeof ProfileRouteWithChildren
   ResetPasswordRoute: typeof ResetPasswordRoute
@@ -226,6 +240,13 @@ declare module '@tanstack/react-router' {
       path: '/editor'
       fullPath: '/editor'
       preLoaderRoute: typeof EditorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/paint': {
+      id: '/paint'
+      path: '/paint'
+      fullPath: '/paint'
+      preLoaderRoute: typeof PaintRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/chats': {
@@ -302,6 +323,7 @@ const rootRouteChildren: RootRouteChildren = {
   EditorRoute: EditorRoute,
   FeedRoute: FeedRoute,
   OrbesRoute: OrbesRoute,
+  PaintRoute: PaintRoute,
   PlusRoute: PlusRoute,
   ProfileRoute: ProfileRouteWithChildren,
   ResetPasswordRoute: ResetPasswordRoute,
