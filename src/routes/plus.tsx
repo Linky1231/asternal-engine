@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
-  ArrowLeft, Star, Palette, Rocket, Link2, Check, Loader2,
+  ArrowLeft, Star, Palette, Rocket, Link2, Check, Loader2, Shield,
   Youtube, Instagram, Music2, Globe, Gift, Sparkles as SparklesIcon,
   Wand2, IdCard, AlertTriangle, RefreshCw,
 } from "lucide-react";
@@ -9,7 +9,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import {
   getMyProfile, claimPlusOrbes, updatePlusSettings, togglePlusStatus,
-  activatePlus, isPlusActive, daysUntilPlusExpires,
+  activatePlus, isPlusActive, daysUntilPlusExpires, isAdmin,
   type Profile, type SocialLinks, type CreatorCardStyle,
 } from "@/lib/social/api";
 import { UserName } from "@/components/social/UserName";
@@ -84,6 +84,7 @@ function PlusPage() {
   const [savedSocials, setSavedSocials] = useState<null | "saving" | "saved">(null);
   const [scriptLoaded, setScriptLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [isAdminUser, setIsAdminUser] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -92,6 +93,7 @@ function PlusPage() {
       const p = await getMyProfile();
       setMe(p);
       setSocials((p?.social_links as SocialLinks) ?? {});
+      setIsAdminUser(await isAdmin());
       setLoading(false);
     })();
   }, [navigate]);
@@ -374,6 +376,61 @@ function PlusPage() {
         </FeatureCard>
 
         {/* CTA suscripción */}
+        {/* ── ADMIN DEV: Botón para activar Plus gratis ── */}
+        {isAdminUser && (
+          <section className="relative overflow-hidden rounded-2xl border-2 p-5 space-y-3"
+            style={{
+              borderColor: "oklch(0.65 0.14 220 / 0.4)",
+              background: "linear-gradient(135deg, oklch(0.65 0.14 220 / 0.08), oklch(0.78 0.13 195 / 0.04))",
+            }}>
+            <div className="flex items-center gap-2.5">
+              <Shield size={18} style={{ color: "var(--plus)" }} />
+              <div>
+                <div className="font-display text-sm font-semibold">Panel de administrador</div>
+                <div className="text-[10px] text-muted-foreground/60">Activa Plus sin costo para probar todas las funciones</div>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              {!isPlus ? (
+                <button disabled={busy} onClick={async () => {
+                  setBusy(true);
+                  try { await togglePlusStatus(true); await refresh(); }
+                  finally { setBusy(false); }
+                }}
+                  className="flex-1 h-11 rounded-xl text-xs font-display tracking-wider text-white active:scale-[0.97] transition shadow-lg flex items-center justify-center gap-2"
+                  style={{ background: "var(--gradient-plus)", boxShadow: "var(--shadow-plus)" }}>
+                  {busy ? <Loader2 size={14} className="animate-spin" /> : <Star size={14} fill="currentColor" />}
+                  ACTIVAR PLUS COMPLETO
+                </button>
+              ) : (
+                <>
+                  <button disabled={busy} onClick={async () => {
+                    setBusy(true);
+                    try { await activatePlus(12); await refresh(); }
+                    finally { setBusy(false); }
+                  }}
+                    className="flex-1 h-11 rounded-xl text-xs font-display tracking-wider text-white active:scale-[0.97] transition shadow-lg flex items-center justify-center gap-2"
+                    style={{ background: "var(--gradient-plus)", boxShadow: "var(--shadow-plus)" }}>
+                    {busy ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+                    +12 MESES
+                  </button>
+                  <button disabled={busy} onClick={async () => {
+                    setBusy(true);
+                    try { await togglePlusStatus(false); await refresh(); }
+                    finally { setBusy(false); }
+                  }}
+                    className="flex-1 h-11 rounded-xl text-xs font-display tracking-wider border active:scale-[0.97] transition flex items-center justify-center gap-2"
+                    style={{ borderColor: "oklch(0.65 0.14 220 / 0.4)", color: "var(--plus)" }}>
+                    {busy ? <Loader2 size={14} className="animate-spin" /> : <Shield size={14} />}
+                    DESACTIVAR PLUS
+                  </button>
+                </>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* CTA suscripción */}
         {!isPlus && (
           <section className="panel rounded-2xl border p-4 flex flex-col items-center gap-3"
             style={{ borderColor: "color-mix(in oklab, var(--plus) 40%, transparent)" }}>
@@ -387,10 +444,6 @@ function PlusPage() {
             <p className="text-[10px] text-muted-foreground text-center max-w-xs">
               Pago seguro procesado por Stripe. Cancela cuando quieras.
             </p>
-            <button disabled={busy} onClick={doActivate}
-              className="text-[10px] text-muted-foreground underline disabled:opacity-40">
-              (dev) Activar Plus 1 mes
-            </button>
           </section>
         )}
 
@@ -401,16 +454,18 @@ function PlusPage() {
                 Renovación: {new Date(me.plus_expires_at).toLocaleDateString()}
               </div>
             )}
-            <div className="flex items-center justify-center gap-4">
-              <button disabled={busy} onClick={doActivate}
-                className="text-[10px] text-muted-foreground underline flex items-center gap-1 disabled:opacity-40">
-                <RefreshCw size={10} /> Renovar 1 mes
-              </button>
-              <button disabled={busy} onClick={doDeactivate}
-                className="text-[10px] text-muted-foreground underline disabled:opacity-40">
-                (dev) Expirar ahora
-              </button>
-            </div>
+            {!isAdminUser && (
+              <div className="flex items-center justify-center gap-4">
+                <button disabled={busy} onClick={doActivate}
+                  className="text-[10px] text-muted-foreground underline flex items-center gap-1 disabled:opacity-40">
+                  <RefreshCw size={10} /> Renovar 1 mes
+                </button>
+                <button disabled={busy} onClick={doDeactivate}
+                  className="text-[10px] text-muted-foreground underline disabled:opacity-40">
+                  (dev) Expirar ahora
+                </button>
+              </div>
+            )}
           </div>
         )}
 
