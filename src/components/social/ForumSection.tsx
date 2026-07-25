@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { fileToDataURL } from "@/lib/engine/images";
@@ -15,25 +15,26 @@ import {
   Reply, Quote, Trash2, Edit3, Send, Loader2, Eye, Clock, Hash,
   X, Check, MessageCircle, Search,
   Globe, LifeBuoy, Trophy, Coffee, MessageCircleMore, Tag,
-  Image, FileText, Film,
+  Image, FileText, Film, ChevronDown, Sparkles, Bookmark, MessageSquareText, AtSign,
+  User, Calendar, Edit,
 } from "lucide-react";
 
-/* ─── Motion variants (reduced timing) ─── */
+/* ─── Motion variants ─── */
 const stagger = {
-  container: { initial: {}, animate: { transition: { staggerChildren: 0.04 } } },
+  container: { initial: {}, animate: { transition: { staggerChildren: 0.05 } } },
   item: {
-    initial: { opacity: 0, y: 12, scale: 0.98, filter: "blur(3px)" },
-    animate: { opacity: 1, y: 0, scale: 1, filter: "blur(0px)", transition: { duration: 0.3, ease: [0.16, 1, 0.3, 1] as const } },
+    initial: { opacity: 0, y: 16, scale: 0.97, filter: "blur(4px)" },
+    animate: { opacity: 1, y: 0, scale: 1, filter: "blur(0px)", transition: { duration: 0.45, ease: [0.2, 0, 0, 1] as const } },
   },
 };
 
 const fadeSlide = {
-  initial: { opacity: 0, y: 8, filter: "blur(1px)" },
-  animate: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.25, ease: [0.16, 1, 0.3, 1] as const } },
-  exit: { opacity: 0, y: -4, filter: "blur(1px)", transition: { duration: 0.15 } },
+  initial: { opacity: 0, y: 12, filter: "blur(2px)" },
+  animate: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.35, ease: [0.2, 0, 0, 1] as const } },
+  exit: { opacity: 0, y: -8, filter: "blur(2px)", transition: { duration: 0.2 } },
 };
 
-/* ─── Time ago helper ─── */
+/* ─── Time ago ─── */
 function timeAgo(iso: string) {
   const s = Math.max(1, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
   if (s < 60) return `${s}s`;
@@ -45,35 +46,45 @@ function timeAgo(iso: string) {
 
 /* ─── Icon map ─── */
 const CAT_ICONS: Record<string, React.ReactNode> = {
-  "globe": <Globe size={16} />,
-  "life-buoy": <LifeBuoy size={16} />,
-  "trophy": <Trophy size={16} />,
-  "message-circle-more": <MessageCircleMore size={16} />,
-  "coffee": <Coffee size={16} />,
+  "globe": <Globe size={18} />,
+  "life-buoy": <LifeBuoy size={18} />,
+  "trophy": <Trophy size={18} />,
+  "message-circle-more": <MessageCircleMore size={18} />,
+  "coffee": <Coffee size={18} />,
 };
 
 /* ─── Tag color map ─── */
 const TAG_STYLES: Record<string, string> = {
-  "Programación": "bg-blue-100/60 text-blue-700 border-blue-200/50 dark:bg-blue-900/20 dark:text-blue-300",
-  "IA": "bg-purple-100/60 text-purple-700 border-purple-200/50 dark:bg-purple-900/20 dark:text-purple-300",
-  "UI": "bg-cyan-100/60 text-cyan-700 border-cyan-200/50 dark:bg-cyan-900/20 dark:text-cyan-300",
-  "Pixel Art": "bg-emerald-100/60 text-emerald-700 border-emerald-200/50 dark:bg-emerald-900/20 dark:text-emerald-300",
-  "Música": "bg-rose-100/60 text-rose-700 border-rose-200/50 dark:bg-rose-900/20 dark:text-rose-300",
-  "Física": "bg-amber-100/60 text-amber-700 border-amber-200/50 dark:bg-amber-900/20 dark:text-amber-300",
-  "Animación": "bg-orange-100/60 text-orange-700 border-orange-200/50 dark:bg-orange-900/20 dark:text-orange-300",
-  "Assets": "bg-teal-100/60 text-teal-700 border-teal-200/50 dark:bg-teal-900/20 dark:text-teal-300",
-  "Publicación": "bg-indigo-100/60 text-indigo-700 border-indigo-200/50 dark:bg-indigo-900/20 dark:text-indigo-300",
-  "Render": "bg-pink-100/60 text-pink-700 border-pink-200/50 dark:bg-pink-900/20 dark:text-pink-300",
-  "General": "bg-neutral-100/60 text-neutral-600 border-neutral-200/50 dark:bg-neutral-800/20 dark:text-neutral-400",
+  "Programación": "bg-blue-50/80 text-blue-600 border-blue-200/60 dark:bg-blue-950/30 dark:text-blue-300 dark:border-blue-800/40",
+  "IA": "bg-purple-50/80 text-purple-600 border-purple-200/60 dark:bg-purple-950/30 dark:text-purple-300 dark:border-purple-800/40",
+  "UI": "bg-cyan-50/80 text-cyan-600 border-cyan-200/60 dark:bg-cyan-950/30 dark:text-cyan-300 dark:border-cyan-800/40",
+  "Pixel Art": "bg-emerald-50/80 text-emerald-600 border-emerald-200/60 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-800/40",
+  "Música": "bg-rose-50/80 text-rose-600 border-rose-200/60 dark:bg-rose-950/30 dark:text-rose-300 dark:border-rose-800/40",
+  "Física": "bg-amber-50/80 text-amber-600 border-amber-200/60 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-800/40",
+  "Animación": "bg-orange-50/80 text-orange-600 border-orange-200/60 dark:bg-orange-950/30 dark:text-orange-300 dark:border-orange-800/40",
+  "Assets": "bg-teal-50/80 text-teal-600 border-teal-200/60 dark:bg-teal-950/30 dark:text-teal-300 dark:border-teal-800/40",
+  "Publicación": "bg-indigo-50/80 text-indigo-600 border-indigo-200/60 dark:bg-indigo-950/30 dark:text-indigo-300 dark:border-indigo-800/40",
+  "Render": "bg-pink-50/80 text-pink-600 border-pink-200/60 dark:bg-pink-950/30 dark:text-pink-300 dark:border-pink-800/40",
+  "General": "bg-neutral-50/80 text-neutral-500 border-neutral-200/60 dark:bg-neutral-900/30 dark:text-neutral-400 dark:border-neutral-800/40",
 };
 
-const DEFAULT_TAG_STYLE = "bg-neutral-100/60 text-neutral-600 border-neutral-200/50 dark:bg-neutral-800/20 dark:text-neutral-400";
+const DEFAULT_TAG_STYLE = "bg-neutral-50/80 text-neutral-500 border-neutral-200/60 dark:bg-neutral-900/30 dark:text-neutral-400 dark:border-neutral-800/40";
 
-/* ─── User avatar mini ─── */
-function AvatarMini({ username }: { username: string }) {
+/* ─── User avatar ─── */
+function AvatarMini({ username, size = "md" }: { username: string; size?: "sm" | "md" | "lg" }) {
+  const sizeMap = { sm: "w-6 h-6 text-[9px]", md: "w-8 h-8 text-xs", lg: "w-10 h-10 text-sm" };
+  const letter = username[0]?.toUpperCase() ?? "?";
+  // Generate a deterministic hue from username
+  const hue = username.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) % 360;
   return (
-    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary/30 to-accent/30 grid place-items-center text-[10px] font-display font-semibold text-primary shrink-0">
-      {username[0]?.toUpperCase() ?? "?"}
+    <div
+      className={`${sizeMap[size]} rounded-full grid place-items-center font-display font-semibold shrink-0`}
+      style={{
+        background: `linear-gradient(135deg, hsl(${hue}, 55%, 75%), hsl(${(hue + 40) % 360}, 50%, 65%))`,
+        color: `hsl(${hue}, 30%, 20%)`,
+      }}
+    >
+      {letter}
     </div>
   );
 }
@@ -82,16 +93,16 @@ function AvatarMini({ username }: { username: string }) {
 function VoteBtn({ dir, active, count, onClick }: { dir: "up" | "down"; active: boolean; count: number; onClick: () => void }) {
   const Icon = dir === "up" ? ThumbsUp : ThumbsDown;
   const activeColors = dir === "up"
-    ? "text-primary bg-primary/10 border-primary/20"
-    : "text-destructive bg-destructive/10 border-destructive/20";
+    ? "text-primary bg-primary/15 border-primary/25 shadow-sm shadow-primary/10"
+    : "text-rose-500 bg-rose-50 border-rose-200 shadow-sm shadow-rose-10 dark:text-rose-400 dark:bg-rose-950/30 dark:border-rose-800/40";
   return (
     <button onClick={e => { e.stopPropagation(); onClick(); }}
-      className={`flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg border transition-all duration-200 active:scale-90 ${
+      className={`flex items-center gap-1.5 text-[11px] px-2.5 py-1.5 rounded-lg border transition-all duration-200 active:scale-90 hover:shadow-sm ${
         active
           ? activeColors
-          : "text-muted-foreground/50 border-transparent hover:border-border/50 hover:text-foreground/70"
+          : "text-muted-foreground/40 border-transparent hover:border-border/60 hover:text-foreground/60 hover:bg-muted/20"
       }`}>
-      <Icon size={11} className={active ? "fill-current" : ""} />
+      <Icon size={12} className={active ? "fill-current" : ""} />
       {count > 0 && <span className="tabular-nums font-medium">{count}</span>}
     </button>
   );
@@ -100,16 +111,41 @@ function VoteBtn({ dir, active, count, onClick }: { dir: "up" | "down"; active: 
 /* ─── Tag pill ─── */
 function TagPill({ tag, small }: { tag: string; small?: boolean }) {
   return (
-    <span className={`inline-flex items-center gap-1 rounded-md font-medium border ${
+    <span className={`inline-flex items-center gap-1 rounded-full font-medium border ${
       TAG_STYLES[tag] ?? DEFAULT_TAG_STYLE
-    } ${small ? "text-[9px] px-1.5 py-0.5" : "text-[10px] px-2 py-0.5"}`}>
-      <Tag size={small ? 8 : 9} className="opacity-60" />
+    } ${small ? "text-[9px] px-2 py-0.5" : "text-[10px] px-2.5 py-0.5"}`}>
       {tag}
     </span>
   );
 }
 
-/* ─── Main Forums Component ─── */
+/* ─── Skeleton loading ─── */
+function SkeletonCard() {
+  return (
+    <div className="animate-pulse p-4 rounded-xl border border-border/30 bg-white/40 space-y-3">
+      <div className="h-4 bg-muted/40 rounded w-3/4" />
+      <div className="h-3 bg-muted/30 rounded w-1/2" />
+      <div className="h-3 bg-muted/30 rounded w-1/4" />
+    </div>
+  );
+}
+
+/* ─── Empty State ─── */
+function EmptyState({ icon, title, subtitle, action }: { icon: React.ReactNode; title: string; subtitle?: string; action?: React.ReactNode }) {
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
+      className="flex flex-col items-center justify-center py-16 px-6 text-center">
+      <div className="w-14 h-14 rounded-2xl bg-muted/30 border border-border/30 grid place-items-center text-muted-foreground/30 mb-4">
+        {icon}
+      </div>
+      <h3 className="text-sm font-display font-semibold text-foreground/70 mb-1">{title}</h3>
+      {subtitle && <p className="text-xs text-muted-foreground/50 max-w-xs">{subtitle}</p>}
+      {action && <div className="mt-4">{action}</div>}
+    </motion.div>
+  );
+}
+
+/* ─── Main Component ─── */
 type View = { type: "categories" } | { type: "threads"; categoryId: string; categoryName: string } | { type: "thread"; threadId: string };
 
 export function ForumSection({ isAdmin: isAdminProp, isMod: isModProp }: { isAdmin?: boolean; isMod?: boolean }) {
@@ -139,12 +175,24 @@ export function ForumSection({ isAdmin: isAdminProp, isMod: isModProp }: { isAdm
     });
   }, []);
 
+  const handleCategorySelect = useCallback((id: string, name: string) => {
+    setView({ type: "threads", categoryId: id, categoryName: name });
+  }, []);
+
+  const handleThreadSelect = useCallback((threadId: string) => {
+    setView({ type: "thread", threadId });
+  }, []);
+
+  const handleBackCategories = useCallback(() => {
+    setView({ type: "categories" });
+  }, []);
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <AnimatePresence mode="wait">
         {view.type === "categories" && (
           <motion.div key="categories" {...fadeSlide}>
-            <CategoryListView onSelect={(id, name) => setView({ type: "threads", categoryId: id, categoryName: name })} />
+            <CategoryListView onSelect={handleCategorySelect} />
           </motion.div>
         )}
         {view.type === "threads" && (
@@ -155,8 +203,8 @@ export function ForumSection({ isAdmin: isAdminProp, isMod: isModProp }: { isAdm
               myId={myId}
               myUsername={myUsername}
               adminOrMod={adminOrMod}
-              onBack={() => setView({ type: "categories" })}
-              onSelect={(threadId) => setView({ type: "thread", threadId })}
+              onBack={handleBackCategories}
+              onSelect={handleThreadSelect}
             />
           </motion.div>
         )}
@@ -167,7 +215,7 @@ export function ForumSection({ isAdmin: isAdminProp, isMod: isModProp }: { isAdm
               myId={myId}
               myUsername={myUsername}
               adminOrMod={adminOrMod}
-              onBack={() => setView({ type: "categories" })}
+              onBack={handleBackCategories}
               onCategoryBack={(catId, catName) => setView({ type: "threads", categoryId: catId, categoryName: catName })}
             />
           </motion.div>
@@ -181,26 +229,50 @@ export function ForumSection({ isAdmin: isAdminProp, isMod: isModProp }: { isAdm
 function CategoryListView({ onSelect }: { onSelect: (id: string, name: string) => void }) {
   const cats = initForumCategories();
   return (
-    <motion.div initial="initial" animate="animate" variants={stagger.container} className="space-y-2">
-      <motion.div variants={stagger.item} className="text-[10px] font-display tracking-[0.2em] text-muted-foreground/60 flex items-center gap-2 px-1">
-        <Hash size={12} /> CATEGORÍAS
+    <motion.div initial="initial" animate="animate" variants={stagger.container} className="space-y-3">
+      {/* Header */}
+      <motion.div variants={stagger.item} className="flex items-center gap-3 px-1">
+        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary/10 to-accent/10 border border-primary/10 grid place-items-center">
+          <Hash size={15} className="text-primary/60" />
+        </div>
+        <div>
+          <h2 className="text-sm font-display font-semibold">Foros de la comunidad</h2>
+          <p className="text-[10px] text-muted-foreground/50">Explora las categorías y únete a la conversación</p>
+        </div>
       </motion.div>
-      <div className="grid gap-1.5 sm:grid-cols-2">
+
+      {/* Category grid */}
+      <div className="grid gap-2 sm:grid-cols-2">
         {cats.map(cat => (
-          <motion.button key={cat.id} variants={stagger.item}
+          <motion.button key={cat.id} variants={stagger.item} layout
             onClick={() => onSelect(cat.id, cat.name)}
-            className="group w-full text-left p-3.5 rounded-xl border border-border/40 bg-white/50 hover:bg-white/90 hover:border-primary/25 hover:shadow-sm hover:shadow-primary/5 transition-all duration-300 active:scale-[0.98]">
-            <div className="flex items-center gap-3">
-              <span className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary/[0.08] to-accent/[0.08] grid place-items-center shrink-0 text-primary group-hover:scale-110 transition-transform duration-300">
-                {CAT_ICONS[cat.icon] ?? <MessageSquare size={17} />}
+            className="group w-full text-left p-4 rounded-2xl border border-border/40 bg-white/60 hover:bg-white/90 hover:border-primary/20 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 active:scale-[0.98]"
+          >
+            <div className="flex items-start gap-3.5">
+              {/* Icon bubble */}
+              <span className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary/8 to-accent/8 border border-primary/10 grid place-items-center shrink-0 text-primary group-hover:scale-110 group-hover:from-primary/15 group-hover:to-accent/15 transition-all duration-300">
+                {CAT_ICONS[cat.icon] ?? <MessageSquare size={20} />}
               </span>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-display font-semibold text-foreground group-hover:text-primary transition-colors">{cat.name}</div>
-                <div className="text-[10px] text-muted-foreground/60 mt-0.5 line-clamp-1">{cat.description}</div>
+
+              <div className="flex-1 min-w-0 pt-0.5">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-sm font-display font-semibold text-foreground/90 group-hover:text-primary transition-colors">
+                    {cat.name}
+                  </h3>
+                  {/* Thread count badge */}
+                  <div className="shrink-0 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-muted/40 text-[10px] text-muted-foreground/60 border border-border/30">
+                    <MessageSquareText size={10} />
+                    <span className="tabular-nums font-medium">{cat.threadCount}</span>
+                  </div>
+                </div>
+                <p className="text-[11px] text-muted-foreground/60 mt-1 line-clamp-2 leading-relaxed">
+                  {cat.description}
+                </p>
               </div>
-              <div className="text-right shrink-0">
-                <div className="text-xs font-display tabular-nums text-primary">{cat.threadCount}</div>
-                <div className="text-[9px] text-muted-foreground/40 uppercase tracking-wider">hilos</div>
+
+              {/* Arrow indicator */}
+              <div className="shrink-0 pt-1 text-muted-foreground/20 group-hover:text-primary/40 transition-colors duration-300">
+                <ArrowLeft size={14} className="rotate-180" />
               </div>
             </div>
           </motion.button>
@@ -269,80 +341,86 @@ function ThreadListView({
   };
 
   return (
-    <div className="space-y-2">
-      {/* Header */}
-      <div className="flex items-center gap-2">
-        <button onClick={onBack} className="w-8 h-8 rounded-lg border border-border grid place-items-center active:scale-90 transition shrink-0 hover:bg-muted/30">
-          <ArrowLeft size={14} />
-        </button>
-        <div className="flex-1 text-sm font-display font-semibold truncate flex items-center gap-2">
-          {CAT_ICONS[categoryId === "general" ? "globe" : categoryId === "help" ? "life-buoy" : categoryId === "showcase" ? "trophy" : categoryId === "feedback" ? "message-circle-more" : "coffee"] ?? <MessageSquare size={14} className="text-primary" />}
-          {categoryName}
+    <div className="space-y-3">
+      {/* ── Header bar ── */}
+      <div className="flex items-center gap-2.5">
+        <motion.button whileTap={{ scale: 0.9 }} onClick={onBack}
+          className="w-9 h-9 rounded-xl border border-border/40 bg-white/60 grid place-items-center shrink-0 hover:bg-muted/30 hover:border-border/60 transition-all shadow-sm"
+        >
+          <ArrowLeft size={15} />
+        </motion.button>
+
+        <div className="flex-1 min-w-0 flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary/10 to-accent/10 border border-primary/10 grid place-items-center shrink-0">
+            {CAT_ICONS[
+              categoryId === "general" ? "globe" :
+              categoryId === "help" ? "life-buoy" :
+              categoryId === "showcase" ? "trophy" :
+              categoryId === "feedback" ? "message-circle-more" : "coffee"
+            ] ?? <MessageSquare size={16} className="text-primary" />}
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-sm font-display font-semibold truncate">{categoryName}</h2>
+            <p className="text-[10px] text-muted-foreground/50">{filtered.length} hilos</p>
+          </div>
         </div>
+
         {myId && (
-          <button onClick={() => setShowNew(s => !s)}
-            className="flex items-center gap-1.5 h-8 px-3.5 rounded-lg bg-primary text-primary-foreground text-[10px] font-display tracking-widest active:scale-95 transition shadow-sm shadow-primary/20 hover:shadow-md hover:shadow-primary/30">
-            <Plus size={13} /> NUEVO HILO
-          </button>
+          <motion.button whileTap={{ scale: 0.95 }} onClick={() => setShowNew(s => !s)}
+            className="flex items-center gap-2 h-9 px-4 rounded-xl bg-primary text-primary-foreground text-[11px] font-display tracking-wider active:scale-95 transition shadow-md shadow-primary/25 hover:shadow-lg hover:shadow-primary/30"
+          >
+            <Plus size={14} /> NUEVO HILO
+          </motion.button>
         )}
       </div>
 
-      {/* Search bar */}
-      <div className="flex items-center gap-2 bg-white/60 rounded-xl px-3 py-1.5 border border-border/40 focus-within:border-primary/30 focus-within:shadow-sm focus-within:shadow-primary/5 transition-all">
-        <Search size={14} className="text-muted-foreground/60 shrink-0" />
+      {/* ── Search bar ── */}
+      <div className="flex items-center gap-2.5 bg-white/70 rounded-2xl px-4 py-2.5 border border-border/30 focus-within:border-primary/25 focus-within:shadow-md focus-within:shadow-primary/5 transition-all duration-200">
+        <Search size={14} className="text-muted-foreground/40 shrink-0" />
         <input value={searchQ} onChange={e => setSearchQ(e.target.value)}
-          placeholder="Buscar hilos…"
-          className="flex-1 bg-transparent text-xs outline-none py-1 placeholder:text-muted-foreground/40" />
+          placeholder="Buscar hilos por título o contenido…"
+          className="flex-1 bg-transparent text-sm outline-none py-0.5 placeholder:text-muted-foreground/40" />
         {searchQ && (
-          <button onClick={() => setSearchQ("")} className="text-muted-foreground/40 hover:text-muted-foreground transition-colors">
-            <X size={12} />
+          <button onClick={() => setSearchQ("")} className="text-muted-foreground/30 hover:text-muted-foreground transition-colors p-1">
+            <X size={13} />
           </button>
         )}
       </div>
 
-      {/* New thread form */}
+      {/* ── New thread form ── */}
       <AnimatePresence>
         {showNew && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden">
             <motion.div initial={{ y: -8 }} animate={{ y: 0 }} exit={{ y: -8 }}
-              className="p-4 rounded-xl border border-primary/20 bg-gradient-to-b from-primary/[0.02] to-transparent shadow-sm space-y-3">
+              className="p-5 rounded-2xl border border-primary/20 bg-gradient-to-b from-primary/[0.03] to-transparent shadow-sm space-y-3.5"
+            >
+              <div className="flex items-center gap-2.5 mb-1">
+                <Sparkles size={14} className="text-primary/60" />
+                <span className="text-[10px] font-display tracking-wider text-muted-foreground/60 uppercase">Nuevo hilo</span>
+              </div>
+
               <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Título del hilo…"
                 maxLength={120} autoFocus
-                className="w-full bg-white/80 rounded-lg px-3.5 py-2.5 text-sm outline-none border border-border/50 focus:border-primary/40 focus:shadow-sm transition-all placeholder:text-muted-foreground/40" />
+                className="w-full bg-white/80 rounded-xl px-4 py-3 text-sm outline-none border border-border/50 focus:border-primary/40 focus:shadow-md transition-all placeholder:text-muted-foreground/40" />
+
               <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="Escribe tu mensaje…"
                 rows={4} maxLength={5000}
-                className="w-full bg-white/80 rounded-lg px-3.5 py-2.5 text-sm outline-none border border-border/50 focus:border-primary/40 resize-none transition-all placeholder:text-muted-foreground/40" />
+                className="w-full bg-white/80 rounded-xl px-4 py-3 text-sm outline-none border border-border/50 focus:border-primary/40 focus:shadow-md resize-none transition-all placeholder:text-muted-foreground/40" />
 
               {/* Media previews */}
               {mediaPreviews.length > 0 && (
                 <div className={`grid gap-2 ${mediaPreviews.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
                   {mediaPreviews.map((url, i) => (
-                    <div key={i} className="relative rounded-xl overflow-hidden bg-muted/30 border border-border/50">
+                    <div key={i} className="relative rounded-xl overflow-hidden bg-muted/20 border border-border/40 group">
                       {mediaFiles[i]?.type.startsWith("video") ? (
-                        <video src={url} className="w-full rounded-lg" controls muted />
+                        <video src={url} className="w-full rounded-xl" controls muted />
                       ) : (
-                        <img src={url} alt="" className="w-full rounded-lg" loading="lazy" />
+                        <img src={url} alt="" className="w-full rounded-xl" loading="lazy" />
                       )}
-                      <button onClick={() => {
-                        setMediaFiles(f => f.filter((_, idx) => idx !== i));
-                      }} className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/50 text-white grid place-items-center active:scale-90 transition">
-                        <X size={11} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Documents preview */}
-              {docFiles.length > 0 && (
-                <div className="space-y-1">
-                  {docFiles.map((d, i) => (
-                    <div key={i} className="flex items-center gap-2 bg-white/60 rounded-lg px-3 py-2 text-xs border border-border/40">
-                      <FileText size={13} className="text-primary shrink-0" />
-                      <span className="flex-1 truncate">{d.name}</span>
-                      <span className="text-muted-foreground tabular-nums">{(d.size / 1024).toFixed(0)}KB</span>
-                      <button onClick={() => setDocFiles(f => f.filter((_, idx) => idx !== i))} className="text-muted-foreground/50 hover:text-destructive">
+                      <button onClick={() => setMediaFiles(f => f.filter((_, idx) => idx !== i))}
+                        className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/50 text-white grid place-items-center opacity-0 group-hover:opacity-100 hover:bg-black/70 transition-all active:scale-90"
+                      >
                         <X size={12} />
                       </button>
                     </div>
@@ -350,16 +428,34 @@ function ThreadListView({
                 </div>
               )}
 
-              {/* Upload bar */}
-              <div className="flex items-center gap-1.5">
+              {/* Document previews */}
+              {docFiles.length > 0 && (
+                <div className="space-y-1.5">
+                  {docFiles.map((d, i) => (
+                    <div key={i} className="flex items-center gap-2.5 bg-white/60 rounded-xl px-3.5 py-2.5 text-xs border border-border/30">
+                      <FileText size={14} className="text-primary/60 shrink-0" />
+                      <span className="flex-1 truncate font-medium text-foreground/80">{d.name}</span>
+                      <span className="text-muted-foreground/50 tabular-nums text-[10px]">{(d.size / 1024).toFixed(0)} KB</span>
+                      <button onClick={() => setDocFiles(f => f.filter((_, idx) => idx !== i))}
+                        className="text-muted-foreground/30 hover:text-destructive transition-colors p-0.5">
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Upload buttons */}
+              <div className="flex items-center gap-2">
                 <input ref={mediaInputRef} type="file" hidden accept="image/*,image/gif,video/*" multiple onChange={e => {
                   const list = Array.from(e.target.files ?? []);
                   if (list.length) { setMediaFiles(prev => [...prev, ...list]); }
                   e.target.value = "";
                 }} />
                 <button onClick={() => mediaInputRef.current?.click()}
-                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border/60 text-[10px] text-muted-foreground/70 hover:text-primary hover:border-primary/30 transition active:scale-95">
-                  <Image size={12} /> Imagen
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border/50 text-[10px] text-muted-foreground/60 hover:text-primary hover:border-primary/30 hover:bg-primary/[0.03] transition-all active:scale-95"
+                >
+                  <Image size={12} /> Imagen / Video
                 </button>
                 <input ref={docInputRef} type="file" hidden multiple accept=".pdf,.doc,.docx,.txt,.zip,.json" onChange={e => {
                   const list = Array.from(e.target.files ?? []);
@@ -367,69 +463,118 @@ function ThreadListView({
                   e.target.value = "";
                 }} />
                 <button onClick={() => docInputRef.current?.click()}
-                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border/60 text-[10px] text-muted-foreground/70 hover:text-primary hover:border-primary/30 transition active:scale-95">
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border/50 text-[10px] text-muted-foreground/60 hover:text-primary hover:border-primary/30 hover:bg-primary/[0.03] transition-all active:scale-95"
+                >
                   <FileText size={12} /> Documento
                 </button>
               </div>
 
-              <div className="flex justify-end gap-2 pt-1">
-                <button onClick={() => { setShowNew(false); setMediaFiles([]); setDocFiles([]); }} className="px-3.5 py-1.5 rounded-lg border border-border text-[11px] hover:bg-muted/20 transition-colors">Cancelar</button>
-                <button disabled={busy || !title.trim() || !content.trim()} onClick={create}
-                  className="px-4 py-1.5 rounded-lg bg-primary text-primary-foreground text-[11px] font-display tracking-widest disabled:opacity-40 active:scale-95 transition flex items-center gap-1.5 shadow-sm shadow-primary/20">
-                  {busy ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />} PUBLICAR
-                </button>
+              {/* Actions */}
+              <div className="flex justify-end gap-2 pt-2 border-t border-border/20">
+                <motion.button whileTap={{ scale: 0.95 }}
+                  onClick={() => { setShowNew(false); setMediaFiles([]); setDocFiles([]); }}
+                  className="px-4 py-2 rounded-xl border border-border/50 text-[11px] hover:bg-muted/20 transition-colors"
+                >
+                  Cancelar
+                </motion.button>
+                <motion.button whileTap={{ scale: 0.95 }}
+                  disabled={busy || !title.trim() || !content.trim()} onClick={create}
+                  className="px-5 py-2 rounded-xl bg-primary text-primary-foreground text-[11px] font-display tracking-wider disabled:opacity-40 transition-all shadow-sm shadow-primary/20 flex items-center gap-1.5"
+                >
+                  {busy ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} PUBLICAR HILO
+                </motion.button>
               </div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Thread list */}
-      <motion.div initial="initial" animate="animate" variants={stagger.container} className="space-y-1.5">
+      {/* ── Thread list ── */}
+      <motion.div initial="initial" animate="animate" variants={stagger.container} className="space-y-2">
         {filtered.length === 0 ? (
-          <motion.div variants={stagger.item} className="text-center text-xs text-muted-foreground/60 py-12">
-            <MessageSquare size={24} className="mx-auto mb-2 opacity-20" />
-            {searchQ ? "No se encontraron hilos." : (myId ? "No hay hilos aún. ¡Crea el primero!" : "Inicia sesión para ver y crear hilos.")}
-          </motion.div>
-        ) : filtered.map(t => (
+          <EmptyState
+            icon={<MessageSquare size={24} />}
+            title={searchQ ? "Sin resultados" : "Aún no hay hilos"}
+            subtitle={searchQ ? "Prueba con otros términos de búsqueda." : "Inicia sesión y sé el primero en crear un hilo."}
+            action={myId && !searchQ ? (
+              <motion.button whileTap={{ scale: 0.95 }} onClick={() => setShowNew(true)}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-[11px] font-display tracking-wider shadow-md shadow-primary/25"
+              >
+                <Plus size={13} /> CREAR PRIMER HILO
+              </motion.button>
+            ) : undefined}
+          />
+        ) : filtered.map((t, idx) => (
           <motion.button key={t.id} variants={stagger.item} layout
             onClick={() => onSelect(t.id)}
-            className="group w-full text-left p-3.5 rounded-xl border border-border/30 bg-white/50 hover:bg-white/90 hover:border-primary/15 hover:shadow-sm hover:shadow-primary/5 transition-all duration-200 active:scale-[0.99]">
-            <div className="flex items-start gap-3">
-              {/* Vote column */}
+            className="group w-full text-left p-4 rounded-2xl border border-border/30 bg-white/60 hover:bg-white/95 hover:border-primary/15 hover:shadow-lg hover:shadow-primary/5 transition-all duration-250 active:scale-[0.99]"
+          >
+            <div className="flex items-start gap-3.5">
+              {/* ── Vote column ── */}
               <div className="flex flex-col items-center gap-0.5 shrink-0 pt-0.5">
                 <VoteBtn dir="up" active={t.myVote === "up"} count={t.upvotes} onClick={() => handleThreadVote(t.id, "up")} />
                 <VoteBtn dir="down" active={t.myVote === "down"} count={t.downvotes} onClick={() => handleThreadVote(t.id, "down")} />
               </div>
 
-              {/* Content */}
+              {/* ── Content ── */}
               <div className="flex-1 min-w-0">
+                {/* Title row */}
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  {t.pinned && <Pin size={11} className="text-primary shrink-0" />}
-                  {t.closed && <Lock size={11} className="text-destructive/50 shrink-0" />}
-                  <span className="text-sm font-display font-semibold truncate group-hover:text-primary transition-colors">{t.title}</span>
+                  {t.pinned && (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-primary/10 text-primary text-[8px] font-semibold tracking-wider border border-primary/20">
+                      <Pin size={9} /> FIJADO
+                    </span>
+                  )}
+                  {t.closed && (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-rose-50 text-rose-500 text-[8px] font-semibold tracking-wider border border-rose-200/60 dark:bg-rose-950/30 dark:text-rose-400 dark:border-rose-800/40">
+                      <Lock size={9} /> CERRADO
+                    </span>
+                  )}
+                  <span className="text-sm font-display font-semibold text-foreground/90 group-hover:text-primary transition-colors leading-snug">
+                    {t.title}
+                  </span>
                 </div>
 
-                {/* Tags row */}
+                {/* Content preview */}
+                <p className="text-xs text-muted-foreground/50 mt-1.5 line-clamp-1 leading-relaxed">
+                  {t.content.length > 80 ? t.content.slice(0, 80) + "…" : t.content}
+                </p>
+
+                {/* Tags */}
                 {t.tags && t.tags.length > 0 && (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
-                    className="flex flex-wrap gap-1 mt-1.5">
+                  <div className="flex flex-wrap gap-1 mt-2">
                     {t.tags.map(tag => <TagPill key={tag} tag={tag} small />)}
-                  </motion.div>
+                  </div>
                 )}
 
-                <div className="text-[10px] text-muted-foreground/60 mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5">
-                  <span className="font-medium text-foreground/70">@{t.authorUsername}</span>
-                  <span className="flex items-center gap-1"><Clock size={9} />{timeAgo(t.createdAt)}</span>
-                  <span className="flex items-center gap-1"><MessageSquare size={9} />{t.postCount}</span>
-                  <span className="flex items-center gap-1"><Eye size={9} />{t.views}</span>
+                {/* Metadata row */}
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2.5 text-[10px] text-muted-foreground/50">
+                  <span className="flex items-center gap-1.5 font-medium text-foreground/60">
+                    <User size={10} /> @{t.authorUsername}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Calendar size={9} /> {timeAgo(t.createdAt)}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <MessageSquareText size={9} /> {t.postCount}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Eye size={9} /> {t.views}
+                  </span>
+                  {t.lastPostAt !== t.createdAt && (
+                    <span className="text-muted-foreground/30">
+                      · Último: {timeAgo(t.lastPostAt)} por @{t.lastPostAuthor}
+                    </span>
+                  )}
                 </div>
               </div>
 
-              <div className="text-[9px] text-muted-foreground/40 text-right shrink-0 hidden sm:block pt-0.5">
-                <div className="uppercase tracking-wider">último</div>
-                <div className="tabular-nums mt-0.5">{timeAgo(t.lastPostAt)}</div>
-              </div>
+              {/* ── Right meta (desktop) ── */}
+              {t.mediaUrls && t.mediaUrls.length > 0 && (
+                <div className="shrink-0 hidden sm:flex items-center text-muted-foreground/30 mt-0.5">
+                  {t.mediaType === "video" ? <Film size={12} /> : <Image size={12} />}
+                </div>
+              )}
             </div>
           </motion.button>
         ))}
@@ -523,59 +668,83 @@ function ThreadDetailView({
   const canPin = adminOrMod;
 
   if (!thread) return (
-    <div className="text-center text-xs text-muted-foreground/60 py-12">
-      <MessageSquare size={28} className="mx-auto mb-2 opacity-20" />
-      Hilo no encontrado.
-      <button onClick={onBack} className="block mx-auto mt-2 text-primary underline hover:no-underline">Volver</button>
-    </div>
+    <EmptyState
+      icon={<MessageSquare size={28} />}
+      title="Hilo no encontrado"
+      subtitle="Este hilo puede haber sido eliminado o no existe."
+      action={
+        <button onClick={onBack} className="text-xs text-primary underline hover:no-underline transition-colors">
+          Volver a categorías
+        </button>
+      }
+    />
   );
 
   return (
-    <div className="space-y-2">
-      {/* Header */}
-      <div className="flex items-center gap-2">
-        <button onClick={onBack} className="w-8 h-8 rounded-lg border border-border grid place-items-center active:scale-90 transition shrink-0 hover:bg-muted/30">
-          <ArrowLeft size={14} />
-        </button>
+    <div className="space-y-3">
+      {/* ── Navigation bar ── */}
+      <div className="flex items-center gap-2.5">
+        <motion.button whileTap={{ scale: 0.9 }} onClick={onBack}
+          className="w-9 h-9 rounded-xl border border-border/40 bg-white/60 grid place-items-center shrink-0 hover:bg-muted/30 transition-all shadow-sm"
+        >
+          <ArrowLeft size={15} />
+        </motion.button>
+
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
-            {thread.pinned && <Pin size={12} className="text-primary shrink-0" />}
-            {thread.closed && <Lock size={12} className="text-destructive/50 shrink-0" />}
+            {thread.pinned && <Pin size={11} className="text-primary shrink-0" />}
+            {thread.closed && <Lock size={11} className="text-rose-500 shrink-0" />}
             <h3 className="text-sm font-display font-semibold truncate">{thread.title}</h3>
           </div>
-          <button onClick={() => onCategoryBack(thread.categoryId, cat?.name ?? "Foros")}
-            className="text-[10px] text-muted-foreground/50 hover:text-primary transition-colors flex items-center gap-1 mt-0.5">
-            <ArrowLeft size={10} /> {catIcon} {cat?.name ?? "Foros"}
-          </button>
+          <motion.button whileHover={{ x: 3 }} onClick={() => onCategoryBack(thread.categoryId, cat?.name ?? "Foros")}
+            className="text-[10px] text-muted-foreground/50 hover:text-primary transition-colors flex items-center gap-1 mt-0.5"
+          >
+            <ArrowLeft size={10} /> {catIcon} Volver a {cat?.name ?? "Foros"}
+          </motion.button>
         </div>
-        {canPin && (
-          <button onClick={() => { togglePinThread(threadId); load(); }}
-            className={`h-8 px-2.5 rounded-lg border text-[10px] flex items-center gap-1 active:scale-95 transition ${
-              thread.pinned ? "border-primary/30 bg-primary/5 text-primary" : "border-border text-muted-foreground/60 hover:text-primary"
-            }`}>
-            <Pin size={11} /> {thread.pinned ? "FIJADO" : "FIJAR"}
-          </button>
-        )}
-        {isOwner && !isClosed && (
-          <button onClick={() => { toggleCloseThread(threadId); load(); }}
-            className="h-8 px-2.5 rounded-lg border border-border text-[10px] flex items-center gap-1 active:scale-95 transition hover:text-destructive">
-            <Lock size={11} /> CERRAR
-          </button>
-        )}
+
+        {/* Admin actions */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {canPin && (
+            <motion.button whileTap={{ scale: 0.9 }} onClick={() => { togglePinThread(threadId); load(); }}
+              className={`h-8 px-3 rounded-xl border text-[10px] font-medium flex items-center gap-1.5 transition-all ${
+                thread.pinned
+                  ? "border-primary/25 bg-primary/8 text-primary shadow-sm"
+                  : "border-border/50 text-muted-foreground/60 hover:text-primary hover:border-primary/25"
+              }`}>
+              <Pin size={11} /> {thread.pinned ? "FIJADO" : "FIJAR"}
+            </motion.button>
+          )}
+          {isOwner && !isClosed && (
+            <motion.button whileTap={{ scale: 0.9 }} onClick={() => { toggleCloseThread(threadId); load(); }}
+              className="h-8 px-3 rounded-xl border border-border/50 text-[10px] font-medium flex items-center gap-1.5 hover:text-rose-500 hover:border-rose-200 transition-all">
+              <Lock size={11} /> CERRAR
+            </motion.button>
+          )}
+        </div>
       </div>
 
-      {/* Thread body */}
-      <motion.div initial="initial" animate="animate" variants={stagger.container} className="space-y-2 max-h-[65vh] overflow-y-auto pr-1 no-scrollbar">
-        {/* First post — thread content */}
-        <motion.div variants={stagger.item} className="p-4 rounded-xl border border-border/40 bg-white/60 shadow-sm">
-          <div className="flex items-center gap-2.5 mb-3">
-            <AvatarMini username={thread.authorUsername} />
-            <div className="flex-1 min-w-0">
-              <div className="text-xs font-display font-semibold">@{thread.authorUsername}</div>
-              <div className="text-[9px] text-muted-foreground/50">{timeAgo(thread.createdAt)}</div>
+      {/* ── Thread body + replies ── */}
+      <motion.div initial="initial" animate="animate" variants={stagger.container} className="space-y-2.5 max-h-[65vh] overflow-y-auto pr-1.5 no-scrollbar">
+        {/* ── Original post (featured) ── */}
+        <motion.div variants={stagger.item} className="p-5 rounded-2xl border border-border/30 bg-gradient-to-b from-white/80 to-white/50 shadow-sm">
+          {/* Author header */}
+          <div className="flex items-start gap-3 mb-4">
+            <AvatarMini username={thread.authorUsername} size="lg" />
+            <div className="flex-1 min-w-0 pt-0.5">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-display font-semibold">@{thread.authorUsername}</span>
+                <span className="px-2 py-0.5 rounded-full bg-primary/8 text-primary/70 text-[8px] font-semibold tracking-wider border border-primary/15">
+                  AUTOR
+                </span>
+              </div>
+              <div className="flex items-center gap-2 mt-0.5 text-[10px] text-muted-foreground/50">
+                <Calendar size={9} />
+                <span>{new Date(thread.createdAt).toLocaleDateString("es-ES", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+              </div>
             </div>
             {/* Thread vote buttons */}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5 shrink-0">
               <VoteBtn dir="up" active={thread.myVote === "up"} count={thread.upvotes} onClick={() => handleThreadVote("up")} />
               <VoteBtn dir="down" active={thread.myVote === "down"} count={thread.downvotes} onClick={() => handleThreadVote("down")} />
             </div>
@@ -583,102 +752,159 @@ function ThreadDetailView({
 
           {/* Tags */}
           {thread.tags && thread.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mb-3">
+            <div className="flex flex-wrap gap-1.5 mb-4">
               {thread.tags.map(tag => <TagPill key={tag} tag={tag} />)}
             </div>
           )}
 
-          <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">{thread.content}</p>
+          {/* Content */}
+          <div className="text-sm leading-relaxed whitespace-pre-wrap break-words text-foreground/85">
+            {thread.content}
+          </div>
 
-          {/* Media display */}
+          {/* Media */}
           {thread.mediaUrls && thread.mediaUrls.length > 0 && (
-            <div className={`grid gap-2 mt-3 ${thread.mediaUrls.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
+            <div className={`grid gap-2.5 mt-4 ${thread.mediaUrls.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
               {thread.mediaUrls.map((url, i) => (
                 thread.mediaType === "video" ? (
-                  <video key={i} src={url} controls className="rounded-lg w-full bg-black" />
+                  <video key={i} src={url} controls muted className="rounded-xl w-full bg-black shadow-sm" />
                 ) : (
-                  <img key={i} src={url} alt="" className="rounded-lg w-full" loading="lazy" />
+                  <div key={i} className="rounded-xl overflow-hidden border border-border/20 shadow-sm">
+                    <img src={url} alt="" className="w-full" loading="lazy" />
+                  </div>
                 )
               ))}
             </div>
           )}
 
-          {/* Documents display */}
+          {/* Documents */}
           {thread.documentUrls && thread.documentUrls.length > 0 && (
-            <div className="space-y-1 mt-3">
+            <div className="space-y-1.5 mt-4">
               {thread.documentUrls.map((url, i) => (
                 <a key={i} href={url} target="_blank" rel="noreferrer" download={thread.documentNames[i]}
-                  className="flex items-center gap-2 bg-muted/30 hover:bg-muted/50 rounded-lg px-3 py-2 text-xs transition border border-border/30">
-                  <FileText size={14} className="text-primary shrink-0" />
-                  <span className="flex-1 truncate">{thread.documentNames[i] ?? `Documento ${i + 1}`}</span>
-                  <span className="text-[10px] text-muted-foreground/60">Descargar</span>
+                  className="flex items-center gap-3 bg-muted/20 hover:bg-muted/40 rounded-xl px-4 py-3 text-xs transition border border-border/20 group"
+                >
+                  <FileText size={16} className="text-primary/60 shrink-0" />
+                  <span className="flex-1 truncate font-medium text-foreground/70 group-hover:text-foreground transition-colors">
+                    {thread.documentNames[i] ?? `Documento ${i + 1}`}
+                  </span>
+                  <span className="text-[10px] text-primary/60 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                    Descargar →
+                  </span>
                 </a>
               ))}
             </div>
           )}
+
+          {/* Stats footer */}
+          <div className="flex items-center gap-3 mt-4 pt-3 border-t border-border/20 text-[10px] text-muted-foreground/40">
+            <span className="flex items-center gap-1"><Eye size={10} /> {thread.views} vistas</span>
+            <span className="flex items-center gap-1"><MessageSquareText size={10} /> {thread.postCount} respuestas</span>
+          </div>
         </motion.div>
 
-        {/* Replies */}
+        {/* ── Replies ── */}
         {posts.filter(p => p.id !== posts[0]?.id).length === 0 ? (
-          <motion.div variants={stagger.item} className="text-center text-[10px] text-muted-foreground/40 py-8 border border-dashed border-border/30 rounded-xl">
-            Sin respuestas aún. ¡Sé el primero en comentar!
+          <motion.div variants={stagger.item}>
+            <div className="text-center py-10 border border-dashed border-border/30 rounded-2xl bg-white/30">
+              <MessageSquare size={22} className="mx-auto mb-2.5 text-muted-foreground/20" />
+              <p className="text-xs text-muted-foreground/50">Sin respuestas aún</p>
+              <p className="text-[10px] text-muted-foreground/30 mt-0.5">¡Sé el primero en comentar!</p>
+            </div>
           </motion.div>
-        ) : posts.filter(p => p.id !== posts[0]?.id).map(p => (
-          <motion.div key={p.id} variants={stagger.item} layout>
+        ) : posts.filter(p => p.id !== posts[0]?.id).map((p, idx) => (
+          <motion.div key={p.id} variants={stagger.item} layout
+            className="group/post p-4 rounded-2xl border border-border/25 bg-white/50 hover:bg-white/80 hover:border-border/40 transition-all duration-200"
+          >
+            {/* Quote */}
             {p.quoteContent && (
-              <div className="mb-2.5 pl-3 border-l-2 border-primary/30 bg-primary/[0.02] rounded-r-md py-1.5 px-2.5 text-xs text-muted-foreground">
-                <span className="text-[9px] font-semibold text-primary/60 uppercase tracking-wider">@{p.quoteAuthor} escribió:</span>
-                <p className="mt-0.5 italic line-clamp-2 text-muted-foreground/70">{p.quoteContent}</p>
+              <div className="mb-3 pl-4 border-l-[3px] border-primary/30 bg-gradient-to-r from-primary/[0.03] to-transparent rounded-r-lg py-2.5 px-3 text-xs">
+                <div className="flex items-center gap-1.5 text-[9px] font-semibold text-primary/60 uppercase tracking-wider mb-1">
+                  <Quote size={10} /> @{p.quoteAuthor} escribió:
+                </div>
+                <p className="italic text-muted-foreground/70 line-clamp-2 text-[11px] leading-relaxed">{p.quoteContent}</p>
               </div>
             )}
-            <div className="flex gap-2.5">
-              <AvatarMini username={p.authorUsername} />
+
+            <div className="flex gap-3">
+              <AvatarMini username={p.authorUsername} size="md" />
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <span className="text-[11px] font-display font-semibold">@{p.authorUsername}</span>
-                  <span className="text-[8px] text-muted-foreground/40">{timeAgo(p.createdAt)}</span>
-                  {p.editedAt && <span className="text-[7px] text-muted-foreground/30 uppercase tracking-wider">· editado</span>}
+                {/* Author line */}
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-[12px] font-display font-semibold text-foreground/80">@{p.authorUsername}</span>
+                  <span className="text-[9px] text-muted-foreground/40">{timeAgo(p.createdAt)}</span>
+                  {p.editedAt && (
+                    <span className="text-[7px] text-muted-foreground/30 uppercase tracking-wider flex items-center gap-0.5">
+                      <Edit size={7} /> editado
+                    </span>
+                  )}
+                  {myId === p.authorId && (
+                    <span className="text-[7px] text-muted-foreground/30 uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-muted/20 border border-border/20">
+                      TÚ
+                    </span>
+                  )}
                 </div>
+
+                {/* Content / Edit */}
                 {editingPost === p.id ? (
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     <textarea value={editContent} onChange={e => setEditContent(e.target.value)}
-                      rows={3} className="w-full bg-white rounded-lg px-2.5 py-1.5 text-sm outline-none border border-primary/40 resize-none focus:shadow-sm transition-all" />
-                    <div className="flex gap-1.5 justify-end">
-                      <button onClick={() => setEditingPost(null)} className="text-[10px] px-2.5 py-1 rounded-lg border border-border hover:bg-muted/20 transition-colors">Cancelar</button>
-                      <button onClick={() => saveEdit(p.id)} className="text-[10px] px-2.5 py-1 rounded-lg bg-primary text-primary-foreground active:scale-95 transition flex items-center gap-1"><Check size={10} /> Guardar</button>
+                      rows={3}
+                      className="w-full bg-white rounded-xl px-3.5 py-2.5 text-sm outline-none border border-primary/40 resize-none focus:shadow-md transition-all" />
+                    <div className="flex gap-2 justify-end">
+                      <button onClick={() => setEditingPost(null)}
+                        className="text-[10px] px-3 py-1.5 rounded-lg border border-border/50 hover:bg-muted/20 transition-colors">
+                        Cancelar
+                      </button>
+                      <button onClick={() => saveEdit(p.id)}
+                        className="text-[10px] px-3 py-1.5 rounded-lg bg-primary text-primary-foreground active:scale-95 transition flex items-center gap-1 shadow-sm">
+                        <Check size={11} /> Guardar
+                      </button>
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">{p.content}</p>
+                  <div className="text-sm leading-relaxed whitespace-pre-wrap break-words text-foreground/80">
+                    {p.content}
+                  </div>
                 )}
-                <div className="flex items-center gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+
+                {/* Action bar */}
+                <div className="flex items-center gap-1.5 mt-2.5 opacity-0 group-hover/post:opacity-100 transition-all duration-200">
                   <button onClick={() => handlePostVote(p.id, "up")}
-                    className={`flex items-center gap-0.5 text-[10px] px-2 py-0.5 rounded-lg border transition-all ${
-                      p.myVote === "up" ? "text-primary bg-primary/10 border-primary/20" : "text-muted-foreground/50 border-transparent hover:text-primary hover:border-border/50"
+                    className={`flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-lg border transition-all active:scale-90 ${
+                      p.myVote === "up"
+                        ? "text-primary bg-primary/10 border-primary/20 shadow-sm"
+                        : "text-muted-foreground/40 border-transparent hover:text-primary hover:border-border/50"
                     }`}>
-                    <ThumbsUp size={10} />{p.upvotes > 0 && <span className="tabular-nums">{p.upvotes}</span>}
+                    <ThumbsUp size={10} className={p.myVote === "up" ? "fill-current" : ""} />
+                    {p.upvotes > 0 && <span className="tabular-nums font-medium">{p.upvotes}</span>}
                   </button>
                   <button onClick={() => handlePostVote(p.id, "down")}
-                    className={`flex items-center gap-0.5 text-[10px] px-2 py-0.5 rounded-lg border transition-all ${
-                      p.myVote === "down" ? "text-destructive bg-destructive/10 border-destructive/20" : "text-muted-foreground/50 border-transparent hover:text-destructive hover:border-border/50"
+                    className={`flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-lg border transition-all active:scale-90 ${
+                      p.myVote === "down"
+                        ? "text-rose-500 bg-rose-50 border-rose-200 shadow-sm dark:bg-rose-950/30 dark:text-rose-400 dark:border-rose-800/40"
+                        : "text-muted-foreground/40 border-transparent hover:text-rose-500 hover:border-border/50"
                     }`}>
-                    <ThumbsDown size={10} />{p.downvotes > 0 && <span className="tabular-nums">{p.downvotes}</span>}
+                    <ThumbsDown size={10} />
+                    {p.downvotes > 0 && <span className="tabular-nums font-medium">{p.downvotes}</span>}
                   </button>
+
                   {!isClosed && myId && (
                     <>
+                      <div className="w-px h-4 bg-border/30 mx-0.5" />
                       <button onClick={() => handleQuote(p)}
-                        className="flex items-center gap-0.5 text-[10px] px-2 py-0.5 rounded-lg border border-transparent text-muted-foreground/50 hover:text-primary hover:border-border/50 transition-all">
+                        className="flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-lg border border-transparent text-muted-foreground/40 hover:text-primary hover:border-border/50 transition-all active:scale-90">
                         <Quote size={10} /> Citar
                       </button>
                       {myId === p.authorId && (
                         <>
                           <button onClick={() => handleEdit(p.id)}
-                            className="flex items-center gap-0.5 text-[10px] px-2 py-0.5 rounded-lg border border-transparent text-muted-foreground/50 hover:text-primary hover:border-border/50 transition-all">
-                            <Edit3 size={10} />
+                            className="flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-lg border border-transparent text-muted-foreground/40 hover:text-primary hover:border-border/50 transition-all active:scale-90">
+                            <Edit3 size={10} /> Editar
                           </button>
                           <button onClick={() => handleDelete(p.id)}
-                            className="flex items-center gap-0.5 text-[10px] px-2 py-0.5 rounded-lg border border-transparent text-muted-foreground/50 hover:text-destructive hover:border-destructive/20 transition-all">
-                            <Trash2 size={10} />
+                            className="flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-lg border border-transparent text-muted-foreground/40 hover:text-rose-500 hover:border-rose-200 transition-all active:scale-90">
+                            <Trash2 size={10} /> Borrar
                           </button>
                         </>
                       )}
@@ -691,41 +917,60 @@ function ThreadDetailView({
         ))}
       </motion.div>
 
-      {/* Reply box */}
+      {/* ── Reply box ── */}
       {myId && !isClosed ? (
-        <div className="space-y-2 pt-1">
-          {quotePost && (
-            <div className="flex items-start gap-2 p-2.5 rounded-lg bg-primary/[0.03] border border-primary/20 text-xs">
-              <Quote size={12} className="text-primary shrink-0 mt-0.5" />
-              <div className="flex-1 min-w-0">
-                <span className="font-semibold text-primary/70 text-[10px] uppercase tracking-wider">@{quotePost.author}</span>
-                <p className="text-muted-foreground/70 truncate mt-0.5">{quotePost.content}</p>
-              </div>
-              <button onClick={() => setQuotePost(null)} className="text-muted-foreground/40 hover:text-destructive shrink-0 transition-colors">
-                <X size={12} />
-              </button>
+        <div className="space-y-2.5 pt-1">
+          {/* Quote indicator */}
+          <AnimatePresence>
+            {quotePost && (
+              <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+                className="flex items-start gap-2.5 p-3 rounded-xl bg-gradient-to-r from-primary/[0.04] to-transparent border border-primary/20 text-xs"
+              >
+                <Quote size={13} className="text-primary/50 shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <span className="font-semibold text-primary/60 text-[9px] uppercase tracking-wider">@{quotePost.author}</span>
+                  <p className="text-muted-foreground/70 truncate mt-0.5 text-[11px]">{quotePost.content}</p>
+                </div>
+                <motion.button whileTap={{ scale: 0.85 }} onClick={() => setQuotePost(null)}
+                  className="text-muted-foreground/30 hover:text-rose-500 shrink-0 transition-colors p-0.5"
+                >
+                  <X size={13} />
+                </motion.button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Textarea */}
+          <div className="relative">
+            <textarea ref={replyRef} value={replyContent} onChange={e => setReplyContent(e.target.value)}
+              placeholder={quotePost ? "Escribe tu respuesta a esta cita…" : "Escribe un comentario…"}
+              rows={2} maxLength={5000}
+              onKeyDown={e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); sendReply(); } }}
+              className="w-full bg-white/70 rounded-2xl px-4 py-3 text-sm outline-none border border-border/40 focus:border-primary/30 focus:shadow-lg focus:shadow-primary/5 transition-all resize-none placeholder:text-muted-foreground/40"
+            />
+            {/* Bottom actions */}
+            <div className="flex justify-between items-center px-1 py-1.5">
+              <span className="text-[8px] text-muted-foreground/30 uppercase tracking-wider flex items-center gap-1">
+                <AtSign size={8} /> Cmd/Ctrl + Enter para enviar
+              </span>
+              <motion.button whileTap={{ scale: 0.95 }}
+                disabled={busy || !replyContent.trim()} onClick={sendReply}
+                className="flex items-center gap-1.5 h-9 px-5 rounded-xl bg-primary text-primary-foreground text-[11px] font-display tracking-wider disabled:opacity-40 transition-all shadow-sm shadow-primary/25 hover:shadow-md"
+              >
+                {busy ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} ENVIAR
+              </motion.button>
             </div>
-          )}
-          <textarea ref={replyRef} value={replyContent} onChange={e => setReplyContent(e.target.value)}
-            placeholder={quotePost ? "Escribe tu respuesta…" : "Escribe un comentario…"}
-            rows={2} maxLength={5000}
-            onKeyDown={e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); sendReply(); } }}
-            className="w-full bg-white/70 rounded-xl px-3.5 py-2.5 text-sm outline-none border border-border/40 focus:border-primary/30 focus:shadow-sm transition-all resize-none placeholder:text-muted-foreground/40" />
-          <div className="flex justify-between items-center">
-            <span className="text-[8px] text-muted-foreground/30 uppercase tracking-wider">Cmd/Ctrl + Enter</span>
-            <button disabled={busy || !replyContent.trim()} onClick={sendReply}
-              className="flex items-center gap-1.5 h-8 px-4 rounded-lg bg-primary text-primary-foreground text-[10px] font-display tracking-widest disabled:opacity-40 active:scale-95 transition shadow-sm shadow-primary/20 hover:shadow-md">
-              {busy ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />} ENVIAR
-            </button>
           </div>
         </div>
       ) : !myId ? (
-        <div className="text-center text-[10px] text-muted-foreground/50 py-4 border border-dashed border-border/30 rounded-xl">
-          Inicia sesión para participar en el foro.
+        <div className="flex items-center justify-center gap-2 py-5 border border-dashed border-border/30 rounded-2xl bg-white/30">
+          <MessageSquare size={14} className="text-muted-foreground/30" />
+          <span className="text-xs text-muted-foreground/50">Inicia sesión para participar en la conversación.</span>
         </div>
       ) : isClosed && (
-        <div className="flex items-center gap-2 text-[10px] text-muted-foreground/60 py-3 px-3.5 border border-border/30 rounded-xl bg-muted/10">
-          <Lock size={11} className="shrink-0" /> Este hilo está cerrado. No se pueden añadir nuevos mensajes.
+        <div className="flex items-center gap-2.5 py-4 px-4 border border-border/30 rounded-2xl bg-muted/10 text-[11px] text-muted-foreground/60">
+          <Lock size={13} className="shrink-0 text-rose-400" />
+          Este hilo está cerrado. No se pueden añadir nuevos mensajes.
         </div>
       )}
     </div>
