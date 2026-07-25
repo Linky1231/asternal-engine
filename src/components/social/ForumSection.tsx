@@ -71,23 +71,39 @@ const TAG_STYLES: Record<string, string> = {
 
 const DEFAULT_TAG_STYLE = "bg-neutral-50/80 text-neutral-500 border-neutral-200/60 dark:bg-neutral-900/30 dark:text-neutral-400 dark:border-neutral-800/40";
 
-/* ─── User avatar ─── */
+/* ─── User avatar (100% opaque) ─── */
 function AvatarMini({ username, size = "md" }: { username: string; size?: "sm" | "md" | "lg" }) {
   const sizeMap = { sm: "w-6 h-6 text-[9px]", md: "w-8 h-8 text-xs", lg: "w-10 h-10 text-sm" };
   const letter = username[0]?.toUpperCase() ?? "?";
-  // Generate a deterministic hue from username
-  const hue = username.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) % 360;
+  // Generate two deterministic hues from username
+  const h1 = username.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) % 360;
+  const h2 = (h1 + 40) % 360;
+  // Convert HSL to RGB for guaranteed 100% opaque solid colors
+  const c1 = hslToRgb(h1, 65, 48);
+  const c2 = hslToRgb(h2, 60, 38);
   return (
     <div
       className={`${sizeMap[size]} rounded-full grid place-items-center font-display font-semibold shrink-0`}
       style={{
-        background: `linear-gradient(135deg, hsl(${hue}, 60%, 45%), hsl(${(hue + 40) % 360}, 55%, 35%))`,
-        color: `hsl(0, 0%, 100%)`,
+        background: `linear-gradient(135deg, rgb(${c1.join(",")}), rgb(${c2.join(",")}))`,
+        color: "rgb(255,255,255)",
+        backgroundSize: "cover",
       }}
     >
       {letter}
     </div>
   );
+}
+
+// Helper: HSL → RGB (returns [r,g,b] 0-255, fully opaque)
+function hslToRgb(h: number, s: number, l: number): [number, number, number] {
+  s /= 100; l /= 100;
+  const a = s * Math.min(l, 1 - l);
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12;
+    return l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+  };
+  return [Math.round(f(0) * 255), Math.round(f(8) * 255), Math.round(f(4) * 255)];
 }
 
 /* ─── Vote button ─── */
