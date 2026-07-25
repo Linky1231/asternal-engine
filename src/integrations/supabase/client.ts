@@ -364,17 +364,84 @@ class LocalQueryBuilder {
 
 // ───── Storage ─────
 
+function compressImage(file: File | Blob, maxDim: number): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let w = img.width, h = img.height;
+      if (w > maxDim || h > maxDim) {
+        const ratio = Math.min(maxDim / w, maxDim / h);
+        w = Math.round(w * ratio);
+        h = Math.round(h * ratio);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, 0, 0, w, h);
+      canvas.toBlob(b => {
+        if (b) resolve(b);
+        else reject(new Error('Canvas compression failed'));
+      }, 'image/jpeg', 0.7);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Image load failed')); };
+    img.src = url;
+  });
+}
+
+function isImageFile(file: File | Blob): boolean {
+  return file.type?.startsWith('image/') ?? false;
+}
+
 function makeStorageBucket(bucket: string) {
   return {
     upload: async (path: string, file: File | Blob, _opts?: Record<string, unknown>) => {
       try {
+        // Compress images before storing to avoid localStorage quota issues
+        let finalFile = file;
+        if (isImageFile(file)) {
+          const maxDim = path.includes('avatar') || path.includes('banner') ? 400 : 1200;
+          finalFile = await compressImage(file, maxDim);
+        }
         const reader = new FileReader();
         const dataUrl = await new Promise<string>((resolve, reject) => {
           reader.onload = () => resolve(reader.result as string);
           reader.onerror = () => reject(new Error('File read failed'));
-          reader.readAsDataURL(file);
+          reader.readAsDataURL(finalFile);
         });
-        localStorage.setItem(`_local_storage_${bucket}_${path}`, dataUrl);
+
+        // If this key already exists, remove it first to stay under quota
+        const key = `_local_storage_${bucket}_${path}`;
+        const existingSize = localStorage.getItem(key)?.length ?? 0;
+        localStorage.removeItem(key);
+
+        // Try to set; if quota error, evict oldest stored keys
+        try {
+          localStorage.setItem(key, dataUrl);
+        } catch {
+          // Evict old stored media to free space
+          const prefix = '_local_storage_';
+          const keys: { k: string; ts: number }[] = [];
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k?.startsWith(prefix)) {
+              try {
+                const raw = localStorage.getItem(k) ?? '';
+                keys.push({ k, ts: raw.length });
+              } catch { /* skip */ }
+            }
+          }
+          // Remove largest files first until we have room
+          keys.sort((a, b) => b.ts - a.ts);
+          for (const entry of keys) {
+            localStorage.removeItem(entry.k);
+            try {
+              localStorage.setItem(key, dataUrl);
+              break;
+            } catch { /* keep evicting */ }
+          }
+        }
         return { data: { path }, error: null };
       } catch (e) { return { data: null, error: e as Error }; }
     },
