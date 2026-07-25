@@ -21,17 +21,17 @@ import {
 
 /* ─── Motion variants ─── */
 const stagger = {
-  container: { initial: {}, animate: { transition: { staggerChildren: 0.05 } } },
+  container: { initial: {}, animate: { transition: { staggerChildren: 0.025 } } },
   item: {
-    initial: { opacity: 0, y: 16, scale: 0.97, filter: "blur(4px)" },
-    animate: { opacity: 1, y: 0, scale: 1, filter: "blur(0px)", transition: { duration: 0.45, ease: [0.2, 0, 0, 1] as const } },
+    initial: { opacity: 0, y: 12, scale: 0.98, filter: "blur(3px)" },
+    animate: { opacity: 1, y: 0, scale: 1, filter: "blur(0px)", transition: { duration: 0.25, ease: [0.25, 0, 0, 1] as const } },
   },
 };
 
 const fadeSlide = {
-  initial: { opacity: 0, y: 12, filter: "blur(2px)" },
-  animate: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.35, ease: [0.2, 0, 0, 1] as const } },
-  exit: { opacity: 0, y: -8, filter: "blur(2px)", transition: { duration: 0.2 } },
+  initial: { opacity: 0, y: 8, filter: "blur(1.5px)" },
+  animate: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.2, ease: [0.25, 0, 0, 1] as const } },
+  exit: { opacity: 0, y: -4, filter: "blur(1.5px)", transition: { duration: 0.12 } },
 };
 
 /* ─── Time ago ─── */
@@ -133,7 +133,7 @@ function SkeletonCard() {
 /* ─── Empty State ─── */
 function EmptyState({ icon, title, subtitle, action }: { icon: React.ReactNode; title: string; subtitle?: string; action?: React.ReactNode }) {
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}
       className="flex flex-col items-center justify-center py-16 px-6 text-center">
       <div className="w-14 h-14 rounded-2xl bg-muted/30 border border-border/30 grid place-items-center text-muted-foreground/30 mb-4">
         {icon}
