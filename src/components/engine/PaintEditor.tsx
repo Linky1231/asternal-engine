@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { SpriteAsset } from "@/lib/engine/core";
 import { uid } from "@/lib/engine/core";
-import { useFormFactor } from "@/hooks/use-mobile";
 import {
   Pencil, Eraser, PaintBucket, Slash, Square, Circle, Pipette, Type, Move,
   Eye, EyeOff, Lock, Unlock, ChevronUp, ChevronDown, Copy, Trash2, Layers,
@@ -78,8 +77,6 @@ const PALETTES: { name: string; colors: string[] }[] = [
 const FONTS = ["Rajdhani", "Orbitron", "JetBrains Mono", "Georgia", "Arial"];
 
 export function PaintEditor({ onSave, onClose, size: initialSize = 512 }: Props) {
-  const ff = useFormFactor();
-  const isWide = ff === "tablet" || ff === "desktop";
   const [size, setSize] = useState<number>(initialSize);
   const changeSize = (next: number) => {
     if (next === size) return;
@@ -709,19 +706,21 @@ export function PaintEditor({ onSave, onClose, size: initialSize = 512 }: Props)
     { id: "move", icon: <Move size={18} strokeWidth={2} />, title: "Seleccionar y mover capa" },
   ];
 
+  const [toolsExpanded, setToolsExpanded] = useState(false);
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col" style={{ background: "var(--gradient-deep)" }}>
-      {/* Top bar — light translucent */}
+      {/* Top bar */}
       <div
-        className="flex items-center justify-between px-4 py-2.5 border-b border-border gap-2 shrink-0"
+        className="flex items-center justify-between px-3 py-2 border-b border-border gap-2 shrink-0"
         style={{
           background: "linear-gradient(180deg, oklch(1 0 0 / 0.9), oklch(0.97 0.005 250 / 0.8))",
           backdropFilter: "blur(20px) saturate(180%)",
         }}
       >
-        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
           <div
-            className="w-9 h-9 rounded-lg shrink-0"
+            className="w-8 h-8 rounded-lg shrink-0"
             style={{
               backgroundColor: "#e5e7eb",
               backgroundImage: thumb ? `url(${thumb})` : undefined,
@@ -735,51 +734,51 @@ export function PaintEditor({ onSave, onClose, size: initialSize = 512 }: Props)
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="bg-muted border border-border rounded-lg px-3 py-1.5 text-[13px] font-medium tracking-tight min-w-0 flex-1 max-w-[180px] focus:outline-none focus:border-primary/50 focus:bg-accent transition"
+            className="bg-muted border border-border rounded-lg px-2 py-1 text-[12px] font-medium tracking-tight min-w-0 flex-1 max-w-[140px] focus:outline-none focus:border-primary/50 focus:bg-accent transition"
           />
           <select
             value={size}
             onChange={(e) => changeSize(Number(e.target.value))}
-            className="bg-muted border border-border rounded-md px-2 py-1 text-[10px] font-mono tracking-tight focus:outline-none focus:border-primary/50 tabular-nums shrink-0"
+            className="bg-muted border border-border rounded-md px-1.5 py-1 text-[9px] font-mono tracking-tight focus:outline-none focus:border-primary/50 tabular-nums shrink-0"
             aria-label="Tamaño del lienzo"
           >
             {SIZE_OPTIONS.map(s => <option key={s} value={s}>{s}×{s}</option>)}
           </select>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
-          <button
-            onClick={onClose}
-            className="text-[12px] font-medium px-3.5 py-1.5 rounded-lg border border-border bg-muted text-foreground/80 hover:bg-accent transition"
-          >
+          <button onClick={onClose} className="text-[11px] font-medium px-3 py-1.5 rounded-lg border border-border bg-muted text-foreground/80 hover:bg-accent transition">
             Cancel
           </button>
-          <button
-            onClick={save}
-            className="text-[12px] font-semibold px-4 py-1.5 rounded-lg text-primary-foreground transition active:scale-[0.97]"
-            style={{
-              background: "linear-gradient(180deg, oklch(0.78 0.17 250), oklch(0.66 0.18 252))",
-              boxShadow: "inset 0 1px 0 oklch(1 0 0 / 0.25), 0 4px 14px -4px oklch(0.66 0.18 252 / 0.55)",
-            }}
-          >
+          <button onClick={save} className="text-[11px] font-semibold px-3 py-1.5 rounded-lg text-primary-foreground transition active:scale-[0.97]" style={{
+            background: "linear-gradient(180deg, oklch(0.78 0.17 250), oklch(0.66 0.18 252))",
+            boxShadow: "inset 0 1px 0 oklch(1 0 0 / 0.25), 0 4px 14px -4px oklch(0.66 0.18 252 / 0.55)",
+          }}>
             Save
           </button>
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 flex flex-col overflow-auto px-4 py-4 gap-4">
-        {/* Canvas surface */}
-        <div key={`canvas-${size}`} className={`mx-auto w-full ${isWide ? "max-w-[760px]" : "max-w-[460px]"} aspect-square relative view-fade`}>
+      {/* Canvas area — fills all available space, canvas fills it while keeping 1:1 aspect ratio */}
+      <div className="flex-1 min-h-0 flex items-center justify-center overflow-hidden p-2">
+        <div key={`canvas-${size}`} className="relative w-full h-full flex items-center justify-center overflow-hidden">
           <div
-            className="absolute inset-0 rounded-md p-[10px]"
+            className="rounded-md p-[8px]"
             style={{
               background: "linear-gradient(180deg, oklch(0.97 0.005 250), oklch(0.93 0.008 250))",
               boxShadow:
                 "inset 0 1px 0 oklch(1 0 0 / 0.7), 0 12px 40px -18px oklch(0.4 0.05 258 / 0.28), 0 0 0 1px oklch(0.82 0.01 250 / 0.6)",
+              maxWidth: "100%",
+              maxHeight: "100%",
+              overflow: "hidden",
             }}
           >
             <div
-              className="w-full h-full rounded-sm overflow-hidden"
+              className="rounded-sm overflow-hidden"
               style={{
+                width: "100%",
+                aspectRatio: "1 / 1",
+                maxWidth: "100%",
+                maxHeight: "100%",
                 backgroundImage:
                   "linear-gradient(45deg, oklch(0.955 0.003 250) 25%, transparent 25%), linear-gradient(-45deg, oklch(0.955 0.003 250) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, oklch(0.955 0.003 250) 75%), linear-gradient(-45deg, transparent 75%, oklch(0.955 0.003 250) 75%)",
                 backgroundSize: "20px 20px",
@@ -811,284 +810,156 @@ export function PaintEditor({ onSave, onClose, size: initialSize = 512 }: Props)
                 boxShadow: "0 12px 40px -10px oklch(0 0 0 / 0.6)",
               }}
             >
-              <textarea
-                autoFocus
-                value={textInput.value}
-                onChange={(e) => setTextInput({ ...textInput, value: e.target.value })}
-                placeholder="Type text…"
-                className="bg-muted border border-border rounded-lg px-2 py-1.5 text-[13px] w-48 min-h-[60px] focus:outline-none focus:border-primary/50"
-              />
+              <textarea autoFocus value={textInput.value} onChange={(e) => setTextInput({ ...textInput, value: e.target.value })} placeholder="Type text…" className="bg-muted border border-border rounded-lg px-2 py-1.5 text-[13px] w-44 min-h-[56px] focus:outline-none focus:border-primary/50" />
               <div className="flex items-center gap-1.5">
-                <select
-                  value={textInput.font}
-                  onChange={(e) => setTextInput({ ...textInput, font: e.target.value })}
-                  className="bg-muted border border-border rounded-lg text-[11px] px-2 py-1 flex-1"
-                >
+                <select value={textInput.font} onChange={(e) => setTextInput({ ...textInput, font: e.target.value })} className="bg-muted border border-border rounded-lg text-[10px] px-2 py-1 flex-1">
                   {FONTS.map(f => <option key={f} value={f}>{f}</option>)}
                 </select>
-                <input
-                  type="number"
-                  min={8}
-                  max={200}
-                  value={textInput.fontSize}
-                  onChange={(e) => setTextInput({ ...textInput, fontSize: Number(e.target.value) })}
-                  className="bg-muted border border-border rounded-lg text-[11px] px-2 py-1 w-14 tabular-nums"
-                />
+                <input type="number" min={8} max={200} value={textInput.fontSize} onChange={(e) => setTextInput({ ...textInput, fontSize: Number(e.target.value) })} className="bg-muted border border-border rounded-lg text-[10px] px-2 py-1 w-12 tabular-nums" />
               </div>
               <div className="flex gap-1.5">
-                <button onClick={() => setTextInput(null)} className="text-[11px] font-medium px-2 py-1.5 rounded-lg border border-border bg-muted flex-1">Cancel</button>
-                <button onClick={commitText} className="text-[11px] font-semibold px-2 py-1.5 rounded-lg text-primary-foreground flex-1" style={{ background: "linear-gradient(180deg, oklch(0.78 0.17 250), oklch(0.66 0.18 252))" }}>Add</button>
+                <button onClick={() => setTextInput(null)} className="text-[10px] font-medium px-2 py-1.5 rounded-lg border border-border bg-muted flex-1">Cancel</button>
+                <button onClick={commitText} className="text-[10px] font-semibold px-2 py-1.5 rounded-lg text-primary-foreground flex-1" style={{ background: "linear-gradient(180deg, oklch(0.78 0.17 250), oklch(0.66 0.18 252))" }}>Add</button>
               </div>
             </div>
           )}
         </div>
+      </div>
 
-        {/* Tool dock — Apple segmented */}
-        <div className={`mx-auto w-full ${isWide ? "max-w-[760px]" : "max-w-[460px]"}`}>
-          <div
-            className="flex gap-1 p-1 rounded-2xl"
-            style={{
+      {/* Bottom panel — compact, scrollable if needed */}
+      <div className="shrink-0 max-h-[30dvh] overflow-y-auto border-t border-border" style={{
+        background: "linear-gradient(0deg, oklch(0.97 0.005 250 / 0.95), oklch(0.99 0 0 / 0.9))",
+        backdropFilter: "blur(20px) saturate(180%)",
+      }}>
+        <button onClick={() => setToolsExpanded(e => !e)} className="w-full flex items-center gap-1.5 px-3 py-1.5 text-[9px] font-display tracking-widest text-muted-foreground hover:text-foreground transition">
+          {toolsExpanded ? "▼" : "▲"} HERRAMIENTAS
+        </button>
+        {toolsExpanded && (
+          <div className="px-3 pb-3 space-y-2">
+            {/* Tool dock */}
+            <div className="flex gap-1 p-1 rounded-2xl" style={{
               background: "oklch(0.22 0.04 262 / 0.6)",
               backdropFilter: "blur(20px) saturate(180%)",
               border: "1px solid oklch(1 0 0 / 0.06)",
               boxShadow: "inset 0 1px 0 oklch(1 0 0 / 0.05), 0 4px 14px -8px oklch(0 0 0 / 0.4)",
-            }}
-          >
-            {TOOLS.map(t => (
-              <button
-                key={t.id}
-                title={t.title}
-                onClick={() => setTool(t.id)}
-                className={`flex-1 h-10 rounded-xl text-base transition-all flex items-center justify-center ${
-                  tool === t.id ? "text-primary-foreground" : "text-foreground/60 hover:text-foreground/90"
-                }`}
-                style={tool === t.id ? {
-                  background: "linear-gradient(180deg, oklch(0.78 0.17 250), oklch(0.64 0.18 252))",
-                  boxShadow: "inset 0 1px 0 oklch(1 0 0 / 0.25), 0 2px 8px -2px oklch(0.66 0.18 252 / 0.5)",
-                } : undefined}
-              >{t.icon}</button>
-            ))}
-          </div>
-        </div>
-
-        {/* History row */}
-        <div className={`mx-auto w-full ${isWide ? "max-w-[760px]" : "max-w-[460px]"} flex gap-1.5`}>
-          <button onClick={undo} title="Deshacer" className="flex-1 h-10 rounded-xl border border-border bg-muted text-foreground/80 hover:bg-accent transition flex items-center justify-center active:scale-95"><Undo2 size={16} /></button>
-          <button onClick={redo} title="Rehacer" className="flex-1 h-10 rounded-xl border border-border bg-muted text-foreground/80 hover:bg-accent transition flex items-center justify-center active:scale-95"><Redo2 size={16} /></button>
-          <button onClick={clearAll} title="Limpiar capa" className="flex-1 h-10 rounded-xl border border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/20 transition flex items-center justify-center gap-1.5 text-[12px] font-medium active:scale-95"><Trash2 size={14} /> Limpiar</button>
-        </div>
-
-        {/* Color + size card */}
-        <div
-          className={`mx-auto w-full ${isWide ? "max-w-[760px]" : "max-w-[460px]"} p-3 rounded-2xl flex flex-col gap-3`}
-          style={{
-            background: "oklch(0.22 0.04 262 / 0.5)",
-            backdropFilter: "blur(20px) saturate(180%)",
-            border: "1px solid oklch(1 0 0 / 0.06)",
-          }}
-        >
-          <div className="flex items-center gap-2.5">
-            <div className="relative w-10 h-10 shrink-0">
-              <input
-                type="color"
-                value={color}
-                onChange={e => setColor(e.target.value)}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                aria-label="Color picker"
-              />
-              <div
-                className="w-10 h-10 rounded-xl pointer-events-none"
-                style={{
-                  background: color,
-                  boxShadow: "inset 0 0 0 1px oklch(1 0 0 / 0.18), 0 4px 12px -4px oklch(0 0 0 / 0.4)",
-                }}
-              />
-            </div>
-            <input
-              type="text"
-              value={color.toUpperCase()}
-              onChange={(e) => {
-                const v = e.target.value.trim();
-                if (/^#?[0-9a-fA-F]{6}$/.test(v)) setColor(v.startsWith("#") ? v : `#${v}`);
-              }}
-              className="bg-muted border border-border rounded-lg px-2 py-1.5 text-[11px] font-mono w-[88px] tracking-tight focus:outline-none focus:border-primary/50 uppercase"
-              maxLength={7}
-              aria-label="Hex color"
-            />
-            <select
-              value={paletteIdx}
-              onChange={(e) => setPaletteIdx(Number(e.target.value))}
-              className="flex-1 bg-muted border border-border rounded-lg px-2 py-1.5 text-[11px] font-medium focus:outline-none focus:border-primary/50"
-              aria-label="Palette"
-            >
-              {PALETTES.map((p, i) => (
-                <option key={p.name} value={i}>{p.name}</option>
+            }}>
+              {TOOLS.map(t => (
+                <button key={t.id} title={t.title} onClick={() => setTool(t.id)}
+                  className={`flex-1 h-9 rounded-xl text-base transition-all flex items-center justify-center ${tool === t.id ? "text-primary-foreground" : "text-foreground/60 hover:text-foreground/90"}`}
+                  style={tool === t.id ? {
+                    background: "linear-gradient(180deg, oklch(0.78 0.17 250), oklch(0.64 0.18 252))",
+                    boxShadow: "inset 0 1px 0 oklch(1 0 0 / 0.25), 0 2px 8px -2px oklch(0.66 0.18 252 / 0.5)",
+                  } : undefined}
+                >{t.icon}</button>
               ))}
-            </select>
-          </div>
-
-          <div className="grid grid-cols-8 gap-1.5">
-            {PALETTE.map((c) => (
-              <button
-                key={c}
-                onClick={() => setColor(c)}
-                className="aspect-square rounded-lg transition-all"
-                style={{
-                  background: c,
-                  boxShadow: color.toLowerCase() === c.toLowerCase()
-                    ? "inset 0 0 0 1.5px oklch(1 0 0 / 0.9), 0 0 0 2px oklch(0.72 0.17 250 / 0.7)"
-                    : "inset 0 0 0 1px oklch(1 0 0 / 0.12)",
-                  transform: color.toLowerCase() === c.toLowerCase() ? "scale(1.06)" : undefined,
-                }}
-                aria-label={c}
-              />
-            ))}
-          </div>
-
-          <div className="flex items-center gap-3 text-[11px] font-medium text-foreground/70">
-            <span className="w-10 shrink-0">Size</span>
-            <input
-              type="range"
-              min={1}
-              max={48}
-              value={width}
-              onChange={e => setWidth(Number(e.target.value))}
-              className="flex-1 accent-[oklch(0.72_0.17_250)]"
-            />
-            <span className="font-mono text-primary-glow w-7 text-right tabular-nums">{width}</span>
-          </div>
-
-          <label className="flex items-center justify-between text-[12px] font-medium text-foreground/85 cursor-pointer select-none">
-            <span>Stabilize brush</span>
-            <span
-              role="switch"
-              aria-checked={stabilize}
-              onClick={() => setStabilize(!stabilize)}
-              className="relative w-[42px] h-[26px] rounded-full transition-colors"
-              style={{
-                background: stabilize ? "oklch(0.7 0.17 145)" : "oklch(0.35 0.02 260)",
-                boxShadow: "inset 0 1px 2px oklch(0 0 0 / 0.3)",
-              }}
-            >
-              <span
-                className="absolute top-[2px] w-[22px] h-[22px] rounded-full bg-white transition-all"
-                style={{
-                  left: stabilize ? "18px" : "2px",
-                  boxShadow: "0 2px 4px oklch(0 0 0 / 0.3)",
-                }}
-              />
-            </span>
-            <input type="checkbox" checked={stabilize} onChange={(e) => setStabilize(e.target.checked)} className="sr-only" />
-          </label>
-
-          <label className="flex items-center justify-between text-[12px] font-medium text-foreground/85 cursor-pointer select-none">
-            <span>Pressure sensitive</span>
-            <span
-              role="switch"
-              aria-checked={pressureOn}
-              onClick={() => setPressureOn(!pressureOn)}
-              className="relative w-[42px] h-[26px] rounded-full transition-colors"
-              style={{
-                background: pressureOn ? "oklch(0.7 0.17 145)" : "oklch(0.35 0.02 260)",
-                boxShadow: "inset 0 1px 2px oklch(0 0 0 / 0.3)",
-              }}
-            >
-              <span
-                className="absolute top-[2px] w-[22px] h-[22px] rounded-full bg-white transition-all"
-                style={{
-                  left: pressureOn ? "18px" : "2px",
-                  boxShadow: "0 2px 4px oklch(0 0 0 / 0.3)",
-                }}
-              />
-            </span>
-            <input type="checkbox" checked={pressureOn} onChange={(e) => setPressureOn(e.target.checked)} className="sr-only" />
-          </label>
-        </div>
-
-        {/* Layers card */}
-        <div
-          className={`mx-auto w-full ${isWide ? "max-w-[760px]" : "max-w-[460px]"} p-3 rounded-2xl flex flex-col gap-2 pop-in`}
-          style={{
-            background: "oklch(0.22 0.04 262 / 0.5)",
-            backdropFilter: "blur(20px) saturate(180%)",
-            border: "1px solid oklch(1 0 0 / 0.06)",
-          }}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold tracking-wider text-foreground/80 inline-flex items-center gap-1.5"><Layers size={12} /> CAPAS · {layers.length}</span>
-            <div className="flex gap-1">
-              <button
-                onClick={addLayer}
-                className="text-[10px] font-semibold px-2.5 py-1 rounded-lg text-primary-foreground active:scale-95 transition inline-flex items-center gap-1"
-                style={{ background: "linear-gradient(180deg, oklch(0.78 0.17 250), oklch(0.66 0.18 252))" }}
-              ><Plus size={12} strokeWidth={2.5} /> Nueva</button>
-              <button
-                onClick={flatten}
-                className="text-[10px] font-medium px-2.5 py-1 rounded-lg border border-border bg-muted text-foreground/80 active:scale-95 transition"
-              >Aplanar</button>
             </div>
-          </div>
-          <div className="flex flex-col gap-1.5 max-h-[260px] overflow-auto pr-1">
-            {[...layers].slice().reverse().map((l) => {
-              const isActive = l.id === activeLayerId;
-              return (
-                <div
-                  key={l.id}
-                  className={`group rounded-xl p-1.5 flex items-center gap-1.5 transition-all cursor-pointer ${isActive ? "bg-primary/15 border border-primary/40" : "bg-muted border border-border hover:bg-muted"}`}
-                  onClick={() => { setActiveLayerId(l.id); activeLayerIdRef.current = l.id; }}
-                >
-                  <div
-                    className="w-9 h-9 rounded-md shrink-0"
-                    style={{
-                      backgroundColor: "#ffffff",
-                      backgroundImage: `url(${(() => { try { return l.canvas.toDataURL("image/png"); } catch { return ""; }})()})`,
-                      backgroundSize: "contain",
-                      backgroundPosition: "center",
-                      backgroundRepeat: "no-repeat",
-                      boxShadow: "inset 0 0 0 1px oklch(0.82 0.01 250 / 0.6)",
-                      opacity: l.visible ? 1 : 0.35,
-                    }}
-                  />
-                  <input
-                    value={l.name}
-                    onChange={(e) => updateLayer(l.id, { name: e.target.value })}
-                    onClick={(e) => e.stopPropagation()}
-                    className="flex-1 min-w-0 bg-transparent text-[12px] font-medium focus:outline-none focus:bg-muted rounded px-1 py-0.5"
-                  />
-                  <button
-                    onClick={(e) => { e.stopPropagation(); updateLayer(l.id, { visible: !l.visible }); }}
-                    title={l.visible ? "Ocultar" : "Mostrar"}
-                    className={`w-7 h-7 grid place-items-center rounded-md transition hover:bg-muted ${l.visible ? "text-primary-glow" : "text-muted-foreground"}`}
-                  >{l.visible ? <Eye size={14} /> : <EyeOff size={14} />}</button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); updateLayer(l.id, { locked: !l.locked }); }}
-                    title={l.locked ? "Desbloquear" : "Bloquear"}
-                    className={`w-7 h-7 grid place-items-center rounded-md transition hover:bg-muted ${l.locked ? "text-destructive" : "text-muted-foreground"}`}
-                  >{l.locked ? <Lock size={14} /> : <Unlock size={14} />}</button>
-                  <div className="flex flex-col">
-                    <button onClick={(e) => { e.stopPropagation(); moveLayer(l.id, 1); }} title="Subir" className="w-6 h-3.5 grid place-items-center text-muted-foreground hover:text-primary-glow"><ChevronUp size={12} /></button>
-                    <button onClick={(e) => { e.stopPropagation(); moveLayer(l.id, -1); }} title="Bajar" className="w-6 h-3.5 grid place-items-center text-muted-foreground hover:text-primary-glow"><ChevronDown size={12} /></button>
-                  </div>
-                  <button onClick={(e) => { e.stopPropagation(); duplicateLayer(l.id); }} title="Duplicar" className="w-7 h-7 grid place-items-center rounded-md text-muted-foreground hover:text-primary-glow hover:bg-muted"><Copy size={13} /></button>
-                  <button onClick={(e) => { e.stopPropagation(); mergeDown(l.id); }} title="Combinar con la inferior" className="w-7 h-7 grid place-items-center rounded-md text-muted-foreground hover:text-primary-glow hover:bg-muted"><Layers size={13} /></button>
-                  <button onClick={(e) => { e.stopPropagation(); deleteLayer(l.id); }} title="Borrar" className="w-7 h-7 grid place-items-center rounded-md text-destructive/70 hover:text-destructive hover:bg-destructive/10"><Trash2 size={13} /></button>
+
+            {/* History row */}
+            <div className="flex gap-1.5">
+              <button onClick={undo} title="Deshacer" className="flex-1 h-9 rounded-xl border border-border bg-muted text-foreground/80 hover:bg-accent transition flex items-center justify-center active:scale-95"><Undo2 size={15} /></button>
+              <button onClick={redo} title="Rehacer" className="flex-1 h-9 rounded-xl border border-border bg-muted text-foreground/80 hover:bg-accent transition flex items-center justify-center active:scale-95"><Redo2 size={15} /></button>
+              <button onClick={clearAll} title="Limpiar capa" className="flex-1 h-9 rounded-xl border border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/20 transition flex items-center justify-center gap-1.5 text-[11px] font-medium active:scale-95"><Trash2 size={13} /> Limpiar</button>
+            </div>
+
+            {/* Color + size */}
+            <div className="p-3 rounded-2xl flex flex-col gap-2" style={{
+              background: "oklch(0.22 0.04 262 / 0.5)",
+              backdropFilter: "blur(20px) saturate(180%)",
+              border: "1px solid oklch(1 0 0 / 0.06)",
+            }}>
+              <div className="flex items-center gap-2">
+                <div className="relative w-9 h-9 shrink-0">
+                  <input type="color" value={color} onChange={e => setColor(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" aria-label="Color picker" />
+                  <div className="w-9 h-9 rounded-xl pointer-events-none" style={{ background: color, boxShadow: "inset 0 0 0 1px oklch(1 0 0 / 0.18), 0 4px 12px -4px oklch(0 0 0 / 0.4)" }} />
                 </div>
-              );
-            })}
-          </div>
-          {activeLayer() && (
-            <div className="flex items-center gap-2 text-[11px] text-foreground/70 pt-1">
-              <span className="w-14 shrink-0">Opacidad</span>
-              <input
-                type="range" min={0} max={100} step={1}
-                value={Math.round((activeLayer()?.opacity ?? 1) * 100)}
-                onChange={(e) => updateLayer(activeLayerIdRef.current, { opacity: Number(e.target.value) / 100 })}
-                className="flex-1 accent-[oklch(0.72_0.17_250)]"
-              />
-              <span className="font-mono text-primary-glow w-8 text-right tabular-nums">{Math.round((activeLayer()?.opacity ?? 1) * 100)}%</span>
+                <input type="text" value={color.toUpperCase()} onChange={(e) => { const v = e.target.value.trim(); if (/^#?[0-9a-fA-F]{6}$/.test(v)) setColor(v.startsWith("#") ? v : `#${v}`); }}
+                  className="bg-muted border border-border rounded-lg px-2 py-1 text-[10px] font-mono w-20 tracking-tight focus:outline-none focus:border-primary/50 uppercase" maxLength={7} aria-label="Hex color" />
+                <select value={paletteIdx} onChange={(e) => setPaletteIdx(Number(e.target.value))}
+                  className="flex-1 bg-muted border border-border rounded-lg px-2 py-1 text-[10px] font-medium focus:outline-none focus:border-primary/50" aria-label="Palette">
+                  {PALETTES.map((p, i) => <option key={p.name} value={i}>{p.name}</option>)}
+                </select>
+              </div>
+              <div className="grid grid-cols-8 gap-1">
+                {PALETTE.map((c) => (
+                  <button key={c} onClick={() => setColor(c)} className="aspect-square rounded-lg transition-all" style={{
+                    background: c,
+                    boxShadow: color.toLowerCase() === c.toLowerCase() ? "inset 0 0 0 1.5px oklch(1 0 0 / 0.9), 0 0 0 2px oklch(0.72 0.17 250 / 0.7)" : "inset 0 0 0 1px oklch(1 0 0 / 0.12)",
+                    transform: color.toLowerCase() === c.toLowerCase() ? "scale(1.06)" : undefined,
+                  }} aria-label={c} />
+                ))}
+              </div>
+              <div className="flex items-center gap-3 text-[10px] font-medium text-foreground/70">
+                <span className="w-8 shrink-0">Size</span>
+                <input type="range" min={1} max={48} value={width} onChange={e => setWidth(Number(e.target.value))} className="flex-1 accent-[oklch(0.72_0.17_250)]" />
+                <span className="font-mono text-primary-glow w-6 text-right tabular-nums">{width}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-[11px] font-medium text-foreground/85">
+                <label className="flex items-center justify-between cursor-pointer select-none">
+                  <span>Stabilize</span>
+                  <span role="switch" aria-checked={stabilize} onClick={() => setStabilize(!stabilize)} className="relative w-[38px] h-[22px] rounded-full transition-colors" style={{ background: stabilize ? "oklch(0.7 0.17 145)" : "oklch(0.35 0.02 260)", boxShadow: "inset 0 1px 2px oklch(0 0 0 / 0.3)" }}>
+                    <span className="absolute top-[2px] w-[18px] h-[18px] rounded-full bg-white transition-all" style={{ left: stabilize ? "18px" : "2px", boxShadow: "0 2px 4px oklch(0 0 0 / 0.3)" }} />
+                  </span>
+                  <input type="checkbox" checked={stabilize} onChange={(e) => setStabilize(e.target.checked)} className="sr-only" />
+                </label>
+                <label className="flex items-center justify-between cursor-pointer select-none">
+                  <span>Pressure</span>
+                  <span role="switch" aria-checked={pressureOn} onClick={() => setPressureOn(!pressureOn)} className="relative w-[38px] h-[22px] rounded-full transition-colors" style={{ background: pressureOn ? "oklch(0.7 0.17 145)" : "oklch(0.35 0.02 260)", boxShadow: "inset 0 1px 2px oklch(0 0 0 / 0.3)" }}>
+                    <span className="absolute top-[2px] w-[18px] h-[18px] rounded-full bg-white transition-all" style={{ left: pressureOn ? "18px" : "2px", boxShadow: "0 2px 4px oklch(0 0 0 / 0.3)" }} />
+                  </span>
+                  <input type="checkbox" checked={pressureOn} onChange={(e) => setPressureOn(e.target.checked)} className="sr-only" />
+                </label>
+              </div>
             </div>
-          )}
-        </div>
+
+            {/* Layers */}
+            <div className="p-3 rounded-2xl flex flex-col gap-2" style={{
+              background: "oklch(0.22 0.04 262 / 0.5)",
+              backdropFilter: "blur(20px) saturate(180%)",
+              border: "1px solid oklch(1 0 0 / 0.06)",
+            }}>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-semibold tracking-wider text-foreground/80 inline-flex items-center gap-1.5"><Layers size={11} /> CAPAS · {layers.length}</span>
+                <div className="flex gap-1">
+                  <button onClick={addLayer} className="text-[9px] font-semibold px-2 py-1 rounded-lg text-primary-foreground active:scale-95 transition inline-flex items-center gap-1" style={{ background: "linear-gradient(180deg, oklch(0.78 0.17 250), oklch(0.66 0.18 252))" }}><Plus size={11} strokeWidth={2.5} /> Nueva</button>
+                  <button onClick={flatten} className="text-[9px] font-medium px-2 py-1 rounded-lg border border-border bg-muted text-foreground/80 active:scale-95 transition">Aplanar</button>
+                </div>
+              </div>
+              <div className="flex flex-col gap-1 max-h-[180px] overflow-auto pr-1">
+                {[...layers].slice().reverse().map((l) => {
+                  const isActive = l.id === activeLayerId;
+                  return (
+                    <div key={l.id} className={`group rounded-xl p-1.5 flex items-center gap-1.5 transition-all cursor-pointer ${isActive ? "bg-primary/15 border border-primary/40" : "bg-muted border border-border hover:bg-muted"}`}
+                      onClick={() => { setActiveLayerId(l.id); activeLayerIdRef.current = l.id; }}>
+                      <div className="w-8 h-8 rounded-md shrink-0" style={{
+                        backgroundColor: "#ffffff",
+                        backgroundImage: `url(${(() => { try { return l.canvas.toDataURL("image/png"); } catch { return ""; }})()})`,
+                        backgroundSize: "contain", backgroundPosition: "center", backgroundRepeat: "no-repeat",
+                        boxShadow: "inset 0 0 0 1px oklch(0.82 0.01 250 / 0.6)",
+                        opacity: l.visible ? 1 : 0.35,
+                      }} />
+                      <input value={l.name} onChange={(e) => updateLayer(l.id, { name: e.target.value })} onClick={(e) => e.stopPropagation()}
+                        className="flex-1 min-w-0 bg-transparent text-[11px] font-medium focus:outline-none focus:bg-muted rounded px-1 py-0.5" />
+                      <button onClick={(e) => { e.stopPropagation(); updateLayer(l.id, { visible: !l.visible }); }} title={l.visible ? "Ocultar" : "Mostrar"}
+                        className={`w-6 h-6 grid place-items-center rounded-md transition hover:bg-muted ${l.visible ? "text-primary-glow" : "text-muted-foreground"}`}>{l.visible ? <Eye size={12} /> : <EyeOff size={12} />}</button>
+                      <button onClick={(e) => { e.stopPropagation(); updateLayer(l.id, { locked: !l.locked }); }} title={l.locked ? "Desbloquear" : "Bloquear"}
+                        className={`w-6 h-6 grid place-items-center rounded-md transition hover:bg-muted ${l.locked ? "text-destructive" : "text-muted-foreground"}`}>{l.locked ? <Lock size={12} /> : <Unlock size={12} />}</button>
+                      <button onClick={(e) => { e.stopPropagation(); deleteLayer(l.id); }} title="Borrar" className="w-6 h-6 grid place-items-center rounded-md text-destructive/70 hover:text-destructive hover:bg-destructive/10"><Trash2 size={11} /></button>
+                    </div>
+                  );
+                })}
+              </div>
+              {activeLayer() && (
+                <div className="flex items-center gap-2 text-[10px] text-foreground/70 pt-1">
+                  <span className="w-12 shrink-0">Opacidad</span>
+                  <input type="range" min={0} max={100} step={1} value={Math.round((activeLayer()?.opacity ?? 1) * 100)}
+                    onChange={(e) => updateLayer(activeLayerIdRef.current, { opacity: Number(e.target.value) / 100 })}
+                    className="flex-1 accent-[oklch(0.72_0.17_250)]" />
+                  <span className="font-mono text-primary-glow w-7 text-right tabular-nums">{Math.round((activeLayer()?.opacity ?? 1) * 100)}%</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
