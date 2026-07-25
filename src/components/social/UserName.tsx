@@ -27,7 +27,7 @@ export function UserName({
   return (
     <span className={`inline-flex items-center gap-1 min-w-0 ${className}`}>
       <span
-        className={`font-display truncate ${sizeCls} ${effect ? `name-fx name-fx-${effect}` : ""}`}
+        className={`font-display ${sizeCls} ${effect ? `name-fx name-fx-${effect}` : "truncate"} ${effect ? "max-w-[180px] overflow-hidden text-ellipsis whitespace-nowrap" : ""}`}
         data-effect={effect ?? undefined}
       >
         {name}

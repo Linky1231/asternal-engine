@@ -340,7 +340,17 @@
     0 0 22px oklch(0.68 0.14 220 / 0.7);
 }
 
-/* ============ Plus: avatar frames — elegant static gradient borders ============ */
+/* ============ Plus: avatar frames — animated gradient borders ============ */
+@keyframes frame-glow {
+  0%, 100% { opacity: 0.75; filter: brightness(1); }
+  50%      { opacity: 1;    filter: brightness(1.25); }
+}
+@keyframes frame-shift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
 .plus-frame {
   position: relative;
   isolation: isolate;
@@ -351,22 +361,32 @@
   inset: -3px;
   border-radius: inherit;
   z-index: -1;
+  background-size: 200% 200%;
+  animation: frame-glow 3s ease-in-out infinite;
 }
 .plus-frame-aurora::before {
   background: linear-gradient(135deg, #1AA6D6, #2FD9D2, #7BE7FF, #2FD9D2);
+  background-size: 200% 200%;
+  animation: frame-glow 3s ease-in-out infinite, frame-shift 6s ease-in-out infinite;
   box-shadow: 0 0 12px -2px rgba(26, 166, 214, 0.45);
 }
 .plus-frame-ocean::before {
   background: linear-gradient(135deg, #0F6C9E, #1AA6D6, #2FD9D2, #1AA6D6);
+  background-size: 200% 200%;
+  animation: frame-glow 3.5s ease-in-out infinite, frame-shift 7s ease-in-out infinite;
   box-shadow: 0 0 12px -2px rgba(15, 108, 158, 0.45);
 }
 .plus-frame-ice::before {
   background: linear-gradient(135deg, #B8ECFF, #ffffff, #7BE7FF, #B8ECFF);
+  background-size: 200% 200%;
+  animation: frame-glow 4s ease-in-out infinite, frame-shift 8s ease-in-out infinite;
   box-shadow: 0 0 12px -2px rgba(184, 236, 255, 0.45);
 }
 .plus-frame-neon::before {
   background: linear-gradient(135deg, #2FD9D2, #B8ECFF, #1AA6D6, #7BE7FF);
-  box-shadow: 0 0 14px -2px rgba(47, 217, 210, 0.5);
+  background-size: 200% 200%;
+  animation: frame-glow 2.5s ease-in-out infinite, frame-shift 5s ease-in-out infinite;
+  box-shadow: 0 0 14px -2px rgba(47, 217, 210, 0.55);
 }
 
 
