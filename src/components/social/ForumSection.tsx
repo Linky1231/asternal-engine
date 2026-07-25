@@ -8,6 +8,7 @@ import {
   deleteForumPost, editForumPost, voteForumPost, togglePinThread,
   toggleCloseThread, incrementThreadView, searchForumThreads,
   voteForumThread, getForumThreadsWithVotes,
+  markAsSolution, unmarkSolution,
   type ForumCategory, type ForumThread, type ForumPost,
 } from "@/lib/social/forum-storage";
 import {
@@ -16,7 +17,7 @@ import {
   X, Check, MessageCircle, Search,
   Globe, LifeBuoy, Trophy, Coffee, MessageCircleMore, Tag,
   Image, FileText, Film, ChevronDown, Sparkles, Bookmark, MessageSquareText, AtSign,
-  User, Calendar, Edit,
+  User, Calendar, Edit, CheckCircle,
 } from "lucide-react";
 
 /* ─── Motion variants ─── */
@@ -660,6 +661,16 @@ function ThreadDetailView({
     replyRef.current?.focus();
   };
 
+  const handleMarkSolution = (postId: string) => {
+    markAsSolution(threadId, postId);
+    load();
+  };
+
+  const handleUnmarkSolution = () => {
+    unmarkSolution(threadId);
+    load();
+  };
+
   const cats = getForumCategories();
   const cat = cats.find(c => c.id === thread?.categoryId);
   const catIcon = cat ? CAT_ICONS[cat.icon] ?? <MessageSquare size={14} /> : <MessageSquare size={14} />;
@@ -812,10 +823,25 @@ function ThreadDetailView({
               <p className="text-[10px] text-muted-foreground/30 mt-0.5">¡Sé el primero en comentar!</p>
             </div>
           </motion.div>
-        ) : posts.filter(p => p.id !== posts[0]?.id).map((p, idx) => (
+        ) : posts.filter(p => p.id !== posts[0]?.id).map((p, idx) => {
+          const isSolution = thread.solutionPostId === p.id;
+          return (
           <motion.div key={p.id} variants={stagger.item} layout
-            className="group/post p-4 rounded-2xl border border-border/25 bg-white/50 hover:bg-white/80 hover:border-border/40 transition-all duration-200"
+            className={`group/post p-4 rounded-2xl border transition-all duration-200 ${
+              isSolution
+                ? "border-emerald-300/40 bg-emerald-50/30 hover:bg-emerald-50/60 dark:bg-emerald-950/10 dark:border-emerald-800/30"
+                : "border-border/25 bg-white/50 hover:bg-white/80 hover:border-border/40"
+            }`}
           >
+            {/* Solution badge */}
+            {isSolution && (
+              <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+                className="flex items-center gap-1.5 mb-3 text-emerald-600 dark:text-emerald-400"
+              >
+                <CheckCircle size={14} className="fill-emerald-500 text-white dark:fill-emerald-400 dark:text-emerald-950" />
+                <span className="text-[10px] font-display font-semibold tracking-wider uppercase">Solución</span>
+              </motion.div>
+            )}
             {/* Quote */}
             {p.quoteContent && (
               <div className="mb-3 pl-4 border-l-[3px] border-primary/30 bg-gradient-to-r from-primary/[0.03] to-transparent rounded-r-lg py-2.5 px-3 text-xs">
@@ -896,6 +922,20 @@ function ThreadDetailView({
                         className="flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-lg border border-transparent text-muted-foreground/40 hover:text-primary hover:border-border/50 transition-all active:scale-90">
                         <Quote size={10} /> Citar
                       </button>
+                      {/* Mark as solution button — only for thread author */}
+                      {myId === thread.authorId && (
+                        isSolution ? (
+                          <button onClick={() => handleUnmarkSolution()}
+                            className="flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-lg border border-emerald-200/60 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition-all active:scale-90">
+                            <CheckCircle size={10} /> Solución
+                          </button>
+                        ) : (
+                          <button onClick={() => handleMarkSolution(p.id)}
+                            className="flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-lg border border-transparent text-muted-foreground/40 hover:text-emerald-600 hover:border-emerald-200 transition-all active:scale-90">
+                            <CheckCircle size={10} /> Marcar solución
+                          </button>
+                        )
+                      )}
                       {myId === p.authorId && (
                         <>
                           <button onClick={() => handleEdit(p.id)}
@@ -914,7 +954,8 @@ function ThreadDetailView({
               </div>
             </div>
           </motion.div>
-        ))}
+          );
+        })}
       </motion.div>
 
       {/* ── Reply box ── */}

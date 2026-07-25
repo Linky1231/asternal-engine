@@ -34,6 +34,7 @@ export interface ForumThread {
   documentNames: string[];
   pinned: boolean;
   closed: boolean;
+  solutionPostId: string | null;
   views: number;
   postCount: number;
   createdAt: string;
@@ -281,6 +282,7 @@ export function createForumThread(
     documentNames: media?.documentNames ?? [],
     pinned: false,
     closed: false,
+    solutionPostId: null,
     views: 0,
     postCount: 0,
     createdAt: now,
@@ -308,6 +310,26 @@ export function incrementThreadView(threadId: string) {
   const threads = read<ForumThread[]>(KEYS.threads, []);
   const t = threads.find(th => th.id === threadId);
   if (t) { t.views += 1; write(KEYS.threads, threads); }
+}
+
+/* ─── Solutions ─── */
+
+export function markAsSolution(threadId: string, postId: string): boolean {
+  const threads = read<ForumThread[]>(KEYS.threads, []);
+  const t = threads.find(th => th.id === threadId);
+  if (!t) return false;
+  t.solutionPostId = postId;
+  write(KEYS.threads, threads);
+  return true;
+}
+
+export function unmarkSolution(threadId: string): boolean {
+  const threads = read<ForumThread[]>(KEYS.threads, []);
+  const t = threads.find(th => th.id === threadId);
+  if (!t) return false;
+  t.solutionPostId = null;
+  write(KEYS.threads, threads);
+  return true;
 }
 
 export function togglePinThread(threadId: string): boolean {
@@ -419,10 +441,11 @@ export function deleteForumPost(postId: string): boolean {
   posts = posts.filter(p => p.id !== postId);
   write(KEYS.posts, posts);
 
-  // Update thread post count
+  // Update thread post count and clear solution if needed
   const threads = read<ForumThread[]>(KEYS.threads, []);
   const affected = threads.filter(t => t.postCount > 0);
   for (const t of affected) {
+    if (t.solutionPostId === postId) t.solutionPostId = null;
     t.postCount = posts.filter(p => p.threadId === t.id).length;
   }
   write(KEYS.threads, threads);
