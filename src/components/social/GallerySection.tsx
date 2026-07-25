@@ -1,8 +1,8 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Palette, Sparkles, X, Loader2, ImagePlus, CheckCircle2,
-  Heart, MessageCircle, AlertTriangle, Search, Clock,
+  Heart, MessageCircle, AlertTriangle, Search,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import {
@@ -11,6 +11,7 @@ import {
   getMyProfile, getMyOrbes,
 } from "@/lib/social/api";
 import type { SpriteAsset } from "@/lib/engine/core";
+import { PaintEditor } from "@/components/engine/PaintEditor";
 
 export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
   myId: string | null; isMod: boolean; onRefresh?: () => void;
@@ -21,11 +22,11 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
   const [filter, setFilter] = useState<"all" | "mine">("all");
   const [searchQ, setSearchQ] = useState("");
 
-  // New window state
-  const [savedSprite, setSavedSprite] = useState<SpriteAsset | null>(null);
-  const paintWindowRef = useRef<Window | null>(null);
+  // Paint editor overlay state
+  const [canvasOpen, setCanvasOpen] = useState(false);
 
   // Publish dialog
+  const [savedSprite, setSavedSprite] = useState<SpriteAsset | null>(null);
   const [pubTitle, setPubTitle] = useState("");
   const [pubPrice, setPubPrice] = useState(0);
   const [publishing, setPublishing] = useState(false);
@@ -37,30 +38,6 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
   const [buyState, setBuyState] = useState<"idle" | "loading" | "success" | "error" | "insufficient">("idle");
   const [balance, setBalance] = useState<number | null>(null);
   const [buyMsg, setBuyMsg] = useState("");
-
-  // Listen for artwork saved from the paint window
-  useEffect(() => {
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === "gallery:pending-artwork" && e.newValue) {
-        try {
-          const sprite = JSON.parse(e.newValue) as SpriteAsset;
-          localStorage.removeItem("gallery:pending-artwork");
-          handleCanvasSave(sprite);
-        } catch { /* ignore parse errors */ }
-      }
-    };
-    const handleMessage = (e: MessageEvent) => {
-      if (e.data?.type === "gallery:artwork-saved" && e.data?.sprite) {
-        handleCanvasSave(e.data.sprite as SpriteAsset);
-      }
-    };
-    window.addEventListener("storage", handleStorage);
-    window.addEventListener("message", handleMessage);
-    return () => {
-      window.removeEventListener("storage", handleStorage);
-      window.removeEventListener("message", handleMessage);
-    };
-  }, []);
 
   const load = async () => {
     setLoading(true);
@@ -75,24 +52,9 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
   };
   useEffect(() => { load(); }, []);
 
-  const openPaintWindow = () => {
-    // Close previously opened window if still open
-    if (paintWindowRef.current && !paintWindowRef.current.closed) {
-      paintWindowRef.current.focus();
-      return;
-    }
-    // Clean any stale key
-    try { localStorage.removeItem("gallery:pending-artwork"); } catch {}
-    const w = window.open(
-      "/paint",
-      "paint-editor",
-      "width=900,height=750,scrollbars=no",
-    );
-    if (w) paintWindowRef.current = w;
-  };
-
-  // --- Canvas save (called after receiving from paint window) ---
+  // --- Canvas save (called from PaintEditor onSave) ---
   const handleCanvasSave = (sprite: SpriteAsset) => {
+    setCanvasOpen(false);
     setSavedSprite(sprite);
     setPubTitle(sprite.name || "Mi obra");
     setPubPrice(0);
@@ -156,7 +118,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
           </div>
         </div>
         <button
-          onClick={openPaintWindow}
+          onClick={() => setCanvasOpen(true)}
           className="h-10 pl-3 pr-4 rounded-xl bg-gradient-to-r from-primary to-accent text-primary-foreground text-[10px] font-display tracking-widest flex items-center gap-1.5 active:scale-95 transition shadow-sm shrink-0"
         >
           <ImagePlus size={15} /> DIBUJAR
@@ -316,6 +278,15 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
             );
           })}
         </div>
+      )}
+
+      {/* ====== PAINT EDITOR OVERLAY ====== */}
+      {canvasOpen && (
+        <PaintEditor
+          onSave={handleCanvasSave}
+          onClose={() => setCanvasOpen(false)}
+          size={512}
+        />
       )}
 
       {/* ====== PUBLISH DIALOG ====== */}
