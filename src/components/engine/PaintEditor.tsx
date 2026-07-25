@@ -706,7 +706,7 @@ export function PaintEditor({ onSave, onClose, size: initialSize = 512 }: Props)
     { id: "move", icon: <Move size={18} strokeWidth={2} />, title: "Seleccionar y mover capa" },
   ];
 
-  const [toolsExpanded, setToolsExpanded] = useState(false);
+  const [toolsExpanded, setToolsExpanded] = useState(true);
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col" style={{ background: "var(--gradient-deep)" }}>
@@ -759,7 +759,7 @@ export function PaintEditor({ onSave, onClose, size: initialSize = 512 }: Props)
       </div>
 
       {/* Canvas area — fills all available space while keeping 1:1 aspect ratio */}
-      <div className="flex-1 min-h-0 flex items-center justify-center overflow-hidden">
+      <div className="flex-1 min-h-0 flex items-center justify-center overflow-hidden p-1">
         <div
           key={`canvas-${size}`}
           className="rounded-md p-[8px]"
@@ -821,8 +821,8 @@ export function PaintEditor({ onSave, onClose, size: initialSize = 512 }: Props)
           )}
       </div>
 
-      {/* Bottom panel — compact, scrollable if needed */}
-      <div className="shrink-0 max-h-[30dvh] overflow-y-auto border-t border-border" style={{
+      {/* Bottom panel — scrollable, taller for easier access */}
+      <div className="shrink-0 max-h-[45dvh] overflow-y-auto border-t border-border" style={{
         background: "linear-gradient(0deg, oklch(0.97 0.005 250 / 0.95), oklch(0.99 0 0 / 0.9))",
         backdropFilter: "blur(20px) saturate(180%)",
       }}>
