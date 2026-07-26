@@ -145,9 +145,9 @@ function HomePage() {
           </div>
         )}
 
-        {/* Tabs */}
+        {/* Tabs - each button has its own appear/fade indicator */}
         <div className="max-w-2xl mx-auto px-3 pb-2">
-          <div className="relative flex bg-muted/40 rounded-2xl p-1">
+          <div className="flex bg-muted/40 rounded-2xl p-1">
             <TabButton active={tab === "games"} onClick={() => setTab("games")}>
               <Gamepad2 size={14} /> JUEGOS
             </TabButton>
@@ -160,10 +160,6 @@ function HomePage() {
             <TabButton active={tab === "profile"} onClick={() => setTab("profile")}>
               <User size={14} /> PERFIL
             </TabButton>
-            <div
-              className="absolute top-1 bottom-1 w-[calc(25%-5px)] rounded-xl bg-gradient-to-r from-primary to-accent shadow-[0_4px_14px_-4px_oklch(0.68_0.21_250/0.55)] transition-all duration-350 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
-              style={{ transform: `translateX(${tab === "games" ? "0%" : tab === "feed" ? "calc(100% + 6.5px)" : tab === "gallery" ? "calc(200% + 13px)" : "calc(300% + 19.5px)"})` }}
-            />
           </div>
         </div>
       </header>
@@ -323,13 +319,20 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
   return (
     <button
       onClick={onClick}
-      className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-display tracking-widest transition-all duration-200 active:scale-90 ${
-        active
-          ? "text-primary-foreground"
-          : "text-muted-foreground hover:text-foreground hover:bg-white/5"
-      }`}
+      className="relative flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-display tracking-widest active:scale-90 transition-all duration-200"
     >
-      {children}
+      {active && (
+        <motion.div
+          className="absolute inset-0 rounded-xl bg-gradient-to-r from-primary to-accent shadow-[0_4px_14px_-4px_oklch(0.68_0.21_250/0.55)]"
+          initial={{ opacity: 0, scale: 0.85 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.85 }}
+          transition={{ duration: 0.15, ease: "easeOut" }}
+        />
+      )}
+      <span className={`relative z-10 transition-colors duration-150 ${active ? "text-primary-foreground" : "text-muted-foreground"}`}>
+        {children}
+      </span>
     </button>
   );
 }

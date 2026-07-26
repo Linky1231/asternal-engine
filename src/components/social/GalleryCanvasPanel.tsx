@@ -36,6 +36,8 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
   const isDrawing = useRef(false);
   const lastPos = useRef({ x: 0, y: 0 });
   const undoStack = useRef<string[]>([]);
+  const lastDrawnRef = useRef({ x: 0, y: 0 });
+  const hasMovedRef = useRef(false);
 
   // Measure the container width and compute buffer resolution at native DPR
   useEffect(() => {
@@ -131,55 +133,7 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
     blit();
   };
 
-  const stroke = (x0: number, y0: number, x1: number, y1: number) => {
-    const buf = bufferRef.current;
-    if (!buf) return;
-    const ctx = buf.getContext("2d")!;
-    const erase = tool === "eraser";
-    ctx.save();
-    ctx.globalCompositeOperation = erase ? "destination-out" : "source-over";
-    ctx.strokeStyle = erase ? "#000000" : color;
-    ctx.lineWidth = brushSize;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-
-    // Interpolate intermediate points for smooth curves — subdivide long segments
-    // so small curves don't appear as polygonal straight lines
-    const dx = x1 - x0;
-    const dy = y1 - y0;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    const stepSize = Math.max(1, brushSize * 0.45);
-    const steps = Math.max(1, Math.ceil(dist / stepSize));
-
-    ctx.beginPath();
-    ctx.moveTo(x0, y0);
-    for (let i = 1; i <= steps; i++) {
-      const t = i / steps;
-      ctx.lineTo(x0 + dx * t, y0 + dy * t);
-    }
-    ctx.stroke();
-    ctx.restore();
-  };
-
-  const onDown = (e: React.PointerEvent) => {
-    if (res === 0) return;
-    isDrawing.current = true;
-    const p = getPos(e);
-    lastPos.current = p;
-    (e.target as Element).setPointerCapture(e.pointerId);
-    stroke(p.x, p.y, p.x, p.y);
-    blit();
-  };
-
-  const onMove = (e: React.PointerEvent) => {
-    if (!isDrawing.current || res === 0) return;
-    const p = getPos(e);
-    stroke(lastPos.current.x, lastPos.current.y, p.x, p.y);
-    lastPos.current = p;
-    blit();
-  };
-
-  // Draw a smooth circle dot at the current position with round brush
+  // Draw a smooth circle dot at (x, y) — the core of our brush engine
   const drawDot = (x: number, y: number) => {
     const buf = bufferRef.current;
     if (!buf) return;
@@ -192,6 +146,71 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
     ctx.arc(x, y, brushSize / 2, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
+  };
+
+  // Draw overlapping dots along a line for perfectly smooth curves —
+  // no straight segments, no polygonal artifacts, just continuous soft brush strokes
+  const stroke = (x0: number, y0: number, x1: number, y1: number) => {
+    const buf = bufferRef.current;
+    if (!buf) return;
+    const ctx = buf.getContext("2d")!;
+    const erase = tool === "eraser";
+    ctx.save();
+    ctx.globalCompositeOperation = erase ? "destination-out" : "source-over";
+    ctx.fillStyle = erase ? "#000000" : color;
+
+    const dx = x1 - x0;
+    const dy = y1 - y0;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    // Subdivide into tiny overlapping circles — step smaller than brush diameter
+    // for maximum overlap → perfectly smooth curve
+    const step = Math.max(1, brushSize * 0.25);
+    const steps = Math.max(1, Math.ceil(dist / step));
+
+    ctx.beginPath();
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const x = x0 + dx * t;
+      const y = y0 + dy * t;
+      ctx.moveTo(x + brushSize, y);
+      ctx.arc(x, y, brushSize / 2, 0, Math.PI * 2);
+    }
+    ctx.fill();
+    ctx.restore();
+  };
+
+  const onDown = (e: React.PointerEvent) => {
+    if (res === 0) return;
+    isDrawing.current = true;
+    hasMovedRef.current = false;
+    const p = getPos(e);
+    lastPos.current = p;
+    lastDrawnRef.current = p;
+    (e.target as Element).setPointerCapture(e.pointerId);
+    // Draw initial dot
+    drawDot(p.x, p.y);
+    blit();
+  };
+
+  const onMove = (e: React.PointerEvent) => {
+    if (!isDrawing.current || res === 0) return;
+    const p = getPos(e);
+
+    // Distance-based jitter filter: skip if barely moved
+    // This stabilizes the pen by ignoring micro-movements
+    const dx = p.x - lastDrawnRef.current.x;
+    const dy = p.y - lastDrawnRef.current.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const minDist = Math.max(0.5, brushSize * 0.08);
+
+    if (dist < minDist) return;
+
+    stroke(lastDrawnRef.current.x, lastDrawnRef.current.y, p.x, p.y);
+    lastDrawnRef.current = p;
+    lastPos.current = p;
+    hasMovedRef.current = true;
+    blit();
   };
 
   const onUp = () => {
@@ -283,10 +302,13 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
       <div className="flex flex-col sm:flex-row gap-3 p-3">
         {/* Canvas */}
         <div className="flex-1 min-w-0">
-          <div
+          <motion.div
             ref={containerRef}
             className="rounded-xl overflow-hidden mx-auto"
             style={{ maxWidth: "100%", maxHeight: "60vh", aspectRatio: "1/1" }}
+            initial={{ opacity: 0, scale: 0.94 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.35, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
           >
             <canvas
               ref={canvasRef}
@@ -306,7 +328,7 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
               onPointerCancel={onUp}
               onDoubleClick={pickColor}
             />
-          </div>
+          </motion.div>
         </div>
 
         {/* Sidebar tools */}
