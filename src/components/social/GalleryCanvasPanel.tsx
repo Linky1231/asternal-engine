@@ -142,9 +142,21 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
     ctx.lineWidth = brushSize;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
+
+    // Interpolate intermediate points for smooth curves — subdivide long segments
+    // so small curves don't appear as polygonal straight lines
+    const dx = x1 - x0;
+    const dy = y1 - y0;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const stepSize = Math.max(1, brushSize * 0.45);
+    const steps = Math.max(1, Math.ceil(dist / stepSize));
+
     ctx.beginPath();
     ctx.moveTo(x0, y0);
-    ctx.lineTo(x1, y1);
+    for (let i = 1; i <= steps; i++) {
+      const t = i / steps;
+      ctx.lineTo(x0 + dx * t, y0 + dy * t);
+    }
     ctx.stroke();
     ctx.restore();
   };
@@ -165,6 +177,21 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
     stroke(lastPos.current.x, lastPos.current.y, p.x, p.y);
     lastPos.current = p;
     blit();
+  };
+
+  // Draw a smooth circle dot at the current position with round brush
+  const drawDot = (x: number, y: number) => {
+    const buf = bufferRef.current;
+    if (!buf) return;
+    const ctx = buf.getContext("2d")!;
+    const erase = tool === "eraser";
+    ctx.save();
+    ctx.globalCompositeOperation = erase ? "destination-out" : "source-over";
+    ctx.fillStyle = erase ? "#000000" : color;
+    ctx.beginPath();
+    ctx.arc(x, y, brushSize / 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
   };
 
   const onUp = () => {

@@ -148,32 +148,20 @@ function HomePage() {
         {/* Tabs */}
         <div className="max-w-2xl mx-auto px-3 pb-2">
           <div className="relative flex bg-muted/40 rounded-2xl p-1">
-            <button
-              onClick={() => setTab("games")}
-              className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-display tracking-widest transition-colors duration-200 ${tab === "games" ? "text-primary-foreground" : "text-muted-foreground"}`}
-            >
+            <TabButton active={tab === "games"} onClick={() => setTab("games")}>
               <Gamepad2 size={14} /> JUEGOS
-            </button>
-            <button
-              onClick={() => setTab("feed")}
-              className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-display tracking-widest transition-colors duration-200 ${tab === "feed" ? "text-primary-foreground" : "text-muted-foreground"}`}
-            >
+            </TabButton>
+            <TabButton active={tab === "feed"} onClick={() => setTab("feed")}>
               <Newspaper size={14} /> FEED
-            </button>
-            <button
-              onClick={() => setTab("gallery")}
-              className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-display tracking-widest transition-colors duration-200 ${tab === "gallery" ? "text-primary-foreground" : "text-muted-foreground"}`}
-            >
+            </TabButton>
+            <TabButton active={tab === "gallery"} onClick={() => setTab("gallery")}>
               <Palette size={14} /> GALERÍA
-            </button>
-            <button
-              onClick={() => setTab("profile")}
-              className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-display tracking-widest transition-colors duration-200 ${tab === "profile" ? "text-primary-foreground" : "text-muted-foreground"}`}
-            >
+            </TabButton>
+            <TabButton active={tab === "profile"} onClick={() => setTab("profile")}>
               <User size={14} /> PERFIL
-            </button>
+            </TabButton>
             <div
-              className="absolute top-1 bottom-1 w-[calc(25%-5px)] rounded-xl bg-gradient-to-r from-primary to-accent shadow-[0_4px_14px_-4px_oklch(0.68_0.21_250/0.55)] transition-transform duration-300 ease-out"
+              className="absolute top-1 bottom-1 w-[calc(25%-5px)] rounded-xl bg-gradient-to-r from-primary to-accent shadow-[0_4px_14px_-4px_oklch(0.68_0.21_250/0.55)] transition-all duration-350 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
               style={{ transform: `translateX(${tab === "games" ? "0%" : tab === "feed" ? "calc(100% + 6.5px)" : tab === "gallery" ? "calc(200% + 13px)" : "calc(300% + 19.5px)"})` }}
             />
           </div>
@@ -263,7 +251,7 @@ function HomePage() {
       {/* Floating CTA to editor */}
       <Link
         to="/editor"
-        className="fixed bottom-5 right-5 z-30 h-14 pl-4 pr-5 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-[0_10px_30px_-6px_oklch(0.68_0.21_250/0.7)] flex items-center gap-2 active:scale-95 transition font-display tracking-widest text-xs"
+        className="fixed bottom-5 right-5 z-30 h-14 pl-4 pr-5 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-[0_10px_30px_-6px_oklch(0.68_0.21_250/0.7)] flex items-center gap-2 active:scale-90 hover:scale-105 hover:shadow-[0_14px_40px_-8px_oklch(0.68_0.21_250/0.8)] transition-all duration-200 font-display tracking-widest text-xs"
       >
         <Plus size={18} /> CREAR
       </Link>
@@ -331,6 +319,21 @@ function MenuLink({ icon, label, to, onClick }: { icon: React.ReactNode; label: 
   );
 }
 
+function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-display tracking-widest transition-all duration-200 active:scale-90 ${
+        active
+          ? "text-primary-foreground"
+          : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
 function MenuItem({ icon, label, onClick, children }: { icon: React.ReactNode; label: string; onClick?: () => void; children?: React.ReactNode }) {
   return (
     <button onClick={onClick}
@@ -356,14 +359,24 @@ function FeedSubTabs({ value, onChange }: { value: FeedSub; onChange: (v: FeedSu
           <button
             key={it.id}
             onClick={() => onChange(it.id)}
-            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-display tracking-widest transition-all duration-200 outline-none focus:outline-none ${
+            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-display tracking-widest transition-all duration-200 outline-none focus:outline-none active:scale-95 ${
               active
-                ? "bg-gradient-to-r from-primary to-accent text-primary-foreground"
-                : "bg-background text-muted-foreground hover:text-foreground"
+                ? "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-sm"
+                : "bg-background text-muted-foreground hover:text-foreground hover:bg-muted/40 hover:shadow-sm"
             }`}
             style={active ? undefined : { boxShadow: "inset 0 0 0 1px var(--color-border)" }}
           >
-            {it.icon} {it.label.toUpperCase()}
+            {active && (
+              <motion.span
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: "spring", stiffness: 500, damping: 20 }}
+              >
+                {it.icon}
+              </motion.span>
+            )}
+            {!active && it.icon}
+            {" "}{it.label.toUpperCase()}
           </button>
         );
       })}
