@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Gamepad2, Newspaper, Search, LogOut, Wrench, Plus, ShieldCheck, User, MessageCircle, Sparkles, Star, Menu, Bell, X, Home, Users, Flame, MessageSquare, Palette } from "lucide-react";
+import { Search, LogOut, Wrench, Plus, ShieldCheck, MessageCircle, Sparkles, Star, Menu, Bell, X, Home, Users, Flame, MessageSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchFeed, fetchGames, getMyProfile, isMod, isAdmin, type PostWithMeta, type Profile } from "@/lib/social/api";
 import { PostComposer } from "@/components/social/PostComposer";
@@ -145,20 +145,20 @@ function HomePage() {
           </div>
         )}
 
-        {/* Tabs - each button has its own appear/fade indicator */}
+        {/* Tabs - clean text-only with appear/fade indicator */}
         <div className="max-w-2xl mx-auto px-3 pb-2">
           <div className="flex bg-muted/40 rounded-2xl p-1">
             <TabButton active={tab === "games"} onClick={() => setTab("games")}>
-              <Gamepad2 size={14} /> JUEGOS
+              JUEGOS
             </TabButton>
             <TabButton active={tab === "feed"} onClick={() => setTab("feed")}>
-              <Newspaper size={14} /> FEED
+              FEED
             </TabButton>
             <TabButton active={tab === "gallery"} onClick={() => setTab("gallery")}>
-              <Palette size={14} /> GALERÍA
+              GALERÍA
             </TabButton>
             <TabButton active={tab === "profile"} onClick={() => setTab("profile")}>
-              <User size={14} /> PERFIL
+              PERFIL
             </TabButton>
           </div>
         </div>
@@ -319,7 +319,7 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
   return (
     <button
       onClick={onClick}
-      className="relative flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-display tracking-widest active:scale-90 transition-all duration-200"
+      className="relative flex-1 flex items-center justify-center py-2 rounded-xl text-[11px] font-display tracking-[0.12em] font-semibold active:scale-90 transition-all duration-200"
     >
       {active && (
         <motion.div
@@ -330,7 +330,7 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
           transition={{ duration: 0.15, ease: "easeOut" }}
         />
       )}
-      <span className={`relative z-10 transition-colors duration-150 ${active ? "text-primary-foreground" : "text-muted-foreground"}`}>
+      <span className={`relative z-10 transition-colors duration-150 ${active ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
         {children}
       </span>
     </button>
