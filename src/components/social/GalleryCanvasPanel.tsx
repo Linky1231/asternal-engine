@@ -24,32 +24,49 @@ interface Props {
 }
 
 export function GalleryCanvasPanel({ onSave, onClose }: Props) {
-  const SIZE = 400;
   const [tool, setTool] = useState<Tool>("brush");
   const [color, setColor] = useState("#3b82f6");
   const [brushSize, setBrushSize] = useState(8);
   const [name, setName] = useState("Mi obra");
+  const [res, setRes] = useState(0); // buffer pixel resolution (containerWidth * dpr)
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const bufferRef = useRef<HTMLCanvasElement | null>(null);
   const isDrawing = useRef(false);
   const lastPos = useRef({ x: 0, y: 0 });
   const undoStack = useRef<string[]>([]);
 
-  // Init buffer
+  // Measure the container width and compute buffer resolution at native DPR
   useEffect(() => {
+    const measure = () => {
+      if (!containerRef.current) return;
+      const w = containerRef.current.clientWidth;
+      if (w < 10) return;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      setRes(Math.max(256, Math.round(w * dpr)));
+    };
+    measure();
+    // Also re-measure on resize
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
+
+  const SIZE = res || 512;
+
+  // Init buffer at measured resolution
+  useEffect(() => {
+    if (res === 0) return;
     const buf = document.createElement("canvas");
-    buf.width = SIZE;
-    buf.height = SIZE;
+    buf.width = res;
+    buf.height = res;
     bufferRef.current = buf;
-    // white bg
     const ctx = buf.getContext("2d")!;
     ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, SIZE, SIZE);
-    // Save initial blank state
-    undoStack.current.push(buf.toDataURL());
+    ctx.fillRect(0, 0, res, res);
+    undoStack.current = [buf.toDataURL()];
     blit();
-  }, []);
+  }, [res]);
 
   const blit = () => {
     const c = canvasRef.current;
@@ -64,8 +81,10 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
     }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
     ctx.clearRect(0, 0, W, W);
-    ctx.drawImage(buf, 0, 0, W, W);
+    // Draw buffer at native display size (no scale)
+    ctx.drawImage(buf, 0, 0, buf.width, buf.height, 0, 0, W, W);
   };
 
   const getPos = (e: React.PointerEvent) => {
@@ -95,7 +114,7 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
     const img = new Image();
     img.onload = () => {
       const ctx = buf.getContext("2d")!;
-      ctx.clearRect(0, 0, SIZE, SIZE);
+      ctx.clearRect(0, 0, buf.width, buf.height);
       ctx.drawImage(img, 0, 0);
       blit();
     };
@@ -108,7 +127,7 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
     pushUndo();
     const ctx = buf.getContext("2d")!;
     ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, SIZE, SIZE);
+    ctx.fillRect(0, 0, buf.width, buf.height);
     blit();
   };
 
@@ -131,17 +150,17 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
   };
 
   const onDown = (e: React.PointerEvent) => {
+    if (res === 0) return;
     isDrawing.current = true;
     const p = getPos(e);
     lastPos.current = p;
     (e.target as Element).setPointerCapture(e.pointerId);
-    // dot on click
     stroke(p.x, p.y, p.x, p.y);
     blit();
   };
 
   const onMove = (e: React.PointerEvent) => {
-    if (!isDrawing.current) return;
+    if (!isDrawing.current || res === 0) return;
     const p = getPos(e);
     stroke(lastPos.current.x, lastPos.current.y, p.x, p.y);
     lastPos.current = p;
@@ -174,8 +193,8 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
     const asset: SpriteAsset = {
       id: uid(),
       name: name.trim() || "Mi obra",
-      width: SIZE,
-      height: SIZE,
+      width: buf.width,
+      height: buf.height,
       fps: 8,
       loop: true,
       frames: [{ id: uid(), layers: [], composite: dataUrl }],
@@ -238,6 +257,7 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
         {/* Canvas */}
         <div className="flex-1 min-w-0">
           <div
+            ref={containerRef}
             className="rounded-xl overflow-hidden mx-auto"
             style={{ maxWidth: "100%", maxHeight: "60vh", aspectRatio: "1/1" }}
           >
