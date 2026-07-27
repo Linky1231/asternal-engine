@@ -98,12 +98,18 @@ function HomePage() {
   const closeMenu = () => setMenuOpen(false);
 
   return (
-    <div className="min-h-screen w-screen flex flex-col bg-background text-foreground">
+    <div className="min-h-screen w-screen flex flex-col bg-background text-foreground relative">
+      {/* Ambient mesh background */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="absolute -top-40 -right-40 w-[500px] h-[500px] rounded-full bg-gradient-to-br from-primary/6 via-accent/4 to-transparent glass-orb-1" />
+        <div className="absolute -bottom-40 -left-40 w-[400px] h-[400px] rounded-full bg-gradient-to-tr from-primary/5 to-accent/3 glass-orb-2" />
+      </div>
+
       {/* Header */}
-      <header className="app-header sticky top-0 z-20 panel border-b backdrop-blur-xl">
+      <header className="app-header sticky top-0 z-20 glass backdrop-blur-xl border-b border-glass-border">
         <div className="max-w-2xl mx-auto flex items-center gap-2 px-3 py-2.5">
           <button onClick={() => setTab("profile")} title="Mi perfil"
-            className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-accent grid place-items-center shadow-[0_6px_16px_-6px_oklch(0.68_0.21_250/0.6)] active:scale-95 transition overflow-hidden shrink-0">
+            className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-accent grid place-items-center shadow-[0_6px_16px_-6px_oklch(0.54_0.175_255/0.6)] active:scale-95 transition overflow-hidden shrink-0">
             {me?.avatar_url ? (
               <img src={me.avatar_url} alt="avatar" className="w-full h-full object-cover" />
             ) : (
@@ -113,41 +119,41 @@ function HomePage() {
             )}
           </button>
           <div className="flex-1 min-w-0">
-            <div className="font-display text-sm text-primary-glow glow-text leading-none truncate">ASTERNAL</div>
+            <div className="font-display text-sm text-primary glow-text leading-none truncate">ASTERNAL</div>
             <div className="text-[10px] font-mono text-muted-foreground truncate">@{me?.username ?? "…"}</div>
           </div>
           {typeof me?.orbes === "number" && me?.show_orbes !== false && (
             <Link
               to="/orbes"
               title={`${me.orbes} orbes · Ver panel`}
-              className="flex items-center gap-1 px-2 h-9 rounded-xl bg-gradient-to-br from-primary/15 to-accent/15 border border-primary/30 shadow-sm active:scale-95 shrink-0"
+              className="flex items-center gap-1 px-2 h-9 rounded-xl glass border-glass-border hover:bg-white/70 shadow-sm active:scale-95 shrink-0 transition-all"
             >
               <Sparkles size={13} className="text-primary" fill="currentColor" />
               <span className="text-xs font-display font-semibold tabular-nums">{me.orbes}</span>
             </Link>
           )}
           <button onClick={() => setMenuOpen(true)} title="Menú"
-            className="w-9 h-9 rounded-xl border border-border grid place-items-center active:scale-95 transition shrink-0">
+            className="w-9 h-9 rounded-xl glass border-glass-border grid place-items-center active:scale-95 transition shrink-0 hover:bg-white/70">
             <Menu size={16} />
           </button>
         </div>
 
-
-
-
         {showSearch && (
           <div className="max-w-2xl mx-auto px-3 pb-2 flex gap-2 animate-in fade-in slide-in-from-top-2">
-            <input value={search} onChange={e => setSearch(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && reload(tab)}
-              placeholder={tab === "games" ? "Buscar juegos…" : "Buscar publicaciones…"}
-              className="flex-1 bg-input/50 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40" />
-            <button onClick={() => reload(tab)} className="px-3 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-display tracking-widest active:scale-95">IR</button>
+            <div className="flex-1 flex items-center gap-2 glass-inset px-3 py-0">
+              <Search size={14} className="text-muted-foreground/50 shrink-0" />
+              <input value={search} onChange={e => setSearch(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && reload(tab)}
+                placeholder={tab === "games" ? "Buscar juegos…" : "Buscar publicaciones…"}
+                className="flex-1 bg-transparent py-2.5 text-sm outline-none placeholder:text-muted-foreground/40" />
+            </div>
+            <button onClick={() => reload(tab)} className="px-4 py-2 rounded-xl bg-gradient-to-r from-primary to-accent text-primary-foreground text-xs font-display tracking-widest active:scale-95 shadow-md shadow-primary/20 transition-all">IR</button>
           </div>
         )}
 
-        {/* Tabs - clean text-only with appear/fade indicator */}
+        {/* Tabs - glass pill container */}
         <div className="max-w-2xl mx-auto px-3 pb-2">
-          <div className="flex bg-muted/40 rounded-2xl p-1">
+          <div className="flex glass-inset p-1">
             <TabButton active={tab === "games"} onClick={() => setTab("games")}>
               JUEGOS
             </TabButton>
@@ -244,10 +250,10 @@ function HomePage() {
         </AnimatePresence>
       </main>
 
-      {/* Floating CTA to editor */}
+      {/* Floating CTA to editor — glass pill */}
       <Link
         to="/editor"
-        className="fixed bottom-5 right-5 z-30 h-14 pl-4 pr-5 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-[0_10px_30px_-6px_oklch(0.68_0.21_250/0.7)] flex items-center gap-2 active:scale-90 hover:scale-105 hover:shadow-[0_14px_40px_-8px_oklch(0.68_0.21_250/0.8)] transition-all duration-200 font-display tracking-widest text-xs"
+        className="fixed bottom-5 right-5 z-30 h-14 pl-4 pr-5 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-[0_10px_30px_-6px_oklch(0.54_0.175_255/0.7)] flex items-center gap-2 active:scale-90 hover:scale-105 hover:shadow-[0_14px_40px_-8px_oklch(0.54_0.175_255/0.8)] transition-all duration-200 font-display tracking-widest text-xs"
       >
         <Plus size={18} /> CREAR
       </Link>
@@ -265,22 +271,22 @@ function HomePage() {
             data-open={menuVisible ? "true" : "false"}
           >
             <div className="flex items-center justify-between mb-2">
-              <div className="font-display text-xs tracking-widest text-primary-glow">MENÚ</div>
-              <button onClick={closeMenu} className="w-8 h-8 rounded-lg border border-border grid place-items-center active:scale-95 bg-background"><X size={14}/></button>
+              <div className="font-display text-xs tracking-widest text-primary">MENÚ</div>
+              <button onClick={closeMenu} className="w-8 h-8 rounded-lg glass border-glass-border grid place-items-center active:scale-95"><X size={14}/></button>
             </div>
             <MenuItem icon={<Search size={16}/>} label="Buscar" onClick={() => { setShowSearch(s => !s); closeMenu(); }} />
             <MenuLink icon={<MessageCircle size={16}/>} label="Mensajes" to="/chats" onClick={closeMenu} />
             <MenuItem icon={<Bell size={16}/>} label="Notificaciones" onClick={() => setNotifOpen(o => !o)} />
             {notifOpen && <NotificationsInline />}
             {(mod || admin) && (
-              <MenuLink icon={<ShieldCheck size={16} className="text-primary-glow"/>} label="Moderación" to="/admin" onClick={closeMenu} />
+              <MenuLink icon={<ShieldCheck size={16} className="text-primary"/>} label="Moderación" to="/admin" onClick={closeMenu} />
             )}
             <MenuLink icon={<Star size={16} fill="currentColor" style={{ color: "var(--plus)" }}/>} label="Centro Plus" to="/plus" onClick={closeMenu} />
-            <MenuLink icon={<Wrench size={16} className="text-primary-glow"/>} label="Editor" to="/editor" onClick={closeMenu} />
+            <MenuLink icon={<Wrench size={16} className="text-primary"/>} label="Editor" to="/editor" onClick={closeMenu} />
             <MenuLink icon={<Sparkles size={16} className="text-primary"/>} label="Panel de Orbes" to="/orbes" onClick={closeMenu} />
             <div className="flex-1 min-h-4" />
             <button onClick={() => { logout(); closeMenu(); }}
-              className="flex items-center gap-3 px-3 h-11 rounded-xl border border-border bg-background text-destructive active:scale-[0.98] transition">
+              className="flex items-center gap-3 px-3 h-11 rounded-xl glass border-glass-border text-destructive hover:bg-white/70 active:scale-[0.98] transition-all">
               <LogOut size={16} /> <span className="text-sm font-medium">Cerrar sesión</span>
             </button>
           </div>
@@ -294,7 +300,7 @@ function SkeletonList() {
   return (
     <div className="space-y-3">
       {[0, 1, 2].map(i => (
-        <div key={i} className="panel rounded-2xl border border-border/50 overflow-hidden animate-pulse">
+        <div key={i} className="glass rounded-2xl border-glass-border overflow-hidden animate-pulse">
           <div className="aspect-[16/10] bg-muted/40" />
           <div className="p-3 space-y-2">
             <div className="h-3 w-1/2 bg-muted/50 rounded" />
@@ -309,7 +315,7 @@ function SkeletonList() {
 function MenuLink({ icon, label, to, onClick }: { icon: React.ReactNode; label: string; to: string; onClick?: () => void }) {
   return (
     <Link to={to} onClick={onClick}
-      className="flex items-center gap-3 px-3 h-11 rounded-xl border border-border bg-background hover:bg-muted/60 active:scale-[0.98] transition">
+      className="flex items-center gap-3 px-3 h-11 rounded-xl glass border-glass-border hover:bg-white/70 active:scale-[0.98] transition-all">
       {icon} <span className="text-sm font-medium">{label}</span>
     </Link>
   );
@@ -323,7 +329,7 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
     >
       {active && (
         <motion.div
-          className="absolute inset-0 rounded-xl bg-gradient-to-r from-primary to-accent shadow-[0_4px_14px_-4px_oklch(0.68_0.21_250/0.55)]"
+          className="absolute inset-0 rounded-xl bg-gradient-to-r from-primary to-accent shadow-[0_4px_14px_-4px_oklch(0.54_0.175_255/0.55)]"
           initial={{ opacity: 0, scale: 0.85 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.85 }}
@@ -340,7 +346,7 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
 function MenuItem({ icon, label, onClick, children }: { icon: React.ReactNode; label: string; onClick?: () => void; children?: React.ReactNode }) {
   return (
     <button onClick={onClick}
-      className="flex items-center gap-3 px-3 h-11 rounded-xl border border-border bg-background hover:bg-muted/60 active:scale-[0.98] transition w-full text-left">
+      className="flex items-center gap-3 px-3 h-11 rounded-xl glass border-glass-border hover:bg-white/70 active:scale-[0.98] transition-all w-full text-left">
       {icon} <span className="text-sm font-medium flex-1">{label}</span>
       {children}
     </button>
@@ -364,10 +370,9 @@ function FeedSubTabs({ value, onChange }: { value: FeedSub; onChange: (v: FeedSu
             onClick={() => onChange(it.id)}
             className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-display tracking-widest transition-all duration-200 outline-none focus:outline-none active:scale-95 ${
               active
-                ? "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-sm"
-                : "bg-background text-muted-foreground hover:text-foreground hover:bg-muted/40 hover:shadow-sm"
+                ? "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-md shadow-primary/20"
+                : "glass border-glass-border hover:bg-white/70 text-muted-foreground hover:text-foreground"
             }`}
-            style={active ? undefined : { boxShadow: "inset 0 0 0 1px var(--color-border)" }}
           >
             {active && (
               <motion.span

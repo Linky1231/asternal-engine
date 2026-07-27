@@ -174,7 +174,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-16 panel rounded-2xl border border-dashed border-border">
+        <div className="text-center py-16 glass rounded-2xl border-dashed border-glass-border">
           <Palette size={36} className="mx-auto text-muted-foreground/40 mb-3" />
           <div className="text-sm font-display text-muted-foreground">
             {q ? "Sin resultados" : filter === "mine" ? "Aún no has creado obras" : "Aún no hay obras"}
@@ -199,7 +199,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
                 initial={{ opacity: 0, y: 16, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ duration: 0.3, delay: i * 0.04, ease: [0.22, 1, 0.36, 1] }}
-                className="group panel rounded-2xl overflow-hidden border border-border/50 hover:border-primary/30 hover:shadow-md transition-all active:scale-[0.98]"
+                className="group glass-card rounded-2xl overflow-hidden border-glass-border hover:border-primary/40 hover:shadow-glass-lg transition-all active:scale-[0.98]"
               >
                 {/* Image area */}
                 <div className="aspect-square bg-muted/20 relative overflow-hidden">
@@ -303,7 +303,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 30, scale: 0.96 }}
               transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-              className="w-full max-w-sm panel border border-border rounded-2xl p-5 space-y-4 shadow-2xl"
+              className="w-full max-w-sm glass-panel rounded-2xl border-glass-border p-5 space-y-4 shadow-2xl"
               onClick={e => e.stopPropagation()}
             >
               <div className="flex items-center gap-2">
@@ -373,7 +373,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-              className="w-full max-w-xs panel rounded-2xl p-6 text-center space-y-2"
+              className="w-full max-w-xs glass-panel rounded-2xl p-6 text-center space-y-2"
             >
               <div className="w-14 h-14 rounded-2xl bg-emerald-500/15 grid place-items-center mx-auto">
                 <CheckCircle2 size={28} className="text-emerald-500" />
@@ -398,7 +398,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 30, scale: 0.96 }}
               transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-              className="w-full max-w-sm panel border border-border rounded-2xl p-5 space-y-3 shadow-2xl"
+              className="w-full max-w-sm glass-panel rounded-2xl border-glass-border p-5 space-y-3 shadow-2xl"
               onClick={e => e.stopPropagation()}
             >
               {(buyState === "idle" || buyState === "loading") && (

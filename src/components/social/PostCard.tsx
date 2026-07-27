@@ -70,7 +70,7 @@ export function PostCard({
   );
 
   return (
-    <article className={`panel rounded-xl p-3 border border-border/40 space-y-2 ${entranceClass}`}>
+    <article className={`glass-card rounded-xl p-3 border-glass-border space-y-2 ${entranceClass}`}>
       <header className="flex items-center gap-2">
         <Link to="/profile/$userId" params={{ userId: post.author_id }}
           className="relative shrink-0">
@@ -91,9 +91,9 @@ export function PostCard({
           <div className="text-[10px] font-mono text-muted-foreground">@{author?.username ?? "?"} · {timeAgo(post.created_at)}{post.category ? ` · ${post.category}` : ""}</div>
         </Link>
         <div className="relative">
-          <button onClick={() => setMenuOpen(o => !o)} className="w-8 h-8 rounded-md border border-border text-muted-foreground">⋯</button>
+          <button onClick={() => setMenuOpen(o => !o)} className="w-8 h-8 rounded-md glass border-glass-border text-muted-foreground hover:bg-white/70 transition-all">⋯</button>
           {menuOpen && (
-            <div className="absolute right-0 top-9 z-10 panel border border-border rounded-md p-1 min-w-[140px] text-xs">
+            <div className="absolute right-0 top-9 z-10 glass rounded-lg border-glass-border p-1 min-w-[140px] text-xs shadow-lg">
               {mine && <button onClick={() => { setEditing(true); setMenuOpen(false); }} className="block w-full text-left px-2 py-1.5 hover:bg-muted/40">Editar</button>}
               {canDelete && <button onClick={remove} className="block w-full text-left px-2 py-1.5 text-destructive hover:bg-muted/40">Borrar</button>}
               {!mine && <button onClick={report} className="block w-full text-left px-2 py-1.5 hover:bg-muted/40">Reportar</button>}

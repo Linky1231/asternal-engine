@@ -166,7 +166,7 @@ export function GameCard({
   }
 
   return (
-    <article className="panel rounded-2xl overflow-hidden border border-border/50 shadow-sm">
+    <article className="glass-card rounded-2xl overflow-hidden border-glass-border">
       <div
         onClick={play}
         className="relative aspect-[16/10] grid place-items-center cursor-pointer active:scale-[0.99] transition overflow-hidden"
@@ -264,7 +264,7 @@ export function GameCard({
             <MoreHorizontal size={16} />
           </button>
           {menuOpen && (
-            <div className="absolute right-0 bottom-9 z-10 panel border border-border rounded-lg p-1 min-w-[140px] text-xs shadow-lg">
+            <div className="absolute right-0 bottom-9 z-10 glass rounded-lg border-glass-border p-1 min-w-[140px] text-xs shadow-lg">
               {mine && (
                 <button onClick={() => { setEditOpen(true); setMenuOpen(false); }} className="flex items-center gap-2 w-full text-left px-2 py-1.5 hover:bg-muted/40 rounded">
                   <Pencil size={13} /> Editar
@@ -312,8 +312,8 @@ export function GameCard({
           onClick={() => buyState !== "loading" && setBuyOpen(false)}
         >
           <div
-            onClick={e => e.stopPropagation()}
-            className="w-full max-w-sm panel rounded-3xl border border-primary/30 p-5 shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-4 duration-300 relative"
+          onClick={e => e.stopPropagation()}
+            className="w-full max-w-sm glass-panel rounded-3xl border-glass-border p-5 shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-4 duration-300 relative"
           >
             {buyState !== "loading" && (
               <button
@@ -350,7 +350,7 @@ export function GameCard({
                 <button
                   onClick={confirmPurchase}
                   disabled={buyState === "loading" || (balance !== null && balance < price)}
-                  className="mt-4 w-full h-11 rounded-2xl bg-gradient-to-r from-primary to-accent text-primary-foreground font-display tracking-widest text-xs disabled:opacity-50 active:scale-[0.98] transition"
+                  className="mt-4 w-full h-11 rounded-2xl bg-gradient-to-r from-primary to-accent text-primary-foreground font-display tracking-widest text-xs disabled:opacity-50 active:scale-[0.98] transition shadow-md shadow-primary/20"
                 >
                   {buyState === "loading" ? <Loader2 size={16} className="animate-spin mx-auto" /> : "CONFIRMAR COMPRA"}
                 </button>
