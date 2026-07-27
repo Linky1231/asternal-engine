@@ -131,3 +131,16 @@
     outline: 0 !important;
     box-shadow: none !important;
   }
+
+  /* Remove all possible default button borders/outlines */
+  button,
+  [role="button"],
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"] {
+    border-style: none !important;
+    border-width: 0 !important;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+  }
