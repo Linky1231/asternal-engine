@@ -95,16 +95,20 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-mesh relative overflow-hidden">
-      {/* ── Ambient glass orbs ── */}
-      <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-gradient-to-br from-primary/10 via-primary/5 to-transparent glass-orb-1 pointer-events-none" />
-      <div className="absolute -bottom-40 -right-40 w-[30rem] h-[30rem] rounded-full bg-gradient-to-tr from-accent/8 via-primary/5 to-transparent glass-orb-2 pointer-events-none" />
-      <div className="absolute top-1/3 right-1/4 w-64 h-64 rounded-full bg-gradient-to-bl from-primary/6 to-accent/4 glass-orb-3 pointer-events-none" />
+    <div className="min-h-screen flex flex-col relative overflow-hidden" style={{ background: 'linear-gradient(180deg, oklch(0.985 0.002 260) 0%, oklch(0.975 0.004 260) 50%, oklch(0.96 0.005 260) 100%)' }}>
+      {/* ── Liquid morphing blobs ── */}
+      <div className="absolute -top-60 -left-60 w-[500px] h-[500px] bg-gradient-to-br from-primary/10 via-accent/8 to-transparent morph-blob-1 pointer-events-none will-change-transform" />
+      <div className="absolute -bottom-60 -right-60 w-[600px] h-[600px] bg-gradient-to-tr from-accent/6 via-primary/8 to-transparent morph-blob-2 pointer-events-none will-change-transform" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-gradient-to-r from-primary/4 via-accent/3 to-primary/4 morph-blob-3 pointer-events-none will-change-transform" />
+      {/* Floating particles */}
+      <div className="absolute top-1/4 left-1/4 w-2 h-2 rounded-full bg-primary/20 animate-pulse" style={{ animationDuration: '4s', animationDelay: '0s' }} />
+      <div className="absolute top-3/4 right-1/3 w-1.5 h-1.5 rounded-full bg-accent/20 animate-pulse" style={{ animationDuration: '5s', animationDelay: '1s' }} />
+      <div className="absolute top-1/2 right-1/4 w-3 h-3 rounded-full bg-primary/10 animate-pulse" style={{ animationDuration: '3.5s', animationDelay: '2s' }} />
 
       {/* ── Auth Content ── */}
       <div className="flex-1 flex items-center justify-center relative z-10">
         <div className="flex items-center justify-center h-full flex-col px-4">
-          <Card className="min-w-[360px] max-w-[400px] border-0 shadow-glass-lg glass overflow-hidden">
+          <div className="min-w-[360px] max-w-[400px] liquid-glass liquid-glass-border glass-sheen overflow-hidden">
             {/* Glass sheen overlay */}
             <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-white/5 to-transparent rounded-[inherit]" />
 
@@ -290,7 +294,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                 freebuff.com
               </a>
             </div>
-          </Card>
+          </div>
         </div>
       </div>
     </div>

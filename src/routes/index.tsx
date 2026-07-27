@@ -99,14 +99,15 @@ function HomePage() {
 
   return (
     <div className="min-h-screen w-screen flex flex-col bg-background text-foreground relative">
-      {/* Ambient mesh background */}
+      {/* Ambient liquid glass background — morphing blobs */}
       <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute -top-40 -right-40 w-[500px] h-[500px] rounded-full bg-gradient-to-br from-primary/6 via-accent/4 to-transparent glass-orb-1" />
-        <div className="absolute -bottom-40 -left-40 w-[400px] h-[400px] rounded-full bg-gradient-to-tr from-primary/5 to-accent/3 glass-orb-2" />
+        <div className="absolute -top-60 -right-60 w-[600px] h-[600px] bg-gradient-to-br from-primary/8 via-accent/5 to-transparent morph-blob-1 will-change-transform" />
+        <div className="absolute -bottom-60 -left-60 w-[500px] h-[500px] bg-gradient-to-tr from-accent/5 via-primary/6 to-transparent morph-blob-2 will-change-transform" />
+        <div className="absolute top-1/3 left-1/3 w-[400px] h-[400px] bg-gradient-to-r from-primary/4 via-accent/3 to-primary/4 morph-blob-3 will-change-transform" />
       </div>
 
       {/* Header */}
-      <header className="app-header sticky top-0 z-20 glass backdrop-blur-xl border-b border-glass-border">
+      <header className="app-header sticky top-0 z-20 liquid-glass border-b-0 shadow-liquid border-glass-border">
         <div className="max-w-2xl mx-auto flex items-center gap-2 px-3 py-2.5">
           <button onClick={() => setTab("profile")} title="Mi perfil"
             className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-accent grid place-items-center shadow-[0_6px_16px_-6px_oklch(0.54_0.175_255/0.6)] active:scale-95 transition overflow-hidden shrink-0">
@@ -250,10 +251,10 @@ function HomePage() {
         </AnimatePresence>
       </main>
 
-      {/* Floating CTA to editor — glass pill */}
+      {/* Floating CTA to editor — liquid glass pill */}
       <Link
         to="/editor"
-        className="fixed bottom-5 right-5 z-30 h-14 pl-4 pr-5 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-[0_10px_30px_-6px_oklch(0.54_0.175_255/0.7)] flex items-center gap-2 active:scale-90 hover:scale-105 hover:shadow-[0_14px_40px_-8px_oklch(0.54_0.175_255/0.8)] transition-all duration-200 font-display tracking-widest text-xs"
+        className="fixed bottom-5 right-5 z-30 h-14 pl-4 pr-5 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-[0_10px_30px_-6px_oklch(0.54_0.175_255/0.7)] flex items-center gap-2 active:scale-90 hover:scale-105 hover:shadow-[0_14px_40px_-8px_oklch(0.54_0.175_255/0.8)] transition-all duration-200 font-display tracking-widest text-xs liquid-glass-border"
       >
         <Plus size={18} /> CREAR
       </Link>
