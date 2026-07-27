@@ -104,7 +104,7 @@ function HomePage() {
       <header className="app-header sticky top-0 z-20 bg-background/92 backdrop-blur-xl border-b border-border/60">
         <div className="max-w-2xl mx-auto flex items-center gap-2 px-4 py-3">
           <button onClick={() => setTab("profile")} title="Mi perfil"
-            className="w-9 h-9 rounded-xl bg-primary grid place-items-center shadow-sm active:scale-95 transition overflow-hidden shrink-0">
+            className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-accent grid place-items-center shadow-[0_2px_10px_-3px_oklch(0.488_0.185_264/0.45)] active:scale-95 transition overflow-hidden shrink-0">
             {me?.avatar_url ? (
               <img src={me.avatar_url} alt="avatar" className="w-full h-full object-cover" />
             ) : (
@@ -142,7 +142,7 @@ function HomePage() {
               onKeyDown={e => e.key === "Enter" && reload(tab)}
               placeholder={tab === "games" ? "Buscar juegos…" : "Buscar publicaciones…"}
               className="flex-1 bg-input/50 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40" />
-            <button onClick={() => reload(tab)} className="px-3 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-display tracking-widest active:scale-95">IR</button>
+            <button onClick={() => reload(tab)} className="px-3 py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-xs font-display tracking-widest shadow-[0_2px_8px_-3px_oklch(0.488_0.185_264/0.4)] active:scale-95 transition">IR</button>
           </div>
         )}
 
@@ -180,7 +180,7 @@ function HomePage() {
               <User size={14} /> PERFIL
             </button>
             <div
-              className="absolute top-1 bottom-1 w-[calc(20%-4px)] rounded-xl bg-primary shadow-sm transition-transform duration-300 ease-out"
+              className="absolute top-1 bottom-1 w-[calc(20%-4px)] rounded-xl bg-gradient-to-br from-primary to-accent shadow-sm transition-transform duration-300 ease-out"
               style={{ transform: `translateX(${tab === "games" ? "0%" : tab === "feed" ? "calc(100% + 6px)" : tab === "gallery" ? "calc(200% + 12px)" : tab === "events" ? "calc(300% + 18px)" : "calc(400% + 24px)"})` }}
             />
           </div>
@@ -274,7 +274,7 @@ function HomePage() {
       {/* Floating CTA to editor */}
       <Link
         to="/editor"
-        className="fixed bottom-5 right-5 z-30 h-14 pl-4 pr-5 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center gap-2 active:scale-95 transition font-display tracking-widest text-xs"
+        className="fixed bottom-5 right-5 z-30 h-14 pl-4 pr-5 rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[0_6px_24px_-6px_oklch(0.488_0.185_264/0.5)] flex items-center gap-2 active:scale-95 transition font-display tracking-widest text-xs"
       >
         <Plus size={18} /> CREAR
       </Link>
@@ -369,8 +369,8 @@ function FeedSubTabs({ value, onChange }: { value: FeedSub; onChange: (v: FeedSu
             onClick={() => onChange(it.id)}
             className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-display tracking-widest transition-all duration-200 outline-none focus:outline-none ${
               active
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "bg-background text-muted-foreground hover:text-foreground"
+              ? "bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[0_2px_8px_-3px_oklch(0.488_0.185_264/0.35)]"
+              : "bg-background text-muted-foreground hover:text-foreground"
             }`}
             style={active ? undefined : { boxShadow: "inset 0 0 0 1px var(--color-border)" }}
           >
