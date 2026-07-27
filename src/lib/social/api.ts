@@ -1203,6 +1203,80 @@ export async function uploadDocument(file: File): Promise<{ path: string; name: 
   return { path, name: file.name };
 }
 
+// ============ FEATURED GAMES ============
+export type FeaturedGame = {
+  post_id: string;
+  sort_order: number;
+  created_at: string;
+  game?: PostWithMeta | null;
+};
+
+export async function getFeaturedGames(): Promise<PostWithMeta[]> {
+  const { data, error } = await supabase
+    .from("featured_games")
+    .select("post_id, sort_order, created_at")
+    .order("sort_order", { ascending: true });
+  if (error) throw error;
+  if (!data?.length) return [];
+  const postIds = (data as { post_id: string }[]).map(d => d.post_id);
+  const { data: posts, error: postsErr } = await supabase
+    .from("posts")
+    .select("*")
+    .in("id", postIds)
+    .is("deleted_at", null);
+  if (postsErr) throw postsErr;
+  if (!posts?.length) return [];
+  // Fetch full meta for these posts
+  return fetchFeed({ category: "game" }).then(all => {
+    const idSet = new Set(postIds);
+    const filtered = all.filter(p => idSet.has(p.id));
+    // Re-sort by the original order
+    const orderMap = new Map((data as { post_id: string; sort_order: number }[]).map(d => [d.post_id, d.sort_order]));
+    filtered.sort((a, b) => (orderMap.get(a.id) ?? 999) - (orderMap.get(b.id) ?? 999));
+    return filtered;
+  });
+}
+
+export async function setFeaturedGame(postId: string): Promise<void> {
+  const { data: existing } = await supabase
+    .from("featured_games")
+    .select("post_id")
+    .eq("post_id", postId)
+    .maybeSingle();
+  if (existing) return; // already featured
+  const { data: all } = await supabase
+    .from("featured_games")
+    .select("sort_order")
+    .order("sort_order", { ascending: false })
+    .limit(1);
+  const maxOrder = ((all ?? [])[0] as { sort_order: number } | undefined)?.sort_order ?? 0;
+  const { error } = await supabase
+    .from("featured_games")
+    .insert({ post_id: postId, sort_order: maxOrder + 1 });
+  if (error) throw error;
+}
+
+export async function unsetFeaturedGame(postId: string): Promise<void> {
+  const { error } = await supabase
+    .from("featured_games")
+    .delete()
+    .eq("post_id", postId);
+  if (error) throw error;
+}
+
+export async function reorderFeaturedGames(postIds: string[]): Promise<void> {
+  // Delete all and re-insert
+  await supabase.from("featured_games").delete().neq("post_id", "__nonexistent__");
+  const inserts = postIds.map((postId, i) => ({
+    post_id: postId,
+    sort_order: i,
+  }));
+  if (inserts.length) {
+    const { error } = await supabase.from("featured_games").insert(inserts);
+    if (error) throw error;
+  }
+}
+
 // ============ FOLLOWS ============
 export type FollowStats = { followers: number; following: number; i_follow: boolean };
 

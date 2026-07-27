@@ -1,9 +1,12 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
-import { Play, Flame, Rocket, Heart, Sparkles as SparklesIcon, Users, ChevronRight, Gamepad2 } from "lucide-react";
+import { Play, Flame, Rocket, Heart, Sparkles as SparklesIcon, Users, ChevronRight, Gamepad2, Star, Trophy } from "lucide-react";
+import { motion } from "framer-motion";
 import type { PostWithMeta } from "@/lib/social/api";
+import { getFeaturedGames } from "@/lib/social/api";
 import { GameIcon } from "./GameIcon";
 import { GameCard } from "./GameCard";
+import Smooth3DSlideshow from "./Smooth3DSlideshow";
 
 function extractTitle(content: string): string {
   const line = content.split("\n")[0] || "Juego";
@@ -19,6 +22,21 @@ export function GamesHome({
 }) {
   const [selected, setSelected] = useState<PostWithMeta | null>(null);
   const [trend, setTrend] = useState<TrendTab>("hot");
+  const [featuredGames, setFeaturedGames] = useState<PostWithMeta[]>([]);
+  const [featuredLoading, setFeaturedLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        setFeaturedGames(await getFeaturedGames());
+      } catch {
+        // table may not exist yet
+        setFeaturedGames([]);
+      } finally {
+        setFeaturedLoading(false);
+      }
+    })();
+  }, []);
 
   const sections = useMemo(() => {
     if (!games.length) return null;
@@ -72,6 +90,34 @@ export function GamesHome({
 
   return (
     <div className="space-y-5">
+      {/* 0. Featured games carousel (admin-selected) */}
+      {featuredGames.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 16, scale: 0.97 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <div className="glass rounded-2xl border-glass-border overflow-hidden">
+            <div className="flex items-center gap-1.5 px-4 pt-3 pb-1">
+              <Trophy size={14} className="text-primary" fill="currentColor" />
+              <span className="font-display text-[10px] tracking-widest text-primary/70">DESTACADOS POR LA ADMINISTRACIÓN</span>
+            </div>
+            <Smooth3DSlideshow
+              slides={featuredGames.map(g => ({
+                id: g.id,
+                image: { src: g.signed_cover || undefined },
+                title: extractTitle(g.content),
+              }))}
+              autoplay={true}
+              onPlayGame={(id) => {
+                const game = games.find(g => g.id === id) || featuredGames.find(g => g.id === id);
+                if (game) setSelected(game);
+              }}
+            />
+          </div>
+        </motion.div>
+      )}
+
       {/* 1. Banner destacado */}
       <FeaturedBanner post={featured} onPlay={() => setSelected(featured)} />
 

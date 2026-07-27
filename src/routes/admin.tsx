@@ -12,15 +12,20 @@ import {
 } from "@/lib/social/forum-storage";
 import {
   ArrowLeft, Shield, ShieldCheck, Loader2, Search, Ban, Trash2, Plus,
-  MessageSquare, Hash, Globe, Edit3, X, Check,
+  MessageSquare, Hash, Globe, Edit3, X, Check, Star, Gamepad2, Trophy,
 } from "lucide-react";
+import {
+  fetchGames, getFeaturedGames, setFeaturedGame, unsetFeaturedGame,
+  type PostWithMeta,
+} from "@/lib/social/api";
+import Smooth3DSlideshow from "@/components/social/Smooth3DSlideshow";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Admin · Asternal" }] }),
   component: AdminPage,
 });
 
-type Tab = "mods" | "bans" | "foros";
+type Tab = "mods" | "bans" | "foros" | "destacados";
 
 function AdminPage() {
   const navigate = useNavigate();
@@ -42,13 +47,25 @@ function AdminPage() {
   const [catName, setCatName] = useState("");
   const [catDesc, setCatDesc] = useState("");
   const [catIcon, setCatIcon] = useState("globe");
+  // Featured games
+  const [featuredGames, setFeaturedGames] = useState<PostWithMeta[]>([]);
+  const [allGames, setAllGames] = useState<PostWithMeta[]>([]);
+  const [gameSearch, setGameSearch] = useState("");
+  const [gameResults, setGameResults] = useState<PostWithMeta[]>([]);
 
   const load = async (search?: string) => {
     setLoading(true);
     try {
       if (tab === "mods") setUsers(await listManagedUsers(search));
       else if (tab === "bans") setBans(await listBannedEmails());
-      else {
+      else if (tab === "destacados") {
+        const [games, featured] = await Promise.all([
+          fetchGames({ search: undefined }),
+          getFeaturedGames(),
+        ]);
+        setAllGames(games);
+        setFeaturedGames(featured);
+      } else {
         setThreads(getForumThreads());
         setCategories(getForumCategories());
       }
@@ -109,6 +126,11 @@ function AdminPage() {
     load();
   };
 
+  function extractGameTitle(content: string): string {
+    const line = content.split("\n")[0] || "Juego";
+    return line.replace(/^🎮\s*/, "").trim() || "Juego";
+  }
+
   if (allowed === null) return <div className="min-h-screen grid place-items-center text-sm text-muted-foreground">Cargando…</div>;
   if (!allowed) return (
     <div className="min-h-screen grid place-items-center px-6 text-center">
@@ -133,17 +155,17 @@ function AdminPage() {
         </div>
         <div className="max-w-2xl mx-auto px-3 pb-2">
           <div className="relative flex bg-muted/40 rounded-2xl p-1">
-            {(["mods", "bans", "foros"] as const).map(t => (
+            {(["mods", "bans", "foros", "destacados"] as const).map(t => (
               <button key={t} onClick={() => setTab(t)}
                 className={`relative z-10 flex-1 py-2 rounded-xl text-[11px] font-display tracking-widest transition-colors ${
                   tab === t ? "text-primary-foreground" : "text-muted-foreground"
                 }`}>
-                {t === "mods" ? "MODS" : t === "bans" ? "BANEOS" : "FOROS"}
+                {t === "mods" ? "MODS" : t === "bans" ? "BANEOS" : t === "foros" ? "FOROS" : "DESTACADOS"}
               </button>
             ))}
-            <div className="absolute top-1 bottom-1 w-[calc(33.333%-5px)] rounded-xl bg-gradient-to-r from-primary to-accent transition-transform duration-300"
+            <div className="absolute top-1 bottom-1 w-[calc(25%-5px)] rounded-xl bg-gradient-to-r from-primary to-accent transition-transform duration-300"
               style={{
-                transform: `translateX(${tab === "mods" ? "0%" : tab === "bans" ? "calc(100% + 7px)" : "calc(200% + 14px)"})`,
+                transform: `translateX(${tab === "mods" ? "0%" : tab === "bans" ? "calc(100% + 7px)" : tab === "foros" ? "calc(200% + 14px)" : "calc(300% + 21px)"})`,
               }}
             />
           </div>
@@ -219,6 +241,127 @@ function AdminPage() {
                 </button>
               </div>
             ))}
+          </>
+        ) : tab === "destacados" ? (
+          /* ── DESTACADOS TAB ── */
+          <>
+            <div className="flex items-center gap-1.5 px-1 mb-2">
+              <Trophy size={16} className="text-primary" />
+              <span className="font-display text-xs tracking-widest text-primary/70">JUEGOS DESTACADOS</span>
+              <span className="text-[10px] text-muted-foreground font-mono ml-auto">{featuredGames.length} seleccionados</span>
+            </div>
+
+            {/* Selected featured games preview */}
+            {featuredGames.length > 0 ? (
+              <div className="glass rounded-2xl border-glass-border overflow-hidden mb-3">
+                <Smooth3DSlideshow
+                  slides={featuredGames.map(g => ({
+                    id: g.id,
+                    image: { src: g.signed_cover || undefined },
+                    title: extractGameTitle(g.content),
+                  }))}
+                  autoplay={false}
+                />
+              </div>
+            ) : (
+              <div className="text-center text-xs text-muted-foreground py-8 glass rounded-2xl border-glass-border mb-3">
+                <Star size={24} className="mx-auto mb-2 opacity-40" />
+                No hay juegos destacados. Selecciona juegos abajo para añadirlos.
+              </div>
+            )}
+
+            {/* Current featured list */}
+            <div className="font-display text-[10px] tracking-widest text-primary/70 flex items-center gap-1 px-1 mb-1">
+              <Gamepad2 size={12} /> SELECCIONADOS ({featuredGames.length})
+            </div>
+            <div className="space-y-1.5 mb-4">
+              {featuredGames.length === 0 ? (
+                <div className="text-[11px] text-muted-foreground/60 px-1">Aún no has seleccionado ningún juego destacado.</div>
+              ) : featuredGames.map((g, idx) => (
+                <div key={g.id} className="glass border-glass-border rounded-xl px-3 py-2.5 flex items-center gap-3">
+                  <span className="text-[9px] font-mono text-muted-foreground w-5 shrink-0 tabular-nums">#{idx + 1}</span>
+                  <div className="w-10 h-10 rounded-xl shrink-0 overflow-hidden border border-border/40 bg-gradient-to-br from-primary/20 to-accent/20">
+                    {g.signed_cover ? (
+                      <img src={g.signed_cover} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full grid place-items-center text-muted-foreground/40">
+                        <Gamepad2 size={16} />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-display truncate">{extractGameTitle(g.content)}</div>
+                    <div className="text-[10px] font-mono text-muted-foreground truncate">@{g.author?.username ?? "?"}</div>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      await unsetFeaturedGame(g.id);
+                      await load();
+                    }}
+                    className="w-8 h-8 grid place-items-center rounded-lg border border-destructive/30 text-destructive/70 hover:bg-destructive/10 active:scale-90 transition"
+                    title="Quitar de destacados"
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Search & add games */}
+            <div className="font-display text-[10px] tracking-widest text-primary/70 flex items-center gap-1 px-1 mb-1">
+              <Search size={12} /> BUSCAR JUEGOS
+            </div>
+            <div className="flex items-center gap-2 bg-input/50 rounded-xl px-3 mb-2">
+              <Search size={14} className="text-muted-foreground shrink-0" />
+              <input
+                value={gameSearch}
+                onChange={e => {
+                  setGameSearch(e.target.value);
+                  const q = e.target.value.toLowerCase().trim();
+                  if (!q) { setGameResults([]); return; }
+                  setGameResults(
+                    allGames
+                      .filter(g => !featuredGames.find(fg => fg.id === g.id))
+                      .filter(g => extractGameTitle(g.content).toLowerCase().includes(q) || g.author?.username?.toLowerCase().includes(q))
+                      .slice(0, 20)
+                  );
+                }}
+                placeholder="Buscar juegos para destacar…"
+                className="flex-1 bg-transparent py-2 text-sm outline-none"
+              />
+            </div>
+            {gameResults.length > 0 && (
+              <div className="space-y-1 mb-3">
+                {gameResults.map(g => (
+                  <div key={g.id} className="glass border-glass-border rounded-xl px-3 py-2 flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl shrink-0 overflow-hidden border border-border/40 bg-gradient-to-br from-primary/20 to-accent/20">
+                      {g.signed_cover ? (
+                        <img src={g.signed_cover} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full grid place-items-center text-muted-foreground/40">
+                          <Gamepad2 size={14} />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-display truncate">{extractGameTitle(g.content)}</div>
+                      <div className="text-[10px] font-mono text-muted-foreground truncate">@{g.author?.username ?? "?"} · {g.likes} ❤️</div>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        await setFeaturedGame(g.id);
+                        setGameSearch("");
+                        setGameResults([]);
+                        await load();
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-primary to-accent text-primary-foreground text-[10px] font-display tracking-widest flex items-center gap-1 active:scale-95 transition"
+                    >
+                      <Plus size={11} /> DESTACAR
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </>
         ) : (
           /* ── FOROS TAB ── */
