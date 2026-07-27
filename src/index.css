@@ -122,25 +122,21 @@
   button:not([disabled]),
   [role="button"]:not([disabled]) {
     cursor: pointer;
-    outline: 0 !important;
   }
-  button:focus-visible,
-  [role="button"]:focus-visible,
-  button:focus,
-  [role="button"]:focus {
-    outline: 0 !important;
-    box-shadow: none !important;
-  }
-
-  /* Remove all possible default button borders/outlines */
   button,
   [role="button"],
   input[type="button"],
   input[type="submit"],
   input[type="reset"] {
-    border-style: none !important;
-    border-width: 0 !important;
+    border: 0 solid transparent;
+    outline: 0 solid transparent;
     -webkit-appearance: none;
     -moz-appearance: none;
     appearance: none;
+  }
+  button:focus-visible,
+  [role="button"]:focus-visible,
+  button:focus,
+  [role="button"]:focus {
+    outline: 0 solid transparent;
   }
