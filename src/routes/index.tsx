@@ -101,8 +101,8 @@ function HomePage() {
   return (
     <div className="min-h-screen w-screen flex flex-col bg-background text-foreground">
       {/* Header */}
-      <header className="app-header sticky top-0 z-20 panel border-b backdrop-blur-xl">
-        <div className="max-w-2xl mx-auto flex items-center gap-2 px-3 py-2.5">
+      <header className="app-header sticky top-0 z-20 bg-background/92 backdrop-blur-xl border-b border-border/60">
+        <div className="max-w-2xl mx-auto flex items-center gap-2 px-4 py-3">
           <button onClick={() => setTab("profile")} title="Mi perfil"
             className="w-9 h-9 rounded-xl bg-primary grid place-items-center shadow-sm active:scale-95 transition overflow-hidden shrink-0">
             {me?.avatar_url ? (
@@ -114,8 +114,8 @@ function HomePage() {
             )}
           </button>
           <div className="flex-1 min-w-0">
-            <div className="font-display text-sm text-primary-glow glow-text leading-none truncate">ASTERNAL</div>
-            <div className="text-[10px] font-mono text-muted-foreground truncate">@{me?.username ?? "…"}</div>
+            <div className="font-display text-sm font-semibold text-foreground leading-none truncate">Asternal</div>
+            <div className="text-[11px] text-muted-foreground/70 truncate mt-0.5">@{me?.username ?? "…"}</div>
           </div>
           {typeof me?.orbes === "number" && me?.show_orbes !== false && (
             <Link
@@ -128,7 +128,7 @@ function HomePage() {
             </Link>
           )}
           <button onClick={() => setMenuOpen(true)} title="Menú"
-            className="w-9 h-9 rounded-xl border border-border grid place-items-center active:scale-95 transition shrink-0">
+            className="w-9 h-9 rounded-xl border border-border/70 hover:bg-muted/60 bg-background grid place-items-center active:scale-95 transition shrink-0">
             <Menu size={16} />
           </button>
         </div>

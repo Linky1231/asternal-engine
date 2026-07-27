@@ -12,15 +12,19 @@ import {
 } from "@/lib/social/forum-storage";
 import {
   ArrowLeft, Shield, ShieldCheck, Loader2, Search, Ban, Trash2, Plus,
-  MessageSquare, Hash, Globe, Edit3, X, Check,
+  MessageSquare, Hash, Globe, Edit3, X, Check, Trophy,
 } from "lucide-react";
+import {
+  fetchEvents, createEvent, updateEventStatus,
+  type EventItem,
+} from "@/lib/social/api";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Admin · Asternal" }] }),
   component: AdminPage,
 });
 
-type Tab = "mods" | "bans" | "foros";
+type Tab = "mods" | "bans" | "foros" | "eventos";
 
 function AdminPage() {
   const navigate = useNavigate();
@@ -42,12 +46,24 @@ function AdminPage() {
   const [catName, setCatName] = useState("");
   const [catDesc, setCatDesc] = useState("");
   const [catIcon, setCatIcon] = useState("globe");
+  // Events
+  const [events, setEvents] = useState<EventItem[]>([]);
+  const [showNewEvent, setShowNewEvent] = useState(false);
+  const [evTitle, setEvTitle] = useState("");
+  const [evDesc, setEvDesc] = useState("");
+  const [evStarts, setEvStarts] = useState("");
+  const [evEnds, setEvEnds] = useState("");
+  const [evPrizePool, setEvPrizePool] = useState<number | "">("");
+  const [evPrizeDesc, setEvPrizeDesc] = useState("");
+  const [evRules, setEvRules] = useState("");
+  const [evErr, setEvErr] = useState<string | null>(null);
 
   const load = async (search?: string) => {
     setLoading(true);
     try {
       if (tab === "mods") setUsers(await listManagedUsers(search));
       else if (tab === "bans") setBans(await listBannedEmails());
+      else if (tab === "eventos") setEvents(await fetchEvents());
       else {
         setThreads(getForumThreads());
         setCategories(getForumCategories());
@@ -132,18 +148,18 @@ function AdminPage() {
           </div>
         </div>
         <div className="max-w-2xl mx-auto px-3 pb-2">
-          <div className="relative flex bg-muted/40 rounded-2xl p-1">
-            {(["mods", "bans", "foros"] as const).map(t => (
+          <div className="relative flex bg-muted/50 rounded-2xl p-0.5">
+            {(["mods", "bans", "foros", "eventos"] as const).map(t => (
               <button key={t} onClick={() => setTab(t)}
                 className={`relative z-10 flex-1 py-2 rounded-xl text-[11px] font-display tracking-widest transition-colors ${
                   tab === t ? "text-primary-foreground" : "text-muted-foreground"
                 }`}>
-                {t === "mods" ? "MODS" : t === "bans" ? "BANEOS" : "FOROS"}
+                {t === "mods" ? "MODS" : t === "bans" ? "BANEOS" : t === "foros" ? "FOROS" : "EVENTOS"}
               </button>
             ))}
-            <div className="absolute top-1 bottom-1 w-[calc(33.333%-5px)] rounded-xl bg-gradient-to-r from-primary to-accent transition-transform duration-300"
+            <div className="absolute top-0.5 bottom-0.5 w-[calc(25%-3px)] rounded-xl bg-primary shadow-sm transition-transform duration-300"
               style={{
-                transform: `translateX(${tab === "mods" ? "0%" : tab === "bans" ? "calc(100% + 7px)" : "calc(200% + 14px)"})`,
+                transform: `translateX(${tab === "mods" ? "0%" : tab === "bans" ? "calc(100% + 4px)" : tab === "foros" ? "calc(200% + 8px)" : "calc(300% + 12px)"})`,
               }}
             />
           </div>
@@ -170,7 +186,7 @@ function AdminPage() {
             <div className="text-center text-xs text-muted-foreground py-10">Sin resultados.</div>
           ) : users.map(u => (
             <div key={u.id} className="panel border border-border/50 rounded-xl px-3 py-2.5 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent grid place-items-center text-primary-foreground font-display">
+              <div className="w-10 h-10 rounded-full bg-primary grid place-items-center text-primary-foreground font-display">
                 {(u.display_name?.[0] ?? u.username[0] ?? "?").toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
@@ -188,6 +204,106 @@ function AdminPage() {
               )}
             </div>
           ))
+        ) : tab === "eventos" ? (
+          <>
+            {admin && (
+              <div className="panel border border-border/50 rounded-xl p-3 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="font-display text-[10px] tracking-widest text-primary flex items-center gap-1"><Trophy size={12}/> NUEVO EVENTO</div>
+                  <button onClick={() => setShowNewEvent(s => !s)}
+                    className={`text-[10px] px-2.5 py-1 rounded-lg border transition ${showNewEvent ? "bg-muted/30 border-border" : "border-primary/30 bg-primary/5 text-primary"}`}>
+                    {showNewEvent ? "Cancelar" : "Crear"}
+                  </button>
+                </div>
+                {showNewEvent && (
+                  <div className="space-y-2 border-t border-border/40 pt-3">
+                    <input value={evTitle} onChange={e => setEvTitle(e.target.value)} placeholder="Título del evento" maxLength={60}
+                      className="w-full bg-input/50 rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary/40" />
+                    <textarea value={evDesc} onChange={e => setEvDesc(e.target.value)} placeholder="Descripción del evento" maxLength={500} rows={2}
+                      className="w-full bg-input/50 rounded-lg px-3 py-2 text-sm outline-none resize-none focus:ring-1 focus:ring-primary/40" />
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <div className="text-[10px] text-muted-foreground mb-0.5">Inicio</div>
+                        <input type="datetime-local" value={evStarts} onChange={e => setEvStarts(e.target.value)}
+                          className="w-full bg-input/50 rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary/40" />
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-muted-foreground mb-0.5">Fin</div>
+                        <input type="datetime-local" value={evEnds} onChange={e => setEvEnds(e.target.value)}
+                          className="w-full bg-input/50 rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary/40" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <div className="text-[10px] text-muted-foreground mb-0.5">Premio (Orbes)</div>
+                        <input type="number" min={0} value={evPrizePool} onChange={e => setEvPrizePool(e.target.value ? Number(e.target.value) : "")} placeholder="0"
+                          className="w-full bg-input/50 rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary/40" />
+                      </div>
+                    </div>
+                    <textarea value={evPrizeDesc} onChange={e => setEvPrizeDesc(e.target.value)} placeholder="Descripción del premio" maxLength={300} rows={1}
+                      className="w-full bg-input/50 rounded-lg px-3 py-2 text-sm outline-none resize-none focus:ring-1 focus:ring-primary/40" />
+                    <textarea value={evRules} onChange={e => setEvRules(e.target.value)} placeholder="Reglas del evento" maxLength={1000} rows={2}
+                      className="w-full bg-input/50 rounded-lg px-3 py-2 text-sm outline-none resize-none focus:ring-1 focus:ring-primary/40" />
+                    {evErr && <div className="text-xs text-destructive">{evErr}</div>}
+                    <button onClick={async () => {
+                        setEvErr(null);
+                        if (!evTitle.trim() || !evDesc.trim() || !evStarts || !evEnds) { setEvErr("Completa todos los campos obligatorios"); return; }
+                        if (new Date(evStarts) >= new Date(evEnds)) { setEvErr("La fecha de fin debe ser posterior al inicio"); return; }
+                        try {
+                          await createEvent({
+                            title: evTitle.trim(),
+                            description: evDesc.trim(),
+                            starts_at: new Date(evStarts).toISOString(),
+                            ends_at: new Date(evEnds).toISOString(),
+                            prize_pool: typeof evPrizePool === "number" ? evPrizePool : null,
+                            prize_description: evPrizeDesc.trim() || null,
+                            rules: evRules.trim() || null,
+                          });
+                          setEvTitle(""); setEvDesc(""); setEvStarts(""); setEvEnds("");
+                          setEvPrizePool(""); setEvPrizeDesc(""); setEvRules("");
+                          setShowNewEvent(false);
+                          await load();
+                        } catch (e) { setEvErr((e as Error).message); }
+                      }}
+                      disabled={!evTitle.trim() || !evDesc.trim() || !evStarts || !evEnds}
+                      className="w-full py-2.5 rounded-lg bg-primary text-primary-foreground text-[10px] font-display tracking-widest disabled:opacity-50 flex items-center justify-center gap-1 active:scale-[0.98] transition">
+                      <Trophy size={12}/> CREAR EVENTO
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+            {events.length === 0 ? (
+              <div className="text-center text-xs text-muted-foreground py-10">No hay eventos creados aún.</div>
+            ) : events.map(ev => {
+              const statusOpts: Array<"upcoming" | "active" | "completed"> = ["upcoming", "active", "completed"];
+              return (
+                <div key={ev.id} className="panel border border-border/50 rounded-xl p-3 flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-muted/60 border border-border/40 grid place-items-center shrink-0">
+                    <Trophy size={18} className="text-amber-500" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-display text-sm font-semibold truncate">{ev.title}</div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">{ev.description}</div>
+                    <div className="flex items-center gap-3 mt-1.5 text-[10px] text-muted-foreground">
+                      <span>{new Date(ev.starts_at).toLocaleDateString()}</span>
+                      <span>{ev.participant_count ?? 0} participantes</span>
+                      <span>{ev.submission_count ?? 0} subs</span>
+                    </div>
+                  </div>
+                  {admin && (
+                    <select value={ev.status} onChange={e => {
+                      const v = e.target.value as "upcoming" | "active" | "completed";
+                      updateEventStatus(ev.id, v).then(() => load()).catch(() => {});
+                    }}
+                      className="text-[10px] bg-input/50 rounded-lg px-2 py-1 border border-border/50 outline-none">
+                      {statusOpts.map(s => <option key={s} value={s}>{s.toUpperCase()}</option>)}
+                    </select>
+                  )}
+                </div>
+              );
+            })}
+          </>
         ) : tab === "bans" ? (
           <>
             {admin && (
@@ -199,7 +315,7 @@ function AdminPage() {
                   className="w-full bg-input/50 rounded-lg px-3 py-2 text-sm outline-none" />
                 {banErr && <div className="text-xs text-destructive">{banErr}</div>}
                 <button onClick={addBan} disabled={!newEmail.trim()}
-                  className="w-full py-2 rounded-lg bg-gradient-to-r from-destructive to-accent text-primary-foreground text-[10px] font-display tracking-widest disabled:opacity-50 flex items-center justify-center gap-1 active:scale-95">
+                  className="w-full py-2 rounded-lg bg-destructive text-destructive-foreground text-[10px] font-display tracking-widest disabled:opacity-50 flex items-center justify-center gap-1 active:scale-95">
                   <Plus size={12}/> BANEAR EMAIL
                 </button>
               </div>
