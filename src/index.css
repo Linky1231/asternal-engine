@@ -113,6 +113,9 @@
 }
 
 @layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
   body {
     @apply bg-background text-foreground;
   }
@@ -120,34 +123,4 @@
   [role="button"]:not([disabled]) {
     cursor: pointer;
   }
-  /* ── Reset ALL interactive elements to remove default browser borders ── */
-  button,
-  [role="button"],
-  input,
-  textarea,
-  select,
-  fieldset {
-    border: 0 solid transparent;
-    outline: 0 solid transparent;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-  }
-  /* Restore native appearance for controls that need it */
-  input[type="range"],
-  input[type="checkbox"],
-  input[type="radio"] {
-    -webkit-appearance: auto;
-    -moz-appearance: auto;
-    appearance: auto;
-  }
-  /* Remove focus outlines */
-  button:focus-visible,
-  [role="button"]:focus-visible,
-  button:focus,
-  [role="button"]:focus,
-  input:focus-visible,
-  textarea:focus-visible,
-  select:focus-visible {
-    outline: 0 solid transparent;
-  }
+}

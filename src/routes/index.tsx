@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, LogOut, Wrench, Plus, ShieldCheck, MessageCircle, Sparkles, Star, Menu, Bell, X, Home, Users, Flame, MessageSquare } from "lucide-react";
+import { Gamepad2, Newspaper, Search, LogOut, Wrench, Plus, ShieldCheck, User, MessageCircle, Sparkles, Star, Menu, Bell, X, Home, Users, Flame, MessageSquare, Palette } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchFeed, fetchGames, getMyProfile, isMod, isAdmin, type PostWithMeta, type Profile } from "@/lib/social/api";
 import { PostComposer } from "@/components/social/PostComposer";
@@ -98,19 +98,12 @@ function HomePage() {
   const closeMenu = () => setMenuOpen(false);
 
   return (
-    <div className="min-h-screen w-screen flex flex-col bg-background text-foreground relative">
-      {/* Ambient liquid glass background — morphing blobs */}
-      <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute -top-60 -right-60 w-[600px] h-[600px] bg-gradient-to-br from-primary/8 via-accent/5 to-transparent morph-blob-1 will-change-transform" />
-        <div className="absolute -bottom-60 -left-60 w-[500px] h-[500px] bg-gradient-to-tr from-accent/5 via-primary/6 to-transparent morph-blob-2 will-change-transform" />
-        <div className="absolute top-1/3 left-1/3 w-[400px] h-[400px] bg-gradient-to-r from-primary/4 via-accent/3 to-primary/4 morph-blob-3 will-change-transform" />
-      </div>
-
+    <div className="min-h-screen w-screen flex flex-col bg-background text-foreground">
       {/* Header */}
-      <header className="app-header sticky top-0 z-20 liquid-glass border-b-0 shadow-liquid border-glass-border">
+      <header className="app-header sticky top-0 z-20 panel border-b backdrop-blur-xl">
         <div className="max-w-2xl mx-auto flex items-center gap-2 px-3 py-2.5">
           <button onClick={() => setTab("profile")} title="Mi perfil"
-            className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-accent grid place-items-center shadow-[0_6px_16px_-6px_oklch(0.54_0.175_255/0.6)] active:scale-95 transition overflow-hidden shrink-0">
+            className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-accent grid place-items-center shadow-[0_6px_16px_-6px_oklch(0.68_0.21_250/0.6)] active:scale-95 transition overflow-hidden shrink-0">
             {me?.avatar_url ? (
               <img src={me.avatar_url} alt="avatar" className="w-full h-full object-cover" />
             ) : (
@@ -120,53 +113,69 @@ function HomePage() {
             )}
           </button>
           <div className="flex-1 min-w-0">
-            <div className="font-display text-sm text-primary glow-text leading-none truncate">ASTERNAL</div>
+            <div className="font-display text-sm text-primary-glow glow-text leading-none truncate">ASTERNAL</div>
             <div className="text-[10px] font-mono text-muted-foreground truncate">@{me?.username ?? "…"}</div>
           </div>
           {typeof me?.orbes === "number" && me?.show_orbes !== false && (
             <Link
               to="/orbes"
               title={`${me.orbes} orbes · Ver panel`}
-              className="flex items-center gap-1 px-2 h-9 rounded-xl glass border-glass-border hover:bg-white/70 shadow-sm active:scale-95 shrink-0 transition-all"
+              className="flex items-center gap-1 px-2 h-9 rounded-xl bg-gradient-to-br from-primary/15 to-accent/15 border border-primary/30 shadow-sm active:scale-95 shrink-0"
             >
               <Sparkles size={13} className="text-primary" fill="currentColor" />
               <span className="text-xs font-display font-semibold tabular-nums">{me.orbes}</span>
             </Link>
           )}
           <button onClick={() => setMenuOpen(true)} title="Menú"
-            className="w-9 h-9 rounded-xl glass border-glass-border grid place-items-center active:scale-95 transition shrink-0 hover:bg-white/70">
+            className="w-9 h-9 rounded-xl border border-border grid place-items-center active:scale-95 transition shrink-0">
             <Menu size={16} />
           </button>
         </div>
 
+
+
+
         {showSearch && (
           <div className="max-w-2xl mx-auto px-3 pb-2 flex gap-2 animate-in fade-in slide-in-from-top-2">
-            <div className="flex-1 flex items-center gap-2 glass-inset px-3 py-0">
-              <Search size={14} className="text-muted-foreground/50 shrink-0" />
-              <input value={search} onChange={e => setSearch(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && reload(tab)}
-                placeholder={tab === "games" ? "Buscar juegos…" : "Buscar publicaciones…"}
-                className="flex-1 bg-transparent py-2.5 text-sm outline-none placeholder:text-muted-foreground/40" />
-            </div>
-            <button onClick={() => reload(tab)} className="px-4 py-2 rounded-xl bg-gradient-to-r from-primary to-accent text-primary-foreground text-xs font-display tracking-widest active:scale-95 shadow-md shadow-primary/20 transition-all">IR</button>
+            <input value={search} onChange={e => setSearch(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && reload(tab)}
+              placeholder={tab === "games" ? "Buscar juegos…" : "Buscar publicaciones…"}
+              className="flex-1 bg-input/50 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40" />
+            <button onClick={() => reload(tab)} className="px-3 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-display tracking-widest active:scale-95">IR</button>
           </div>
         )}
 
-        {/* Tabs - glass pill container */}
+        {/* Tabs */}
         <div className="max-w-2xl mx-auto px-3 pb-2">
-          <div className="flex glass-inset p-1">
-            <TabButton active={tab === "games"} onClick={() => setTab("games")}>
-              JUEGOS
-            </TabButton>
-            <TabButton active={tab === "feed"} onClick={() => setTab("feed")}>
-              FEED
-            </TabButton>
-            <TabButton active={tab === "gallery"} onClick={() => setTab("gallery")}>
-              GALERÍA
-            </TabButton>
-            <TabButton active={tab === "profile"} onClick={() => setTab("profile")}>
-              PERFIL
-            </TabButton>
+          <div className="relative flex bg-muted/40 rounded-2xl p-1">
+            <button
+              onClick={() => setTab("games")}
+              className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-display tracking-widest transition-colors duration-200 ${tab === "games" ? "text-primary-foreground" : "text-muted-foreground"}`}
+            >
+              <Gamepad2 size={14} /> JUEGOS
+            </button>
+            <button
+              onClick={() => setTab("feed")}
+              className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-display tracking-widest transition-colors duration-200 ${tab === "feed" ? "text-primary-foreground" : "text-muted-foreground"}`}
+            >
+              <Newspaper size={14} /> FEED
+            </button>
+            <button
+              onClick={() => setTab("gallery")}
+              className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-display tracking-widest transition-colors duration-200 ${tab === "gallery" ? "text-primary-foreground" : "text-muted-foreground"}`}
+            >
+              <Palette size={14} /> GALERÍA
+            </button>
+            <button
+              onClick={() => setTab("profile")}
+              className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-display tracking-widest transition-colors duration-200 ${tab === "profile" ? "text-primary-foreground" : "text-muted-foreground"}`}
+            >
+              <User size={14} /> PERFIL
+            </button>
+            <div
+              className="absolute top-1 bottom-1 w-[calc(25%-5px)] rounded-xl bg-gradient-to-r from-primary to-accent shadow-[0_4px_14px_-4px_oklch(0.68_0.21_250/0.55)] transition-transform duration-300 ease-out"
+              style={{ transform: `translateX(${tab === "games" ? "0%" : tab === "feed" ? "calc(100% + 6.5px)" : tab === "gallery" ? "calc(200% + 13px)" : "calc(300% + 19.5px)"})` }}
+            />
           </div>
         </div>
       </header>
@@ -251,10 +260,10 @@ function HomePage() {
         </AnimatePresence>
       </main>
 
-      {/* Floating CTA to editor — liquid glass pill */}
+      {/* Floating CTA to editor */}
       <Link
         to="/editor"
-        className="fixed bottom-5 right-5 z-30 h-14 pl-4 pr-5 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-[0_10px_30px_-6px_oklch(0.54_0.175_255/0.7)] flex items-center gap-2 active:scale-90 hover:scale-105 hover:shadow-[0_14px_40px_-8px_oklch(0.54_0.175_255/0.8)] transition-all duration-200 font-display tracking-widest text-xs liquid-glass-border"
+        className="fixed bottom-5 right-5 z-30 h-14 pl-4 pr-5 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-[0_10px_30px_-6px_oklch(0.68_0.21_250/0.7)] flex items-center gap-2 active:scale-95 transition font-display tracking-widest text-xs"
       >
         <Plus size={18} /> CREAR
       </Link>
@@ -272,22 +281,22 @@ function HomePage() {
             data-open={menuVisible ? "true" : "false"}
           >
             <div className="flex items-center justify-between mb-2">
-              <div className="font-display text-xs tracking-widest text-primary">MENÚ</div>
-              <button onClick={closeMenu} className="w-8 h-8 rounded-lg glass border-glass-border grid place-items-center active:scale-95"><X size={14}/></button>
+              <div className="font-display text-xs tracking-widest text-primary-glow">MENÚ</div>
+              <button onClick={closeMenu} className="w-8 h-8 rounded-lg border border-border grid place-items-center active:scale-95 bg-background"><X size={14}/></button>
             </div>
             <MenuItem icon={<Search size={16}/>} label="Buscar" onClick={() => { setShowSearch(s => !s); closeMenu(); }} />
             <MenuLink icon={<MessageCircle size={16}/>} label="Mensajes" to="/chats" onClick={closeMenu} />
             <MenuItem icon={<Bell size={16}/>} label="Notificaciones" onClick={() => setNotifOpen(o => !o)} />
             {notifOpen && <NotificationsInline />}
             {(mod || admin) && (
-              <MenuLink icon={<ShieldCheck size={16} className="text-primary"/>} label="Moderación" to="/admin" onClick={closeMenu} />
+              <MenuLink icon={<ShieldCheck size={16} className="text-primary-glow"/>} label="Moderación" to="/admin" onClick={closeMenu} />
             )}
             <MenuLink icon={<Star size={16} fill="currentColor" style={{ color: "var(--plus)" }}/>} label="Centro Plus" to="/plus" onClick={closeMenu} />
-            <MenuLink icon={<Wrench size={16} className="text-primary"/>} label="Editor" to="/editor" onClick={closeMenu} />
+            <MenuLink icon={<Wrench size={16} className="text-primary-glow"/>} label="Editor" to="/editor" onClick={closeMenu} />
             <MenuLink icon={<Sparkles size={16} className="text-primary"/>} label="Panel de Orbes" to="/orbes" onClick={closeMenu} />
             <div className="flex-1 min-h-4" />
             <button onClick={() => { logout(); closeMenu(); }}
-              className="flex items-center gap-3 px-3 h-11 rounded-xl glass border-glass-border text-destructive hover:bg-white/70 active:scale-[0.98] transition-all">
+              className="flex items-center gap-3 px-3 h-11 rounded-xl border border-border bg-background text-destructive active:scale-[0.98] transition">
               <LogOut size={16} /> <span className="text-sm font-medium">Cerrar sesión</span>
             </button>
           </div>
@@ -301,7 +310,7 @@ function SkeletonList() {
   return (
     <div className="space-y-3">
       {[0, 1, 2].map(i => (
-        <div key={i} className="glass rounded-2xl border-glass-border overflow-hidden animate-pulse">
+        <div key={i} className="panel rounded-2xl border border-border/50 overflow-hidden animate-pulse">
           <div className="aspect-[16/10] bg-muted/40" />
           <div className="p-3 space-y-2">
             <div className="h-3 w-1/2 bg-muted/50 rounded" />
@@ -316,38 +325,16 @@ function SkeletonList() {
 function MenuLink({ icon, label, to, onClick }: { icon: React.ReactNode; label: string; to: string; onClick?: () => void }) {
   return (
     <Link to={to} onClick={onClick}
-      className="flex items-center gap-3 px-3 h-11 rounded-xl glass border-glass-border hover:bg-white/70 active:scale-[0.98] transition-all">
+      className="flex items-center gap-3 px-3 h-11 rounded-xl border border-border bg-background hover:bg-muted/60 active:scale-[0.98] transition">
       {icon} <span className="text-sm font-medium">{label}</span>
     </Link>
-  );
-}
-
-function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      onClick={onClick}
-      className="relative flex-1 flex items-center justify-center py-2 rounded-xl text-[11px] font-display tracking-[0.12em] font-semibold active:scale-90 transition-all duration-200"
-    >
-      {active && (
-        <motion.div
-          className="absolute inset-0 rounded-xl bg-gradient-to-r from-primary to-accent shadow-[0_4px_14px_-4px_oklch(0.54_0.175_255/0.55)]"
-          initial={{ opacity: 0, scale: 0.85 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.85 }}
-          transition={{ duration: 0.15, ease: "easeOut" }}
-        />
-      )}
-      <span className={`relative z-10 transition-colors duration-150 ${active ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-        {children}
-      </span>
-    </button>
   );
 }
 
 function MenuItem({ icon, label, onClick, children }: { icon: React.ReactNode; label: string; onClick?: () => void; children?: React.ReactNode }) {
   return (
     <button onClick={onClick}
-      className="flex items-center gap-3 px-3 h-11 rounded-xl glass border-glass-border hover:bg-white/70 active:scale-[0.98] transition-all w-full text-left">
+      className="flex items-center gap-3 px-3 h-11 rounded-xl border border-border bg-background hover:bg-muted/60 active:scale-[0.98] transition w-full text-left">
       {icon} <span className="text-sm font-medium flex-1">{label}</span>
       {children}
     </button>
@@ -369,23 +356,14 @@ function FeedSubTabs({ value, onChange }: { value: FeedSub; onChange: (v: FeedSu
           <button
             key={it.id}
             onClick={() => onChange(it.id)}
-            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-display tracking-widest transition-all duration-200 outline-none focus:outline-none active:scale-95 ${
+            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-display tracking-widest transition-all duration-200 outline-none focus:outline-none ${
               active
-                ? "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-md shadow-primary/20"
-                : "glass border-glass-border hover:bg-white/70 text-muted-foreground hover:text-foreground"
+                ? "bg-gradient-to-r from-primary to-accent text-primary-foreground"
+                : "bg-background text-muted-foreground hover:text-foreground"
             }`}
+            style={active ? undefined : { boxShadow: "inset 0 0 0 1px var(--color-border)" }}
           >
-            {active && (
-              <motion.span
-                initial={{ scale: 0, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ type: "spring", stiffness: 500, damping: 20 }}
-              >
-                {it.icon}
-              </motion.span>
-            )}
-            {!active && it.icon}
-            {" "}{it.label.toUpperCase()}
+            {it.icon} {it.label.toUpperCase()}
           </button>
         );
       })}
