@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Gamepad2, Newspaper, Search, LogOut, Wrench, Plus, ShieldCheck, User, MessageCircle, Sparkles, Star, Menu, Bell, X, Home, Users, Flame, MessageSquare, Palette } from "lucide-react";
+import { Gamepad2, Newspaper, Search, LogOut, Wrench, Plus, ShieldCheck, User, MessageCircle, Sparkles, Star, Menu, Bell, X, Home, Users, Flame, MessageSquare, Palette, Trophy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchFeed, fetchGames, getMyProfile, isMod, isAdmin, type PostWithMeta, type Profile } from "@/lib/social/api";
 import { PostComposer } from "@/components/social/PostComposer";
@@ -12,6 +12,7 @@ import { ProfilePanel } from "@/components/social/ProfilePanel";
 import { NotificationsInline } from "@/components/social/NotificationsInline";
 import { ForumSection } from "@/components/social/ForumSection";
 import { GallerySection } from "@/components/social/GallerySection";
+import { EventsSection } from "@/components/social/EventsSection";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -28,7 +29,7 @@ export const Route = createFileRoute("/")({
   component: HomePage,
 });
 
-type Tab = "games" | "feed" | "gallery" | "profile";
+type Tab = "games" | "feed" | "gallery" | "events" | "profile";
 type FeedSub = "forYou" | "following" | "trending" | "forums";
 
 function HomePage() {
@@ -103,7 +104,7 @@ function HomePage() {
       <header className="app-header sticky top-0 z-20 panel border-b backdrop-blur-xl">
         <div className="max-w-2xl mx-auto flex items-center gap-2 px-3 py-2.5">
           <button onClick={() => setTab("profile")} title="Mi perfil"
-            className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-accent grid place-items-center shadow-[0_6px_16px_-6px_oklch(0.68_0.21_250/0.6)] active:scale-95 transition overflow-hidden shrink-0">
+            className="w-9 h-9 rounded-xl bg-primary grid place-items-center shadow-sm active:scale-95 transition overflow-hidden shrink-0">
             {me?.avatar_url ? (
               <img src={me.avatar_url} alt="avatar" className="w-full h-full object-cover" />
             ) : (
@@ -120,7 +121,7 @@ function HomePage() {
             <Link
               to="/orbes"
               title={`${me.orbes} orbes · Ver panel`}
-              className="flex items-center gap-1 px-2 h-9 rounded-xl bg-gradient-to-br from-primary/15 to-accent/15 border border-primary/30 shadow-sm active:scale-95 shrink-0"
+              className="flex items-center gap-1 px-2 h-9 rounded-xl bg-primary/10 border border-primary/20 shadow-sm active:scale-95 shrink-0"
             >
               <Sparkles size={13} className="text-primary" fill="currentColor" />
               <span className="text-xs font-display font-semibold tabular-nums">{me.orbes}</span>
@@ -147,7 +148,7 @@ function HomePage() {
 
         {/* Tabs */}
         <div className="max-w-2xl mx-auto px-3 pb-2">
-          <div className="relative flex bg-muted/40 rounded-2xl p-1">
+          <div className="relative flex bg-muted/50 rounded-2xl p-0.5">
             <button
               onClick={() => setTab("games")}
               className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-display tracking-widest transition-colors duration-200 ${tab === "games" ? "text-primary-foreground" : "text-muted-foreground"}`}
@@ -167,14 +168,20 @@ function HomePage() {
               <Palette size={14} /> GALERÍA
             </button>
             <button
+              onClick={() => setTab("events")}
+              className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-display tracking-widest transition-colors duration-200 ${tab === "events" ? "text-primary-foreground" : "text-muted-foreground"}`}
+            >
+              <Trophy size={14} /> EVENTOS
+            </button>
+            <button
               onClick={() => setTab("profile")}
               className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-display tracking-widest transition-colors duration-200 ${tab === "profile" ? "text-primary-foreground" : "text-muted-foreground"}`}
             >
               <User size={14} /> PERFIL
             </button>
             <div
-              className="absolute top-1 bottom-1 w-[calc(25%-5px)] rounded-xl bg-gradient-to-r from-primary to-accent shadow-[0_4px_14px_-4px_oklch(0.68_0.21_250/0.55)] transition-transform duration-300 ease-out"
-              style={{ transform: `translateX(${tab === "games" ? "0%" : tab === "feed" ? "calc(100% + 6.5px)" : tab === "gallery" ? "calc(200% + 13px)" : "calc(300% + 19.5px)"})` }}
+              className="absolute top-1 bottom-1 w-[calc(20%-4px)] rounded-xl bg-primary shadow-sm transition-transform duration-300 ease-out"
+              style={{ transform: `translateX(${tab === "games" ? "0%" : tab === "feed" ? "calc(100% + 6px)" : tab === "gallery" ? "calc(200% + 12px)" : tab === "events" ? "calc(300% + 18px)" : "calc(400% + 24px)"})` }}
             />
           </div>
         </div>
@@ -247,6 +254,8 @@ function HomePage() {
               </>
             ) : tab === "gallery" ? (
               <GallerySection myId={myId} isMod={mod} />
+            ) : tab === "events" ? (
+              <EventsSection isAdmin={admin} />
             ) : (
               <motion.div
                 initial={{ opacity: 0, y: 12 }}
@@ -263,7 +272,7 @@ function HomePage() {
       {/* Floating CTA to editor */}
       <Link
         to="/editor"
-        className="fixed bottom-5 right-5 z-30 h-14 pl-4 pr-5 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-[0_10px_30px_-6px_oklch(0.68_0.21_250/0.7)] flex items-center gap-2 active:scale-95 transition font-display tracking-widest text-xs"
+        className="fixed bottom-5 right-5 z-30 h-14 pl-4 pr-5 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center gap-2 active:scale-95 transition font-display tracking-widest text-xs"
       >
         <Plus size={18} /> CREAR
       </Link>
@@ -277,7 +286,7 @@ function HomePage() {
         >
           <div
             onClick={e => e.stopPropagation()}
-            className="absolute right-0 top-0 h-full w-[86vw] max-w-xs bg-background border-l border-border shadow-2xl p-4 flex flex-col gap-2 asternal-menu-drawer overflow-y-auto"
+            className="absolute right-0 top-0 h-full w-[86vw] max-w-xs bg-background border-l border-border shadow-lg p-4 flex flex-col gap-2 asternal-menu-drawer overflow-y-auto"
             data-open={menuVisible ? "true" : "false"}
           >
             <div className="flex items-center justify-between mb-2">
@@ -358,7 +367,7 @@ function FeedSubTabs({ value, onChange }: { value: FeedSub; onChange: (v: FeedSu
             onClick={() => onChange(it.id)}
             className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-display tracking-widest transition-all duration-200 outline-none focus:outline-none ${
               active
-                ? "bg-gradient-to-r from-primary to-accent text-primary-foreground"
+                ? "bg-primary text-primary-foreground shadow-sm"
                 : "bg-background text-muted-foreground hover:text-foreground"
             }`}
             style={active ? undefined : { boxShadow: "inset 0 0 0 1px var(--color-border)" }}

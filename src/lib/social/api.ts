@@ -1203,6 +1203,120 @@ export async function uploadDocument(file: File): Promise<{ path: string; name: 
   return { path, name: file.name };
 }
 
+// ============ EVENTS ============
+export type EventItem = {
+  id: string;
+  title: string;
+  description: string;
+  banner_url: string | null;
+  starts_at: string;
+  ends_at: string;
+  prize_pool: number | null;
+  prize_description: string | null;
+  rules: string | null;
+  status: "upcoming" | "active" | "completed";
+  created_by: string;
+  created_at: string;
+  submission_count?: number;
+  participant_count?: number;
+  my_submission?: { id: string; post_id: string; status: string } | null;
+};
+
+export async function fetchEvents(): Promise<EventItem[]> {
+  const { data, error } = await supabase
+    .from("events" as never)
+    .select("*")
+    .order("starts_at", { ascending: false });
+  if (error) throw error;
+  const now = new Date().toISOString();
+  const { data: { user } } = await supabase.auth.getUser();
+  const me = user?.id ?? null;
+  const events = (data ?? []) as EventItem[];
+  // Enrich with submission counts and my submissions
+  const enriched: EventItem[] = [];
+  for (const ev of events) {
+    const { count: subs } = await supabase
+      .from("event_submissions" as never)
+      .select("*", { count: "exact", head: true })
+      .eq("event_id", ev.id);
+    const { count: parts } = await supabase
+      .from("event_submissions" as never)
+      .select("author_id", { count: "exact", head: true })
+      .eq("event_id", ev.id);
+    let mySub = null;
+    if (me) {
+      const { data: subData } = await supabase
+        .from("event_submissions" as never)
+        .select("id,post_id,status")
+        .eq("event_id", ev.id)
+        .eq("author_id", me)
+        .maybeSingle();
+      mySub = subData as { id: string; post_id: string; status: string } | null;
+    }
+    enriched.push({
+      ...ev,
+      submission_count: subs ?? 0,
+      participant_count: parts ?? 0,
+      my_submission: mySub,
+    });
+  }
+  return enriched;
+}
+
+export async function createEvent(input: {
+  title: string;
+  description: string;
+  banner_url?: string | null;
+  starts_at: string;
+  ends_at: string;
+  prize_pool?: number | null;
+  prize_description?: string | null;
+  rules?: string | null;
+}): Promise<EventItem> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+  const { data, error } = await supabase
+    .from("events" as never)
+    .insert({
+      title: input.title,
+      description: input.description,
+      banner_url: input.banner_url ?? null,
+      starts_at: input.starts_at,
+      ends_at: input.ends_at,
+      prize_pool: input.prize_pool ?? null,
+      prize_description: input.prize_description ?? null,
+      rules: input.rules ?? null,
+      created_by: user.id,
+      status: new Date(input.starts_at) > new Date() ? "upcoming" : "active",
+    } as never)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as EventItem;
+}
+
+export async function submitToEvent(eventId: string, postId: string): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+  const { error } = await supabase
+    .from("event_submissions" as never)
+    .insert({
+      event_id: eventId,
+      post_id: postId,
+      author_id: user.id,
+      status: "submitted",
+    } as never);
+  if (error) throw error;
+}
+
+export async function updateEventStatus(eventId: string, status: "upcoming" | "active" | "completed"): Promise<void> {
+  const { error } = await supabase
+    .from("events" as never)
+    .update({ status } as never)
+    .eq("id", eventId);
+  if (error) throw error;
+}
+
 // ============ FOLLOWS ============
 export type FollowStats = { followers: number; following: number; i_follow: boolean };
 
