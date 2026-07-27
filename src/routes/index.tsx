@@ -231,11 +231,13 @@ function HomePage() {
                     if (filtered.length === 0) {
                       return (
                         <div className="text-center text-xs text-muted-foreground py-10">
-                          {feedSub === "following"
-                            ? "Interactúa con publicaciones para poblar esta sección."
+                          {feedSub === "forYou"
+                            ? "Sé el primero en publicar o sigue a creadores para ver su contenido aquí."
+                            : feedSub === "following"
+                            ? "Interactúa con publicaciones (like, favorito) para poblar esta sección."
                             : feedSub === "trending"
                             ? "Aún no hay tendencias. ¡Publica algo!"
-                            : "Sé el primero en publicar."}
+                            : ""}
                         </div>
                       );
                     }
@@ -380,18 +382,93 @@ function FeedSubTabs({ value, onChange }: { value: FeedSub; onChange: (v: FeedSu
   );
 }
 
+function computeForYouScore(
+  p: PostWithMeta,
+  now: number,
+  authorCounts: Map<string, number>,
+): number {
+  // --- Raw engagement (weighted) ---
+  const likes = p.likes ?? 0;
+  const favs = p.favorites ?? 0;
+  const comments = p.comments_count ?? 0;
+  const reposts = p.reposts_count ?? 0;
+
+  const engagement =
+    likes * 1.0 +
+    favs * 2.5 +
+    comments * 3.0 +
+    reposts * 4.0;
+
+  // --- Recency: exponential decay (24h half-life) ---
+  const ageMs = now - new Date(p.created_at).getTime();
+  const ageH = Math.max(0.01, ageMs / 36e5);
+  const HALF_LIFE = 24; // hours
+  const recencyFactor = Math.pow(0.5, ageH / HALF_LIFE);
+
+  // --- Freshness burst: posts < 24h get a boost that fades linearly ---
+  const freshBoost = ageH < 24 ? 1 + (1 - ageH / 24) * 0.7 : 1;
+
+  // --- Media bonus ---
+  const hasMedia = p.media_type === "image" || p.media_type === "video";
+  const hasCover = !!p.cover_url;
+  const mediaBonus = hasMedia || hasCover ? 1.25 : 1;
+
+  // --- Engagement rate (interactions per hour) ---
+  const totalInteractions = likes + favs + comments + reposts;
+  const rateBonus = ageH > 0.5
+    ? 1 + Math.min(2, (totalInteractions / ageH) * 0.2)
+    : 2; // very fresh posts get a generous rate bonus
+
+  // --- Author diversity penalty ---
+  const authorCount = authorCounts.get(p.author_id) ?? 0;
+  // First post: no penalty. Second: -30%. Third+: -60%.
+  const diversityPenalty = authorCount === 0 ? 1
+    : authorCount === 1 ? 0.7
+    : 0.4;
+
+  // --- Base score ---
+  let score = engagement * recencyFactor * freshBoost * mediaBonus * rateBonus * diversityPenalty;
+
+  // --- Small chaotic jitter (±8%) for natural variety in ties ---
+  score *= 0.92 + Math.random() * 0.16;
+
+  return score;
+}
+
 function filterFeed(posts: PostWithMeta[], sub: FeedSub, myId: string | null): PostWithMeta[] {
+  const now = Date.now();
+
+  if (sub === "forYou") {
+    const authorCounts = new Map<string, number>();
+
+    const scored = [...posts]
+      .map(p => {
+        const score = computeForYouScore(p, now, authorCounts);
+        // Track author count AFTER scoring so the penalty is based on *prior* entries
+        authorCounts.set(p.author_id, (authorCounts.get(p.author_id) ?? 0) + 1);
+        return { p, score };
+      })
+      .sort((a, b) => b.score - a.score);
+
+    return scored.map(x => x.p);
+  }
+
   if (sub === "trending") {
-    const now = Date.now();
     return [...posts]
       .map(p => {
+        const likes = p.likes ?? 0;
+        const favs = p.favorites ?? 0;
+        const comments = p.comments_count ?? 0;
+        const reposts = p.reposts_count ?? 0;
         const ageH = Math.max(1, (now - new Date(p.created_at).getTime()) / 36e5);
-        const score = ((p.likes ?? 0) + (p.favorites ?? 0) * 2 + (p.comments_count ?? 0) * 1.5) / Math.pow(ageH + 2, 0.8);
-        return { p, score };
+        // Trending favours raw velocity
+        const velocity = (likes + favs * 3 + comments * 2 + reposts * 5) / Math.pow(ageH + 1, 0.6);
+        return { p, score: velocity };
       })
       .sort((a, b) => b.score - a.score)
       .map(x => x.p);
   }
+
   if (sub === "following") {
     if (!myId) return [];
     const engagedAuthors = new Set(
@@ -400,6 +477,7 @@ function filterFeed(posts: PostWithMeta[], sub: FeedSub, myId: string | null): P
     engagedAuthors.delete(myId);
     return posts.filter(p => engagedAuthors.has(p.author_id));
   }
+
   return posts;
 }
 
