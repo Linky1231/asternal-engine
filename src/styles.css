@@ -172,6 +172,27 @@
     letter-spacing: -0.022em;
     font-weight: 600;
   }
+
+  /* ── Reset all interactive elements to remove default browser borders ── */
+  button,
+  [role="button"],
+  input,
+  textarea,
+  select,
+  fieldset {
+    border: 0 solid transparent;
+    outline: 0 solid transparent;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+  }
+  button:focus-visible,
+  [role="button"]:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: 0 solid transparent;
+  }
 }
 
 /* ═══════════════════════════════════════════════
