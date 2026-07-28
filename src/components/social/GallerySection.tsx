@@ -143,23 +143,35 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
   return (
     <div className="space-y-5">
       {/* ====== HEADER ====== */}
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-3 panel rounded-2xl p-3 border border-border/40">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-primary to-accent grid place-items-center shadow-sm shrink-0">
-            <Palette size={20} className="text-primary-foreground" />
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-accent grid place-items-center shadow-md shrink-0">
+            <Palette size={22} className="text-primary-foreground" />
           </div>
           <div className="min-w-0">
-            <div className="font-display text-base font-semibold truncate tracking-tight">Galería</div>
-            <div className="text-[10px] font-mono text-muted-foreground truncate">
-              {artworks.length} obra{artworks.length !== 1 ? "s" : ""} · {mineCount} tuya{mineCount !== 1 ? "s" : ""}
+            <div className="font-display text-base font-semibold truncate tracking-tight flex items-center gap-2">
+              Galería
+              <span className="text-[9px] font-mono text-muted-foreground/60 bg-muted/50 px-2 py-0.5 rounded-full border border-border/30">
+                Comunidad
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-[10px] font-mono text-muted-foreground/70 mt-0.5">
+              <span className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                {artworks.length} obra{artworks.length !== 1 ? "s" : ""}
+              </span>
+              <span>·</span>
+              <span className="flex items-center gap-1">
+                {mineCount} tuya{mineCount !== 1 ? "s" : ""}
+              </span>
             </div>
           </div>
         </div>
         <button
           onClick={() => setCanvasOpen(true)}
-          className="h-10 pl-3.5 pr-4.5 rounded-xl bg-gradient-to-r from-primary to-accent text-primary-foreground text-[10px] font-display tracking-widest flex items-center gap-1.5 active:scale-95 hover:shadow-lg hover:shadow-primary/20 transition-all shrink-0"
+          className="h-10 pl-4 pr-5 rounded-xl bg-gradient-to-r from-primary to-accent text-primary-foreground text-[10px] font-display tracking-widest flex items-center gap-1.5 active:scale-95 hover:shadow-lg hover:shadow-primary/25 transition-all shrink-0 font-semibold"
         >
-          <ImagePlus size={15} /> NUEVA OBRA
+          <ImagePlus size={16} /> NUEVA OBRA
         </button>
       </div>
 
@@ -265,108 +277,125 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
                 key={art.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35, delay: Math.min(i * 0.03, 0.25), ease: [0.22, 1, 0.36, 1] }}
+                transition={{ duration: 0.35, delay: Math.min(i * 0.04, 0.3), ease: [0.22, 1, 0.36, 1] }}
                 onClick={() => setDetailPost(art)}
                 className="group text-left w-full"
               >
-                <div className="panel rounded-2xl overflow-hidden border border-border/40 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 active:scale-[0.97]">
-                  {/* Image area */}
-                  <div className="aspect-square bg-gradient-to-br from-muted/30 to-muted/10 relative overflow-hidden">
+                <div className="relative panel rounded-2xl overflow-hidden border border-border/40 hover:border-primary/40 hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 active:scale-[0.97]">
+                  {/* Image area with decorative gradient border */}
+                  <div className="aspect-square bg-gradient-to-br from-muted/20 to-muted/5 relative overflow-hidden">
                     {imgUrl ? (
-                      <img
-                        src={imgUrl}
-                        alt={title}
-                        className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-500 ease-out"
-                      />
+                      <>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                        <img
+                          src={imgUrl}
+                          alt={title}
+                          className="w-full h-full object-contain p-3 group-hover:scale-105 transition-transform duration-500 ease-out"
+                        />
+                      </>
                     ) : (
                       <div className="w-full h-full grid place-items-center">
-                        <Palette size={40} className="text-muted-foreground/15" />
+                        <Palette size={44} className="text-muted-foreground/12" />
                       </div>
                     )}
 
-                    {/* Hover overlay */}
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-300 flex items-center justify-center">
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/90 text-black text-[9px] font-display tracking-widest shadow-lg backdrop-blur-sm translate-y-2 group-hover:translate-y-0 transition-all duration-300">
-                        <Eye size={11} /> VER
+                    {/* Premium hover overlay with glass effect */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/0 via-black/0 to-black/0 group-hover:from-black/30 group-hover:via-black/10 group-hover:to-transparent transition-all duration-300 flex items-center justify-center">
+                      <div className="opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center gap-1.5 px-4 py-2 rounded-full bg-white/15 backdrop-blur-md text-white text-[10px] font-display tracking-widest shadow-lg translate-y-3 group-hover:translate-y-0 border border-white/20">
+                        <Eye size={12} /> VER DETALLE
                       </div>
                     </div>
 
-                    {/* Top badge */}
+                    {/* Badge row */}
                     <div className="absolute top-2.5 right-2.5 flex gap-1.5">
                       {mine ? (
-                        <span className="px-2 py-0.5 rounded-full text-[8px] font-display tracking-widest bg-primary/25 text-primary-glow border border-primary/30 backdrop-blur-sm">
+                        <span className="px-2.5 py-0.5 rounded-full text-[8px] font-display tracking-widest bg-primary/30 text-white border border-white/20 backdrop-blur-md shadow-sm">
                           TUYA
                         </span>
                       ) : owned ? (
-                        <span className="px-2 py-0.5 rounded-full text-[8px] font-display tracking-widest bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 backdrop-blur-sm">
+                        <span className="px-2.5 py-0.5 rounded-full text-[8px] font-display tracking-widest bg-emerald-500/30 text-emerald-300 border border-emerald-400/30 backdrop-blur-md shadow-sm">
                           COLECTADA
                         </span>
                       ) : price > 0 ? null : (
-                        <span className="px-2 py-0.5 rounded-full text-[8px] font-display tracking-widest bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 backdrop-blur-sm">
+                        <span className="px-2.5 py-0.5 rounded-full text-[8px] font-display tracking-widest bg-emerald-500/30 text-emerald-300 border border-emerald-400/30 backdrop-blur-md shadow-sm">
                           GRATIS
                         </span>
                       )}
                     </div>
 
-                    {/* Price pill */}
+                    {/* Price pill - floating at bottom */}
                     {price > 0 && !mine && !owned && (
                       <div className="absolute bottom-2.5 left-2.5">
-                        <span className="px-2.5 py-1 rounded-full text-[9px] font-display tracking-widest bg-primary/90 text-primary-foreground backdrop-blur-sm flex items-center gap-1 shadow-sm">
-                          <Sparkles size={9} /> {price}
+                        <span className="px-3 py-1 rounded-full text-[10px] font-display tracking-widest bg-gradient-to-r from-primary to-accent text-white backdrop-blur-md flex items-center gap-1.5 shadow-lg shadow-primary/20">
+                          <Sparkles size={10} /> {price}
                         </span>
                       </div>
                     )}
                   </div>
 
                   {/* Info area */}
-                  <div className="p-3 space-y-1.5">
-                    <div className="text-xs font-display truncate font-medium tracking-tight">{title}</div>
-                    <Link
-                      to="/profile/$userId" params={{ userId: art.author_id }}
-                      onClick={e => e.stopPropagation()}
-                      className="flex items-center gap-1.5 group/author"
-                    >
-                      <div className="w-4 h-4 rounded-full bg-gradient-to-br from-primary/40 to-accent/30 grid place-items-center overflow-hidden shrink-0 ring-1 ring-border/50">
-                        {art.author?.avatar_url ? (
-                          <img src={art.author.avatar_url} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <span className="text-[6px] font-display text-primary-glow">
-                            {(art.author?.username ?? "?")[0]?.toUpperCase()}
+                  <div className="p-3.5 space-y-2">
+                    <div className="text-sm font-display truncate font-semibold tracking-tight">{title}</div>
+                    
+                    {/* Author + actions in a row */}
+                    <div className="flex items-center justify-between gap-2">
+                      <Link
+                        to="/profile/$userId" params={{ userId: art.author_id }}
+                        onClick={e => e.stopPropagation()}
+                        className="flex items-center gap-1.5 group/author min-w-0 flex-1"
+                      >
+                        <div className="w-5 h-5 rounded-full bg-gradient-to-br from-primary/50 to-accent/30 grid place-items-center overflow-hidden shrink-0 ring-2 ring-border/40 group-hover/author:ring-primary/40 transition-all">
+                          {art.author?.avatar_url ? (
+                            <img src={art.author.avatar_url} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-[7px] font-display text-white font-bold">
+                              {(art.author?.username ?? "?")[0]?.toUpperCase()}
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[10px] font-mono text-muted-foreground truncate group-hover/author:text-foreground transition">
+                          @{art.author?.username ?? "anon"}
+                        </span>
+                      </Link>
+
+                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground/60 shrink-0">
+                        <span className="flex items-center gap-0.5" title="Likes">
+                          <Heart size={10} className={art.likes > 0 ? "text-rose-400 fill-rose-400/20" : ""} />
+                          {art.likes}
+                        </span>
+                        <span className="flex items-center gap-0.5" title="Comentarios">
+                          <MessageCircle size={10} />
+                          {art.comments_count}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Buy/Get button */}
+                    {!mine && (
+                      <div className="flex gap-1.5 pt-0.5">
+                        {!owned && price > 0 && (
+                          <span
+                            onClick={e => { e.stopPropagation(); openBuy(art.id); }}
+                            className="flex-1 py-1.5 rounded-lg bg-gradient-to-r from-primary to-accent text-primary-foreground text-[9px] font-display tracking-widest active:scale-95 transition text-center cursor-pointer shadow-sm"
+                          >
+                            COMPRAR CON <Sparkles size={8} className="inline" /> {price}
+                          </span>
+                        )}
+                        {!owned && price === 0 && (
+                          <span
+                            onClick={e => { e.stopPropagation(); openBuy(art.id); }}
+                            className="flex-1 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-400 text-[9px] font-display tracking-widest border border-emerald-500/20 active:scale-95 transition text-center cursor-pointer"
+                          >
+                            OBTENER GRATIS
+                          </span>
+                        )}
+                        {owned && (
+                          <span className="flex-1 py-1.5 rounded-lg bg-muted/30 text-muted-foreground/50 text-[9px] font-display tracking-widest text-center border border-border/30 cursor-default">
+                            ✔ COLECTADA
                           </span>
                         )}
                       </div>
-                      <span className="text-[9px] font-mono text-muted-foreground truncate group-hover/author:text-foreground transition">
-                        @{art.author?.username ?? "anon"}
-                      </span>
-                    </Link>
-
-                    {/* Stats row */}
-                    <div className="flex items-center gap-2.5 text-[9px] text-muted-foreground/70 pt-0.5">
-                      <span className="flex items-center gap-1">
-                        <Heart size={9} className={art.likes > 0 ? "text-rose-400" : ""} />
-                        {art.likes}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <MessageCircle size={9} />
-                        {art.comments_count}
-                      </span>
-                      {!mine && !owned && price > 0 && (
-                        <span
-                          onClick={e => { e.stopPropagation(); openBuy(art.id); }}
-                          className="ml-auto px-2.5 py-0.5 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground text-[8px] font-display tracking-widest active:scale-90 transition"
-                        >
-                          COMPRAR
-                        </span>
-                      )}
-                      {!mine && !owned && price === 0 && (
-                        <span
-                          onClick={e => { e.stopPropagation(); openBuy(art.id); }}
-                          className="ml-auto px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[8px] font-display tracking-widest border border-emerald-500/20 active:scale-90 transition"
-                        >
-                          OBTENER
-                        </span>
-                      )}
-                    </div>
+                    )}
                   </div>
                 </div>
               </motion.button>
