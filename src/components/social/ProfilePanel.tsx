@@ -312,7 +312,7 @@ export function ProfilePanel({
               {showMore && (
                 <div className="space-y-2">
                   <div className="grid grid-cols-2 gap-2">
-                    <LabeledInput label="Pronombres" value={pronouns} onChange={setPronouns} placeholder="ella/elle" max={20}/>
+                    <LabeledInput label="Pronombres" value={pronouns} onChange={setPronouns} placeholder="el/ella" max={20}/>
                     <LabeledInput label="Ubicación" value={location} onChange={setLocation} placeholder="Ciudad" max={40}/>
                   </div>
                   <LabeledInput label="Título personalizado" value={customTitle} onChange={setCustomTitle} placeholder="Desarrolladora indie" max={40}/>
@@ -339,7 +339,7 @@ export function ProfilePanel({
                     <div className="flex flex-wrap gap-1">
                       {GENRES.map(g => (
                         <button key={g} onClick={() => setFavoriteGenre(g === favoriteGenre ? "" : g)}
-                          className={`px-2.5 py-1 rounded-full text-[11px] border transition ${favoriteGenre === g ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground"}`}>
+                          className={`px-2.5 py-1 rounded-full text-[11px] border transition ${favoriteGenre === g ? "bg-gradient-to-r from-primary to-accent text-primary-foreground border-primary/0" : "border-border text-muted-foreground"}`}>
                           {g}
                         </button>
                       ))}
