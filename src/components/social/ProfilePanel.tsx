@@ -28,9 +28,10 @@ import { UserName } from "./UserName";
 const GENRES = ["Acción", "Aventura", "Puzzle", "RPG", "Estrategia", "Plataformas", "Casual", "Terror", "Simulación", "Deportes"];
 
 export function ProfilePanel({
-  userId, myId, isMod, viewingOwn,
+  userId, myId, isMod, viewingOwn, onProfileChange,
 }: {
   userId: string; myId: string | null; isMod: boolean; viewingOwn: boolean;
+  onProfileChange?: (p: Profile) => void;
 }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -146,6 +147,7 @@ export function ProfilePanel({
         ...(banner_url ? { banner_url } : {}),
       });
       setProfile(updated);
+      onProfileChange?.(updated);
       setEditing(false);
       setAvatarFile(null); setBannerFile(null);
       setSaved(true);

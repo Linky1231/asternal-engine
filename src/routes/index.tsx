@@ -264,7 +264,7 @@ function HomePage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
               >
-                {myId && <ProfilePanel userId={myId} myId={myId} isMod={mod} viewingOwn={true} />}
+                {myId && <ProfilePanel userId={myId} myId={myId} isMod={mod} viewingOwn={true} onProfileChange={setMe} />}
               </motion.div>
             )}
           </motion.div>

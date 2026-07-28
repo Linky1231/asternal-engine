@@ -780,15 +780,49 @@ export async function updateMyProfile(patch: {
 export async function uploadBanner(file: File): Promise<string> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
-  const path = await uploadMedia(file, user.id);
+  // Resize banner to 1024×300 max for quality + speed
+  const optimized = await resizeImage(file, 1024);
+  const optimizedFile = new File([optimized], file.name.replace(/\.[^.]+$/, "") + ".webp", { type: "image/webp" });
+  const path = await uploadMedia(optimizedFile, user.id);
   const { data } = await supabase.storage.from(MEDIA_BUCKET).createSignedUrl(path, 60 * 60 * 24 * 365);
   return data?.signedUrl ?? path;
+}
+
+/** Resize an image file to target size (max dimension) for faster upload & crisp display */
+async function resizeImage(file: File, maxDim: number = 384): Promise<Blob> {
+  if (!file.type.startsWith("image/")) return file;
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const i = new Image();
+    i.onload = () => resolve(i);
+    i.onerror = reject;
+    i.src = URL.createObjectURL(file);
+  });
+  // Only resize if image is larger than maxDim
+  if (img.naturalWidth <= maxDim && img.naturalHeight <= maxDim) {
+    URL.revokeObjectURL(img.src);
+    return file;
+  }
+  const ratio = Math.min(maxDim / img.naturalWidth, maxDim / img.naturalHeight);
+  const w = Math.round(img.naturalWidth * ratio);
+  const h = Math.round(img.naturalHeight * ratio);
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d")!;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(img, 0, 0, w, h);
+  URL.revokeObjectURL(img.src);
+  return new Promise(resolve => canvas.toBlob(blob => resolve(blob ?? file), "image/webp", 0.92));
 }
 
 export async function uploadAvatar(file: File): Promise<string> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
-  const path = await uploadMedia(file, user.id);
+  // Resize to 384×384 max for crisp display + fast upload
+  const optimized = await resizeImage(file, 384);
+  const optimizedFile = new File([optimized], file.name.replace(/\.[^.]+$/, "") + ".webp", { type: "image/webp" });
+  const path = await uploadMedia(optimizedFile, user.id);
   const { data } = await supabase.storage.from(MEDIA_BUCKET).createSignedUrl(path, 60 * 60 * 24 * 365);
   return data?.signedUrl ?? path;
 }
