@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import {
   Loader2, Camera, Save, Gamepad2, Newspaper, CheckCircle2, Star, ChevronRight,
   ImagePlus, MapPin, Cake, Palette, Tag, Sparkles as SparklesIcon, Eye, EyeOff,
-  Sun, Moon, MonitorSmartphone, Heart, ChevronDown, ChevronUp,
+  Heart, ChevronDown, ChevronUp,
   Youtube, Instagram, Globe, UserPlus, UserCheck,
 } from "lucide-react";
 import {
@@ -24,12 +24,6 @@ import {
 import { GameCard } from "./GameCard";
 import { PostCard } from "./PostCard";
 import { UserName } from "./UserName";
-
-const THEMES = [
-  { v: "auto", icon: MonitorSmartphone, label: "Auto" },
-  { v: "light", icon: Sun, label: "Claro" },
-  { v: "dark", icon: Moon, label: "Oscuro" },
-];
 
 const GENRES = ["Acción", "Aventura", "Puzzle", "RPG", "Estrategia", "Plataformas", "Casual", "Terror", "Simulación", "Deportes"];
 
@@ -63,7 +57,6 @@ export function ProfilePanel({
   const [customTitle, setCustomTitle] = useState("");
   const [birthday, setBirthday] = useState("");
   const [showOrbes, setShowOrbes] = useState(true);
-  const [themeMode, setThemeMode] = useState("auto");
   const [interestsRaw, setInterestsRaw] = useState("");
 
   const fileRef = useRef<HTMLInputElement>(null);
@@ -95,7 +88,6 @@ export function ProfilePanel({
         setCustomTitle(p.custom_title ?? "");
         setBirthday(p.birthday ?? "");
         setShowOrbes(p.show_orbes ?? true);
-        setThemeMode(p.theme_mode ?? "auto");
         setInterestsRaw((p.interests ?? []).join(", "));
       }
     } finally { setLoading(false); }
@@ -149,7 +141,7 @@ export function ProfilePanel({
         username, display_name: displayName, bio,
         pronouns, location, status_emoji: statusEmoji, status_text: statusText,
         accent_color: accentColor, favorite_genre: favoriteGenre, custom_title: customTitle,
-        birthday: birthday || null, show_orbes: showOrbes, theme_mode: themeMode, interests,
+        birthday: birthday || null, show_orbes: showOrbes, interests,
         ...(avatar_url ? { avatar_url } : {}),
         ...(banner_url ? { banner_url } : {}),
       });
@@ -354,20 +346,6 @@ export function ProfilePanel({
                     </div>
                   </div>
                   <LabeledInput label="Intereses (separados por coma, máx 10)" value={interestsRaw} onChange={setInterestsRaw} placeholder="pixel art, roguelike, coop" max={200} icon={<Tag size={10}/>}/>
-                  <div>
-                    <div className="text-[10px] font-display tracking-widest text-muted-foreground mb-1">TEMA</div>
-                    <div className="flex gap-1">
-                      {THEMES.map(t => {
-                        const Icon = t.icon;
-                        return (
-                          <button key={t.v} onClick={() => setThemeMode(t.v)}
-                            className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[11px] border transition ${themeMode === t.v ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground"}`}>
-                            <Icon size={12}/> {t.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
                   <label className="flex items-center gap-2 px-2 py-2 rounded-lg border border-border cursor-pointer">
                     <button type="button" onClick={() => setShowOrbes(v => !v)}
                       className={`w-9 h-5 rounded-full transition relative ${showOrbes ? "bg-primary" : "bg-muted"}`}>
