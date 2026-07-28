@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import {
   Pencil, Eraser, PaintBucket, Slash, Square, Circle, Pipette, Type, Move,
   Eye, EyeOff, Lock, Unlock, Copy, Trash2, Layers, Undo2, Redo2, Plus, Save, X,
+  ChevronDown,
 } from "lucide-react";
 import type { SpriteAsset } from "@/lib/engine/core";
 import { uid } from "@/lib/engine/core";
@@ -687,31 +688,25 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
   ];
 
   return (
-    <motion.div
-      initial={{ height: 0, opacity: 0 }}
-      animate={{ height: "auto", opacity: 1 }}
-      exit={{ height: 0, opacity: 0 }}
-      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-      className="overflow-hidden rounded-2xl border border-border/60 panel mb-4"
-    >
+    <div className="w-full h-full flex flex-col rounded-2xl border border-border/40 panel overflow-hidden bg-muted/95 backdrop-blur-xl">
       {/* Top bar */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-border/40 gap-2 shrink-0">
+      <div className="flex items-center justify-between px-3 sm:px-4 py-2.5 border-b border-border/30 gap-2 shrink-0 bg-muted/50">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <div
-            className="w-7 h-7 rounded-lg shrink-0"
+            className="w-8 h-8 rounded-xl shrink-0 overflow-hidden"
             style={{
               backgroundColor: "#e5e7eb",
               backgroundImage: thumb ? `url(${thumb})` : undefined,
               backgroundSize: "contain",
               backgroundRepeat: "no-repeat",
               backgroundPosition: "center",
-              boxShadow: "inset 0 0 0 1px oklch(1 0 0 / 0.08), 0 1px 3px oklch(0 0 0 / 0.3)",
+              boxShadow: "inset 0 0 0 1px oklch(1 0 0 / 0.08), 0 2px 4px oklch(0 0 0 / 0.15)",
             }}
           />
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="bg-muted border border-border rounded-lg px-2 py-1 text-[12px] font-medium tracking-tight min-w-0 flex-1 max-w-[140px] focus:outline-none focus:border-primary/50 focus:bg-accent transition"
+            className="bg-input/50 border border-border/40 rounded-xl px-2.5 py-1.5 text-xs font-medium tracking-tight min-w-0 flex-1 max-w-[160px] focus:outline-none focus:border-primary/40 focus:bg-accent/30 transition"
           />
           <select
             value={size}
@@ -729,40 +724,37 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
               redoStack.current = [];
               setSize(next);
             }}
-            className="bg-muted border border-border rounded-md px-1.5 py-1 text-[9px] font-mono tracking-tight focus:outline-none focus:border-primary/50 tabular-nums shrink-0"
+            className="bg-input/50 border border-border/40 rounded-xl px-2 py-1.5 text-[10px] font-mono tracking-tight focus:outline-none focus:border-primary/40 tabular-nums shrink-0"
             aria-label="Tamaño del lienzo"
           >
             {SIZE_OPTIONS.map(s => <option key={s} value={s}>{s}×{s}</option>)}
           </select>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
-          <button onClick={onClose} className="text-[11px] font-medium px-3 py-1.5 rounded-lg border border-border bg-muted text-foreground/80 hover:bg-accent transition inline-flex items-center gap-1">
-            <X size={13} /> Cancel
+          <button onClick={onClose} className="h-9 px-3.5 rounded-xl border border-border/50 bg-muted/50 text-foreground/70 hover:text-foreground hover:bg-muted/80 transition inline-flex items-center gap-1.5 text-xs font-medium">
+            <X size={14} /> Cancelar
           </button>
-          <button onClick={doSave} className="text-[11px] font-semibold px-3 py-1.5 rounded-lg text-primary-foreground transition active:scale-[0.97] inline-flex items-center gap-1" style={{
-            background: "linear-gradient(180deg, oklch(0.78 0.17 250), oklch(0.66 0.18 252))",
-            boxShadow: "inset 0 1px 0 oklch(1 0 0 / 0.25), 0 4px 14px -4px oklch(0.66 0.18 252 / 0.55)",
-          }}>
-            <Save size={12} /> Guardar
+          <button onClick={doSave} className="h-9 px-4 rounded-xl bg-gradient-to-r from-primary to-accent text-primary-foreground hover:shadow-lg hover:shadow-primary/20 transition active:scale-[0.97] inline-flex items-center gap-1.5 text-xs font-semibold shadow-sm">
+            <Save size={14} /> Guardar
           </button>
         </div>
       </div>
 
-      {/* Main: Canvas + Tools Sidebar */}
-      <div className="flex flex-col lg:flex-row gap-0 lg:gap-0 min-h-0">
-        {/* Canvas area - takes all remaining horizontal space */}
-        <div className="flex-1 min-h-0 min-w-0 flex items-center justify-center overflow-hidden p-2 relative">
+      {/* Main: Canvas + Tools */}
+      <div className="flex-1 flex flex-col lg:flex-row min-h-0">
+        {/* Canvas area */}
+        <div className="flex-1 min-h-0 min-w-0 flex items-center justify-center overflow-hidden p-2 sm:p-3 relative">
           <div
             ref={containerRef}
             key={`canvas-${size}`}
-            className="rounded-xl overflow-hidden mx-auto w-full"
-            style={{ maxWidth: "100%", maxHeight: "75vh", aspectRatio: "1/1" }}
+            className="rounded-xl overflow-hidden w-full h-full max-w-full"
+            style={{ aspectRatio: "1/1", maxHeight: "100%" }}
           >
             <div
-              className="w-full h-full rounded-lg overflow-hidden"
+              className="w-full h-full rounded-xl overflow-hidden"
               style={{
                 backgroundImage:
-                  "linear-gradient(45deg, #e5e7eb 25%, transparent 25%), linear-gradient(-45deg, #e5e7eb 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e5e7eb 75%), linear-gradient(-45deg, transparent 75%, #e5e7eb 75%)",
+                  "linear-gradient(45deg, #d4d4d4 25%, transparent 25%), linear-gradient(-45deg, #d4d4d4 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #d4d4d4 75%), linear-gradient(-45deg, transparent 75%, #d4d4d4 75%)",
                 backgroundSize: "16px 16px",
                 backgroundPosition: "0 0, 0 8px, 8px -8px, -8px 0",
                 backgroundColor: "#ffffff",
@@ -807,26 +799,18 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
           )}
         </div>
 
-        {/* Tools sidebar - always visible on desktop, scrollable on mobile */}
-        <div
-          className="lg:w-[280px] shrink-0 border-t lg:border-t-0 lg:border-l border-border/40 overflow-y-auto"
-          style={{
-            maxHeight: "75vh",
-            background: "linear-gradient(180deg, oklch(0.97 0.005 250 / 0.95), oklch(0.99 0 0 / 0.9))",
-            backdropFilter: "blur(20px) saturate(180%)",
-          }}
-        >
+        {/* Tools sidebar */}
+        <div className="lg:w-[280px] shrink-0 border-t lg:border-t-0 lg:border-l border-border/30 overflow-y-auto bg-muted/20">
           <div className="p-2.5 space-y-2">
             {/* Tool dock */}
-            <div className="grid grid-cols-3 gap-1 p-1.5 rounded-2xl" style={{
-              background: "oklch(0.22 0.04 262 / 0.6)",
-              backdropFilter: "blur(20px) saturate(180%)",
-              border: "1px solid oklch(1 0 0 / 0.06)",
-              boxShadow: "inset 0 1px 0 oklch(1 0 0 / 0.05), 0 4px 14px -8px oklch(0 0 0 / 0.4)",
-            }}>
+            <div className="grid grid-cols-3 gap-1 p-1.5 rounded-2xl bg-muted/80 border border-border/40">
               {TOOLS.map(t => (
                 <button key={t.id} title={t.title} onClick={() => setTool(t.id)}
-                  className={`h-9 rounded-xl text-base transition-all flex items-center justify-center ${tool === t.id ? "text-primary-foreground" : "text-foreground/60 hover:text-foreground/90"}`}
+                  className={`h-9 rounded-xl text-base transition-all flex items-center justify-center ${
+                    tool === t.id
+                      ? "text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  }`}
                   style={tool === t.id ? {
                     background: "linear-gradient(180deg, oklch(0.78 0.17 250), oklch(0.64 0.18 252))",
                     boxShadow: "inset 0 1px 0 oklch(1 0 0 / 0.25), 0 2px 8px -2px oklch(0.66 0.18 252 / 0.5)",
@@ -837,26 +821,22 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
 
             {/* History row */}
             <div className="flex gap-1.5">
-              <button onClick={undo} title="Deshacer" className="flex-1 h-8 rounded-xl border border-border bg-muted text-foreground/80 hover:bg-accent transition flex items-center justify-center active:scale-95"><Undo2 size={14} /></button>
-              <button onClick={redo} title="Rehacer" className="flex-1 h-8 rounded-xl border border-border bg-muted text-foreground/80 hover:bg-accent transition flex items-center justify-center active:scale-95"><Redo2 size={14} /></button>
-              <button onClick={clearAll} title="Limpiar capa" className="flex-1 h-8 rounded-xl border border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/20 transition flex items-center justify-center gap-1 text-[10px] font-medium active:scale-95"><Trash2 size={12} /></button>
+              <button onClick={undo} title="Deshacer" className="flex-1 h-8 rounded-xl border border-border/50 bg-muted/30 text-foreground/70 hover:text-foreground hover:bg-muted/60 transition flex items-center justify-center active:scale-95"><Undo2 size={14} /></button>
+              <button onClick={redo} title="Rehacer" className="flex-1 h-8 rounded-xl border border-border/50 bg-muted/30 text-foreground/70 hover:text-foreground hover:bg-muted/60 transition flex items-center justify-center active:scale-95"><Redo2 size={14} /></button>
+              <button onClick={clearAll} title="Limpiar capa" className="flex-1 h-8 rounded-xl border border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/20 transition flex items-center justify-center active:scale-95"><Trash2 size={12} /></button>
             </div>
 
             {/* Color + size */}
-            <div className="p-2.5 rounded-2xl flex flex-col gap-2" style={{
-              background: "oklch(0.22 0.04 262 / 0.5)",
-              backdropFilter: "blur(20px) saturate(180%)",
-              border: "1px solid oklch(1 0 0 / 0.06)",
-            }}>
+            <div className="p-2.5 rounded-2xl bg-muted/50 border border-border/40 space-y-2">
               <div className="flex items-center gap-1.5">
                 <div className="relative w-8 h-8 shrink-0">
                   <input type="color" value={color} onChange={e => setColor(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" aria-label="Color picker" />
-                  <div className="w-8 h-8 rounded-xl pointer-events-none" style={{ background: color, boxShadow: "inset 0 0 0 1px oklch(1 0 0 / 0.18), 0 4px 12px -4px oklch(0 0 0 / 0.4)" }} />
+                  <div className="w-8 h-8 rounded-xl pointer-events-none ring-1 ring-white/20" style={{ background: color, boxShadow: "0 4px 12px -4px oklch(0 0 0 / 0.4)" }} />
                 </div>
                 <input type="text" value={color.toUpperCase()} onChange={(e) => { const v = e.target.value.trim(); if (/^#?[0-9a-fA-F]{6}$/.test(v)) setColor(v.startsWith("#") ? v : `#${v}`); }}
-                  className="bg-muted border border-border rounded-lg px-2 py-1 text-[9px] font-mono w-16 tracking-tight focus:outline-none focus:border-primary/50 uppercase" maxLength={7} aria-label="Hex color" />
+                  className="bg-input/50 border border-border/50 rounded-lg px-2 py-1 text-[9px] font-mono w-16 tracking-tight focus:outline-none focus:border-primary/40 uppercase" maxLength={7} aria-label="Hex color" />
                 <select value={paletteIdx} onChange={(e) => setPaletteIdx(Number(e.target.value))}
-                  className="flex-1 bg-muted border border-border rounded-lg px-1.5 py-1 text-[9px] font-medium focus:outline-none focus:border-primary/50" aria-label="Palette">
+                  className="flex-1 bg-input/50 border border-border/50 rounded-lg px-1.5 py-1 text-[9px] font-medium focus:outline-none focus:border-primary/40" aria-label="Palette">
                   {PALETTES.map((p, i) => <option key={p.name} value={i}>{p.name}</option>)}
                 </select>
               </div>
@@ -864,26 +844,28 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
                 {PALETTE.map((c) => (
                   <button key={c} onClick={() => setColor(c)} className="aspect-square rounded-lg transition-all" style={{
                     background: c,
-                    boxShadow: color.toLowerCase() === c.toLowerCase() ? "inset 0 0 0 1.5px oklch(1 0 0 / 0.9), 0 0 0 2px oklch(0.72 0.17 250 / 0.7)" : "inset 0 0 0 1px oklch(1 0 0 / 0.12)",
+                    boxShadow: color.toLowerCase() === c.toLowerCase()
+                      ? "inset 0 0 0 1.5px white, 0 0 0 2px oklch(0.72 0.17 250 / 0.7)"
+                      : "inset 0 0 0 1px oklch(1 0 0 / 0.12)",
                     transform: color.toLowerCase() === c.toLowerCase() ? "scale(1.06)" : undefined,
                   }} aria-label={c} />
                 ))}
               </div>
-              <div className="flex items-center gap-2 text-[10px] font-medium text-foreground/70">
-                <span className="w-6 shrink-0 text-[9px]">Size</span>
-                <input type="range" min={1} max={48} value={width} onChange={e => setWidth(Number(e.target.value))} className="flex-1 accent-[oklch(0.72_0.17_250)]" />
-                <span className="font-mono text-primary-glow w-5 text-right tabular-nums text-[10px]">{width}</span>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground/80">
+                <span className="w-6 shrink-0 text-[9px] font-medium">Size</span>
+                <input type="range" min={1} max={48} value={width} onChange={e => setWidth(Number(e.target.value))} className="flex-1 accent-primary" />
+                <span className="font-mono text-primary font-semibold w-5 text-right tabular-nums text-[10px]">{width}</span>
               </div>
-              <div className="grid grid-cols-2 gap-2 text-[10px] font-medium text-foreground/85">
+              <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground/90">
                 <label className="flex items-center justify-between cursor-pointer select-none gap-1">
-                  <span className="text-[9px]">Stab</span>
+                  <span className="text-[9px] font-medium">Stab</span>
                   <span role="switch" aria-checked={stabilize} onClick={() => setStabilize(!stabilize)} className="relative w-[32px] h-[18px] rounded-full transition-colors shrink-0" style={{ background: stabilize ? "oklch(0.7 0.17 145)" : "oklch(0.35 0.02 260)", boxShadow: "inset 0 1px 2px oklch(0 0 0 / 0.3)" }}>
                     <span className="absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white transition-all" style={{ left: stabilize ? "16px" : "2px", boxShadow: "0 2px 4px oklch(0 0 0 / 0.3)" }} />
                   </span>
                   <input type="checkbox" checked={stabilize} onChange={(e) => setStabilize(e.target.checked)} className="sr-only" />
                 </label>
                 <label className="flex items-center justify-between cursor-pointer select-none gap-1">
-                  <span className="text-[9px]">Pres</span>
+                  <span className="text-[9px] font-medium">Pres</span>
                   <span role="switch" aria-checked={pressureOn} onClick={() => setPressureOn(!pressureOn)} className="relative w-[32px] h-[18px] rounded-full transition-colors shrink-0" style={{ background: pressureOn ? "oklch(0.7 0.17 145)" : "oklch(0.35 0.02 260)", boxShadow: "inset 0 1px 2px oklch(0 0 0 / 0.3)" }}>
                     <span className="absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white transition-all" style={{ left: pressureOn ? "16px" : "2px", boxShadow: "0 2px 4px oklch(0 0 0 / 0.3)" }} />
                   </span>
@@ -892,60 +874,62 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
               </div>
             </div>
 
-            {/* Layers - collapsible */}
-            <div className="p-2.5 rounded-2xl flex flex-col gap-1.5" style={{
-              background: "oklch(0.22 0.04 262 / 0.5)",
-              backdropFilter: "blur(20px) saturate(180%)",
-              border: "1px solid oklch(1 0 0 / 0.06)",
-            }}>
+            {/* Layers */}
+            <div className="p-2.5 rounded-2xl bg-muted/50 border border-border/40 space-y-1.5">
               <button onClick={() => setToolsExpanded(e => !e)} className="flex items-center justify-between w-full">
-                <span className="text-[9px] font-semibold tracking-wider text-foreground/80 inline-flex items-center gap-1"><Layers size={10} /> CAPAS · {layers.length}</span>
+                <span className="text-[9px] font-semibold tracking-wider text-muted-foreground/90 inline-flex items-center gap-1">
+                  <Layers size={10} /> CAPAS · {layers.length}
+                </span>
                 <div className="flex gap-1" onClick={e => e.stopPropagation()}>
-                  <button onClick={addLayer} className="text-[8px] font-semibold px-1.5 py-0.5 rounded-lg text-primary-foreground active:scale-95 transition inline-flex items-center gap-0.5" style={{ background: "linear-gradient(180deg, oklch(0.78 0.17 250), oklch(0.66 0.18 252))" }}><Plus size={9} strokeWidth={2.5} /></button>
-                  <button onClick={flatten} className="text-[8px] font-medium px-1.5 py-0.5 rounded-lg border border-border bg-muted text-foreground/80 active:scale-95 transition">Flatten</button>
+                  <button onClick={addLayer} className="text-[8px] font-semibold px-1.5 py-0.5 rounded-lg text-primary-foreground active:scale-95 transition inline-flex items-center gap-0.5" style={{ background: "linear-gradient(180deg, oklch(0.78 0.17 250), oklch(0.66 0.18 252))" }}>
+                    <Plus size={9} strokeWidth={2.5} />
+                  </button>
+                  <button onClick={flatten} className="text-[8px] font-medium px-1.5 py-0.5 rounded-lg border border-border/50 bg-muted/50 text-foreground/70 active:scale-95 transition">Flatten</button>
                 </div>
               </button>
               {toolsExpanded && (
-                <>
-                  <div className="flex flex-col gap-1 max-h-[160px] overflow-auto pr-1">
-                    {[...layers].slice().reverse().map((l) => {
-                      const isActive = l.id === activeLayerId;
-                      return (
-                        <div key={l.id} className={`group rounded-xl p-1 flex items-center gap-1 transition-all cursor-pointer ${isActive ? "bg-primary/15 border border-primary/40" : "bg-muted border border-border hover:bg-muted"}`}
-                          onClick={() => { setActiveLayerId(l.id); activeLayerIdRef.current = l.id; }}>
-                          <div className="w-7 h-7 rounded-md shrink-0" style={{
-                            backgroundColor: "#ffffff",
-                            backgroundImage: `url(${(() => { try { return l.canvas.toDataURL("image/png"); } catch { return ""; }})()})`,
-                            backgroundSize: "contain", backgroundPosition: "center", backgroundRepeat: "no-repeat",
-                            boxShadow: "inset 0 0 0 1px oklch(0.82 0.01 250 / 0.6)",
-                            opacity: l.visible ? 1 : 0.35,
-                          }} />
-                          <input value={l.name} onChange={(e) => updateLayer(l.id, { name: e.target.value })} onClick={(e) => e.stopPropagation()}
-                            className="flex-1 min-w-0 bg-transparent text-[9px] font-medium focus:outline-none focus:bg-muted rounded px-1 py-0.5" />
-                          <button onClick={(e) => { e.stopPropagation(); updateLayer(l.id, { visible: !l.visible }); }} title={l.visible ? "Ocultar" : "Mostrar"}
-                            className={`w-5 h-5 grid place-items-center rounded-md transition hover:bg-muted ${l.visible ? "text-primary-glow" : "text-muted-foreground"}`}>{l.visible ? <Eye size={10} /> : <EyeOff size={10} />}</button>
-                          <button onClick={(e) => { e.stopPropagation(); updateLayer(l.id, { locked: !l.locked }); }} title={l.locked ? "Desbloquear" : "Bloquear"}
-                            className={`w-5 h-5 grid place-items-center rounded-md transition hover:bg-muted ${l.locked ? "text-destructive" : "text-muted-foreground"}`}>{l.locked ? <Lock size={10} /> : <Unlock size={10} />}</button>
-                          <button onClick={(e) => { e.stopPropagation(); deleteLayer(l.id); }} title="Borrar" className="w-5 h-5 grid place-items-center rounded-md text-destructive/70 hover:text-destructive hover:bg-destructive/10"><Trash2 size={9} /></button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {activeLayer() && (
-                    <div className="flex items-center gap-2 text-[9px] text-foreground/70 pt-0.5">
-                      <span className="w-10 shrink-0">Opacidad</span>
-                      <input type="range" min={0} max={100} step={1} value={Math.round((activeLayer()?.opacity ?? 1) * 100)}
-                        onChange={(e) => updateLayer(activeLayerIdRef.current, { opacity: Number(e.target.value) / 100 })}
-                        className="flex-1 accent-[oklch(0.72_0.17_250)]" />
-                      <span className="font-mono text-primary-glow w-6 text-right tabular-nums text-[9px]">{Math.round((activeLayer()?.opacity ?? 1) * 100)}%</span>
-                    </div>
-                  )}
-                </>
+                <div className="flex flex-col gap-1 max-h-[160px] overflow-auto pr-1">
+                  {[...layers].slice().reverse().map((l) => {
+                    const isActive = l.id === activeLayerId;
+                    return (
+                      <div key={l.id} className={`group rounded-xl p-1 flex items-center gap-1.5 transition-all cursor-pointer ${
+                        isActive
+                          ? "bg-primary/10 border border-primary/30"
+                          : "bg-muted/40 border border-border/40 hover:bg-muted/60"
+                      }`}
+                        onClick={() => { setActiveLayerId(l.id); activeLayerIdRef.current = l.id; }}>
+                        <div className="w-7 h-7 rounded-md shrink-0 overflow-hidden" style={{
+                          backgroundColor: "#ffffff",
+                          backgroundImage: `url(${(() => { try { return l.canvas.toDataURL("image/png"); } catch { return ""; }})()})`,
+                          backgroundSize: "contain", backgroundPosition: "center", backgroundRepeat: "no-repeat",
+                          boxShadow: "inset 0 0 0 1px oklch(0.82 0.01 250 / 0.6)",
+                          opacity: l.visible ? 1 : 0.35,
+                        }} />
+                        <input value={l.name} onChange={(e) => updateLayer(l.id, { name: e.target.value })} onClick={(e) => e.stopPropagation()}
+                          className="flex-1 min-w-0 bg-transparent text-[9px] font-medium focus:outline-none focus:bg-muted/50 rounded px-1 py-0.5" />
+                        <button onClick={(e) => { e.stopPropagation(); updateLayer(l.id, { visible: !l.visible }); }} title={l.visible ? "Ocultar" : "Mostrar"}
+                          className={`w-5 h-5 grid place-items-center rounded-md transition hover:bg-muted/50 ${l.visible ? "text-primary" : "text-muted-foreground"}`}>{l.visible ? <Eye size={10} /> : <EyeOff size={10} />}</button>
+                        <button onClick={(e) => { e.stopPropagation(); updateLayer(l.id, { locked: !l.locked }); }} title={l.locked ? "Desbloquear" : "Bloquear"}
+                          className={`w-5 h-5 grid place-items-center rounded-md transition hover:bg-muted/50 ${l.locked ? "text-destructive" : "text-muted-foreground"}`}>{l.locked ? <Lock size={10} /> : <Unlock size={10} />}</button>
+                        <button onClick={(e) => { e.stopPropagation(); deleteLayer(l.id); }} title="Borrar" className="w-5 h-5 grid place-items-center rounded-md text-destructive/60 hover:text-destructive hover:bg-destructive/10"><Trash2 size={9} /></button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              {activeLayer() && toolsExpanded && (
+                <div className="flex items-center gap-2 text-[9px] text-muted-foreground/80 pt-0.5">
+                  <span className="w-10 shrink-0">Opacidad</span>
+                  <input type="range" min={0} max={100} step={1} value={Math.round((activeLayer()?.opacity ?? 1) * 100)}
+                    onChange={(e) => updateLayer(activeLayerIdRef.current, { opacity: Number(e.target.value) / 100 })}
+                    className="flex-1 accent-primary" />
+                  <span className="font-mono text-primary font-semibold w-6 text-right tabular-nums text-[9px]">{Math.round((activeLayer()?.opacity ?? 1) * 100)}%</span>
+                </div>
               )}
             </div>
           </div>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }

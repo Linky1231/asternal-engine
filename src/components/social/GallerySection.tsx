@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Palette, Sparkles, X, Loader2, ImagePlus, CheckCircle2,
-  Heart, MessageCircle, AlertTriangle, Search,
+  Heart, MessageCircle, AlertTriangle, Search, Clock, TrendingUp,
+  DollarSign, Gift, Eye, ExternalLink,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import {
@@ -13,17 +14,27 @@ import {
 import type { SpriteAsset } from "@/lib/engine/core";
 import { GalleryCanvasPanel } from "@/components/social/GalleryCanvasPanel";
 
+const TABS: { id: string; label: string; icon: typeof Clock }[] = [
+  { id: "recent", label: "Recientes", icon: Clock },
+  { id: "popular", label: "Populares", icon: TrendingUp },
+  { id: "free", label: "Gratis", icon: Gift },
+  { id: "paid", label: "De pago", icon: DollarSign },
+];
+
 export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
   myId: string | null; isMod: boolean; onRefresh?: () => void;
 }) {
   const [artworks, setArtworks] = useState<PostWithMeta[]>([]);
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [filter, setFilter] = useState<"all" | "mine">("all");
+  const [tab, setTab] = useState("recent");
   const [searchQ, setSearchQ] = useState("");
 
   // Paint editor overlay state
   const [canvasOpen, setCanvasOpen] = useState(false);
+
+  // Detail modal
+  const [detailPost, setDetailPost] = useState<PostWithMeta | null>(null);
 
   // Publish dialog
   const [savedSprite, setSavedSprite] = useState<SpriteAsset | null>(null);
@@ -52,7 +63,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
   };
   useEffect(() => { load(); }, []);
 
-  // --- Canvas save (called from PaintEditor onSave) ---
+  // --- Canvas save ---
   const handleCanvasSave = (sprite: SpriteAsset) => {
     setCanvasOpen(false);
     setSavedSprite(sprite);
@@ -92,101 +103,157 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
     } catch (e) { setBuyState("error"); setBuyMsg((e as Error).message); }
   };
 
-  // Filter & search
+  // Filter & sort
   const q = searchQ.toLowerCase().trim();
-  const filtered = artworks.filter(a => {
-    if (filter === "mine" && a.author_id !== myId) return false;
+  const filtered = useMemo(() => {
+    let list = [...artworks];
+
+    // Search filter
     if (q) {
-      const title = a.content.replace(/^🎨\s*/, "").toLowerCase();
-      const author = a.author?.username?.toLowerCase() ?? "";
-      return title.includes(q) || author.includes(q);
+      list = list.filter(a => {
+        const title = a.content.replace(/^🎨\s*/, "").toLowerCase();
+        const author = a.author?.username?.toLowerCase() ?? "";
+        return title.includes(q) || author.includes(q);
+      });
     }
-    return true;
-  });
+
+    // Tab filter & sort
+    switch (tab) {
+      case "recent":
+        list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        break;
+      case "popular":
+        list.sort((a, b) => (b.likes ?? 0) - (a.likes ?? 0));
+        break;
+      case "free":
+        list = list.filter(a => (a.price_orbes ?? 0) === 0);
+        list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        break;
+      case "paid":
+        list = list.filter(a => (a.price_orbes ?? 0) > 0);
+        list.sort((a, b) => (b.likes ?? 0) - (a.likes ?? 0));
+        break;
+    }
+
+    return list;
+  }, [artworks, q, tab]);
+
+  const mineCount = artworks.filter(a => a.author_id === myId).length;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* ====== HEADER ====== */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent grid place-items-center shadow-sm shrink-0">
-            <Palette size={18} className="text-primary-foreground" />
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-primary to-accent grid place-items-center shadow-sm shrink-0">
+            <Palette size={20} className="text-primary-foreground" />
           </div>
           <div className="min-w-0">
-            <div className="font-display text-sm font-semibold truncate">Galería</div>
-            <div className="text-[10px] font-mono text-muted-foreground truncate">Arte de la comunidad</div>
+            <div className="font-display text-base font-semibold truncate tracking-tight">Galería</div>
+            <div className="text-[10px] font-mono text-muted-foreground truncate">
+              {artworks.length} obra{artworks.length !== 1 ? "s" : ""} · {mineCount} tuya{mineCount !== 1 ? "s" : ""}
+            </div>
           </div>
         </div>
         <button
           onClick={() => setCanvasOpen(true)}
-          className="h-10 pl-3 pr-4 rounded-xl bg-gradient-to-r from-primary to-accent text-primary-foreground text-[10px] font-display tracking-widest flex items-center gap-1.5 active:scale-95 transition shadow-sm shrink-0"
+          className="h-10 pl-3.5 pr-4.5 rounded-xl bg-gradient-to-r from-primary to-accent text-primary-foreground text-[10px] font-display tracking-widest flex items-center gap-1.5 active:scale-95 hover:shadow-lg hover:shadow-primary/20 transition-all shrink-0"
         >
-          <ImagePlus size={15} /> DIBUJAR
+          <ImagePlus size={15} /> NUEVA OBRA
         </button>
       </div>
 
-      {/* ====== SEARCH + FILTER TABS ====== */}
-      <div className="flex items-center gap-2">
-        <div className="flex-1 flex items-center gap-2 bg-input/50 rounded-xl px-3 py-2 focus-within:ring-2 focus-within:ring-primary/40 transition">
-          <Search size={14} className="text-muted-foreground shrink-0" />
-          <input
-            value={searchQ}
-            onChange={e => setSearchQ(e.target.value)}
-            placeholder="Buscar obras o artistas…"
-            className="flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground/60"
-          />
-          {searchQ && (
-            <button onClick={() => setSearchQ("")} className="text-muted-foreground hover:text-foreground">
-              <X size={14} />
+      {/* ====== SEARCH BAR ====== */}
+      <div className="flex items-center gap-2 bg-input/40 border border-border/50 rounded-2xl px-3.5 py-2.5 focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary/40 transition-all">
+        <Search size={15} className="text-muted-foreground shrink-0" />
+        <input
+          value={searchQ}
+          onChange={e => setSearchQ(e.target.value)}
+          placeholder="Buscar obras o artistas…"
+          className="flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground/50"
+        />
+        {searchQ && (
+          <button onClick={() => setSearchQ("")} className="w-6 h-6 grid place-items-center rounded-full hover:bg-muted/50 text-muted-foreground transition">
+            <X size={13} />
+          </button>
+        )}
+      </div>
+
+      {/* ====== NAVIGATION TABS ====== */}
+      <div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
+        {TABS.map(t => {
+          const Icon = t.icon;
+          const isActive = tab === t.id;
+          return (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[10px] font-display tracking-widest transition-all active:scale-95 whitespace-nowrap ${
+                isActive
+                  ? "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-sm shadow-primary/20"
+                  : "text-muted-foreground hover:text-foreground bg-muted/30 hover:bg-muted/60 border border-border/40"
+              }`}
+            >
+              <Icon size={13} />
+              {t.label}
             </button>
-          )}
-        </div>
-      </div>
-
-      <div className="flex gap-2">
+          );
+        })}
+        <div className="flex-1" />
         <button
-          onClick={() => setFilter("all")}
-          className={`px-4 py-1.5 rounded-full text-[10px] font-display tracking-widest transition active:scale-95 ${
-            filter === "all"
-              ? "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-sm"
-              : "bg-muted/40 text-muted-foreground hover:text-foreground border border-border/60"
+          onClick={() => setTab("all")}
+          className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[10px] font-display tracking-widest transition-all active:scale-95 ${
+            tab === "all"
+              ? "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-sm shadow-primary/20"
+              : "text-muted-foreground hover:text-foreground bg-muted/30 hover:bg-muted/60 border border-border/40"
           }`}
         >
-          TODAS
-        </button>
-        <button
-          onClick={() => setFilter("mine")}
-          className={`px-4 py-1.5 rounded-full text-[10px] font-display tracking-widest transition active:scale-95 ${
-            filter === "mine"
-              ? "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-sm"
-              : "bg-muted/40 text-muted-foreground hover:text-foreground border border-border/60"
-          }`}
-        >
-          MIS OBRAS
+          <Eye size={13} />
+          TODO
         </button>
       </div>
 
       {/* ====== ARTWORKS GRID ====== */}
       {loading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {[0,1,2,3,4,5].map(i => (
-            <div key={i} className="aspect-square rounded-2xl bg-muted/40 animate-pulse" />
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="space-y-2">
+              <div className="aspect-square rounded-2xl bg-muted/30 animate-pulse" />
+              <div className="h-3 w-3/4 rounded-lg bg-muted/20 animate-pulse" />
+              <div className="h-2.5 w-1/2 rounded-lg bg-muted/15 animate-pulse" />
+            </div>
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-16 panel rounded-2xl border border-dashed border-border">
-          <Palette size={36} className="mx-auto text-muted-foreground/40 mb-3" />
-          <div className="text-sm font-display text-muted-foreground">
-            {q ? "Sin resultados" : filter === "mine" ? "Aún no has creado obras" : "Aún no hay obras"}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center py-20 panel rounded-3xl border border-dashed border-border/60"
+        >
+          <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-primary/10 to-accent/10 grid place-items-center mx-auto mb-4">
+            <Palette size={32} className="text-muted-foreground/40" />
           </div>
-          <div className="text-[11px] text-muted-foreground/60 mt-1">
-            {filter === "mine"
-              ? "Toca DIBUJAR para crear tu primera obra"
-              : "¡Sé el primero en publicar!"}
+          <div className="text-base font-display text-muted-foreground">
+            {q ? `Sin resultados para "${q}"` : "Aún no hay obras aquí"}
           </div>
-        </div>
+          <div className="text-xs text-muted-foreground/60 mt-1.5 max-w-xs mx-auto leading-relaxed">
+            {q
+              ? "Prueba con otro término de búsqueda"
+              : tab === "free"
+                ? "No hay obras gratuitas todavía"
+                : tab === "paid"
+                  ? "No hay obras de pago todavía"
+                  : "¡Sé el primero en compartir tu arte con la comunidad!"}
+          </div>
+          <button
+            onClick={() => setCanvasOpen(true)}
+            className="mt-5 h-10 px-5 rounded-xl bg-gradient-to-r from-primary to-accent text-primary-foreground text-[10px] font-display tracking-widest active:scale-95 transition shadow-sm"
+          >
+            <ImagePlus size={14} className="inline mr-1.5" />CREAR OBRA
+          </button>
+        </motion.div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           {filtered.map((art, i) => {
             const imgUrl = art.signed_media?.[0] ?? art.signed_cover;
             const price = art.price_orbes ?? 0;
@@ -194,99 +261,251 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
             const owned = art.owned ?? false;
             const title = art.content.replace(/^🎨\s*/, "");
             return (
-              <motion.div
+              <motion.button
                 key={art.id}
-                initial={{ opacity: 0, y: 16, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ duration: 0.3, delay: i * 0.04, ease: [0.22, 1, 0.36, 1] }}
-                className="group panel rounded-2xl overflow-hidden border border-border/50 hover:border-primary/30 hover:shadow-md transition-all active:scale-[0.98]"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35, delay: Math.min(i * 0.03, 0.25), ease: [0.22, 1, 0.36, 1] }}
+                onClick={() => setDetailPost(art)}
+                className="group text-left w-full"
               >
-                {/* Image area */}
-                <div className="aspect-square bg-muted/20 relative overflow-hidden">
-                  {imgUrl ? (
-                    <img src={imgUrl} alt={title} className="w-full h-full object-contain p-3 group-hover:scale-[1.02] transition-transform duration-300" />
-                  ) : (
-                    <div className="w-full h-full grid place-items-center">
-                      <Palette size={36} className="text-muted-foreground/20" />
-                    </div>
-                  )}
-
-                  {/* Top-right badge */}
-                  <div className="absolute top-2 right-2">
-                    {mine ? (
-                      <span className="px-2 py-0.5 rounded-full text-[9px] font-display tracking-widest bg-primary/20 text-primary-glow border border-primary/30">
-                        TU OBRA
-                      </span>
-                    ) : owned ? (
-                      <span className="px-2 py-0.5 rounded-full text-[9px] font-display tracking-widest bg-emerald-500/20 text-emerald-500 border border-emerald-500/30">
-                        COLECTADA
-                      </span>
-                    ) : price > 0 ? (
-                      <span className="px-2 py-0.5 rounded-full text-[9px] font-display tracking-widest bg-primary/20 text-primary-glow border border-primary/30 flex items-center gap-1">
-                        <Sparkles size={9} /> {price}
-                      </span>
+                <div className="panel rounded-2xl overflow-hidden border border-border/40 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 active:scale-[0.97]">
+                  {/* Image area */}
+                  <div className="aspect-square bg-gradient-to-br from-muted/30 to-muted/10 relative overflow-hidden">
+                    {imgUrl ? (
+                      <img
+                        src={imgUrl}
+                        alt={title}
+                        className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-500 ease-out"
+                      />
                     ) : (
-                      <span className="px-2 py-0.5 rounded-full text-[9px] font-display tracking-widest bg-emerald-500/20 text-emerald-500 border border-emerald-500/30">
-                        GRATIS
-                      </span>
+                      <div className="w-full h-full grid place-items-center">
+                        <Palette size={40} className="text-muted-foreground/15" />
+                      </div>
                     )}
-                  </div>
-                </div>
 
-                {/* Info area */}
-                <div className="p-2.5 space-y-1.5">
-                  <div className="text-xs font-display truncate font-medium">{title}</div>
-                  <Link
-                    to="/profile/$userId" params={{ userId: art.author_id }}
-                    className="flex items-center gap-1.5 group/author"
-                    onClick={e => e.stopPropagation()}
-                  >
-                    <div className="w-5 h-5 rounded-full bg-gradient-to-br from-primary/40 to-accent/30 grid place-items-center overflow-hidden shrink-0">
-                      {art.author?.avatar_url ? (
-                        <img src={art.author.avatar_url} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="text-[7px] font-display text-primary-glow">
-                          {(art.author?.username ?? "?")[0]?.toUpperCase()}
+                    {/* Hover overlay */}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-300 flex items-center justify-center">
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/90 text-black text-[9px] font-display tracking-widest shadow-lg backdrop-blur-sm translate-y-2 group-hover:translate-y-0 transition-all duration-300">
+                        <Eye size={11} /> VER
+                      </div>
+                    </div>
+
+                    {/* Top badge */}
+                    <div className="absolute top-2.5 right-2.5 flex gap-1.5">
+                      {mine ? (
+                        <span className="px-2 py-0.5 rounded-full text-[8px] font-display tracking-widest bg-primary/25 text-primary-glow border border-primary/30 backdrop-blur-sm">
+                          TUYA
+                        </span>
+                      ) : owned ? (
+                        <span className="px-2 py-0.5 rounded-full text-[8px] font-display tracking-widest bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 backdrop-blur-sm">
+                          COLECTADA
+                        </span>
+                      ) : price > 0 ? null : (
+                        <span className="px-2 py-0.5 rounded-full text-[8px] font-display tracking-widest bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 backdrop-blur-sm">
+                          GRATIS
                         </span>
                       )}
                     </div>
-                    <span className="text-[9px] font-mono text-muted-foreground truncate group-hover/author:text-foreground transition">
-                      @{art.author?.username ?? "anon"}
-                    </span>
-                  </Link>
 
-                  {/* Actions row */}
-                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground pt-0.5">
-                    <span className="flex items-center gap-0.5"><Heart size={10} /> {art.likes}</span>
-                    <span className="flex items-center gap-0.5"><MessageCircle size={10} /> {art.comments_count}</span>
-                    {!mine && (
-                      <button
-                        onClick={e => { e.stopPropagation(); openBuy(art.id); }}
-                        disabled={owned}
-                        className={`ml-auto text-[9px] font-display tracking-widest px-2.5 py-0.5 rounded-full transition active:scale-90 ${
-                          owned
-                            ? "text-muted-foreground/40 cursor-default border border-transparent"
-                            : "bg-gradient-to-r from-primary to-accent text-primary-foreground hover:shadow-sm"
-                        }`}
-                      >
-                        {owned ? "✔" : price > 0 ? "COMPRAR" : "OBTENER"}
-                      </button>
+                    {/* Price pill */}
+                    {price > 0 && !mine && !owned && (
+                      <div className="absolute bottom-2.5 left-2.5">
+                        <span className="px-2.5 py-1 rounded-full text-[9px] font-display tracking-widest bg-primary/90 text-primary-foreground backdrop-blur-sm flex items-center gap-1 shadow-sm">
+                          <Sparkles size={9} /> {price}
+                        </span>
+                      </div>
                     )}
                   </div>
+
+                  {/* Info area */}
+                  <div className="p-3 space-y-1.5">
+                    <div className="text-xs font-display truncate font-medium tracking-tight">{title}</div>
+                    <Link
+                      to="/profile/$userId" params={{ userId: art.author_id }}
+                      onClick={e => e.stopPropagation()}
+                      className="flex items-center gap-1.5 group/author"
+                    >
+                      <div className="w-4 h-4 rounded-full bg-gradient-to-br from-primary/40 to-accent/30 grid place-items-center overflow-hidden shrink-0 ring-1 ring-border/50">
+                        {art.author?.avatar_url ? (
+                          <img src={art.author.avatar_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-[6px] font-display text-primary-glow">
+                            {(art.author?.username ?? "?")[0]?.toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[9px] font-mono text-muted-foreground truncate group-hover/author:text-foreground transition">
+                        @{art.author?.username ?? "anon"}
+                      </span>
+                    </Link>
+
+                    {/* Stats row */}
+                    <div className="flex items-center gap-2.5 text-[9px] text-muted-foreground/70 pt-0.5">
+                      <span className="flex items-center gap-1">
+                        <Heart size={9} className={art.likes > 0 ? "text-rose-400" : ""} />
+                        {art.likes}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <MessageCircle size={9} />
+                        {art.comments_count}
+                      </span>
+                      {!mine && !owned && price > 0 && (
+                        <span
+                          onClick={e => { e.stopPropagation(); openBuy(art.id); }}
+                          className="ml-auto px-2.5 py-0.5 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground text-[8px] font-display tracking-widest active:scale-90 transition"
+                        >
+                          COMPRAR
+                        </span>
+                      )}
+                      {!mine && !owned && price === 0 && (
+                        <span
+                          onClick={e => { e.stopPropagation(); openBuy(art.id); }}
+                          className="ml-auto px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[8px] font-display tracking-widest border border-emerald-500/20 active:scale-90 transition"
+                        >
+                          OBTENER
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </motion.div>
+              </motion.button>
             );
           })}
         </div>
       )}
 
-      {/* ====== DRAWING PANEL (slides down from top) ====== */}
+      {/* ====== DETAIL MODAL ====== */}
+      <AnimatePresence>
+        {detailPost && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[130] bg-black/70 backdrop-blur-md grid place-items-center p-4"
+            onClick={() => setDetailPost(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 20 }}
+              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+              className="w-full max-w-lg max-h-[90vh] overflow-y-auto panel border border-border/60 rounded-3xl shadow-2xl"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Image */}
+              <div className="relative bg-muted/20 rounded-2xl overflow-hidden mx-3 mt-3">
+                {(detailPost.signed_media?.[0] ?? detailPost.signed_cover) ? (
+                  <img
+                    src={detailPost.signed_media?.[0] ?? detailPost.signed_cover}
+                    alt={detailPost.content.replace(/^🎨\s*/, "")}
+                    className="w-full object-contain max-h-[50vh]"
+                  />
+                ) : (
+                  <div className="aspect-square grid place-items-center">
+                    <Palette size={48} className="text-muted-foreground/20" />
+                  </div>
+                )}
+                <button
+                  onClick={() => setDetailPost(null)}
+                  className="absolute top-3 right-3 w-8 h-8 grid place-items-center rounded-full bg-black/40 text-white hover:bg-black/60 transition backdrop-blur-sm"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+
+              {/* Info */}
+              <div className="p-4 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-display text-base font-semibold tracking-tight">
+                      {detailPost.content.replace(/^🎨\s*/, "")}
+                    </div>
+                    <Link
+                      to="/profile/$userId" params={{ userId: detailPost.author_id }}
+                      onClick={e => e.stopPropagation()}
+                      className="flex items-center gap-1.5 mt-1 group/author"
+                    >
+                      <div className="w-5 h-5 rounded-full bg-gradient-to-br from-primary/40 to-accent/30 grid place-items-center overflow-hidden shrink-0 ring-1 ring-border/50">
+                        {detailPost.author?.avatar_url ? (
+                          <img src={detailPost.author.avatar_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-[7px] font-display text-primary-glow">
+                            {(detailPost.author?.username ?? "?")[0]?.toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-xs font-mono text-muted-foreground group-hover/author:text-foreground transition">
+                        @{detailPost.author?.username ?? "anon"}
+                      </span>
+                      <ExternalLink size={10} className="text-muted-foreground/40" />
+                    </Link>
+                  </div>
+
+                  {/* Price / Buy */}
+                  {detailPost.author_id !== myId && (
+                    <button
+                      onClick={e => { e.stopPropagation(); setDetailPost(null); openBuy(detailPost.id); }}
+                      disabled={detailPost.owned}
+                      className={`shrink-0 px-4 py-2 rounded-xl text-[10px] font-display tracking-widest transition active:scale-95 ${
+                        detailPost.owned
+                          ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20"
+                          : (detailPost.price_orbes ?? 0) > 0
+                            ? "bg-gradient-to-r from-primary to-accent text-primary-foreground hover:shadow-lg hover:shadow-primary/20"
+                            : "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/25"
+                      }`}
+                    >
+                      {detailPost.owned
+                        ? "✔ COLECTADA"
+                        : (detailPost.price_orbes ?? 0) > 0
+                          ? <span className="flex items-center gap-1"><Sparkles size={11} /> {detailPost.price_orbes}</span>
+                          : "OBTENER GRATIS"}
+                    </button>
+                  )}
+                </div>
+
+                {/* Stats */}
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <Heart size={12} className={detailPost.likes > 0 ? "text-rose-400" : ""} />
+                    {detailPost.likes} like{detailPost.likes !== 1 ? "s" : ""}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <MessageCircle size={12} />
+                    {detailPost.comments_count} comentario{detailPost.comments_count !== 1 ? "s" : ""}
+                  </span>
+                  <span className="text-[10px] font-mono text-muted-foreground/50">
+                    {new Date(detailPost.created_at).toLocaleDateString("es", { month: "short", day: "numeric" })}
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ====== DRAWING OVERLAY (full-screen) ====== */}
       <AnimatePresence>
         {canvasOpen && (
-          <GalleryCanvasPanel
-            onSave={handleCanvasSave}
-            onClose={() => setCanvasOpen(false)}
-          />
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[150] bg-black/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              className="w-full h-full max-w-5xl max-h-[90vh] overflow-hidden"
+            >
+              <GalleryCanvasPanel
+                onSave={handleCanvasSave}
+                onClose={() => setCanvasOpen(false)}
+              />
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
 
@@ -295,7 +514,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
         {savedSprite && !pubDone && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[120] bg-black/60 backdrop-blur-sm grid place-items-center p-4"
+            className="fixed inset-0 z-[160] bg-black/70 backdrop-blur-md grid place-items-center p-4"
             onClick={() => { if (!publishing) setSavedSprite(null); }}
           >
             <motion.div
@@ -303,15 +522,15 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 30, scale: 0.96 }}
               transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-              className="w-full max-w-sm panel border border-border rounded-2xl p-5 space-y-4 shadow-2xl"
+              className="w-full max-w-sm panel border border-border/60 rounded-2xl p-5 space-y-4 shadow-2xl"
               onClick={e => e.stopPropagation()}
             >
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent grid place-items-center">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-accent grid place-items-center">
                   <ImagePlus size={14} className="text-primary-foreground" />
                 </div>
                 <div className="font-display text-sm">Publicar obra</div>
-                <button onClick={() => setSavedSprite(null)} className="ml-auto w-8 h-8 grid place-items-center rounded-lg border border-border hover:bg-muted/40">
+                <button onClick={() => setSavedSprite(null)} className="ml-auto w-8 h-8 grid place-items-center rounded-xl border border-border hover:bg-muted/40 transition">
                   <X size={14} />
                 </button>
               </div>
@@ -327,7 +546,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
                 onChange={e => setPubTitle(e.target.value)}
                 placeholder="Título de la obra"
                 maxLength={60}
-                className="w-full bg-input/50 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40"
+                className="w-full bg-input/50 border border-border/50 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30 transition"
               />
 
               <div>
@@ -339,11 +558,11 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
                     type="number" min={0} max={9999}
                     value={pubPrice}
                     onChange={e => setPubPrice(Math.max(0, Number(e.target.value)))}
-                    className="flex-1 bg-input/50 rounded-xl px-3 py-2 text-sm font-mono outline-none focus:ring-2 focus:ring-primary/40"
+                    className="flex-1 bg-input/50 border border-border/50 rounded-xl px-3 py-2 text-sm font-mono outline-none focus:ring-2 focus:ring-primary/30"
                   />
                   <span className="text-xs text-muted-foreground">orbes</span>
                 </div>
-                <div className="text-[10px] text-muted-foreground mt-1">0 = gratuita</div>
+                <div className="text-[10px] text-muted-foreground/60 mt-1">0 = gratuita</div>
               </div>
 
               {pubErr && <div className="text-xs text-destructive">{pubErr}</div>}
@@ -369,7 +588,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
         {pubDone && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[120] bg-black/60 backdrop-blur-sm grid place-items-center p-4"
+            className="fixed inset-0 z-[160] bg-black/70 backdrop-blur-md grid place-items-center p-4"
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
@@ -390,7 +609,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
         {buyPostId && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[110] bg-black/60 backdrop-blur-sm grid place-items-center p-4"
+            className="fixed inset-0 z-[140] bg-black/70 backdrop-blur-md grid place-items-center p-4"
             onClick={() => buyState !== "loading" && setBuyPostId(null)}
           >
             <motion.div
@@ -398,7 +617,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 30, scale: 0.96 }}
               transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-              className="w-full max-w-sm panel border border-border rounded-2xl p-5 space-y-3 shadow-2xl"
+              className="w-full max-w-sm panel border border-border/60 rounded-2xl p-5 space-y-3 shadow-2xl"
               onClick={e => e.stopPropagation()}
             >
               {(buyState === "idle" || buyState === "loading") && (
@@ -406,7 +625,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
                   <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/25 to-accent/20 grid place-items-center mx-auto">
                     {buyState === "loading"
                       ? <Loader2 size={22} className="animate-spin text-primary" />
-                      : <Palette size={22} className="text-primary" />}
+                      : <Sparkles size={22} className="text-primary" />}
                   </div>
                   <h3 className="font-display text-center text-sm">
                     {buyState === "loading" ? "Procesando…" : "¿Adquirir esta obra?"}
@@ -416,7 +635,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
                     const price = art?.price_orbes ?? 0;
                     const after = balance - price;
                     return (
-                      <div className="rounded-xl bg-muted/40 border border-border/60 p-3 space-y-2 text-xs">
+                      <div className="rounded-xl bg-muted/30 border border-border/60 p-3 space-y-2 text-xs">
                         <div className="flex items-center justify-between">
                           <span className="text-muted-foreground">Tu saldo</span>
                           <span className="font-mono tabular-nums flex items-center gap-1">
@@ -455,8 +674,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
                   <h3 className="font-display text-sm">¡Adquirida!</h3>
                   <p className="text-xs text-muted-foreground mt-1">{buyMsg}</p>
                 </div>
-              )}
-              {(buyState === "insufficient" || buyState === "error") && (
+              )}        {(buyState === "insufficient" || buyState === "error") && (
                 <div className="text-center py-2">
                   <div className="w-12 h-12 rounded-2xl bg-destructive/15 grid place-items-center mx-auto mb-2">
                     <AlertTriangle size={22} className="text-destructive" />
