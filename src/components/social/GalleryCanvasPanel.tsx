@@ -166,44 +166,26 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
     if (!c || !buf) return;
     const ctx = c.getContext("2d")!;
     const W = c.clientWidth;
-    const H = c.clientHeight;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    if (c.width !== Math.round(W * dpr) || c.height !== Math.round(H * dpr)) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); }
+    if (c.width !== Math.round(W * dpr)) { c.width = Math.round(W * dpr); c.height = Math.round(W * dpr); }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "low";
-    ctx.clearRect(0, 0, W, H);
-    // Draw the square buffer centered in the rectangular display
-    const scale = Math.min(W / size, H / size);
-    const ox = (W - size * scale) / 2;
-    const oy = (H - size * scale) / 2;
-    ctx.drawImage(buf, ox, oy, size * scale, size * scale);
-    // Draw subtle border around the active drawing area
-    ctx.strokeStyle = "oklch(0.5 0.1 250 / 0.15)";
-    ctx.lineWidth = 1;
-    ctx.strokeRect(ox, oy, size * scale, size * scale);
-    displayScale.current = scale;
+    ctx.clearRect(0, 0, W, W);
+    ctx.drawImage(buf, 0, 0, W, W);
+    displayScale.current = W / size;
     if (preview) {
       ctx.save();
-      ctx.translate(ox, oy);
       ctx.scale(displayScale.current, displayScale.current);
       preview(ctx);
       ctx.restore();
     }
   };
 
-  const getDisplayOffset = () => {
-    const c = canvasRef.current; if (!c) return { ox: 0, oy: 0, s: 1 };
-    const s = displayScale.current || 1;
-    const W = c.clientWidth;
-    const H = c.clientHeight;
-    return { ox: (W - size * s) / 2, oy: (H - size * s) / 2, s };
-  };
-
   const strokeSegmentDisplay = (x0: number, y0: number, x1: number, y1: number, erase: boolean, w: number) => {
     const c = canvasRef.current; if (!c) return;
     const ctx = c.getContext("2d")!;
-    const { ox, oy, s } = getDisplayOffset();
+    const s = displayScale.current || 1;
     ctx.save();
     ctx.globalCompositeOperation = erase ? "destination-out" : "source-over";
     ctx.strokeStyle = color;
@@ -211,8 +193,8 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
     ctx.beginPath();
-    ctx.moveTo(ox + x0 * s, oy + y0 * s);
-    ctx.lineTo(ox + x1 * s, oy + y1 * s);
+    ctx.moveTo(x0 * s, y0 * s);
+    ctx.lineTo(x1 * s, y1 * s);
     ctx.stroke();
     ctx.restore();
   };
@@ -220,12 +202,12 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
   const stampDotDisplay = (x: number, y: number, erase: boolean, w: number) => {
     const c = canvasRef.current; if (!c) return;
     const ctx = c.getContext("2d")!;
-    const { ox, oy, s } = getDisplayOffset();
+    const s = displayScale.current || 1;
     ctx.save();
     ctx.globalCompositeOperation = erase ? "destination-out" : "source-over";
     ctx.fillStyle = color;
     ctx.beginPath();
-    ctx.arc(ox + x * s, oy + y * s, Math.max(0.5, w / 2) * s, 0, Math.PI * 2);
+    ctx.arc(x * s, y * s, Math.max(0.5, w / 2) * s, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   };
@@ -760,12 +742,13 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
 
       {/* Main: Canvas + Tools */}
       <div className="flex-1 flex flex-col lg:flex-row min-h-0">
-        {/* Canvas area - fills ALL available space (rectangular for drawing) */}
-        <div className="flex-1 min-h-0 min-w-0 flex items-stretch overflow-hidden p-2 sm:p-3 relative">
+        {/* Canvas area - forces square aspect ratio */}
+        <div className="flex-1 min-h-0 min-w-0 flex items-center justify-center overflow-hidden p-2 sm:p-3 relative">
           <div
             ref={containerRef}
             key={`canvas-${size}`}
-            className="flex-1 rounded-xl overflow-hidden"
+            className="rounded-xl overflow-hidden max-w-full max-h-full"
+            style={{ aspectRatio: "1/1", width: "auto", height: "auto", maxWidth: "100%", maxHeight: "100%" }}
           >
             <div
               className="w-full h-full rounded-xl overflow-hidden"
