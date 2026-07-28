@@ -497,9 +497,8 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-              className="w-full h-full max-w-5xl max-h-[90vh] overflow-hidden"
-            >
+              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}            className="w-full h-full overflow-hidden"
+          >
               <GalleryCanvasPanel
                 onSave={handleCanvasSave}
                 onClose={() => setCanvasOpen(false)}
