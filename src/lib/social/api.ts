@@ -1317,6 +1317,34 @@ export async function updateEventStatus(eventId: string, status: "upcoming" | "a
   if (error) throw error;
 }
 
+// ============ TEST CHAT ============
+/** Create or retrieve a test group chat for the current user (admin) */
+export async function ensureTestChat(): Promise<string> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+  // Look for existing test chat
+  const { data: myChats } = await supabase.from("chat_members").select("chat_id").eq("user_id", user.id).eq("status", "active");
+  const myIds = (myChats ?? []).map(m => m.chat_id);
+  if (myIds.length) {
+    const { data: testChats } = await supabase.from("chats").select("id").eq("type", "group").in("id", myIds).ilike("name", "%🧪 Chat de prueba%");
+    if (testChats?.length) return testChats[0].id;
+  }
+  // Create new test chat
+  const { data: chat, error } = await supabase.from("chats").insert({
+    type: "group", name: "🧪 Chat de prueba", created_by: user.id,
+  }).select().single();
+  if (error) throw error;
+  await supabase.from("chat_members").insert({
+    chat_id: chat.id, user_id: user.id, status: "active", is_admin: true, invited_by: user.id,
+  });
+  // Send welcome message
+  await supabase.from("chat_messages").insert({
+    chat_id: chat.id, author_id: user.id,
+    content: "👋 ¡Bienvenido al Chat de Prueba! Puedes usar este chat para probar el sistema de mensajes, stickers y todas las funciones. ¡Envía tu primer mensaje! 📝",
+  });
+  return chat.id;
+}
+
 // ============ FOLLOWS ============
 export type FollowStats = { followers: number; following: number; i_follow: boolean };
 
