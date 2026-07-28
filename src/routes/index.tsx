@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Gamepad2, Newspaper, Search, LogOut, Wrench, Plus, ShieldCheck, User, MessageCircle, Sparkles, Star, Menu, Bell, X, Home, Users, Flame, MessageSquare, Palette, Trophy } from "lucide-react";
+import { Gamepad2, Newspaper, Search, LogOut, Wrench, Plus, ShieldCheck, User, MessageCircle, Sparkles, Star, Menu, Bell, X, Home, Users, Flame, MessageSquare, Palette, Trophy, History, Clock, BarChart3, ChevronDown, ChevronRight, Globe, Heart, Megaphone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchFeed, fetchGames, getMyProfile, isMod, isAdmin, type PostWithMeta, type Profile } from "@/lib/social/api";
 import { PostComposer } from "@/components/social/PostComposer";
@@ -13,6 +13,7 @@ import { NotificationsInline } from "@/components/social/NotificationsInline";
 import { ForumSection } from "@/components/social/ForumSection";
 import { GallerySection } from "@/components/social/GallerySection";
 import { EventsSection } from "@/components/social/EventsSection";
+import { HistorySection } from "@/components/social/HistorySection";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -29,7 +30,7 @@ export const Route = createFileRoute("/")({
   component: HomePage,
 });
 
-type Tab = "games" | "feed" | "gallery" | "events" | "profile";
+type Tab = "games" | "feed" | "gallery" | "events" | "profile" | "history";
 type FeedSub = "forYou" | "following" | "trending" | "forums";
 
 function HomePage() {
@@ -258,6 +259,8 @@ function HomePage() {
               <GallerySection myId={myId} isMod={mod} />
             ) : tab === "events" ? (
               <EventsSection isAdmin={admin} />
+            ) : tab === "history" ? (
+              <HistorySection />
             ) : (
               <motion.div
                 initial={{ opacity: 0, y: 12 }}
@@ -295,16 +298,26 @@ function HomePage() {
               <div className="font-display text-xs tracking-widest text-primary-glow">MENÚ</div>
               <button onClick={closeMenu} className="w-8 h-8 rounded-lg border border-border grid place-items-center active:scale-95 bg-background"><X size={14}/></button>
             </div>
+            {/* Categoría: SOCIAL */}
+            <CategoryHeader label="SOCIAL" />
             <MenuItem icon={<Search size={16}/>} label="Buscar" onClick={() => { setShowSearch(s => !s); closeMenu(); }} />
             <MenuLink icon={<MessageCircle size={16}/>} label="Mensajes" to="/chats" onClick={closeMenu} />
             <MenuItem icon={<Bell size={16}/>} label="Notificaciones" onClick={() => setNotifOpen(o => !o)} />
             {notifOpen && <NotificationsInline />}
+
+            {/* Categoría: COMUNIDAD */}
+            <CategoryHeader label="COMUNIDAD" />
+            <MenuItem icon={<BarChart3 size={16} className="text-primary-glow"/>} label="Historial" onClick={() => { setTab("history"); closeMenu(); }} />
+            <MenuLink icon={<Megaphone size={16} className="text-primary"/>} label="Panel de Orbes" to="/orbes" onClick={closeMenu} />
             {(mod || admin) && (
               <MenuLink icon={<ShieldCheck size={16} className="text-primary-glow"/>} label="Moderación" to="/admin" onClick={closeMenu} />
             )}
-            <MenuLink icon={<Star size={16} fill="currentColor" style={{ color: "var(--plus)" }}/>} label="Centro Plus" to="/plus" onClick={closeMenu} />
+
+            {/* Categoría: CREACIÓN */}
+            <CategoryHeader label="CREACIÓN" />
             <MenuLink icon={<Wrench size={16} className="text-primary-glow"/>} label="Editor" to="/editor" onClick={closeMenu} />
-            <MenuLink icon={<Sparkles size={16} className="text-primary"/>} label="Panel de Orbes" to="/orbes" onClick={closeMenu} />
+            <MenuLink icon={<Star size={16} fill="currentColor" style={{ color: "var(--plus)" }}/>} label="Centro Plus" to="/plus" onClick={closeMenu} />
+
             <div className="flex-1 min-h-4" />
             <button onClick={() => { logout(); closeMenu(); }}
               className="flex items-center gap-3 px-3 h-11 rounded-xl border border-border bg-background text-destructive active:scale-[0.98] transition">
@@ -349,6 +362,15 @@ function MenuItem({ icon, label, onClick, children }: { icon: React.ReactNode; l
       {icon} <span className="text-sm font-medium flex-1">{label}</span>
       {children}
     </button>
+  );
+}
+
+function CategoryHeader({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-2 pt-1 pb-0.5">
+      <div className="text-[10px] font-display tracking-[0.15em] text-muted-foreground/60">{label}</div>
+      <div className="flex-1 h-px bg-border/40" />
+    </div>
   );
 }
 
