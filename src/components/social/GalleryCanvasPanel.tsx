@@ -676,24 +676,24 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
   void previewVersion;
 
   const TOOLS: { id: Tool; icon: ReactNode; title: string }[] = [
-    { id: "brush", icon: <Pencil size={20} strokeWidth={2} />, title: "Pincel" },
-    { id: "eraser", icon: <Eraser size={20} strokeWidth={2} />, title: "Borrador" },
-    { id: "fill", icon: <PaintBucket size={20} strokeWidth={2} />, title: "Relleno" },
-    { id: "line", icon: <Slash size={20} strokeWidth={2} />, title: "Línea" },
-    { id: "rect", icon: <Square size={20} strokeWidth={2} />, title: "Rectángulo" },
-    { id: "circle", icon: <Circle size={20} strokeWidth={2} />, title: "Círculo" },
-    { id: "picker", icon: <Pipette size={20} strokeWidth={2} />, title: "Cuentagotas" },
-    { id: "text", icon: <Type size={20} strokeWidth={2} />, title: "Texto" },
-    { id: "move", icon: <Move size={20} strokeWidth={2} />, title: "Mover capa" },
+    { id: "brush", icon: <Pencil size={18} strokeWidth={2} />, title: "Pincel" },
+    { id: "eraser", icon: <Eraser size={18} strokeWidth={2} />, title: "Borrador" },
+    { id: "fill", icon: <PaintBucket size={18} strokeWidth={2} />, title: "Relleno" },
+    { id: "line", icon: <Slash size={18} strokeWidth={2} />, title: "Línea" },
+    { id: "rect", icon: <Square size={18} strokeWidth={2} />, title: "Rectángulo" },
+    { id: "circle", icon: <Circle size={18} strokeWidth={2} />, title: "Círculo" },
+    { id: "picker", icon: <Pipette size={18} strokeWidth={2} />, title: "Cuentagotas" },
+    { id: "text", icon: <Type size={18} strokeWidth={2} />, title: "Texto" },
+    { id: "move", icon: <Move size={18} strokeWidth={2} />, title: "Mover capa" },
   ];
 
   return (
     <div className="w-full h-full flex flex-col rounded-2xl border border-border/40 panel overflow-hidden bg-muted/95 backdrop-blur-xl">
-      {/* Top bar */}
-      <div className="flex items-center justify-between px-3 sm:px-4 py-2.5 border-b border-border/30 gap-2 shrink-0 bg-muted/50">
-        <div className="flex items-center gap-2 min-w-0 flex-1">
+      {/* Top bar - compact */}
+      <div className="flex items-center justify-between px-2.5 sm:px-3 py-1.5 border-b border-border/30 gap-1.5 shrink-0 bg-muted/50">
+        <div className="flex items-center gap-1.5 min-w-0 flex-1">
           <div
-            className="w-8 h-8 rounded-xl shrink-0 overflow-hidden"
+            className="w-6 h-6 rounded-lg shrink-0 overflow-hidden"
             style={{
               backgroundColor: "#e5e7eb",
               backgroundImage: thumb ? `url(${thumb})` : undefined,
@@ -706,7 +706,7 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="bg-input/50 border border-border/40 rounded-xl px-2.5 py-1.5 text-xs font-medium tracking-tight min-w-0 flex-1 max-w-[160px] focus:outline-none focus:border-primary/40 focus:bg-accent/30 transition"
+            className="bg-input/40 border border-border/40 rounded-lg px-2 py-1 text-[11px] font-medium tracking-tight min-w-0 flex-1 max-w-[120px] focus:outline-none focus:border-primary/40 focus:bg-accent/30 transition"
           />
           <select
             value={size}
@@ -724,18 +724,18 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
               redoStack.current = [];
               setSize(next);
             }}
-            className="bg-input/50 border border-border/40 rounded-xl px-2 py-1.5 text-[10px] font-mono tracking-tight focus:outline-none focus:border-primary/40 tabular-nums shrink-0"
+            className="bg-input/40 border border-border/40 rounded-lg px-1.5 py-1 text-[9px] font-mono tracking-tight focus:outline-none focus:border-primary/40 tabular-nums shrink-0"
             aria-label="Tamaño del lienzo"
           >
             {SIZE_OPTIONS.map(s => <option key={s} value={s}>{s}×{s}</option>)}
           </select>
         </div>
-        <div className="flex items-center gap-1.5 shrink-0">
-          <button onClick={onClose} className="h-9 px-3.5 rounded-xl border border-border/50 bg-muted/50 text-foreground/70 hover:text-foreground hover:bg-muted/80 transition inline-flex items-center gap-1.5 text-xs font-medium">
-            <X size={14} /> Cancelar
+        <div className="flex items-center gap-1 shrink-0">
+          <button onClick={onClose} className="h-7 px-2.5 rounded-lg border border-border/50 bg-muted/50 text-foreground/70 hover:text-foreground hover:bg-muted/80 transition inline-flex items-center gap-1 text-[10px] font-medium">
+            <X size={11} /> Cancelar
           </button>
-          <button onClick={doSave} className="h-9 px-4 rounded-xl bg-gradient-to-r from-primary to-accent text-primary-foreground hover:shadow-lg hover:shadow-primary/20 transition active:scale-[0.97] inline-flex items-center gap-1.5 text-xs font-semibold shadow-sm">
-            <Save size={14} /> Guardar
+          <button onClick={doSave} className="h-7 px-3 rounded-lg bg-gradient-to-r from-primary to-accent text-primary-foreground hover:shadow-lg hover:shadow-primary/20 transition active:scale-[0.97] inline-flex items-center gap-1 text-[10px] font-semibold shadow-sm">
+            <Save size={11} /> Guardar
           </button>
         </div>
       </div>
@@ -743,7 +743,7 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
       {/* Main: Canvas + Tools */}
       <div className="flex-1 flex flex-col lg:flex-row min-h-0">
         {/* Canvas area - forces square aspect ratio */}
-        <div className="flex-1 min-h-0 min-w-0 flex items-center justify-center overflow-hidden p-2 sm:p-3 relative">
+        <div className="flex-1 min-h-0 min-w-0 flex items-center justify-center overflow-hidden p-1 sm:p-1.5 relative">
           <div
             ref={containerRef}
             key={`canvas-${size}`}
@@ -799,14 +799,14 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
           )}
         </div>
 
-        {/* Tools sidebar - bigger buttons */}
-        <div className="lg:w-[280px] shrink-0 border-t lg:border-t-0 lg:border-l border-border/30 overflow-y-auto bg-muted/20">
-          <div className="p-3 space-y-3">
+        {/* Tools sidebar - compact, lean */}
+        <div className="lg:w-[200px] shrink-0 border-t lg:border-t-0 lg:border-l border-border/30 overflow-y-auto bg-muted/20">
+          <div className="p-2 space-y-2">
             {/* Tool dock */}
-            <div className="grid grid-cols-3 gap-2 p-2.5 rounded-xl bg-muted/80 border border-border/40">
+            <div className="grid grid-cols-3 gap-1.5 p-2 rounded-xl bg-muted/80 border border-border/40">
               {TOOLS.map(t => (
                 <button key={t.id} title={t.title} onClick={() => setTool(t.id)}
-                  className={`h-12 rounded-xl text-sm transition-all flex items-center justify-center ${
+                  className={`h-9 rounded-lg text-sm transition-all flex items-center justify-center ${
                     tool === t.id
                       ? "text-primary-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
@@ -819,80 +819,80 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
               ))}
             </div>
 
-            {/* History row */}
-            <div className="flex gap-2">
-              <button onClick={undo} title="Deshacer" className="flex-1 h-11 rounded-xl border border-border/50 bg-muted/30 text-foreground/70 hover:text-foreground hover:bg-muted/60 transition flex items-center justify-center active:scale-95 gap-1.5 text-sm font-medium"><Undo2 size={18} /> Deshacer</button>
-              <button onClick={redo} title="Rehacer" className="flex-1 h-11 rounded-xl border border-border/50 bg-muted/30 text-foreground/70 hover:text-foreground hover:bg-muted/60 transition flex items-center justify-center active:scale-95 gap-1.5 text-sm font-medium"><Redo2 size={18} /> Rehacer</button>
-              <button onClick={clearAll} title="Limpiar" className="h-11 w-11 rounded-xl border border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/20 transition flex items-center justify-center active:scale-95"><Trash2 size={18} /></button>
+            {/* History row - icon only */}
+            <div className="flex gap-1.5">
+              <button onClick={undo} title="Deshacer" className="flex-1 h-8 rounded-lg border border-border/50 bg-muted/30 text-foreground/70 hover:text-foreground hover:bg-muted/60 transition flex items-center justify-center active:scale-95"><Undo2 size={16} /></button>
+              <button onClick={redo} title="Rehacer" className="flex-1 h-8 rounded-lg border border-border/50 bg-muted/30 text-foreground/70 hover:text-foreground hover:bg-muted/60 transition flex items-center justify-center active:scale-95"><Redo2 size={16} /></button>
+              <button onClick={clearAll} title="Limpiar capa" className="h-8 w-8 rounded-lg border border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/20 transition flex items-center justify-center active:scale-95"><Trash2 size={14} /></button>
             </div>
 
             {/* Color */}
-            <div className="p-4 rounded-xl bg-muted/50 border border-border/40 space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="relative w-12 h-12 shrink-0">
+            <div className="p-2.5 rounded-xl bg-muted/50 border border-border/40 space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="relative w-9 h-9 shrink-0">
                   <input type="color" value={color} onChange={e => setColor(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" aria-label="Color picker" />
-                  <div className="w-12 h-12 rounded-xl pointer-events-none ring-1 ring-white/20" style={{ background: color, boxShadow: "0 4px 12px -4px oklch(0 0 0 / 0.4)" }} />
+                  <div className="w-9 h-9 rounded-lg pointer-events-none ring-1 ring-white/20" style={{ background: color, boxShadow: "0 4px 12px -4px oklch(0 0 0 / 0.4)" }} />
                 </div>
                 <input type="text" value={color.toUpperCase()} onChange={(e) => { const v = e.target.value.trim(); if (/^#?[0-9a-fA-F]{6}$/.test(v)) setColor(v.startsWith("#") ? v : `#${v}`); }}
-                  className="bg-input/50 border border-border/50 rounded-xl px-3 py-2 text-sm font-mono w-24 tracking-tight focus:outline-none focus:border-primary/40 uppercase" maxLength={7} aria-label="Hex color" />
-                <select value={paletteIdx} onChange={e => setPaletteIdx(Number(e.target.value))} className="ml-auto bg-input/50 border border-border/50 rounded-xl px-2 py-2 text-xs font-medium focus:outline-none focus:border-primary/40">
+                  className="bg-input/50 border border-border/50 rounded-lg px-2 py-1 text-[10px] font-mono w-16 tracking-tight focus:outline-none focus:border-primary/40 uppercase" maxLength={7} aria-label="Hex color" />
+                <select value={paletteIdx} onChange={e => setPaletteIdx(Number(e.target.value))} className="ml-auto bg-input/50 border border-border/50 rounded-lg px-1.5 py-1 text-[9px] font-medium focus:outline-none focus:border-primary/40">
                   {PALETTES.map((p, i) => <option key={i} value={i}>{p.name}</option>)}
                 </select>
               </div>
-              <div className="grid grid-cols-8 gap-2">
+              <div className="grid grid-cols-8 gap-1">
                 {PALETTE.map((c) => (
-                  <button key={c} onClick={() => setColor(c)} className="aspect-square rounded-xl transition-all min-h-[28px]" style={{
+                  <button key={c} onClick={() => setColor(c)} className="aspect-square rounded-lg transition-all min-h-[20px]" style={{
                     background: c,
                     boxShadow: color.toLowerCase() === c.toLowerCase()
-                      ? "inset 0 0 0 2px white, 0 0 0 2.5px oklch(0.72 0.17 250 / 0.7)"
+                      ? "inset 0 0 0 2px white, 0 0 0 2px oklch(0.72 0.17 250 / 0.7)"
                       : "inset 0 0 0 1px oklch(1 0 0 / 0.12)",
                     transform: color.toLowerCase() === c.toLowerCase() ? "scale(1.08)" : undefined,
                   }} aria-label={c} />
                 ))}
               </div>
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-medium text-muted-foreground/80 w-16 shrink-0">Grosor</span>
-                <input type="range" min={1} max={48} value={width} onChange={e => setWidth(Number(e.target.value))} className="flex-1 accent-primary h-2" />
-                <span className="font-mono text-primary font-semibold w-8 text-right tabular-nums text-sm">{width}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-medium text-muted-foreground/80 w-10 shrink-0">Grosor</span>
+                <input type="range" min={1} max={48} value={width} onChange={e => setWidth(Number(e.target.value))} className="flex-1 accent-primary h-1.5" />
+                <span className="font-mono text-primary font-semibold w-6 text-right tabular-nums text-[11px]">{width}</span>
               </div>
-              <div className="flex gap-6">
-                <label className="flex items-center justify-between cursor-pointer select-none gap-3 flex-1">
-                  <span className="text-sm font-medium text-muted-foreground/80">Stab</span>
-                  <span role="switch" aria-checked={stabilize} onClick={() => setStabilize(!stabilize)} className="relative w-11 h-6 rounded-full transition-colors shrink-0" style={{ background: stabilize ? "oklch(0.7 0.17 145)" : "oklch(0.35 0.02 260)", boxShadow: "inset 0 1px 3px oklch(0 0 0 / 0.4)" }}>
-                    <span className="absolute top-[3px] w-[18px] h-[18px] rounded-full bg-white transition-all" style={{ left: stabilize ? "24px" : "3px", boxShadow: "0 2px 6px oklch(0 0 0 / 0.4)" }} />
+              <div className="flex gap-3">
+                <label className="flex items-center justify-between cursor-pointer select-none gap-2 flex-1">
+                  <span className="text-[10px] font-medium text-muted-foreground/80">Stab</span>
+                  <span role="switch" aria-checked={stabilize} onClick={() => setStabilize(!stabilize)} className="relative w-9 h-5 rounded-full transition-colors shrink-0" style={{ background: stabilize ? "oklch(0.7 0.17 145)" : "oklch(0.35 0.02 260)", boxShadow: "inset 0 1px 3px oklch(0 0 0 / 0.4)" }}>
+                    <span className="absolute top-[3px] w-[14px] h-[14px] rounded-full bg-white transition-all" style={{ left: stabilize ? "19px" : "3px", boxShadow: "0 2px 6px oklch(0 0 0 / 0.4)" }} />
                   </span>
                 </label>
-                <label className="flex items-center justify-between cursor-pointer select-none gap-3 flex-1">
-                  <span className="text-sm font-medium text-muted-foreground/80">Pres</span>
-                  <span role="switch" aria-checked={pressureOn} onClick={() => setPressureOn(!pressureOn)} className="relative w-11 h-6 rounded-full transition-colors shrink-0" style={{ background: pressureOn ? "oklch(0.7 0.17 145)" : "oklch(0.35 0.02 260)", boxShadow: "inset 0 1px 3px oklch(0 0 0 / 0.4)" }}>
-                    <span className="absolute top-[3px] w-[18px] h-[18px] rounded-full bg-white transition-all" style={{ left: pressureOn ? "24px" : "3px", boxShadow: "0 2px 6px oklch(0 0 0 / 0.4)" }} />
+                <label className="flex items-center justify-between cursor-pointer select-none gap-2 flex-1">
+                  <span className="text-[10px] font-medium text-muted-foreground/80">Pres</span>
+                  <span role="switch" aria-checked={pressureOn} onClick={() => setPressureOn(!pressureOn)} className="relative w-9 h-5 rounded-full transition-colors shrink-0" style={{ background: pressureOn ? "oklch(0.7 0.17 145)" : "oklch(0.35 0.02 260)", boxShadow: "inset 0 1px 3px oklch(0 0 0 / 0.4)" }}>
+                    <span className="absolute top-[3px] w-[14px] h-[14px] rounded-full bg-white transition-all" style={{ left: pressureOn ? "19px" : "3px", boxShadow: "0 2px 6px oklch(0 0 0 / 0.4)" }} />
                   </span>
                 </label>
               </div>
             </div>
 
             {/* Layers */}
-            <div className="p-4 rounded-xl bg-muted/50 border border-border/40 space-y-3">
+            <div className="p-2.5 rounded-xl bg-muted/50 border border-border/40 space-y-2">
               <button onClick={() => setToolsExpanded(e => !e)} className="flex items-center justify-between w-full">
-                <span className="text-sm font-semibold tracking-wider text-muted-foreground/90 inline-flex items-center gap-2">
-                  <Layers size={16} /> CAPAS · {layers.length}
+                <span className="text-[10px] font-semibold tracking-wider text-muted-foreground/90 inline-flex items-center gap-1.5">
+                  <Layers size={13} /> CAPAS · {layers.length}
                 </span>
-                <button onClick={(e) => { e.stopPropagation(); addLayer(); }} className="w-8 h-8 rounded-xl flex items-center justify-center text-primary-foreground active:scale-95 transition" style={{ background: "linear-gradient(180deg, oklch(0.78 0.17 250), oklch(0.66 0.18 252))" }}>
-                  <Plus size={16} strokeWidth={2.5} />
+                <button onClick={(e) => { e.stopPropagation(); addLayer(); }} className="w-6 h-6 rounded-lg flex items-center justify-center text-primary-foreground active:scale-95 transition" style={{ background: "linear-gradient(180deg, oklch(0.78 0.17 250), oklch(0.66 0.18 252))" }}>
+                  <Plus size={12} strokeWidth={2.5} />
                 </button>
               </button>
               {toolsExpanded && (
-                <div className="flex flex-col gap-1.5 max-h-[240px] overflow-auto">
+                <div className="flex flex-col gap-1 max-h-[180px] overflow-auto">
                   {[...layers].slice().reverse().map((l) => {
                     const isActive = l.id === activeLayerId;
                     return (
-                      <div key={l.id} className={`group rounded-xl p-3 flex items-center gap-3 transition-all cursor-pointer ${
+                      <div key={l.id} className={`group rounded-lg p-2 flex items-center gap-2 transition-all cursor-pointer ${
                         isActive
                           ? "bg-primary/10 border border-primary/30"
                           : "bg-muted/40 border border-border/40 hover:bg-muted/60"
                       }`}
                         onClick={() => { setActiveLayerId(l.id); activeLayerIdRef.current = l.id; }}>
-                        <div className="w-10 h-10 rounded-xl shrink-0 overflow-hidden" style={{
+                        <div className="w-7 h-7 rounded-lg shrink-0 overflow-hidden" style={{
                           backgroundColor: "#ffffff",
                           backgroundImage: `url(${(() => { try { return l.canvas.toDataURL("image/png"); } catch { return ""; }})()})`,
                           backgroundSize: "contain", backgroundPosition: "center", backgroundRepeat: "no-repeat",
@@ -900,11 +900,11 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
                           opacity: l.visible ? 1 : 0.35,
                         }} />
                         <input value={l.name} onChange={(e) => updateLayer(l.id, { name: e.target.value })} onClick={(e) => e.stopPropagation()}
-                          className="flex-1 min-w-0 bg-transparent text-sm font-medium focus:outline-none focus:bg-muted/50 rounded-lg px-2 py-1" />
+                          className="flex-1 min-w-0 bg-transparent text-[11px] font-medium focus:outline-none focus:bg-muted/50 rounded-lg px-1.5 py-0.5" />
                         <button onClick={(e) => { e.stopPropagation(); updateLayer(l.id, { visible: !l.visible }); }}
-                          className={`w-9 h-9 grid place-items-center rounded-xl transition hover:bg-muted/50 ${l.visible ? "text-primary" : "text-muted-foreground"}`}>{l.visible ? <Eye size={16} /> : <EyeOff size={16} />}</button>
+                          className={`w-7 h-7 grid place-items-center rounded-lg transition hover:bg-muted/50 ${l.visible ? "text-primary" : "text-muted-foreground"}`}>{l.visible ? <Eye size={13} /> : <EyeOff size={13} />}</button>
                         <button onClick={(e) => { e.stopPropagation(); updateLayer(l.id, { locked: !l.locked }); }}
-                          className={`w-9 h-9 grid place-items-center rounded-xl transition hover:bg-muted/50 ${l.locked ? "text-destructive" : "text-muted-foreground"}`}>{l.locked ? <Lock size={16} /> : <Unlock size={16} />}</button>
+                          className={`w-7 h-7 grid place-items-center rounded-lg transition hover:bg-muted/50 ${l.locked ? "text-destructive" : "text-muted-foreground"}`}>{l.locked ? <Lock size={13} /> : <Unlock size={13} />}</button>
                       </div>
                     );
                   })}
