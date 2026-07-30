@@ -520,7 +520,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[150] bg-black/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4"
+            className="fixed inset-0 z-[150] bg-black/80 backdrop-blur-md flex items-center justify-center p-0"
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
