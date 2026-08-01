@@ -181,7 +181,7 @@ function HomePage() {
               <User size={14} /> PERFIL
             </button>
             <div
-              className="absolute top-1 bottom-1 w-[calc(20%-4px)] rounded-xl bg-gradient-to-br from-primary to-accent shadow-sm transition-transform duration-300 ease-out"
+              className="absolute top-1 bottom-1 w-[calc(20%_-_4px)] rounded-xl bg-gradient-to-br from-primary to-accent shadow-sm transition-transform duration-300 ease-out"
               style={{ transform: `translateX(${tab === "games" ? "0%" : tab === "feed" ? "calc(100% + 6px)" : tab === "gallery" ? "calc(200% + 12px)" : tab === "events" ? "calc(300% + 18px)" : "calc(400% + 24px)"})` }}
             />
           </div>

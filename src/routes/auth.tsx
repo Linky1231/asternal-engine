@@ -214,7 +214,6 @@ function AuthPage() {
   const [loaded, setLoaded] = useState(false);
   const [typedLine, setTypedLine] = useState("");
   const fullLine = "crea, publica y comparte";
-  const [animateIdx, setAnimateIdx] = useState(0);
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const usernameRef = useRef<HTMLInputElement>(null);
@@ -236,22 +235,6 @@ function AuthPage() {
     }, 45);
     return () => clearInterval(t);
   }, [loaded]);
-
-  useEffect(() => {
-    setAnimateIdx(0);
-    username.setFocused(false);
-    email.setFocused(false);
-    password.setFocused(false);
-    const fields = mode === "signup" ? 4 : 3;
-    let i = 0;
-    const t = setInterval(() => {
-      i++;
-      setAnimateIdx(i);
-      if (i >= fields) clearInterval(t);
-    }, 80);
-    // No auto-focus — el usuario hace clic en el campo cuando quiera
-    return () => clearInterval(t);
-  }, [mode]);
 
   const clearErrors = () => { setErr(null); setFieldErrors({}); };
 
@@ -451,7 +434,7 @@ function AuthPage() {
 
                 {/* Tabs */}
                 <div className="flex bg-muted/60 rounded-lg p-0.5 mb-5 relative">
-                  <div className="absolute top-0.5 bottom-0.5 w-[calc(50%-2px)] rounded-md bg-white shadow-sm transition-all duration-400"
+                  <div className="absolute top-0.5 bottom-0.5 w-[calc(50%_-_2px)] rounded-md bg-white shadow-sm transition-all duration-400"
                     style={{ left: mode === "signin" ? "2px" : "calc(50% + 0px)" }} />
                   {(["signin", "signup"] as const).map(m => (
                     <button key={m} type="button" onClick={() => switchMode(m)}
@@ -466,7 +449,7 @@ function AuthPage() {
                 {/* Form */}
                 <form onSubmit={onSubmit} className="space-y-3">
                   {mode === "signup" && (
-                    <div style={{ animation: animateIdx >= 0 ? 'slide-in-up 300ms cubic-bezier(0.22,1,0.36,1) both' : 'none' }}>
+                    <div style={{ animation: 'slide-in-up 300ms cubic-bezier(0.22,1,0.36,1) both', animationDelay: '0ms' }}>
                       <FloatInput label="Nombre de usuario" icon={User} type="text"
                         value={username.value} onChange={username.setValue}
                         onFocus={() => username.setFocused(true)}
@@ -478,7 +461,7 @@ function AuthPage() {
                     </div>
                   )}
 
-                  <div style={{ animation: animateIdx >= 1 ? 'slide-in-up 300ms cubic-bezier(0.22,1,0.36,1) both' : 'none' }}>
+                  <div style={{ animation: 'slide-in-up 300ms cubic-bezier(0.22,1,0.36,1) both', animationDelay: '80ms' }}>
                     <FloatInput label="Correo electrónico" icon={Mail} type="email"
                       value={email.value} onChange={email.setValue}
                       onFocus={() => email.setFocused(true)}
@@ -488,7 +471,7 @@ function AuthPage() {
                       inputRef={emailRef} error={fieldErrors.email} />
                   </div>
 
-                  <div style={{ animation: animateIdx >= 2 ? 'slide-in-up 300ms cubic-bezier(0.22,1,0.36,1) both' : 'none' }}>
+                  <div style={{ animation: 'slide-in-up 300ms cubic-bezier(0.22,1,0.36,1) both', animationDelay: '160ms' }}>
                     <FloatInput label="Contraseña" icon={Lock} type={showPw ? "text" : "password"}
                       value={password.value} onChange={password.setValue}
                       onFocus={() => password.setFocused(true)}
@@ -519,7 +502,7 @@ function AuthPage() {
                   )}
 
                   {/* Submit button with shimmer */}
-                  <div style={{ animation: animateIdx >= 3 ? 'slide-in-up 300ms cubic-bezier(0.22,1,0.36,1) both' : 'none' }}>
+                  <div style={{ animation: 'slide-in-up 300ms cubic-bezier(0.22,1,0.36,1) both', animationDelay: '240ms' }}>
                     <button disabled={busy}
                       className="relative w-full py-2.5 rounded-lg bg-primary text-white text-sm font-display font-semibold tracking-wide shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 active:scale-[0.98] transition-all duration-300 disabled:opacity-50 overflow-hidden group/btn"
                     >
