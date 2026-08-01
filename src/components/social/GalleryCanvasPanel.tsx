@@ -809,26 +809,20 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
             </div>
           )}
 
-          {/* Floating layers panel */}
+          {/* Floating layers panel - matches gallery canvas styling */}
           {layersOpen && (
             <div
-              className="absolute top-1 right-1 z-20 rounded-xl p-2.5 space-y-1.5 w-48"
-              style={{
-                background: "oklch(0.18 0.03 262 / 0.96)",
-                backdropFilter: "blur(24px) saturate(200%)",
-                border: "1px solid oklch(1 0 0 / 0.1)",
-                boxShadow: "0 16px 48px -12px oklch(0 0 0 / 0.6)",
-              }}
+              className="absolute top-1 right-1 z-20 rounded-xl p-2.5 space-y-1.5 w-48 bg-muted/95 backdrop-blur-xl border border-border/40 shadow-xl"
             >
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold tracking-wider text-muted-foreground/90 inline-flex items-center gap-1.5">
+                <span className="text-[11px] font-semibold tracking-wider text-foreground/80 inline-flex items-center gap-1.5">
                   <Layers size={13} /> CAPAS · {layers.length}
                 </span>
                 <div className="flex gap-1">
                   <button onClick={(e) => { e.stopPropagation(); addLayer(); }} className="w-7 h-7 rounded-md flex items-center justify-center text-primary-foreground active:scale-95 transition" style={{ background: "linear-gradient(180deg, oklch(0.78 0.17 250), oklch(0.66 0.18 252))" }}>
                     <Plus size={13} strokeWidth={2.5} />
                   </button>
-                  <button onClick={() => setLayersOpen(false)} className="w-7 h-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground transition">
+                  <button onClick={() => setLayersOpen(false)} className="w-7 h-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground bg-muted/60 hover:bg-muted/80 border border-border/40 transition">
                     <X size={12} />
                   </button>
                 </div>
