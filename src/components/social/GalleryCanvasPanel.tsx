@@ -883,11 +883,11 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
               ))}
             </div>
 
-            {/* History row - bigger */}
+            {/* History row - uniform size, delete same as others */}
             <div className="flex gap-1">
-              <button onClick={undo} title="Deshacer" className="flex-1 h-8 rounded-md border border-border/50 bg-muted/30 text-foreground/70 hover:text-foreground hover:bg-muted/60 transition flex items-center justify-center active:scale-95"><Undo2 size={15} /></button>
-              <button onClick={redo} title="Rehacer" className="flex-1 h-8 rounded-md border border-border/50 bg-muted/30 text-foreground/70 hover:text-foreground hover:bg-muted/60 transition flex items-center justify-center active:scale-95"><Redo2 size={15} /></button>
-              <button onClick={clearAll} title="Limpiar capa" className="h-8 w-8 rounded-md border border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/20 transition flex items-center justify-center active:scale-95"><Trash2 size={15} /></button>
+              <button onClick={undo} title="Deshacer" className="flex-1 h-9 rounded-md border border-border/50 bg-muted/30 text-foreground/70 hover:text-foreground hover:bg-muted/60 transition flex items-center justify-center active:scale-95"><Undo2 size={16} /></button>
+              <button onClick={redo} title="Rehacer" className="flex-1 h-9 rounded-md border border-border/50 bg-muted/30 text-foreground/70 hover:text-foreground hover:bg-muted/60 transition flex items-center justify-center active:scale-95"><Redo2 size={16} /></button>
+              <button onClick={clearAll} title="Limpiar capa" className="flex-1 h-9 rounded-md border border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/20 transition flex items-center justify-center active:scale-95"><Trash2 size={16} /></button>
             </div>
 
             {/* Color - legible */}
@@ -898,7 +898,7 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
                   <div className="w-8 h-8 rounded-md pointer-events-none ring-1 ring-white/20" style={{ background: color, boxShadow: "0 2px 8px -4px oklch(0 0 0 / 0.4)" }} />
                 </div>
                 <input type="text" value={color.toUpperCase()} onChange={(e) => { const v = e.target.value.trim(); if (/^#?[0-9a-fA-F]{6}$/.test(v)) setColor(v.startsWith("#") ? v : `#${v}`); }}
-                  className="bg-input/50 border border-border/50 rounded-md px-1.5 py-1.5 text-[11px] font-mono w-16 tracking-tight focus:outline-none focus:border-primary/40 uppercase" maxLength={7} aria-label="Hex color" />
+                  className="bg-input/50 border border-border/50 rounded-md px-1.5 py-1.5 text-xs font-mono w-16 tracking-tight focus:outline-none focus:border-primary/40 uppercase" maxLength={7} aria-label="Hex color" />
               </div>
               <div className="grid grid-cols-8 gap-1">
                 {PALETTE.map((c) => (
@@ -912,19 +912,19 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
                 ))}
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="text-[11px] font-medium text-muted-foreground/80 w-9 shrink-0">Grosor</span>
-                <input type="range" min={1} max={48} value={width} onChange={e => setWidth(Number(e.target.value))} className="flex-1 accent-primary h-1.5" />
-                <span className="font-mono text-primary font-semibold w-5 text-right tabular-nums text-[10px]">{width}</span>
+                <span className="text-xs font-medium text-muted-foreground/80 w-10 shrink-0">Grosor</span>
+                <input type="range" min={1} max={48} value={width} onChange={e => setWidth(Number(e.target.value))} className="flex-1 accent-primary h-2" />
+                <span className="font-mono text-primary font-semibold w-6 text-right tabular-nums text-xs">{width}</span>
               </div>
               <div className="flex gap-2">
                 <label className="flex items-center justify-between cursor-pointer select-none gap-1.5 flex-1">
-                  <span className="text-[11px] font-medium text-muted-foreground/80">Stab</span>
+                  <span className="text-xs font-medium text-muted-foreground/80">Stab</span>
                   <span role="switch" aria-checked={stabilize} onClick={() => setStabilize(!stabilize)} className="relative w-9 h-5 rounded-full transition-colors shrink-0" style={{ background: stabilize ? "oklch(0.7 0.17 145)" : "oklch(0.35 0.02 260)", boxShadow: "inset 0 1px 2px oklch(0 0 0 / 0.4)" }}>
                     <span className="absolute top-[3px] w-[14px] h-[14px] rounded-full bg-white transition-all" style={{ left: stabilize ? "19px" : "3px", boxShadow: "0 1px 4px oklch(0 0 0 / 0.4)" }} />
                   </span>
                 </label>
                 <label className="flex items-center justify-between cursor-pointer select-none gap-1.5 flex-1">
-                  <span className="text-[11px] font-medium text-muted-foreground/80">Pres</span>
+                  <span className="text-xs font-medium text-muted-foreground/80">Pres</span>
                   <span role="switch" aria-checked={pressureOn} onClick={() => setPressureOn(!pressureOn)} className="relative w-9 h-5 rounded-full transition-colors shrink-0" style={{ background: pressureOn ? "oklch(0.7 0.17 145)" : "oklch(0.35 0.02 260)", boxShadow: "inset 0 1px 2px oklch(0 0 0 / 0.4)" }}>
                     <span className="absolute top-[3px] w-[14px] h-[14px] rounded-full bg-white transition-all" style={{ left: pressureOn ? "19px" : "3px", boxShadow: "0 1px 4px oklch(0 0 0 / 0.4)" }} />
                   </span>
