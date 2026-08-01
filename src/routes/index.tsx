@@ -190,13 +190,13 @@ function HomePage() {
 
       {/* Content */}
       <main className="flex-1 max-w-2xl mx-auto w-full px-3 py-3 space-y-3 pb-24">
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="popLayout" initial={false}>
           <motion.div
             key={tab}
-            initial={{ opacity: 0, y: 12, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -8, scale: 0.96 }}
-            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
             className="space-y-3"
           >
             {tab === "games" ? (
@@ -206,24 +206,24 @@ function HomePage() {
             ) : tab === "feed" ? (
               <>
                 <motion.div
-                  initial={{ opacity: 0, y: -8, filter: "blur(2px)" }}
-                  animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                  transition={{ duration: 0.3, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.15, ease: "easeOut" }}
                 >
                   <PostComposer onCreated={() => reload("feed")} />
                 </motion.div>
                 <motion.div
-                  initial={{ opacity: 0, y: -6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.25, delay: 0.14, ease: [0.22, 1, 0.36, 1] }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.15, delay: 0.05, ease: "easeOut" }}
                 >
                   <FeedSubTabs value={feedSub} onChange={setFeedSub} />
                 </motion.div>
                 <motion.div
                   key={feedSub}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.12, ease: "easeOut" }}
                 >
                   {feedSub === "forums" ? (
                     <ForumSection isAdmin={admin} isMod={mod} />
@@ -245,9 +245,9 @@ function HomePage() {
                     return filtered.map((p, i) => (
                       <motion.div
                         key={p.id}
-                        initial={{ opacity: 0, y: 12, scale: 0.98 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        transition={{ duration: 0.3, delay: i * 0.04, ease: [0.22, 1, 0.36, 1] }}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.15, delay: Math.min(i * 0.02, 0.15), ease: "easeOut" }}
                       >
                         <PostCard key={p.id} post={p} myId={myId} isMod={mod} onChange={() => reload("feed")} />
                       </motion.div>
@@ -263,9 +263,9 @@ function HomePage() {
               <HistorySection />
             ) : (
               <motion.div
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.15, ease: "easeOut" }}
               >
                 {myId && <ProfilePanel userId={myId} myId={myId} isMod={mod} viewingOwn={true} onProfileChange={setMe} />}
               </motion.div>
