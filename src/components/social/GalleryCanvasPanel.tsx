@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import {
   Pencil, Eraser, PaintBucket, Slash, Square, Circle, Pipette, Type, Move,
   Eye, EyeOff, Lock, Unlock, Copy, Trash2, Layers, Undo2, Redo2, Plus, Save, X,
-  ChevronDown, SlidersHorizontal,
+  ChevronDown,
 } from "lucide-react";
 import type { SpriteAsset } from "@/lib/engine/core";
 import { uid } from "@/lib/engine/core";
@@ -89,7 +89,6 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
   const [toolsExpanded, setToolsExpanded] = useState(false);
   const [previewVersion, setPreviewVersion] = useState(0);
   const [layersOpen, setLayersOpen] = useState(false);
-  const [toolsOpen, setToolsOpen] = useState(true);
 
   // text overlay state
   const [textInput, setTextInput] = useState<{
@@ -733,15 +732,6 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
           </select>
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          <button onClick={() => setToolsOpen(!toolsOpen)} title="Herramientas"
-            className={`h-8 px-2 rounded-md border transition inline-flex items-center gap-1 text-[11px] font-medium ${
-              toolsOpen
-                ? "bg-primary/15 border-primary/40 text-primary"
-                : "border-border/50 bg-muted/50 text-foreground/70 hover:text-foreground hover:bg-muted/80"
-            }`}
-          >
-            <SlidersHorizontal size={13} />
-          </button>
           <button onClick={() => setLayersOpen(!layersOpen)} title="Capas"
             className={`h-8 px-2 rounded-md border transition inline-flex items-center gap-1 text-[11px] font-medium ${
               layersOpen
@@ -761,9 +751,9 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
       </div>
 
       {/* Main: Canvas + Tools */}
-      <div className="flex-1 min-h-0 relative">
-        {/* Canvas area - takes ALL available space, tools float above */}
-        <div className="absolute inset-0 flex items-center justify-center overflow-hidden p-0">
+      <div className="flex-1 flex flex-col lg:flex-row min-h-0">
+        {/* Canvas area - max space, no padding */}
+        <div className="flex-1 min-h-0 min-w-0 flex items-center justify-center overflow-hidden p-0 relative">
           <div
             ref={containerRef}
             key={`canvas-${size}`}
@@ -873,9 +863,8 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
           )}
         </div>
 
-        {/* Floating tools panel - overlays canvas, collapsible */}
-        {toolsOpen && (
-        <div className="absolute right-2 top-2 bottom-2 w-[132px] z-10 shrink-0 overflow-y-auto rounded-xl border border-border/40 bg-muted/90 backdrop-blur-xl shadow-2xl">
+        {/* Tools sidebar - legible buttons, compact width */}
+        <div className="lg:w-[140px] shrink-0 border-t lg:border-t-0 lg:border-l border-border/30 overflow-y-auto bg-muted/20">
           <div className="p-1.5 space-y-1.5">
             {/* Tool dock - bigger buttons */}
             <div className="grid grid-cols-3 gap-1 p-1 rounded-lg bg-muted/80 border border-border/40">
@@ -944,7 +933,6 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
             </div>
           </div>
         </div>
-        )}
       </div>
     </div>
   );
