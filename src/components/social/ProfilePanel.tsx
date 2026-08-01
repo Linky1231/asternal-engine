@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import {
   Loader2, Camera, Save, Gamepad2, Newspaper, CheckCircle2, Star, ChevronRight,
   ImagePlus, MapPin, Cake, Palette, Tag, Sparkles as SparklesIcon, Eye, EyeOff,
-  Heart, ChevronDown, ChevronUp,
+  Heart, MessageCircle, ChevronDown, ChevronUp,
   Youtube, Instagram, Globe, UserPlus, UserCheck,
 } from "lucide-react";
 import {
@@ -62,9 +62,10 @@ export function ProfilePanel({
 
   const fileRef = useRef<HTMLInputElement>(null);
   const bannerRef = useRef<HTMLInputElement>(null);
-  const [tab, setTab] = useState<"games" | "posts">("games");
+  const [tab, setTab] = useState<"games" | "posts" | "gallery">("games");
   const [games, setGames] = useState<PostWithMeta[]>([]);
   const [posts, setPosts] = useState<PostWithMeta[]>([]);
+  const [artworks, setArtworks] = useState<PostWithMeta[]>([]);
   const [contentLoading, setContentLoading] = useState(false);
   const [follow, setFollow] = useState<FollowStats>({ followers: 0, following: 0, i_follow: false });
   const [followBusy, setFollowBusy] = useState(false);
@@ -97,11 +98,12 @@ export function ProfilePanel({
   const loadContent = async () => {
     setContentLoading(true);
     try {
-      const [g, ps] = await Promise.all([
+      const [g, ps, arts] = await Promise.all([
         fetchUserPosts(userId, { games: true }),
         fetchUserPosts(userId, { games: false }),
+        fetchUserPosts(userId, { artwork: true }),
       ]);
-      setGames(g); setPosts(ps);
+      setGames(g); setPosts(ps); setArtworks(arts);
     } finally { setContentLoading(false); }
   };
 
@@ -402,8 +404,12 @@ export function ProfilePanel({
           className={`relative z-10 flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-display tracking-widest transition-colors ${tab === "posts" ? "text-primary-foreground" : "text-muted-foreground"}`}>
           <Newspaper size={14} /> POSTS · {posts.length}
         </button>
-        <div className="absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-xl bg-gradient-to-r from-primary to-accent shadow-[0_4px_14px_-4px_oklch(0.68_0.21_250/0.55)] transition-transform duration-300 ease-out"
-          style={{ transform: `translateX(${tab === "games" ? "0%" : "calc(100% + 8px)"})` }} />
+        <button onClick={() => setTab("gallery")}
+          className={`relative z-10 flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-display tracking-widest transition-colors ${tab === "gallery" ? "text-primary-foreground" : "text-muted-foreground"}`}>
+          <Palette size={14} /> GALERÍA · {artworks.length}
+        </button>
+        <div className="absolute top-1 bottom-1 w-[calc(33.333%-4px)] rounded-xl bg-gradient-to-r from-primary to-accent shadow-[0_4px_14px_-4px_oklch(0.68_0.21_250/0.55)] transition-transform duration-300 ease-out"
+          style={{ transform: `translateX(${tab === "games" ? "0%" : tab === "posts" ? "calc(100% + 6px)" : "calc(200% + 12px)"})` }} />
       </div>
 
       <div className="space-y-3">
@@ -413,6 +419,54 @@ export function ProfilePanel({
           games.length === 0 ? (
             <div className="p-6 text-center text-xs text-muted-foreground panel rounded-2xl border border-dashed border-border">Sin juegos publicados</div>
           ) : games.map(g => <GameCard key={g.id} post={g} myId={myId} isMod={isMod} onChange={loadContent} />)
+        ) : tab === "gallery" ? (
+          artworks.length === 0 ? (
+            <div className="p-6 text-center text-xs text-muted-foreground panel rounded-2xl border border-dashed border-border">
+              {viewingOwn ? "Aún no has publicado obras en la galería" : "Este artista aún no ha publicado obras"}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              {artworks.map(a => {
+                const imgUrl = a.signed_media?.[0] ?? a.signed_cover;
+                const price = a.price_orbes ?? 0;
+                const title = a.content.replace(/^🎨\s*/, "");
+                return (
+                  <div key={a.id} className="panel rounded-2xl overflow-hidden border border-border/40 group">
+                    <div className="aspect-square bg-muted/20 relative overflow-hidden">
+                      {imgUrl ? (
+                        <img src={imgUrl} alt={title} className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-500 ease-out" />
+                      ) : (
+                        <div className="w-full h-full grid place-items-center"><Palette size={32} className="text-muted-foreground/15" /></div>
+                      )}
+                      {price > 0 ? (
+                        <span className="absolute bottom-2 left-2 px-2.5 py-1 rounded-full text-[9px] font-display tracking-widest bg-gradient-to-r from-primary to-accent text-white flex items-center gap-1 shadow-lg">
+                          <SparklesIcon size={9} /> {price}
+                        </span>
+                      ) : (
+                        <span className="absolute bottom-2 left-2 px-2.5 py-1 rounded-full text-[9px] font-display tracking-widest bg-emerald-500/30 text-emerald-300 border border-emerald-400/30 backdrop-blur-md">
+                          GRATIS
+                        </span>
+                      )}
+                    </div>
+                    <div className="p-2.5 space-y-1.5">
+                      <div className="text-xs font-display truncate font-semibold tracking-tight">{title}</div>
+                      <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Heart size={10} className={a.likes > 0 ? "text-rose-400" : ""} /> {a.likes}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <MessageCircle size={10} /> {a.comments_count}
+                        </span>
+                        <span className="text-[9px] font-mono text-muted-foreground/50 ml-auto">
+                          {new Date(a.created_at).toLocaleDateString("es", { month: "short", day: "numeric" })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )
         ) : (
           posts.length === 0 ? (
             <div className="p-6 text-center text-xs text-muted-foreground panel rounded-2xl border border-dashed border-border">Sin publicaciones</div>

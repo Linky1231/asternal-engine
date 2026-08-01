@@ -832,10 +832,11 @@ export async function fetchProfileById(userId: string): Promise<Profile | null> 
   return (data as Profile) ?? null;
 }
 
-export async function fetchUserPosts(userId: string, opts: { games?: boolean } = {}): Promise<PostWithMeta[]> {
+export async function fetchUserPosts(userId: string, opts: { games?: boolean; artwork?: boolean } = {}): Promise<PostWithMeta[]> {
   let q = supabase.from("posts").select("*").eq("author_id", userId).is("deleted_at", null).order("created_at", { ascending: false }).limit(100);
-  if (opts.games === true) q = q.eq("category", "game");
-  else if (opts.games === false) q = q.or("category.is.null,category.neq.game");
+  if (opts.artwork) q = q.eq("category", "artwork");
+  else if (opts.games === true) q = q.eq("category", "game");
+  else if (opts.games === false) q = q.or("category.is.null,category.neq.game,category.neq.artwork");
   const { data: posts, error } = await q;
   if (error) throw error;
   if (!posts?.length) return [];
