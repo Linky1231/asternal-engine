@@ -270,7 +270,7 @@ function PlusPage() {
 
         {/* Name effects — NEW */}
         <FeatureCard icon={<Wand2 size={18} />} title="Efectos de nombre"
-          desc="Haz que tu nombre destaque en publicaciones, perfil y chats." locked={!isPlus}>
+          desc="Haz que tu nombre destaque en publicaciones y perfil." locked={!isPlus}>
           <div className="grid grid-cols-2 gap-2">
             <button onClick={() => setNameFx(null)} disabled={!isPlus}
               className={`h-12 rounded-xl border-2 text-xs font-display transition ${!me?.name_effect ? "border-foreground" : "border-border"} disabled:opacity-40`}>

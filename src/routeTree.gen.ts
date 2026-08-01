@@ -15,12 +15,10 @@ import { Route as PlusRouteImport } from './routes/plus'
 import { Route as OrbesRouteImport } from './routes/orbes'
 import { Route as FeedRouteImport } from './routes/feed'
 import { Route as EditorRouteImport } from './routes/editor'
-import { Route as ChatsRouteImport } from './routes/chats'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProfileUserIdRouteImport } from './routes/profile.$userId'
-import { Route as ChatsChatIdRouteImport } from './routes/chats.$chatId'
 import { Route as PaintRouteImport } from './routes/paint'
 
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -53,11 +51,6 @@ const EditorRoute = EditorRouteImport.update({
   path: '/editor',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ChatsRoute = ChatsRouteImport.update({
-  id: '/chats',
-  path: '/chats',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
@@ -78,11 +71,6 @@ const ProfileUserIdRoute = ProfileUserIdRouteImport.update({
   path: '/$userId',
   getParentRoute: () => ProfileRoute,
 } as any)
-const ChatsChatIdRoute = ChatsChatIdRouteImport.update({
-  id: '/$chatId',
-  path: '/$chatId',
-  getParentRoute: () => ChatsRoute,
-} as any)
 
 const PaintRoute = PaintRouteImport.update({
   id: '/paint',
@@ -94,7 +82,6 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
-  '/chats': typeof ChatsRouteWithChildren
   '/editor': typeof EditorRoute
   '/feed': typeof FeedRoute
   '/orbes': typeof OrbesRoute
@@ -102,14 +89,12 @@ export interface FileRoutesByFullPath {
   '/plus': typeof PlusRoute
   '/profile': typeof ProfileRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
-  '/chats/$chatId': typeof ChatsChatIdRoute
   '/profile/$userId': typeof ProfileUserIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
-  '/chats': typeof ChatsRouteWithChildren
   '/editor': typeof EditorRoute
   '/feed': typeof FeedRoute
   '/orbes': typeof OrbesRoute
@@ -117,7 +102,6 @@ export interface FileRoutesByTo {
   '/plus': typeof PlusRoute
   '/profile': typeof ProfileRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
-  '/chats/$chatId': typeof ChatsChatIdRoute
   '/profile/$userId': typeof ProfileUserIdRoute
 }
 export interface FileRoutesById {
@@ -125,7 +109,6 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
-  '/chats': typeof ChatsRouteWithChildren
   '/editor': typeof EditorRoute
   '/feed': typeof FeedRoute
   '/orbes': typeof OrbesRoute
@@ -133,7 +116,6 @@ export interface FileRoutesById {
   '/plus': typeof PlusRoute
   '/profile': typeof ProfileRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
-  '/chats/$chatId': typeof ChatsChatIdRoute
   '/profile/$userId': typeof ProfileUserIdRoute
 }
 export interface FileRouteTypes {
@@ -142,7 +124,6 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/auth'
-    | '/chats'
     | '/editor'
     | '/feed'
     | '/orbes'
@@ -150,14 +131,12 @@ export interface FileRouteTypes {
     | '/plus'
     | '/profile'
     | '/reset-password'
-    | '/chats/$chatId'
     | '/profile/$userId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/admin'
     | '/auth'
-    | '/chats'
     | '/editor'
     | '/feed'
     | '/orbes'
@@ -165,14 +144,12 @@ export interface FileRouteTypes {
     | '/plus'
     | '/profile'
     | '/reset-password'
-    | '/chats/$chatId'
     | '/profile/$userId'
   id:
     | '__root__'
     | '/'
     | '/admin'
     | '/auth'
-    | '/chats'
     | '/editor'
     | '/feed'
     | '/orbes'
@@ -180,7 +157,6 @@ export interface FileRouteTypes {
     | '/plus'
     | '/profile'
     | '/reset-password'
-    | '/chats/$chatId'
     | '/profile/$userId'
   fileRoutesById: FileRoutesById
 }
@@ -188,7 +164,6 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
   AuthRoute: typeof AuthRoute
-  ChatsRoute: typeof ChatsRouteWithChildren
   EditorRoute: typeof EditorRoute
   FeedRoute: typeof FeedRoute
   OrbesRoute: typeof OrbesRoute
@@ -249,13 +224,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PaintRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/chats': {
-      id: '/chats'
-      path: '/chats'
-      fullPath: '/chats'
-      preLoaderRoute: typeof ChatsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/auth': {
       id: '/auth'
       path: '/auth'
@@ -284,25 +252,8 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProfileUserIdRouteImport
       parentRoute: typeof ProfileRoute
     }
-    '/chats/$chatId': {
-      id: '/chats/$chatId'
-      path: '/$chatId'
-      fullPath: '/chats/$chatId'
-      preLoaderRoute: typeof ChatsChatIdRouteImport
-      parentRoute: typeof ChatsRoute
-    }
   }
 }
-
-interface ChatsRouteChildren {
-  ChatsChatIdRoute: typeof ChatsChatIdRoute
-}
-
-const ChatsRouteChildren: ChatsRouteChildren = {
-  ChatsChatIdRoute: ChatsChatIdRoute,
-}
-
-const ChatsRouteWithChildren = ChatsRoute._addFileChildren(ChatsRouteChildren)
 
 interface ProfileRouteChildren {
   ProfileUserIdRoute: typeof ProfileUserIdRoute
@@ -319,7 +270,6 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   AuthRoute: AuthRoute,
-  ChatsRoute: ChatsRouteWithChildren,
   EditorRoute: EditorRoute,
   FeedRoute: FeedRoute,
   OrbesRoute: OrbesRoute,

@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   isMod, isAdmin, listManagedUsers, setUserModerator, type ManagedUser,
   listBannedEmails, banEmail, unbanEmail, type BannedEmail,
-  ensureTestChat,
 } from "@/lib/social/api";
 import {
   getForumThreads, getForumCategories, deleteForumThread,
@@ -13,7 +12,7 @@ import {
 } from "@/lib/social/forum-storage";
 import {
   ArrowLeft, Shield, ShieldCheck, Loader2, Search, Ban, Trash2, Plus,
-  MessageSquare, Hash, Globe, Edit3, X, Check, Trophy, MessageCircle,
+  MessageSquare, Hash, Globe, Edit3, X, Check, Trophy,
 } from "lucide-react";
 import {
   fetchEvents, createEvent, updateEventStatus,
@@ -47,8 +46,6 @@ function AdminPage() {
   const [catName, setCatName] = useState("");
   const [catDesc, setCatDesc] = useState("");
   const [catIcon, setCatIcon] = useState("globe");
-  // Test chat
-  const [testChatBusy, setTestChatBusy] = useState(false);
   // Events
   const [events, setEvents] = useState<EventItem[]>([]);
   const [showNewEvent, setShowNewEvent] = useState(false);
@@ -149,22 +146,6 @@ function AdminPage() {
             <div className="font-display text-sm text-primary-glow glow-text leading-none flex items-center gap-1.5"><ShieldCheck size={14}/> MODERACIÓN</div>
             <div className="text-[10px] font-mono text-muted-foreground">{admin ? "Administrador" : "Moderador"}</div>
           </div>
-          <button onClick={async () => {
-              setTestChatBusy(true);
-              try {
-                const chatId = await ensureTestChat();
-                navigate({ to: "/chats/$chatId", params: { chatId } });
-              } catch (e) {
-                console.error(e);
-              } finally { setTestChatBusy(false); }
-            }}
-            disabled={testChatBusy}
-            title="Chat de prueba"
-            className="flex items-center gap-1.5 h-9 px-3 rounded-xl border border-primary/40 bg-primary/10 text-primary-glow text-[10px] font-display tracking-widest active:scale-95 transition disabled:opacity-60 shrink-0"
-          >
-            {testChatBusy ? <Loader2 size={12} className="animate-spin" /> : <MessageCircle size={12} />}
-            PROBAR CHAT
-          </button>
         </div>
         <div className="max-w-2xl mx-auto px-3 pb-2">
           <div className="relative flex bg-muted/50 rounded-2xl p-0.5">
