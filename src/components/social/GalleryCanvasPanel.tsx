@@ -694,7 +694,7 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
       <div className="flex items-center justify-between px-2.5 py-1 border-b border-border/30 gap-1.5 shrink-0 bg-muted/50">
         <div className="flex items-center gap-1.5 min-w-0 flex-1">
           <div
-            className="w-6 h-6 rounded-md shrink-0 overflow-hidden"
+            className="w-8 h-8 rounded-md shrink-0 overflow-hidden"
             style={{
               backgroundColor: "#e5e7eb",
               backgroundImage: thumb ? `url(${thumb})` : undefined,
@@ -707,7 +707,7 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="bg-input/40 border border-border/40 rounded-md px-2 py-1 text-xs font-medium tracking-tight min-w-0 flex-1 max-w-[110px] focus:outline-none focus:border-primary/40 focus:bg-accent/30 transition"
+            className="bg-input/40 border border-border/40 rounded-md px-2.5 py-1.5 text-sm font-medium tracking-tight min-w-0 flex-1 max-w-[150px] focus:outline-none focus:border-primary/40 focus:bg-accent/30 transition"
           />
           <select
             value={size}
@@ -725,7 +725,7 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
               redoStack.current = [];
               setSize(next);
             }}
-            className="bg-input/40 border border-border/40 rounded-md px-2 py-1 text-[11px] font-mono tracking-tight focus:outline-none focus:border-primary/40 tabular-nums shrink-0"
+            className="bg-input/40 border border-border/40 rounded-md px-2.5 py-1.5 text-sm font-mono tracking-tight focus:outline-none focus:border-primary/40 tabular-nums shrink-0"
             aria-label="Tamaño del lienzo"
           >
             {SIZE_OPTIONS.map(s => <option key={s} value={s}>{s}×{s}</option>)}
@@ -744,8 +744,9 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
           <button onClick={onClose} className="h-9 px-3 rounded-md border border-border/50 bg-muted/50 text-foreground/70 hover:text-foreground hover:bg-muted/80 transition inline-flex items-center gap-1 text-xs font-semibold">
             <X size={15} />
           </button>
-          <button onClick={doSave} className="h-9 px-3.5 rounded-md bg-gradient-to-r from-primary to-accent text-primary-foreground hover:shadow-lg hover:shadow-primary/20 transition active:scale-[0.97] inline-flex items-center gap-1 text-xs font-semibold shadow-sm">
-            <Save size={15} />
+          <button onClick={doSave} className="h-10 px-4 rounded-md bg-gradient-to-r from-primary to-accent text-primary-foreground hover:shadow-lg hover:shadow-primary/20 transition active:scale-[0.97] inline-flex items-center gap-1.5 text-sm font-semibold shadow-sm">
+            <Save size={16} />
+            <span className="hidden sm:inline">Publicar</span>
           </button>
         </div>
       </div>
