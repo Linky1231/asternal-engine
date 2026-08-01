@@ -9,8 +9,9 @@ import { Link } from "@tanstack/react-router";
 import {
   type PostWithMeta, type Profile,
   fetchArtworks, purchaseArtwork, publishArtwork,
-  getMyProfile, getMyOrbes,
+  getMyProfile, getMyOrbes, toggleReaction,
 } from "@/lib/social/api";
+import { CommentSection } from "@/components/social/CommentSection";
 import type { SpriteAsset } from "@/lib/engine/core";
 import { GalleryCanvasPanel } from "@/components/social/GalleryCanvasPanel";
 
@@ -43,6 +44,9 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
   const [publishing, setPublishing] = useState(false);
   const [pubErr, setPubErr] = useState<string | null>(null);
   const [pubDone, setPubDone] = useState(false);
+
+  // Like state
+  const [likingId, setLikingId] = useState<string | null>(null);
 
   // Buy modal
   const [buyPostId, setBuyPostId] = useState<string | null>(null);
@@ -85,6 +89,16 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
       setPubDone(true);
       setTimeout(() => { setSavedSprite(null); setPubDone(false); setPublishing(false); load(); }, 1200);
     } catch (e) { setPubErr((e as Error).message); setPublishing(false); }
+  };
+
+  // --- Like ---
+  const likeArt = async (postId: string) => {
+    if (!myId) return;
+    setLikingId(postId);
+    try {
+      await toggleReaction({ postId, type: "like" });
+      await load();
+    } finally { setLikingId(null); }
   };
 
   // --- Buy ---
@@ -359,14 +373,27 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
                       </Link>
 
                       <div className="flex items-center gap-2 text-[10px] text-muted-foreground/60 shrink-0">
-                        <span className="flex items-center gap-0.5" title="Likes">
-                          <Heart size={10} className={art.likes > 0 ? "text-rose-400 fill-rose-400/20" : ""} />
+                        <button
+                          onClick={e => { e.stopPropagation(); likeArt(art.id); }}
+                          disabled={likingId === art.id || !myId}
+                          title={myId ? (art.my_like ? "Quitar like" : "Me gusta") : "Inicia sesión para dar like"}
+                          className={`flex items-center gap-0.5 rounded-md px-1 py-0.5 transition active:scale-90 disabled:opacity-50 ${
+                            art.my_like ? "text-rose-400 fill-rose-400/30" : "hover:text-rose-400"
+                          }`}
+                        >
+                          {likingId === art.id
+                            ? <Loader2 size={10} className="animate-spin" />
+                            : <Heart size={10} className={art.my_like ? "fill-rose-400 text-rose-400" : ""} />}
                           {art.likes}
-                        </span>
-                        <span className="flex items-center gap-0.5" title="Comentarios">
+                        </button>
+                        <button
+                          onClick={e => { e.stopPropagation(); setDetailPost(art); }}
+                          className="flex items-center gap-0.5 rounded-md px-1 py-0.5 transition hover:text-primary active:scale-90"
+                          title="Comentarios"
+                        >
                           <MessageCircle size={10} />
                           {art.comments_count}
-                        </span>
+                        </button>
                       </div>
                     </div>
 
@@ -495,17 +522,38 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
 
                 {/* Stats */}
                 <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <Heart size={12} className={detailPost.likes > 0 ? "text-rose-400" : ""} />
-                    {detailPost.likes} like{detailPost.likes !== 1 ? "s" : ""}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <MessageCircle size={12} />
+                  <button
+                    onClick={e => { e.stopPropagation(); likeArt(detailPost.id); }}
+                    disabled={likingId === detailPost.id || !myId}
+                    title={myId ? (detailPost.my_like ? "Quitar like" : "Me gusta") : "Inicia sesión para dar like"}
+                    className={`flex items-center gap-1 rounded-lg px-2 py-1.5 border transition active:scale-95 disabled:opacity-50 ${
+                      detailPost.my_like
+                        ? "border-rose-400/40 bg-rose-500/10 text-rose-400"
+                        : "border-border hover:border-rose-400/40 hover:text-rose-400"
+                    }`}
+                  >
+                    {likingId === detailPost.id
+                      ? <Loader2 size={13} className="animate-spin" />
+                      : <Heart size={13} className={detailPost.my_like ? "fill-rose-400 text-rose-400" : ""} />}
+                    <span className="font-semibold tabular-nums">{detailPost.likes}</span>
+                  </button>
+                  <span className="flex items-center gap-1 text-muted-foreground/80">
+                    <MessageCircle size={13} />
                     {detailPost.comments_count} comentario{detailPost.comments_count !== 1 ? "s" : ""}
                   </span>
                   <span className="text-[10px] font-mono text-muted-foreground/50">
                     {new Date(detailPost.created_at).toLocaleDateString("es", { month: "short", day: "numeric" })}
                   </span>
+                </div>
+
+                {/* Comments */}
+                <div className="border-t border-border/40 pt-1">
+                  <CommentSection
+                    postId={detailPost.id}
+                    myId={myId}
+                    isMod={false}
+                    onChange={load}
+                  />
                 </div>
               </div>
             </motion.div>
