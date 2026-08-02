@@ -21,6 +21,40 @@ export function getSchemaSql(): string {
   return schemaSql;
 }
 
+/**
+ * Divide el script en bloques pequeños (~secciones naturales del archivo).
+ * El script es idempotente, por lo que puede ejecutarse completo o por partes.
+ */
+export function getSchemaSqlBlocks(): { title: string; sql: string }[] {
+  const lines = schemaSql.split("\n");
+  // Líneas (1-based) donde empieza cada gran sección: PROFILES, POLLS, FOLLOWS,
+  // RLS POLICIES, FUNCIONES RPC, TRIGGER. Si el archivo cambia, el fallback
+  // devuelve un único bloque con todo el SQL.
+  const cutLines = [46, 208, 295, 381, 496, 666].filter(c => c > 0 && c < lines.length);
+  if (!cutLines.length) return [{ title: "Bloque 1 · Todo el esquema", sql: schemaSql }];
+
+  const ranges: [number, number][] = [];
+  let start = 0;
+  for (const c of cutLines) {
+    ranges.push([start, c - 1]);
+    start = c - 1;
+  }
+  ranges.push([start, lines.length]);
+
+  return ranges.map(([s, e], i) => {
+    const part = lines.slice(s, e);
+    const names = part
+      .filter(l => /^--\s*─/.test(l))
+      .map(l => (l.match(/──\s*(.+?)\s*──/) ?? [null, ""])[1])
+      .filter(Boolean)
+      .slice(0, 3);
+    return {
+      title: `Bloque ${i + 1}${names.length ? " · " + names.join(", ") : ""}`,
+      sql: part.join("\n"),
+    };
+  });
+}
+
 /** Enlace directo al SQL Editor del proyecto (para pegar el script). */
 export function sqlEditorUrl(url: string): string | null {
   const ref = projectRefFromUrl(url);
