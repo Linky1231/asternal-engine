@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Gamepad2, Newspaper, Search, LogOut, Wrench, Plus, ShieldCheck, User, Sparkles, Star, Menu, Bell, X, Home, Users, Flame, MessageSquare, Palette, Trophy, History, Clock, BarChart3, ChevronDown, ChevronRight, Globe, Heart, Megaphone } from "lucide-react";
+import { Gamepad2, Newspaper, Search, LogOut, Wrench, Plus, ShieldCheck, User, Sparkles, Star, Menu, Bell, X, Home, Users, Flame, MessageSquare, Palette, Trophy, History, Clock, BarChart3, ChevronDown, ChevronRight, Globe, Heart, Megaphone, Database } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchFeed, fetchGames, getMyProfile, isMod, isAdmin, type PostWithMeta, type Profile } from "@/lib/social/api";
 import { PostComposer } from "@/components/social/PostComposer";
@@ -14,6 +14,7 @@ import { ForumSection } from "@/components/social/ForumSection";
 import { GallerySection } from "@/components/social/GallerySection";
 import { EventsSection } from "@/components/social/EventsSection";
 import { HistorySection } from "@/components/social/HistorySection";
+import { SupabaseSetupDialog } from "@/components/social/SupabaseSetupDialog";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -46,6 +47,7 @@ function HomePage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showSearch, setShowSearch] = useState(false);
+  const [setupOpen, setSetupOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuMounted, setMenuMounted] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
@@ -282,6 +284,9 @@ function HomePage() {
         <Plus size={18} /> CREAR
       </Link>
 
+      {/* Supabase setup dialog */}
+      <SupabaseSetupDialog open={setupOpen} onOpenChange={setSetupOpen} />
+
       {/* Menu drawer */}
       {menuMounted && (
         <div
@@ -316,6 +321,10 @@ function HomePage() {
             <CategoryHeader label="CREACIÓN" />
             <MenuLink icon={<Wrench size={16} className="text-primary-glow"/>} label="Editor" to="/editor" onClick={closeMenu} />
             <MenuLink icon={<Star size={16} fill="currentColor" style={{ color: "var(--plus)" }}/>} label="Centro Plus" to="/plus" onClick={closeMenu} />
+
+            {/* Categoría: SISTEMA */}
+            <CategoryHeader label="SISTEMA" />
+            <MenuItem icon={<Database size={16} className="text-primary-glow"/>} label="Supabase" onClick={() => { setSetupOpen(true); closeMenu(); }} />
 
             <div className="flex-1 min-h-4" />
             <button onClick={() => { logout(); closeMenu(); }}
