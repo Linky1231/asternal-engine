@@ -1,5 +1,5 @@
 // @ts-nocheck — Local DB adapter (types differ from Supabase generics)
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, isSchemaMissing } from "@/integrations/supabase/client";
 
 export type SocialLinks = {
   youtube?: string;
@@ -162,7 +162,11 @@ export async function fetchFeed(opts: { search?: string; tag?: string; category?
   if (opts.category) q = q.eq("category", opts.category);
   else if (!opts.includeGames) q = q.or("category.is.null,category.neq.game");
   const { data: posts, error } = await q;
-  if (error) throw error;
+  if (error) {
+    // Esquema aún sin crear en Supabase: degradar a lista vacía en vez de crashear.
+    if (isSchemaMissing(error)) return [];
+    throw error;
+  }
   if (!posts || !posts.length) return [];
 
   const ids = posts.map(p => p.id);

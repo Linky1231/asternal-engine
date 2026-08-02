@@ -75,13 +75,18 @@ function HomePage() {
 
   useEffect(() => {
     (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { navigate({ to: "/auth" }); return; }
-      setMyId(session.user.id);
-      setMe(await getMyProfile());
-      setMod(await isMod());
-      setAdmin(await isAdmin());
-      await reload(tab);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) { navigate({ to: "/auth" }); return; }
+        setMyId(session.user.id);
+        setMe(await getMyProfile());
+        setMod(await isMod());
+        setAdmin(await isAdmin());
+        await reload(tab);
+      } catch (e) {
+        // No romper la preview si el esquema aún no está creado en Supabase.
+        console.warn("[home] error de carga inicial (¿esquema sin crear?):", e);
+      }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

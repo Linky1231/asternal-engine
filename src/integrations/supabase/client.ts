@@ -716,6 +716,27 @@ export function hasSupabaseConfig(): boolean {
   return Boolean(getSupabaseUrl() && getSupabaseAnonKey());
 }
 
+/**
+ * Detecta errores de PostgREST cuando una tabla aún no existe en la base de
+ * datos (esquema sin crear). La app usa esto para degradar a listas vacías en
+ * lugar de crashear mientras el usuario configura Supabase.
+ */
+export function isSchemaMissing(err: unknown): boolean {
+  if (!err) return false;
+  const msg = typeof err === "string"
+    ? err
+    : (err as { message?: string })?.message ?? "";
+  const code = (err as { code?: string })?.code ?? "";
+  return (
+    code === "PGRST205" ||
+    code === "42P01" ||
+    /could not find the table/i.test(msg) ||
+    /schema cache/i.test(msg) ||
+    /does not exist/i.test(msg) ||
+    /undefined_table/i.test(msg)
+  );
+}
+
 function createSupabaseClient(): LocalClient {
   const url = getSupabaseUrl();
   const anonKey = getSupabaseAnonKey();
