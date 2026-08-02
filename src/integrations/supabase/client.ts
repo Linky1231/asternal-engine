@@ -665,17 +665,64 @@ function createLocalClient(): LocalClient {
   };
 }
 
-/* ───── Real Supabase client (when credentials exist) ───── */
+/* ───── Real Supabase client (when credentials exist) ─────
+ *
+ * Las credenciales se resuelven en este orden:
+ *   1. Override guardado por el usuario en el diálogo de configuración
+ *      (localStorage) — permite conectar sin depender de la inyección de
+ *      variables de entorno al compilar.
+ *   2. Variables de entorno de Vite (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY)
+ *      inyectadas por el entorno desde el tab Keys.
+ */
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
-const hasRealConfig = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
+const LOCAL_SB_URL_KEY = '_ast_supabase_url';
+const LOCAL_SB_ANON_KEY = '_ast_supabase_anon';
+
+function readLocal(key: string): string | null {
+  try { return localStorage.getItem(key); } catch { return null; }
+}
+
+function writeLocal(key: string, value: string | null): void {
+  try {
+    if (value && value.trim()) localStorage.setItem(key, value.trim());
+    else localStorage.removeItem(key);
+  } catch { /* ignore quota/private-mode errors */ }
+}
+
+export function getSupabaseUrl(): string | undefined {
+  const local = readLocal(LOCAL_SB_URL_KEY);
+  if (local && local.trim()) return local.trim();
+  return import.meta.env.VITE_SUPABASE_URL as string | undefined;
+}
+
+export function getSupabaseAnonKey(): string | undefined {
+  const local = readLocal(LOCAL_SB_ANON_KEY);
+  if (local && local.trim()) return local.trim();
+  return import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+}
+
+/** Guarda (o borra) las credenciales escritas a mano en el diálogo de configuración. */
+export function saveSupabaseCredentials(url: string, anonKey: string): void {
+  writeLocal(LOCAL_SB_URL_KEY, url.trim() ? url : null);
+  writeLocal(LOCAL_SB_ANON_KEY, anonKey.trim() ? anonKey : null);
+}
+
+export function clearSupabaseCredentials(): void {
+  writeLocal(LOCAL_SB_URL_KEY, null);
+  writeLocal(LOCAL_SB_ANON_KEY, null);
+}
+
+export function hasSupabaseConfig(): boolean {
+  return Boolean(getSupabaseUrl() && getSupabaseAnonKey());
+}
 
 function createSupabaseClient(): LocalClient {
-  if (hasRealConfig) {
+  const url = getSupabaseUrl();
+  const anonKey = getSupabaseAnonKey();
+  if (url && anonKey) {
     try {
       // Real Supabase: auth, data, storage and RPC all work against the cloud.
-      return createClient<Database>(SUPABASE_URL!, SUPABASE_ANON_KEY!, {
+      return createClient<Database>(url, anonKey, {
         auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
       }) as unknown as LocalClient;
     } catch (e) {

@@ -3,17 +3,23 @@
  * Con la URL + anon key la app funciona; este módulo permite crear el esquema
  * (tablas, RLS, funciones, bucket, triggers) automáticamente desde el navegador
  * usando la Management API de Supabase con un token de acceso personal (sbp_...).
+ *
+ * Las credenciales se leen de forma dinámica (override en localStorage o
+ * variables de entorno inyectadas al compilar), por lo que el usuario puede
+ * pegarlas directamente en el diálogo si el entorno no las inyecta.
  */
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, getSupabaseUrl, getSupabaseAnonKey } from "@/integrations/supabase/client";
 // Importa el script SQL completo como texto crudo (Vite ?raw)
 import schemaSql from "../../../supabase-setup.sql?raw";
 
-export const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-export const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 export const SUPABASE_ACCESS_TOKEN = import.meta.env.VITE_SUPABASE_ACCESS_TOKEN as string | undefined;
 
+export { getSupabaseUrl, getSupabaseAnonKey };
+
 /** ¿Está configurado el modo real (URL + anon key)? */
-export const isRealConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
+export function hasSupabaseConfig(): boolean {
+  return Boolean(getSupabaseUrl() && getSupabaseAnonKey());
+}
 
 /** Extrae el project ref de una URL tipo https://xxxx.supabase.co */
 export function projectRefFromUrl(url: string): string | null {
@@ -27,7 +33,7 @@ export function projectRefFromUrl(url: string): string | null {
  * esquemas inexistentes como instalaciones parciales.
  */
 export async function checkSchemaReady(): Promise<boolean> {
-  if (!isRealConfigured) return false;
+  if (!hasSupabaseConfig()) return false;
   try {
     const { error } = await supabase.from("posts").select("id").limit(1);
     if (error) return false;
@@ -45,8 +51,9 @@ export type SetupResult = { ok: boolean; message: string };
  * @param accessToken Token de acceso personal de Supabase (sbp_...).
  */
 export async function runSchemaSetup(accessToken: string): Promise<SetupResult> {
-  if (!SUPABASE_URL) return { ok: false, message: "Falta VITE_SUPABASE_URL en las claves." };
-  const ref = projectRefFromUrl(SUPABASE_URL);
+  const url = getSupabaseUrl();
+  if (!url) return { ok: false, message: "Falta la URL de Supabase. Pégala en el paso anterior o añádela en Keys (VITE_SUPABASE_URL)." };
+  const ref = projectRefFromUrl(url);
   if (!ref) return { ok: false, message: "No se pudo extraer el project ref de la URL." };
   const token = accessToken.trim();
   if (!token.startsWith("sbp_")) {
