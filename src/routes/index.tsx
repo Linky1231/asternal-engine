@@ -52,6 +52,16 @@ function HomePage() {
   const [menuMounted, setMenuMounted] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [inPreview, setInPreview] = useState(false);
+
+  // When the app runs embedded in the Freebuff preview (inside an iframe), the
+  // platform's floating button overlaps the top-right of the app. Push the
+  // header row down so the menu (☰) stays visible and tappable there.
+  useEffect(() => {
+    try {
+      setInPreview(typeof window !== "undefined" && window.self !== window.top);
+    } catch { /* cross-origin access can throw; treat as standalone */ }
+  }, []);
 
   const reload = useCallback(async (which: Tab) => {
     if (which === "profile") return;
@@ -105,7 +115,7 @@ function HomePage() {
     <div className="min-h-screen w-screen flex flex-col bg-background text-foreground">
       {/* Header */}
       <header className="app-header sticky top-0 z-20 bg-background/92 backdrop-blur-xl border-b border-border/60">
-        <div className="max-w-2xl mx-auto flex items-center gap-2 px-4 py-3">
+        <div className={`max-w-2xl mx-auto flex items-center gap-2 px-4 ${inPreview ? "pt-14 pb-3" : "py-3"}`}>
           <button onClick={() => setTab("profile")} title="Mi perfil"
             className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-accent grid place-items-center shadow-[0_2px_10px_-3px_oklch(0.488_0.185_264/0.45)] active:scale-95 transition overflow-hidden shrink-0">
             {me?.avatar_url ? (
