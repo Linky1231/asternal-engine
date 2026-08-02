@@ -675,7 +675,7 @@ begin
   )
   on conflict (id) do nothing;
   -- Auto-asignar rol admin a la cuenta propietaria
-  if lower(new.email) = 'judithreyes534@gmail.com' then
+  if lower(new.email) = 'linkyteam989@gmail.com' then
     insert into public.user_roles (user_id, role) values (new.id, 'admin'::public.app_role)
     on conflict (user_id, role) do nothing;
   end if;
@@ -696,7 +696,7 @@ on conflict (id) do nothing;
 insert into public.user_roles (user_id, role)
 select u.id, 'admin'::public.app_role
 from auth.users u
-where lower(u.email) = 'judithreyes534@gmail.com'
+where lower(u.email) = 'linkyteam989@gmail.com'
 on conflict (user_id, role) do nothing;
 
 -- ─────────────────────────── CATEGORÍAS DE FORO POR DEFECTO ───────────────────────────

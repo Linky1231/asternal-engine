@@ -165,7 +165,7 @@ function ensureProfileExists(userId: string, email: string, username?: string): 
   saveTableData('profiles', profiles);
 
   // Auto-assign admin role to the owner email
-  if (email === 'judithreyes534@gmail.com') {
+  if (email === 'Linkyteam989@gmail.com') {
     const roles = getTableData<Record<string, unknown>>('user_roles');
     if (!roles.find(r => r.user_id === userId && r.role === 'admin')) {
       roles.push({ user_id: userId, role: 'admin' });
