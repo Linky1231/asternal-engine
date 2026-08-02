@@ -93,11 +93,15 @@ function HomePage() {
     if (menuOpen) {
       setMenuMounted(true);
       // Wait one paint after mount, then flip data-open to trigger the transition.
-      const r1 = requestAnimationFrame(() => {
-        const r2 = requestAnimationFrame(() => setMenuVisible(true));
-        (r1 as unknown as { r2?: number }).r2 = r2;
+      let raf1 = 0;
+      let raf2 = 0;
+      raf1 = requestAnimationFrame(() => {
+        raf2 = requestAnimationFrame(() => setMenuVisible(true));
       });
-      return () => cancelAnimationFrame(r1);
+      return () => {
+        cancelAnimationFrame(raf1);
+        cancelAnimationFrame(raf2);
+      };
     }
     if (!menuMounted) return;
     setMenuVisible(false);
