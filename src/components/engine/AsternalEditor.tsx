@@ -559,9 +559,14 @@ function LibrarySheet({
 
 function Logo() {
   return (
-    <a href="/profile" title="Mi perfil" className="relative w-9 h-9 rounded-md bg-gradient-to-br from-primary to-accent grid place-items-center shadow-[0_0_16px_oklch(0.68_0.21_250/0.7)] active:scale-95 transition">
+    <Link
+      to="/"
+      title="Ir al inicio"
+      aria-label="Ir al inicio"
+      className="relative w-9 h-9 rounded-md bg-gradient-to-br from-primary to-accent grid place-items-center shadow-[0_0_16px_oklch(0.68_0.21_250/0.7)] active:scale-95 transition"
+    >
       <span className="font-display text-lg text-primary-foreground">A</span>
-    </a>
+    </Link>
   );
 }
 
