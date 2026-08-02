@@ -244,7 +244,8 @@ export function ForumSection({ isAdmin: isAdminProp, isMod: isModProp }: { isAdm
 
 /* ─── Category List ─── */
 function CategoryListView({ onSelect }: { onSelect: (id: string, name: string) => void }) {
-  const cats = initForumCategories();
+  const [cats, setCats] = useState<ForumCategory[]>([]);
+  useEffect(() => { initForumCategories().then(setCats); }, []);
   return (
     <motion.div initial="initial" animate="animate" variants={stagger.container} className="space-y-3">
       {/* Header */}
@@ -318,7 +319,7 @@ function ThreadListView({
   const mediaInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
 
-  const load = () => setThreads(getForumThreadsWithVotes(categoryId, myId));
+  const load = () => { getForumThreadsWithVotes(categoryId, myId).then(setThreads); };
   useEffect(load, [categoryId, myId]);
 
   useEffect(() => {
@@ -346,15 +347,14 @@ function ThreadListView({
         processed.documentUrls = await Promise.all(docFiles.map(f => fileToDataURL(f)));
         processed.documentNames = docFiles.map(f => f.name);
       }
-      createForumThread(categoryId, title, content, { id: myId, username: myUsername }, undefined, processed);
+      await createForumThread(categoryId, title, content, { id: myId, username: myUsername }, undefined, processed);
       setTitle(""); setContent(""); setMediaFiles([]); setDocFiles([]); setShowNew(false);
     } finally { setBusy(false); load(); }
   };
 
   const handleThreadVote = (threadId: string, vote: "up" | "down") => {
     if (!myId) return;
-    voteForumThread(threadId, myId, vote);
-    load();
+    voteForumThread(threadId, myId, vote).then(load);
   };
 
   return (
@@ -617,8 +617,8 @@ function ThreadDetailView({
   const replyRef = useRef<HTMLTextAreaElement>(null);
 
   const load = () => {
-    setThread(getForumThread(threadId));
-    setPosts(getForumPosts(threadId));
+    getForumThread(threadId).then(t => setThread(t));
+    getForumPosts(threadId).then(setPosts);
   };
   useEffect(() => {
     incrementThreadView(threadId);
@@ -628,7 +628,7 @@ function ThreadDetailView({
   const sendReply = async () => {
     if (!replyContent.trim() || !myId || thread?.closed) return;
     setBusy(true);
-    createForumPost(
+    await createForumPost(
       threadId,
       replyContent,
       { id: myId, username: myUsername },
@@ -642,14 +642,12 @@ function ThreadDetailView({
 
   const handlePostVote = (postId: string, vote: "up" | "down") => {
     if (!myId) return;
-    voteForumPost(postId, myId, vote);
-    setPosts(getForumPosts(threadId));
+    voteForumPost(postId, myId, vote).then(() => getForumPosts(threadId).then(setPosts));
   };
 
   const handleThreadVote = (vote: "up" | "down") => {
     if (!myId || !thread) return;
-    voteForumThread(threadId, myId, vote);
-    setThread(getForumThread(threadId));
+    voteForumThread(threadId, myId, vote).then(() => getForumThread(threadId).then(setThread));
   };
 
   const handleEdit = (postId: string) => {
@@ -661,15 +659,14 @@ function ThreadDetailView({
 
   const saveEdit = async (postId: string) => {
     if (!editContent.trim()) return;
-    editForumPost(postId, editContent);
+    await editForumPost(postId, editContent);
     setEditingPost(null);
-    setPosts(getForumPosts(threadId));
+    getForumPosts(threadId).then(setPosts);
   };
 
   const handleDelete = (postId: string) => {
     if (!confirm("¿Borrar este mensaje?")) return;
-    deleteForumPost(postId);
-    setPosts(getForumPosts(threadId));
+    deleteForumPost(postId).then(() => getForumPosts(threadId).then(setPosts));
   };
 
   const handleQuote = (p: ForumPost) => {
@@ -678,16 +675,15 @@ function ThreadDetailView({
   };
 
   const handleMarkSolution = (postId: string) => {
-    markAsSolution(threadId, postId);
-    load();
+    markAsSolution(threadId, postId).then(load);
   };
 
   const handleUnmarkSolution = () => {
-    unmarkSolution(threadId);
-    load();
+    unmarkSolution(threadId).then(load);
   };
 
-  const cats = getForumCategories();
+  const [cats, setCats] = useState<ForumCategory[]>([]);
+  useEffect(() => { getForumCategories().then(setCats); }, []);
   const cat = cats.find(c => c.id === thread?.categoryId);
   const catIcon = cat ? CAT_ICONS[cat.icon] ?? <MessageSquare size={14} /> : <MessageSquare size={14} />;
   const isOwner = myId === thread?.authorId;
@@ -733,7 +729,7 @@ function ThreadDetailView({
         {/* Admin actions */}
         <div className="flex items-center gap-1.5 shrink-0">
           {canPin && (
-            <motion.button whileTap={{ scale: 0.9 }} onClick={() => { togglePinThread(threadId); load(); }}
+            <motion.button whileTap={{ scale: 0.9 }} onClick={() => { togglePinThread(threadId).then(load); }}
               className={`h-8 px-3 rounded-xl border text-[10px] font-medium flex items-center gap-1.5 transition-all ${
                 thread.pinned
                   ? "border-primary/25 bg-primary/8 text-primary shadow-sm"
@@ -743,7 +739,7 @@ function ThreadDetailView({
             </motion.button>
           )}
           {isOwner && !isClosed && (
-            <motion.button whileTap={{ scale: 0.9 }} onClick={() => { toggleCloseThread(threadId); load(); }}
+            <motion.button whileTap={{ scale: 0.9 }} onClick={() => { toggleCloseThread(threadId).then(load); }}
               className="h-8 px-3 rounded-xl border border-border/50 text-[10px] font-medium flex items-center gap-1.5 hover:text-rose-500 hover:border-rose-200 transition-all">
               <Lock size={11} /> CERRAR
             </motion.button>

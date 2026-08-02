@@ -1,10 +1,10 @@
 /**
  * Forum storage — Asternal
  * Sistema de foros con hilos, categorías y comentarios anidados.
- * Todo almacenado en localStorage.
+ * Backend: Supabase (sincronizado entre todos los dispositivos).
  */
 
-import { uid } from "@/lib/engine/core";
+import { supabase } from "@/integrations/supabase/client";
 
 /* ─── Types ─── */
 
@@ -128,394 +128,370 @@ export function autoDetectTags(title: string, content: string): string[] {
   return found.size > 0 ? Array.from(found) : [...DEFAULT_TAGS];
 }
 
-/* ─── Keys ─── */
+/* ─── Default categories (seed) ─── */
 
-const KEYS = {
-  categories: "_forum_categories",
-  threads: "_forum_threads",
-  posts: "_forum_posts",
-  votes: "_forum_votes",
-  threadVotes: "_forum_thread_votes",
+export function getDefaultCategories(): ForumCategory[] {
+  return [
+    { id: "00000000-0000-4000-8000-000000000001", name: "General",     description: "Charlas, anuncios y temas generales de la comunidad", icon: "globe", sortOrder: 0, threadCount: 0, createdAt: new Date(0).toISOString() },
+    { id: "00000000-0000-4000-8000-000000000002", name: "Ayuda",       description: "Dudas sobre el editor, scripts, física y más",          icon: "life-buoy", sortOrder: 1, threadCount: 0, createdAt: new Date(0).toISOString() },
+    { id: "00000000-0000-4000-8000-000000000003", name: "Showcase",    description: "Comparte tus juegos, arte y creaciones",               icon: "trophy", sortOrder: 2, threadCount: 0, createdAt: new Date(0).toISOString() },
+    { id: "00000000-0000-4000-8000-000000000004", name: "Feedback",    description: "Sugerencias y mejoras para Asternal",                  icon: "message-circle-more", sortOrder: 3, threadCount: 0, createdAt: new Date(0).toISOString() },
+    { id: "00000000-0000-4000-8000-000000000005", name: "Off-Topic",   description: "Todo lo demás: memes, música, charla libre",           icon: "coffee", sortOrder: 4, threadCount: 0, createdAt: new Date(0).toISOString() },
+  ];
+}
+
+/* ─── Row mappers (snake_case → camelCase) ─── */
+
+type CatRow = { id: string; name: string; description: string; icon: string; sort_order: number; created_at: string; threadCount?: number };
+
+function mapCategory(r: CatRow): ForumCategory {
+  return {
+    id: r.id,
+    name: r.name,
+    description: r.description,
+    icon: r.icon,
+    sortOrder: r.sort_order,
+    threadCount: r.threadCount ?? 0,
+    createdAt: r.created_at,
+  };
+}
+
+type ThreadRow = {
+  id: string; category_id: string; title: string; content: string;
+  author_id: string; author_username: string; tags: string[] | null;
+  upvotes: number; downvotes: number; media_urls: string[] | null;
+  media_type: string | null; document_urls: string[] | null; document_names: string[] | null;
+  pinned: boolean; closed: boolean; solution_post_id: string | null;
+  views: number; post_count: number; created_at: string; updated_at: string;
+  last_post_at: string; last_post_author: string;
 };
 
-function read<T>(key: string, fallback: T): T {
-  try { return JSON.parse(localStorage.getItem(key) || "null") ?? fallback; }
-  catch { return fallback; }
+function mapThread(r: ThreadRow): ForumThread {
+  return {
+    id: r.id,
+    categoryId: r.category_id,
+    title: r.title,
+    content: r.content,
+    authorId: r.author_id,
+    authorUsername: r.author_username,
+    tags: r.tags ?? [],
+    upvotes: r.upvotes ?? 0,
+    downvotes: r.downvotes ?? 0,
+    mediaUrls: r.media_urls ?? [],
+    mediaType: (r.media_type as "image" | "video" | "none") ?? "none",
+    documentUrls: r.document_urls ?? [],
+    documentNames: r.document_names ?? [],
+    pinned: r.pinned ?? false,
+    closed: r.closed ?? false,
+    solutionPostId: r.solution_post_id ?? null,
+    views: r.views ?? 0,
+    postCount: r.post_count ?? 0,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at ?? r.created_at,
+    lastPostAt: r.last_post_at ?? r.created_at,
+    lastPostAuthor: r.last_post_author ?? "",
+  };
 }
-function write<T>(key: string, data: T) {
-  localStorage.setItem(key, JSON.stringify(data));
+
+type PostRow = {
+  id: string; thread_id: string; content: string; author_id: string; author_username: string;
+  parent_post_id: string | null; quote_post_id: string | null; quote_content: string | null;
+  quote_author: string | null; upvotes: number; downvotes: number; created_at: string; edited_at: string | null;
+};
+
+function mapPost(r: PostRow): ForumPost {
+  return {
+    id: r.id,
+    threadId: r.thread_id,
+    content: r.content,
+    authorId: r.author_id,
+    authorUsername: r.author_username,
+    parentPostId: r.parent_post_id ?? null,
+    quotePostId: r.quote_post_id ?? null,
+    quoteContent: r.quote_content ?? null,
+    quoteAuthor: r.quote_author ?? null,
+    upvotes: r.upvotes ?? 0,
+    downvotes: r.downvotes ?? 0,
+    myVote: null,
+    createdAt: r.created_at,
+    editedAt: r.edited_at ?? null,
+  };
+}
+
+async function currentUserId(): Promise<string | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  return user?.id ?? null;
 }
 
 /* ─── Categories ─── */
 
-export function getDefaultCategories(): ForumCategory[] {
-  return [
-    { id: "general",    name: "General",      description: "Charlas, anuncios y temas generales de la comunidad", icon: "globe", sortOrder: 0, threadCount: 0, createdAt: new Date(0).toISOString() },
-    { id: "help",       name: "Ayuda",         description: "Dudas sobre el editor, scripts, física y más",          icon: "life-buoy", sortOrder: 1, threadCount: 0, createdAt: new Date(0).toISOString() },
-    { id: "showcase",   name: "Showcase",      description: "Comparte tus juegos, arte y creaciones",               icon: "trophy", sortOrder: 2, threadCount: 0, createdAt: new Date(0).toISOString() },
-    { id: "feedback",   name: "Feedback",       description: "Sugerencias y mejoras para Asternal",                  icon: "message-circle-more", sortOrder: 3, threadCount: 0, createdAt: new Date(0).toISOString() },
-    { id: "offtopic",   name: "Off-Topic",      description: "Todo lo demás: memes, música, charla libre",           icon: "coffee", sortOrder: 4, threadCount: 0, createdAt: new Date(0).toISOString() },
-  ];
+export async function initForumCategories(): Promise<ForumCategory[]> {
+  const cats = await getForumCategories();
+  if (cats.length > 0) return cats;
+  return getDefaultCategories();
 }
 
-export function initForumCategories(): ForumCategory[] {
-  let cats = read<ForumCategory[]>(KEYS.categories, []);
-  if (cats.length === 0) {
-    cats = getDefaultCategories();
-    write(KEYS.categories, cats);
+export async function getForumCategories(): Promise<ForumCategory[]> {
+  const { data, error } = await supabase
+    .from("forum_categories")
+    .select("*")
+    .order("sort_order", { ascending: true });
+  if (error) {
+    console.warn("[foros] error leyendo categorías:", error.message);
+    return getDefaultCategories();
   }
-  return cats;
+  const rows = (data ?? []) as CatRow[];
+  // Count threads per category (works in both real and local modes)
+  const { data: threadRows } = await supabase.from("forum_threads").select("category_id");
+  const counts = new Map<string, number>();
+  for (const t of (threadRows ?? []) as { category_id: string }[]) {
+    counts.set(t.category_id, (counts.get(t.category_id) ?? 0) + 1);
+  }
+  return rows.map(r => mapCategory({ ...r, threadCount: counts.get(r.id) ?? 0 }));
 }
 
-export function getForumCategories(): ForumCategory[] {
-  return read<ForumCategory[]>(KEYS.categories, getDefaultCategories());
+export async function createForumCategory(name: string, description: string, icon: string): Promise<ForumCategory> {
+  const { data, error } = await supabase
+    .from("forum_categories")
+    .insert({ name: name.trim(), description: description.trim(), icon: icon || "globe", sort_order: 0 })
+    .select()
+    .single();
+  if (error) throw error;
+  return mapCategory(data as CatRow);
 }
 
-export function createForumCategory(name: string, description: string, icon: string): ForumCategory {
-  const cats = read<ForumCategory[]>(KEYS.categories, getDefaultCategories());
-  const maxOrder = cats.reduce((max, c) => Math.max(max, c.sortOrder), 0);
-  const cat: ForumCategory = {
-    id: uid(),
-    name: name.trim(),
-    description: description.trim(),
-    icon: icon || "globe",
-    sortOrder: maxOrder + 1,
-    threadCount: 0,
-    createdAt: new Date().toISOString(),
-  };
-  cats.push(cat);
-  write(KEYS.categories, cats);
-  return cat;
-}
-
-export function deleteForumCategory(categoryId: string): boolean {
+export async function deleteForumCategory(categoryId: string): Promise<boolean> {
   const defaultIds = getDefaultCategories().map(c => c.id);
-  if (defaultIds.includes(categoryId)) return false; // can't delete defaults
-  let cats = read<ForumCategory[]>(KEYS.categories, getDefaultCategories());
-  cats = cats.filter(c => c.id !== categoryId);
-  write(KEYS.categories, cats);
-  // Delete all threads in this category
-  const threads = read<ForumThread[]>(KEYS.threads, []);
-  const deletedThreads = threads.filter(t => t.categoryId === categoryId);
-  const deletedIds = new Set(deletedThreads.map(t => t.id));
-  const remaining = threads.filter(t => t.categoryId !== categoryId);
-  write(KEYS.threads, remaining);
-  // Delete all posts in those threads
-  const posts = read<ForumPost[]>(KEYS.posts, []);
-  write(KEYS.posts, posts.filter(p => !deletedIds.has(p.threadId)));
-  return true;
+  if (defaultIds.includes(categoryId)) return false;
+  const { error } = await supabase.from("forum_categories").delete().eq("id", categoryId);
+  return !error;
 }
 
-/* ─── Threads ─── */
+/* ─── Hot score (same algorithm as before) ─── */
 
-export function getForumThreads(categoryId?: string): ForumThread[] {
-  const threads = read<ForumThread[]>(KEYS.threads, []);
-  let filtered = categoryId ? threads.filter(t => t.categoryId === categoryId) : threads;
-  // Hot algorithm: score = postCount*3 + views*1 + upvotes_weighted, decayed by age
-  // Pinned always first
-  return filtered.sort((a, b) => {
-    if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-    return getThreadHotScore(b) - getThreadHotScore(a);
-  });
+async function postsByThread(threadIds: string[]): Promise<Map<string, PostRow[]>> {
+  const map = new Map<string, PostRow[]>();
+  if (!threadIds.length) return map;
+  const { data } = await supabase.from("forum_posts").select("*").in("thread_id", threadIds);
+  for (const p of (data ?? []) as PostRow[]) {
+    const arr = map.get(p.thread_id) ?? [];
+    arr.push(p);
+    map.set(p.thread_id, arr);
+  }
+  return map;
 }
 
-function getThreadHotScore(t: ForumThread): number {
-  const posts = read<ForumPost[]>(KEYS.posts, []);
-  const threadPosts = posts.filter(p => p.threadId === t.id);
-  const totalPostUpvotes = threadPosts.reduce((s, p) => s + p.upvotes, 0);
-  const totalPostDownvotes = threadPosts.reduce((s, p) => s + p.downvotes, 0);
+function getThreadHotScore(t: ForumThread, threadPosts: PostRow[]): number {
+  const totalPostUpvotes = threadPosts.reduce((s, p) => s + (p.upvotes ?? 0), 0);
+  const totalPostDownvotes = threadPosts.reduce((s, p) => s + (p.downvotes ?? 0), 0);
   const interactions = t.postCount * 5 + t.views + (totalPostUpvotes + t.upvotes) * 3 - (totalPostDownvotes + t.downvotes);
   const ageHours = Math.max(1, (Date.now() - new Date(t.createdAt).getTime()) / 3600000);
   return Math.round(interactions / Math.pow(ageHours + 2, 0.6));
 }
 
-export function searchForumThreads(query: string, categoryId?: string): ForumThread[] {
+async function sortThreads(threads: ForumThread[]): Promise<ForumThread[]> {
+  const postsMap = await postsByThread(threads.map(t => t.id));
+  return threads.sort((a, b) => {
+    if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+    const sa = getThreadHotScore(a, postsMap.get(a.id) ?? []);
+    const sb = getThreadHotScore(b, postsMap.get(b.id) ?? []);
+    return sb - sa;
+  });
+}
+
+/* ─── Threads ─── */
+
+export async function getForumThreads(categoryId?: string): Promise<ForumThread[]> {
+  let q = supabase.from("forum_threads").select("*");
+  if (categoryId) q = q.eq("category_id", categoryId);
+  const { data, error } = await q;
+  if (error) return [];
+  const threads = ((data ?? []) as ThreadRow[]).map(mapThread);
+  return sortThreads(threads);
+}
+
+export async function searchForumThreads(query: string, categoryId?: string): Promise<ForumThread[]> {
   if (!query.trim()) return getForumThreads(categoryId);
   const q = query.toLowerCase().trim();
-  const threads = read<ForumThread[]>(KEYS.threads, []);
-  let filtered = categoryId ? threads.filter(t => t.categoryId === categoryId) : threads;
-  return filtered
+  const threads = await getForumThreads(categoryId);
+  return threads
     .filter(t => t.title.toLowerCase().includes(q) || t.content.toLowerCase().includes(q))
     .sort((a, b) => {
       if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-      return getThreadHotScore(b) - getThreadHotScore(a);
+      const aScore = (a.title.toLowerCase().startsWith(q) ? 100 : 0) + a.postCount * 3;
+      const bScore = (b.title.toLowerCase().startsWith(q) ? 100 : 0) + b.postCount * 3;
+      return bScore - aScore;
     });
 }
 
-export function getForumThreadsWithVotes(categoryId?: string, userId?: string | null): (ForumThread & { myVote: "up" | "down" | null })[] {
-  const threads = getForumThreads(categoryId);
-  const threadVotes = userId ? read<ForumThreadVote[]>(KEYS.threadVotes, []).filter(v => v.userId === userId) : [];
-  return threads.map(t => ({
-    ...t,
-    myVote: (threadVotes.find(v => v.threadId === t.id)?.vote ?? null) as "up" | "down" | null,
-  }));
+export async function getForumThreadsWithVotes(categoryId?: string, userId?: string | null): Promise<(ForumThread & { myVote: "up" | "down" | null })[]> {
+  const threads = await getForumThreads(categoryId);
+  if (!userId || !threads.length) return threads.map(t => ({ ...t, myVote: null }));
+  const { data } = await supabase.from("forum_thread_votes").select("thread_id,vote").eq("user_id", userId).in("thread_id", threads.map(t => t.id));
+  const vmap = new Map((data ?? []).map((v: { thread_id: string; vote: string }) => [v.thread_id, v.vote]));
+  return threads.map(t => ({ ...t, myVote: (vmap.get(t.id) as "up" | "down") ?? null }));
 }
 
-export function getForumThread(threadId: string): (ForumThread & { myVote: "up" | "down" | null }) | null {
-  const threads = read<ForumThread[]>(KEYS.threads, []);
-  const t = threads.find(th => th.id === threadId) ?? null;
-  if (!t) return null;
-  const threadVotes = read<ForumThreadVote[]>(KEYS.threadVotes, []);
-  return {
-    ...t,
-    myVote: (threadVotes.find(v => v.threadId === t.id)?.vote ?? null) as "up" | "down" | null,
-  };
-}
-
-export function voteForumThread(threadId: string, userId: string, vote: "up" | "down"): { upvotes: number; downvotes: number } {
-  const threads = read<ForumThread[]>(KEYS.threads, []);
-  const thread = threads.find(t => t.id === threadId);
-  if (!thread) return { upvotes: 0, downvotes: 0 };
-
-  let votes = read<ForumThreadVote[]>(KEYS.threadVotes, []);
-  const existing = votes.find(v => v.threadId === threadId && v.userId === userId);
-
-  if (existing) {
-    if (existing.vote === "up") thread.upvotes = Math.max(0, thread.upvotes - 1);
-    if (existing.vote === "down") thread.downvotes = Math.max(0, thread.downvotes - 1);
-    votes = votes.filter(v => !(v.threadId === threadId && v.userId === userId));
+export async function getForumThread(threadId: string): Promise<(ForumThread & { myVote: "up" | "down" | null }) | null> {
+  const { data, error } = await supabase.from("forum_threads").select("*").eq("id", threadId).maybeSingle();
+  if (error || !data) return null;
+  const thread = mapThread(data as ThreadRow);
+  const me = await currentUserId();
+  let myVote: "up" | "down" | null = null;
+  if (me) {
+    const { data: v } = await supabase.from("forum_thread_votes").select("vote").eq("thread_id", threadId).eq("user_id", me).maybeSingle();
+    myVote = ((v as { vote?: string } | null)?.vote as "up" | "down") ?? null;
   }
-
-  if (existing?.vote === vote) {
-    write(KEYS.threads, threads);
-    write(KEYS.threadVotes, votes);
-    return { upvotes: thread.upvotes, downvotes: thread.downvotes };
-  }
-
-  votes.push({ threadId, userId, vote });
-  if (vote === "up") thread.upvotes += 1;
-  if (vote === "down") thread.downvotes += 1;
-  write(KEYS.threads, threads);
-  write(KEYS.threadVotes, votes);
-  return { upvotes: thread.upvotes, downvotes: thread.downvotes };
+  return { ...thread, myVote };
 }
 
-export function createForumThread(
+export async function voteForumThread(threadId: string, userId: string, vote: "up" | "down"): Promise<{ upvotes: number; downvotes: number }> {
+  const { data } = await supabase.rpc("forum_vote_thread", { _thread_id: threadId, _user_id: userId, _vote: vote });
+  const r = (data as { upvotes?: number; downvotes?: number } | null) ?? {};
+  return { upvotes: r.upvotes ?? 0, downvotes: r.downvotes ?? 0 };
+}
+
+export async function createForumThread(
   categoryId: string,
   title: string,
   content: string,
   author: { id: string; username: string },
   tags?: string[],
   media?: { mediaUrls: string[]; mediaType: "image" | "video" | "none"; documentUrls: string[]; documentNames: string[] },
-): ForumThread {
+): Promise<ForumThread> {
   const autoTags = autoDetectTags(title, content);
   const finalTags = tags && tags.length > 0 ? tags.slice(0, 4) : autoTags;
   const now = new Date().toISOString();
-  const thread: ForumThread = {
-    id: uid(),
-    categoryId,
+  const { data, error } = await supabase.from("forum_threads").insert({
+    category_id: categoryId,
     title: title.trim(),
     content: content.trim(),
-    authorId: author.id,
-    authorUsername: author.username,
+    author_id: author.id,
+    author_username: author.username,
     tags: finalTags,
     upvotes: 0,
     downvotes: 0,
-    mediaUrls: media?.mediaUrls ?? [],
-    mediaType: media?.mediaType ?? "none",
-    documentUrls: media?.documentUrls ?? [],
-    documentNames: media?.documentNames ?? [],
+    media_urls: media?.mediaUrls ?? [],
+    media_type: media?.mediaType ?? "none",
+    document_urls: media?.documentUrls ?? [],
+    document_names: media?.documentNames ?? [],
     pinned: false,
     closed: false,
-    solutionPostId: null,
+    solution_post_id: null,
     views: 0,
-    postCount: 0,
-    createdAt: now,
-    updatedAt: now,
-    lastPostAt: now,
-    lastPostAuthor: author.username,
-  };
-  const threads = read<ForumThread[]>(KEYS.threads, []);
-  threads.push(thread);
-  write(KEYS.threads, threads);
-
-  // Update thread count in category
-  const cats = read<ForumCategory[]>(KEYS.categories, getDefaultCategories());
-  const cat = cats.find(c => c.id === categoryId);
-  if (cat) { cat.threadCount = threads.filter(t => t.categoryId === categoryId).length; }
-  write(KEYS.categories, cats);
-
-  // Create initial post
-  createForumPost(thread.id, content, author);
-
-  return thread;
+    post_count: 1,
+    created_at: now,
+    updated_at: now,
+    last_post_at: now,
+    last_post_author: author.username,
+  } as never).select().single();
+  if (error) throw error;
+  // Create the initial post
+  await createForumPost((data as { id: string }).id, content, author);
+  return mapThread(data as ThreadRow);
 }
 
-export function incrementThreadView(threadId: string) {
-  const threads = read<ForumThread[]>(KEYS.threads, []);
-  const t = threads.find(th => th.id === threadId);
-  if (t) { t.views += 1; write(KEYS.threads, threads); }
+export async function incrementThreadView(threadId: string): Promise<void> {
+  try {
+    await supabase.rpc("forum_bump_views", { _thread_id: threadId });
+  } catch { /* ignore */ }
 }
 
 /* ─── Solutions ─── */
 
-export function markAsSolution(threadId: string, postId: string): boolean {
-  const threads = read<ForumThread[]>(KEYS.threads, []);
-  const t = threads.find(th => th.id === threadId);
-  if (!t) return false;
-  t.solutionPostId = postId;
-  write(KEYS.threads, threads);
-  return true;
+export async function markAsSolution(threadId: string, postId: string): Promise<boolean> {
+  const { error } = await supabase.from("forum_threads").update({ solution_post_id: postId }).eq("id", threadId);
+  return !error;
 }
 
-export function unmarkSolution(threadId: string): boolean {
-  const threads = read<ForumThread[]>(KEYS.threads, []);
-  const t = threads.find(th => th.id === threadId);
-  if (!t) return false;
-  t.solutionPostId = null;
-  write(KEYS.threads, threads);
-  return true;
+export async function unmarkSolution(threadId: string): Promise<boolean> {
+  const { error } = await supabase.from("forum_threads").update({ solution_post_id: null }).eq("id", threadId);
+  return !error;
 }
 
-export function togglePinThread(threadId: string): boolean {
-  const threads = read<ForumThread[]>(KEYS.threads, []);
-  const t = threads.find(th => th.id === threadId);
-  if (!t) return false;
-  t.pinned = !t.pinned;
-  write(KEYS.threads, threads);
-  return t.pinned;
+export async function togglePinThread(threadId: string): Promise<boolean> {
+  const { data } = await supabase.from("forum_threads").select("pinned").eq("id", threadId).maybeSingle();
+  const next = !((data as { pinned?: boolean } | null)?.pinned ?? false);
+  await supabase.from("forum_threads").update({ pinned: next }).eq("id", threadId);
+  return next;
 }
 
-export function toggleCloseThread(threadId: string): boolean {
-  const threads = read<ForumThread[]>(KEYS.threads, []);
-  const t = threads.find(th => th.id === threadId);
-  if (!t) return false;
-  t.closed = !t.closed;
-  write(KEYS.threads, threads);
-  return t.closed;
+export async function toggleCloseThread(threadId: string): Promise<boolean> {
+  const { data } = await supabase.from("forum_threads").select("closed").eq("id", threadId).maybeSingle();
+  const next = !((data as { closed?: boolean } | null)?.closed ?? false);
+  await supabase.from("forum_threads").update({ closed: next }).eq("id", threadId);
+  return next;
 }
 
-export function deleteForumThread(threadId: string) {
-  let threads = read<ForumThread[]>(KEYS.threads, []);
-  const t = threads.find(th => th.id === threadId);
-  threads = threads.filter(th => th.id !== threadId);
-  write(KEYS.threads, threads);
-
-  // Delete all posts
-  let posts = read<ForumPost[]>(KEYS.posts, []);
-  posts = posts.filter(p => p.threadId !== threadId);
-  write(KEYS.posts, posts);
-
-  if (t) {
-    const cats = read<ForumCategory[]>(KEYS.categories, getDefaultCategories());
-    const cat = cats.find(c => c.id === t.categoryId);
-    if (cat) { cat.threadCount = threads.filter(th => th.categoryId === t.categoryId).length; }
-    write(KEYS.categories, cats);
-  }
+export async function deleteForumThread(threadId: string): Promise<void> {
+  await supabase.from("forum_threads").delete().eq("id", threadId);
 }
 
 /* ─── Posts ─── */
 
-export function getForumPosts(threadId: string): ForumPost[] {
-  const posts = read<ForumPost[]>(KEYS.posts, []);
-  const votes = read<ForumVote[]>(KEYS.votes, []);
-  return posts
-    .filter(p => p.threadId === threadId)
-    .map(p => ({
-      ...p,
-      myVote: (votes.find(v => v.postId === p.id)?.vote ?? null) as "up" | "down" | null,
-    }))
-    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+export async function getForumPosts(threadId: string): Promise<ForumPost[]> {
+  const { data, error } = await supabase
+    .from("forum_posts")
+    .select("*")
+    .eq("thread_id", threadId)
+    .order("created_at", { ascending: true });
+  if (error) return [];
+  const posts = ((data ?? []) as PostRow[]).map(mapPost);
+  const me = await currentUserId();
+  if (me && posts.length) {
+    const { data: votes } = await supabase.from("forum_votes").select("post_id,vote").eq("user_id", me).in("post_id", posts.map(p => p.id));
+    const vmap = new Map((votes ?? []).map((v: { post_id: string; vote: string }) => [v.post_id, v.vote]));
+    for (const p of posts) p.myVote = (vmap.get(p.id) as "up" | "down") ?? null;
+  }
+  return posts;
 }
 
-export function createForumPost(
+export async function createForumPost(
   threadId: string,
   content: string,
   author: { id: string; username: string },
   quote: { postId: string | null; content: string | null; author: string | null } = { postId: null, content: null, author: null },
-): ForumPost {
+): Promise<ForumPost> {
   const now = new Date().toISOString();
-  const post: ForumPost = {
-    id: uid(),
-    threadId,
+  const { data, error } = await supabase.from("forum_posts").insert({
+    thread_id: threadId,
     content: content.trim(),
-    authorId: author.id,
-    authorUsername: author.username,
-    parentPostId: null,
-    quotePostId: quote.postId,
-    quoteContent: quote.content,
-    quoteAuthor: quote.author,
+    author_id: author.id,
+    author_username: author.username,
+    parent_post_id: null,
+    quote_post_id: quote.postId,
+    quote_content: quote.content,
+    quote_author: quote.author,
     upvotes: 0,
     downvotes: 0,
-    myVote: null,
-    createdAt: now,
-    editedAt: null,
-  };
-  const posts = read<ForumPost[]>(KEYS.posts, []);
-  posts.push(post);
-  write(KEYS.posts, posts);
-
-  // Update thread post count & lastPostAt
-  const threads = read<ForumThread[]>(KEYS.threads, []);
-  const t = threads.find(th => th.id === threadId);
-  if (t) {
-    t.postCount = posts.filter(p => p.threadId === threadId).length;
-    t.lastPostAt = now;
-    t.lastPostAuthor = author.username;
-    t.updatedAt = now;
-    write(KEYS.threads, threads);
-  }
-
-  return post;
+    created_at: now,
+    edited_at: null,
+  } as never).select().single();
+  if (error) throw error;
+  await supabase.rpc("forum_touch_thread", { _thread_id: threadId, _author: author.username });
+  return mapPost(data as PostRow);
 }
 
-export function editForumPost(postId: string, newContent: string): boolean {
-  const posts = read<ForumPost[]>(KEYS.posts, []);
-  const p = posts.find(po => po.id === postId);
-  if (!p) return false;
-  p.content = newContent.trim();
-  p.editedAt = new Date().toISOString();
-  write(KEYS.posts, posts);
-  return true;
+export async function editForumPost(postId: string, newContent: string): Promise<boolean> {
+  const { error } = await supabase.from("forum_posts").update({ content: newContent.trim(), edited_at: new Date().toISOString() }).eq("id", postId);
+  return !error;
 }
 
-export function deleteForumPost(postId: string): boolean {
-  let posts = read<ForumPost[]>(KEYS.posts, []);
-  const exists = posts.some(p => p.id === postId);
-  if (!exists) return false;
-  posts = posts.filter(p => p.id !== postId);
-  write(KEYS.posts, posts);
-
-  // Update thread post count and clear solution if needed
-  const threads = read<ForumThread[]>(KEYS.threads, []);
-  const affected = threads.filter(t => t.postCount > 0);
-  for (const t of affected) {
-    if (t.solutionPostId === postId) t.solutionPostId = null;
-    t.postCount = posts.filter(p => p.threadId === t.id).length;
+export async function deleteForumPost(postId: string): Promise<boolean> {
+  const { data: post } = await supabase.from("forum_posts").select("thread_id").eq("id", postId).maybeSingle();
+  const { error } = await supabase.from("forum_posts").delete().eq("id", postId);
+  if (!error && post) {
+    try {
+      await supabase.rpc("forum_touch_thread", { _thread_id: (post as { thread_id: string }).thread_id, _author: "" });
+    } catch { /* ignore */ }
   }
-  write(KEYS.threads, threads);
-  return true;
+  return !error;
 }
 
 /* ─── Votes ─── */
 
-export function voteForumPost(postId: string, userId: string, vote: "up" | "down"): { upvotes: number; downvotes: number } {
-  const posts = read<ForumPost[]>(KEYS.posts, []);
-  const post = posts.find(p => p.id === postId);
-  if (!post) return { upvotes: 0, downvotes: 0 };
-
-  let votes = read<ForumVote[]>(KEYS.votes, []);
-  const existing = votes.find(v => v.postId === postId && v.userId === userId);
-
-  // Remove previous vote counts
-  if (existing) {
-    if (existing.vote === "up") post.upvotes = Math.max(0, post.upvotes - 1);
-    if (existing.vote === "down") post.downvotes = Math.max(0, post.downvotes - 1);
-    votes = votes.filter(v => !(v.postId === postId && v.userId === userId));
-  }
-
-  // If same vote as existing, toggle off
-  if (existing?.vote === vote) {
-    write(KEYS.posts, posts);
-    write(KEYS.votes, votes);
-    return { upvotes: post.upvotes, downvotes: post.downvotes };
-  }
-
-  // Add new vote
-  votes.push({ postId, userId, vote });
-  if (vote === "up") post.upvotes += 1;
-  if (vote === "down") post.downvotes += 1;
-  write(KEYS.posts, posts);
-  write(KEYS.votes, votes);
-  return { upvotes: post.upvotes, downvotes: post.downvotes };
+export async function voteForumPost(postId: string, userId: string, vote: "up" | "down"): Promise<{ upvotes: number; downvotes: number }> {
+  const { data } = await supabase.rpc("forum_vote_post", { _post_id: postId, _user_id: userId, _vote: vote });
+  const r = (data as { upvotes?: number; downvotes?: number } | null) ?? {};
+  return { upvotes: r.upvotes ?? 0, downvotes: r.downvotes ?? 0 };
 }

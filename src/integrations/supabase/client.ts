@@ -6,6 +6,7 @@
  * lives in the browser via localStorage.
  */
 
+import { createClient } from "@supabase/supabase-js";
 import type { Database } from './types';
 
 // ───── Types ─────
@@ -508,7 +509,106 @@ const localRpc = async (fn: string, _args?: Record<string, unknown>) => {
       saveTableData('game_purchases', purchases);
       return { data: { ok: true, paid: price, balance: buyerOrbes - price }, error: null };
     }
-    case 'claim_plus_orbes': return { data: { ok: true, amount: 50, reason: 'Reclamo local' }, error: null };
+    case 'claim_plus_orbes': {
+      const { data: { user } } = await localAuth.getUser();
+      if (!user) return { data: { ok: false }, error: null };
+      const profiles = getTableData('profiles');
+      const idx = profiles.findIndex(p => (p as Record<string, unknown>).id === user.id);
+      if (idx === -1) return { data: { ok: false }, error: null };
+      const prof = profiles[idx] as Record<string, unknown>;
+      const last = prof.last_plus_claim_at as string | null;
+      if (last) {
+        const next = new Date(new Date(last).getTime() + 30 * 86400000).toISOString();
+        if (new Date(last).getTime() + 30 * 86400000 > Date.now()) {
+          return { data: { ok: false, already_claimed: true, next_at: next }, error: null };
+        }
+      }
+      const nowIso = now();
+      profiles[idx] = { ...prof, orbes: (prof.orbes as number ?? 0) + 10000, last_plus_claim_at: nowIso };
+      saveTableData('profiles', profiles);
+      const nextAt = new Date(Date.now() + 30 * 86400000).toISOString();
+      return { data: { ok: true, amount: 10000, next_at: nextAt }, error: null };
+    }
+    case 'forum_vote_thread': {
+      const threadId = _args?._thread_id as string;
+      const userId = _args?._user_id as string;
+      const vote = _args?._vote as 'up' | 'down';
+      const threads = getTableData('forum_threads');
+      const thread = threads.find(t => (t as Record<string, unknown>).id === threadId);
+      if (!thread) return { data: { upvotes: 0, downvotes: 0 }, error: null };
+      const t = thread as Record<string, unknown>;
+      let votes = getTableData<Record<string, unknown>>('forum_thread_votes');
+      const existing = votes.find(v => v.thread_id === threadId && v.user_id === userId);
+      if (existing) {
+        if (existing.vote === 'up') t.upvotes = Math.max(0, (t.upvotes as number ?? 0) - 1);
+        if (existing.vote === 'down') t.downvotes = Math.max(0, (t.downvotes as number ?? 0) - 1);
+        votes = votes.filter(v => !(v.thread_id === threadId && v.user_id === userId));
+      }
+      if (existing?.vote === vote) {
+        saveTableData('forum_threads', threads);
+        saveTableData('forum_thread_votes', votes);
+        return { data: { upvotes: t.upvotes, downvotes: t.downvotes }, error: null };
+      }
+      votes.push({ thread_id: threadId, user_id: userId, vote });
+      if (vote === 'up') t.upvotes = (t.upvotes as number ?? 0) + 1;
+      if (vote === 'down') t.downvotes = (t.downvotes as number ?? 0) + 1;
+      saveTableData('forum_threads', threads);
+      saveTableData('forum_thread_votes', votes);
+      return { data: { upvotes: t.upvotes, downvotes: t.downvotes }, error: null };
+    }
+    case 'forum_vote_post': {
+      const postId = _args?._post_id as string;
+      const userId = _args?._user_id as string;
+      const vote = _args?._vote as 'up' | 'down';
+      const posts = getTableData('forum_posts');
+      const post = posts.find(p => (p as Record<string, unknown>).id === postId);
+      if (!post) return { data: { upvotes: 0, downvotes: 0 }, error: null };
+      const p = post as Record<string, unknown>;
+      let votes = getTableData<Record<string, unknown>>('forum_votes');
+      const existing = votes.find(v => v.post_id === postId && v.user_id === userId);
+      if (existing) {
+        if (existing.vote === 'up') p.upvotes = Math.max(0, (p.upvotes as number ?? 0) - 1);
+        if (existing.vote === 'down') p.downvotes = Math.max(0, (p.downvotes as number ?? 0) - 1);
+        votes = votes.filter(v => !(v.post_id === postId && v.user_id === userId));
+      }
+      if (existing?.vote === vote) {
+        saveTableData('forum_posts', posts);
+        saveTableData('forum_votes', votes);
+        return { data: { upvotes: p.upvotes, downvotes: p.downvotes }, error: null };
+      }
+      votes.push({ post_id: postId, user_id: userId, vote });
+      if (vote === 'up') p.upvotes = (p.upvotes as number ?? 0) + 1;
+      if (vote === 'down') p.downvotes = (p.downvotes as number ?? 0) + 1;
+      saveTableData('forum_posts', posts);
+      saveTableData('forum_votes', votes);
+      return { data: { upvotes: p.upvotes, downvotes: p.downvotes }, error: null };
+    }
+    case 'forum_bump_views': {
+      const threadId = _args?._thread_id as string;
+      const threads = getTableData('forum_threads');
+      const thread = threads.find(t => (t as Record<string, unknown>).id === threadId);
+      if (thread) {
+        (thread as Record<string, unknown>).views = ((thread as Record<string, unknown>).views as number ?? 0) + 1;
+        saveTableData('forum_threads', threads);
+      }
+      return { data: null, error: null };
+    }
+    case 'forum_touch_thread': {
+      const threadId = _args?._thread_id as string;
+      const author = (_args?._author as string) ?? '';
+      const threads = getTableData('forum_threads');
+      const thread = threads.find(t => (t as Record<string, unknown>).id === threadId);
+      if (thread) {
+        const t = thread as Record<string, unknown>;
+        const posts = getTableData('forum_posts');
+        t.post_count = posts.filter(p => (p as Record<string, unknown>).thread_id === threadId).length;
+        t.last_post_at = now();
+        t.last_post_author = author;
+        t.updated_at = now();
+        saveTableData('forum_threads', threads);
+      }
+      return { data: null, error: null };
+    }
     case 'activate_plus': return { data: { ok: true, expires_at: new Date(Date.now() + 30 * 86400000).toISOString() }, error: null };
     case 'can_play_game': return { data: true, error: null };
     case 'expire_lapsed_plus': return { data: [], error: null };
@@ -565,11 +665,31 @@ function createLocalClient(): LocalClient {
   };
 }
 
+/* ───── Real Supabase client (when credentials exist) ───── */
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+const hasRealConfig = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
+
+function createSupabaseClient(): LocalClient {
+  if (hasRealConfig) {
+    try {
+      // Real Supabase: auth, data, storage and RPC all work against the cloud.
+      return createClient<Database>(SUPABASE_URL!, SUPABASE_ANON_KEY!, {
+        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
+      }) as unknown as LocalClient;
+    } catch (e) {
+      console.warn('[supabase] Error creando el cliente real, usando modo local:', e);
+    }
+  }
+  return createLocalClient();
+}
+
 let _supabase: LocalClient | undefined;
 
 export const supabase = new Proxy({} as LocalClient, {
   get(_, prop, receiver) {
-    if (!_supabase) _supabase = createLocalClient();
+    if (!_supabase) _supabase = createSupabaseClient();
     return Reflect.get(_supabase, prop, receiver);
   },
 });

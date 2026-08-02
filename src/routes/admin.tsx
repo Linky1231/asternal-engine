@@ -65,8 +65,8 @@ function AdminPage() {
       else if (tab === "bans") setBans(await listBannedEmails());
       else if (tab === "eventos") setEvents(await fetchEvents());
       else {
-        setThreads(getForumThreads());
-        setCategories(getForumCategories());
+        setThreads(await getForumThreads());
+        setCategories(await getForumCategories());
       }
     } finally { setLoading(false); }
   };
@@ -106,23 +106,22 @@ function AdminPage() {
 
   const handleDeleteThread = (threadId: string) => {
     if (!confirm("¿Borrar este hilo permanentemente? También se borrarán todas sus respuestas.")) return;
-    deleteForumThread(threadId);
-    load();
+    deleteForumThread(threadId).then(() => load());
   };
 
   const handleDeleteCategory = (categoryId: string) => {
     const cat = categories.find(c => c.id === categoryId);
     if (!cat) return;
     if (!confirm(`¿Borrar la categoría "${cat.name}"? También se borrarán TODOS los hilos dentro de ella.`)) return;
-    deleteForumCategory(categoryId);
-    load();
+    deleteForumCategory(categoryId).then(() => load());
   };
 
   const handleNewCategory = () => {
     if (!catName.trim()) return;
-    createForumCategory(catName.trim(), catDesc.trim(), catIcon);
-    setCatName(""); setCatDesc(""); setCatIcon("globe"); setShowNewCat(false);
-    load();
+    createForumCategory(catName.trim(), catDesc.trim(), catIcon).then(() => {
+      setCatName(""); setCatDesc(""); setCatIcon("globe"); setShowNewCat(false);
+      load();
+    });
   };
 
   if (allowed === null) return <div className="min-h-screen grid place-items-center text-sm text-muted-foreground">Cargando…</div>;

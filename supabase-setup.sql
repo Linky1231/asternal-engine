@@ -1,0 +1,727 @@
+-- ════════════════════════════════════════════════════════════════════
+--  ASTERNAL — ESQUEMA SUPABASE
+--  Ejecuta TODO este script en: Supabase Dashboard → SQL Editor → Run
+--  (Se puede ejecutar completo o en bloques, es idempotente)
+-- ════════════════════════════════════════════════════════════════════
+
+create extension if not exists pgcrypto;
+
+-- ─────────────────────────── ENUMS ───────────────────────────
+do $$ begin
+  create type public.app_role as enum ('admin','moderator','user');
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create type public.notification_type as enum ('comment','reply','reaction','repost','mention');
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create type public.post_media_type as enum ('none','image','video','link');
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create type public.reaction_type as enum ('like','favorite');
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create type public.report_status as enum ('open','reviewed','dismissed','actioned');
+exception when duplicate_object then null; end $$;
+
+-- ─────────────────────────── HELPERS ───────────────────────────
+create or replace function public.has_role(_role public.app_role, _user_id uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.user_roles where user_id = _user_id and role = _role);
+$$;
+
+create or replace function public.is_mod_or_admin(_user_id uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.user_roles where user_id = _user_id and role in ('admin','moderator'));
+$$;
+
+create or replace function public.is_plus_active(_uid uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select coalesce((select is_plus from public.profiles where id = _uid), false);
+$$;
+
+-- ─────────────────────────── PROFILES ───────────────────────────
+create table if not exists public.profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  username text not null,
+  display_name text,
+  avatar_url text,
+  bio text,
+  banner_url text,
+  pronouns text,
+  location text,
+  status_text text,
+  status_emoji text,
+  accent_color text,
+  favorite_genre text,
+  custom_title text,
+  birthday text,
+  show_orbes boolean not null default true,
+  theme_mode text not null default 'dark',
+  interests text[] not null default '{}',
+  orbes bigint not null default 100,
+  is_plus boolean not null default false,
+  show_plus_badge boolean not null default false,
+  avatar_frame text,
+  social_links jsonb,
+  last_plus_claim_at timestamptz,
+  plus_expires_at timestamptz,
+  name_effect text,
+  profile_background text,
+  post_effect text,
+  creator_card_style jsonb,
+  featured_post_id uuid,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+alter table public.profiles enable row level security;
+
+-- ─────────────────────────── TAGS ───────────────────────────
+create table if not exists public.tags (
+  id uuid primary key default gen_random_uuid(),
+  name text not null unique,
+  created_at timestamptz not null default now()
+);
+alter table public.tags enable row level security;
+
+-- ─────────────────────────── POSTS ───────────────────────────
+create table if not exists public.posts (
+  id uuid primary key default gen_random_uuid(),
+  author_id uuid not null references auth.users(id) on delete cascade,
+  content text not null default '',
+  media_urls text[] not null default '{}',
+  media_type public.post_media_type not null default 'none',
+  link_url text,
+  category text,
+  cover_url text,
+  allow_remix boolean not null default true,
+  price_orbes bigint not null default 0,
+  text_color text,
+  html_content text,
+  document_paths text[] not null default '{}',
+  document_names text[] not null default '{}',
+  pinned_game_id uuid,
+  locked_content text,
+  unlock_reactions_goal bigint,
+  unlock_at timestamptz,
+  entrance_effect text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+alter table public.posts enable row level security;
+
+-- ─────────────────────────── COMMENTS ───────────────────────────
+create table if not exists public.comments (
+  id uuid primary key default gen_random_uuid(),
+  post_id uuid not null references public.posts(id) on delete cascade,
+  author_id uuid not null references auth.users(id) on delete cascade,
+  parent_id uuid references public.comments(id) on delete cascade,
+  content text not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+alter table public.comments enable row level security;
+
+-- ─────────────────────────── REACTIONS ───────────────────────────
+create table if not exists public.reactions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  post_id uuid references public.posts(id) on delete cascade,
+  comment_id uuid references public.comments(id) on delete cascade,
+  type public.reaction_type not null,
+  created_at timestamptz not null default now()
+);
+alter table public.reactions enable row level security;
+
+-- ─────────────────────────── REPOSTS ───────────────────────────
+create table if not exists public.reposts (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  post_id uuid not null references public.posts(id) on delete cascade,
+  quote text,
+  created_at timestamptz not null default now()
+);
+alter table public.reposts enable row level security;
+
+-- ─────────────────────────── NOTIFICATIONS ───────────────────────────
+create table if not exists public.notifications (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  actor_id uuid references auth.users(id) on delete set null,
+  type public.notification_type not null default 'comment',
+  post_id uuid references public.posts(id) on delete cascade,
+  comment_id uuid references public.comments(id) on delete cascade,
+  read boolean not null default false,
+  created_at timestamptz not null default now()
+);
+alter table public.notifications enable row level security;
+
+-- ─────────────────────────── REPORTS / BLOCKS ───────────────────────────
+create table if not exists public.reports (
+  id uuid primary key default gen_random_uuid(),
+  reporter_id uuid not null references auth.users(id) on delete cascade,
+  post_id uuid references public.posts(id) on delete cascade,
+  comment_id uuid references public.comments(id) on delete cascade,
+  reason text not null,
+  status public.report_status not null default 'open',
+  resolved_by uuid references auth.users(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+alter table public.reports enable row level security;
+
+create table if not exists public.blocks (
+  id uuid primary key default gen_random_uuid(),
+  blocker_id uuid not null references auth.users(id) on delete cascade,
+  blocked_id uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  unique (blocker_id, blocked_id)
+);
+alter table public.blocks enable row level security;
+
+-- ─────────────────────────── GAME PURCHASES / ORBES ───────────────────────────
+create table if not exists public.game_purchases (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  post_id uuid not null references public.posts(id) on delete cascade,
+  price_paid bigint not null default 0,
+  purchased_at timestamptz not null default now(),
+  unique (user_id, post_id)
+);
+alter table public.game_purchases enable row level security;
+
+create table if not exists public.orbe_transactions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  amount bigint not null,
+  kind text not null default 'adjustment',
+  post_id uuid references public.posts(id) on delete set null,
+  description text,
+  created_at timestamptz not null default now()
+);
+alter table public.orbe_transactions enable row level security;
+
+-- ─────────────────────────── POLLS ───────────────────────────
+create table if not exists public.post_polls (
+  id uuid primary key default gen_random_uuid(),
+  post_id uuid not null references public.posts(id) on delete cascade,
+  question text not null,
+  options jsonb not null default '[]',
+  created_at timestamptz not null default now()
+);
+alter table public.post_polls enable row level security;
+
+create table if not exists public.post_poll_votes (
+  id uuid primary key default gen_random_uuid(),
+  poll_id uuid not null references public.post_polls(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  option_index int not null,
+  created_at timestamptz not null default now(),
+  unique (poll_id, user_id)
+);
+alter table public.post_poll_votes enable row level security;
+
+create table if not exists public.post_tags (
+  post_id uuid not null references public.posts(id) on delete cascade,
+  tag_id uuid not null references public.tags(id) on delete cascade,
+  primary key (post_id, tag_id)
+);
+alter table public.post_tags enable row level security;
+
+-- ─────────────────────────── USER PROJECTS ───────────────────────────
+create table if not exists public.user_projects (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  name text not null default 'Proyecto',
+  data jsonb not null default '{}',
+  published_post_id uuid references public.posts(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+alter table public.user_projects enable row level security;
+
+-- ─────────────────────────── USER ROLES ───────────────────────────
+create table if not exists public.user_roles (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  role public.app_role not null default 'user',
+  created_at timestamptz not null default now(),
+  unique (user_id, role)
+);
+alter table public.user_roles enable row level security;
+
+-- ─────────────────────────── BANNED EMAILS ───────────────────────────
+create table if not exists public.banned_emails (
+  id uuid primary key default gen_random_uuid(),
+  email text not null unique,
+  reason text,
+  banned_by uuid references auth.users(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+alter table public.banned_emails enable row level security;
+
+-- ─────────────────────────── EVENTS ───────────────────────────
+create table if not exists public.events (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  description text not null default '',
+  banner_url text,
+  starts_at timestamptz not null,
+  ends_at timestamptz not null,
+  prize_pool bigint,
+  prize_description text,
+  rules text,
+  status text not null default 'upcoming',
+  created_by uuid references auth.users(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+alter table public.events enable row level security;
+
+create table if not exists public.event_submissions (
+  id uuid primary key default gen_random_uuid(),
+  event_id uuid not null references public.events(id) on delete cascade,
+  post_id uuid not null references public.posts(id) on delete cascade,
+  author_id uuid not null references auth.users(id) on delete cascade,
+  status text not null default 'submitted',
+  created_at timestamptz not null default now(),
+  unique (event_id, author_id)
+);
+alter table public.event_submissions enable row level security;
+
+-- ─────────────────────────── FOLLOWS ───────────────────────────
+create table if not exists public.follows (
+  id uuid primary key default gen_random_uuid(),
+  follower_id uuid not null references auth.users(id) on delete cascade,
+  following_id uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  unique (follower_id, following_id)
+);
+alter table public.follows enable row level security;
+
+-- ─────────────────────────── FOROS ───────────────────────────
+create table if not exists public.forum_categories (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  description text not null default '',
+  icon text not null default 'globe',
+  sort_order int not null default 0,
+  created_at timestamptz not null default now()
+);
+alter table public.forum_categories enable row level security;
+
+create table if not exists public.forum_threads (
+  id uuid primary key default gen_random_uuid(),
+  category_id uuid not null references public.forum_categories(id) on delete cascade,
+  title text not null,
+  content text not null,
+  author_id uuid not null references auth.users(id) on delete cascade,
+  author_username text not null default '',
+  tags text[] not null default '{}',
+  upvotes int not null default 0,
+  downvotes int not null default 0,
+  media_urls text[] not null default '{}',
+  media_type text not null default 'none',
+  document_urls text[] not null default '{}',
+  document_names text[] not null default '{}',
+  pinned boolean not null default false,
+  closed boolean not null default false,
+  solution_post_id uuid,
+  views int not null default 0,
+  post_count int not null default 1,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  last_post_at timestamptz not null default now(),
+  last_post_author text not null default ''
+);
+alter table public.forum_threads enable row level security;
+
+create table if not exists public.forum_posts (
+  id uuid primary key default gen_random_uuid(),
+  thread_id uuid not null references public.forum_threads(id) on delete cascade,
+  content text not null,
+  author_id uuid not null references auth.users(id) on delete cascade,
+  author_username text not null default '',
+  parent_post_id uuid references public.forum_posts(id) on delete cascade,
+  quote_post_id uuid,
+  quote_content text,
+  quote_author text,
+  upvotes int not null default 0,
+  downvotes int not null default 0,
+  created_at timestamptz not null default now(),
+  edited_at timestamptz
+);
+alter table public.forum_posts enable row level security;
+
+alter table public.forum_threads
+  add constraint forum_threads_solution_fk foreign key (solution_post_id)
+  references public.forum_posts(id) on delete set null;
+
+create table if not exists public.forum_votes (
+  post_id uuid not null references public.forum_posts(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  vote text not null check (vote in ('up','down')),
+  created_at timestamptz not null default now(),
+  primary key (post_id, user_id)
+);
+alter table public.forum_votes enable row level security;
+
+create table if not exists public.forum_thread_votes (
+  thread_id uuid not null references public.forum_threads(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  vote text not null check (vote in ('up','down')),
+  created_at timestamptz not null default now(),
+  primary key (thread_id, user_id)
+);
+alter table public.forum_thread_votes enable row level security;
+
+-- ─────────────────────────── RLS POLICIES ───────────────────────────
+
+-- profiles: lectura pública, edición propia o staff
+create policy profiles_read on public.profiles for select using (true);
+create policy profiles_insert on public.profiles for insert with check (auth.uid() = id);
+create policy profiles_update on public.profiles for update using (auth.uid() = id or public.is_mod_or_admin(auth.uid()));
+
+-- tags
+create policy tags_read on public.tags for select using (true);
+create policy tags_insert on public.tags for insert with check (true);
+
+-- posts: lectura pública (no borrados), insert/update/delete autor o staff
+create policy posts_read on public.posts for select using (deleted_at is null or author_id = auth.uid());
+create policy posts_insert on public.posts for insert with check (auth.uid() = author_id);
+create policy posts_update on public.posts for update using (auth.uid() = author_id or public.is_mod_or_admin(auth.uid()));
+create policy posts_delete on public.posts for delete using (auth.uid() = author_id or public.is_mod_or_admin(auth.uid()));
+
+-- comments
+create policy comments_read on public.comments for select using (true);
+create policy comments_insert on public.comments for insert with check (auth.uid() = author_id);
+create policy comments_update on public.comments for update using (auth.uid() = author_id or public.is_mod_or_admin(auth.uid()));
+create policy comments_delete on public.comments for delete using (auth.uid() = author_id or public.is_mod_or_admin(auth.uid()));
+
+-- reactions
+create policy reactions_read on public.reactions for select using (true);
+create policy reactions_insert on public.reactions for insert with check (auth.uid() = user_id);
+create policy reactions_delete on public.reactions for delete using (auth.uid() = user_id);
+
+-- reposts
+create policy reposts_read on public.reposts for select using (true);
+create policy reposts_insert on public.reposts for insert with check (auth.uid() = user_id);
+create policy reposts_delete on public.reposts for delete using (auth.uid() = user_id);
+
+-- notifications: solo el dueño
+create policy notif_read on public.notifications for select using (auth.uid() = user_id);
+create policy notif_insert on public.notifications for insert with check (auth.uid() = user_id);
+create policy notif_update on public.notifications for update using (auth.uid() = user_id);
+
+-- reports
+create policy reports_read on public.reports for select using (public.is_mod_or_admin(auth.uid()));
+create policy reports_insert on public.reports for insert with check (auth.uid() = reporter_id);
+
+-- blocks
+create policy blocks_read on public.blocks for select using (auth.uid() = blocker_id);
+create policy blocks_insert on public.blocks for insert with check (auth.uid() = blocker_id);
+create policy blocks_delete on public.blocks for delete using (auth.uid() = blocker_id);
+
+-- game_purchases: lectura pública (para saber qué se posee), inserción vía RPC
+create policy purchases_read on public.game_purchases for select using (true);
+create policy purchases_insert on public.game_purchases for insert with check (auth.uid() = user_id);
+
+-- orbe_transactions: solo el dueño
+create policy orbex_read on public.orbe_transactions for select using (auth.uid() = user_id);
+
+-- polls
+create policy polls_read on public.post_polls for select using (true);
+create policy polls_insert on public.post_polls for insert with check (true);
+create policy poll_votes_read on public.post_poll_votes for select using (true);
+create policy poll_votes_insert on public.post_poll_votes for insert with check (auth.uid() = user_id);
+create policy poll_votes_delete on public.post_poll_votes for delete using (auth.uid() = user_id);
+create policy post_tags_read on public.post_tags for select using (true);
+create policy post_tags_insert on public.post_tags for insert with check (true);
+
+-- user_projects: solo el dueño
+create policy projects_read on public.user_projects for select using (auth.uid() = user_id);
+create policy projects_insert on public.user_projects for insert with check (auth.uid() = user_id);
+create policy projects_update on public.user_projects for update using (auth.uid() = user_id);
+create policy projects_delete on public.user_projects for delete using (auth.uid() = user_id);
+
+-- user_roles: lectura pública (para saber mods/admin), gestión staff
+create policy roles_read on public.user_roles for select using (true);
+create policy roles_insert on public.user_roles for insert with check (public.has_role('admin', auth.uid()));
+create policy roles_delete on public.user_roles for delete using (public.has_role('admin', auth.uid()));
+
+-- banned_emails: solo staff
+create policy bans_read on public.banned_emails for select using (public.is_mod_or_admin(auth.uid()));
+create policy bans_insert on public.banned_emails for insert with check (public.is_mod_or_admin(auth.uid()));
+create policy bans_delete on public.banned_emails for delete using (public.is_mod_or_admin(auth.uid()));
+
+-- events: lectura pública, creación/gestión solo admin
+create policy events_read on public.events for select using (true);
+create policy events_insert on public.events for insert with check (public.has_role('admin', auth.uid()));
+create policy events_update on public.events for update using (public.has_role('admin', auth.uid()));
+create policy events_delete on public.events for delete using (public.has_role('admin', auth.uid()));
+create policy subs_read on public.event_submissions for select using (true);
+create policy subs_insert on public.event_submissions for insert with check (auth.uid() = author_id);
+
+-- follows
+create policy follows_read on public.follows for select using (true);
+create policy follows_insert on public.follows for insert with check (auth.uid() = follower_id);
+create policy follows_delete on public.follows for delete using (auth.uid() = follower_id);
+
+-- foros
+create policy fc_read on public.forum_categories for select using (true);
+create policy fc_insert on public.forum_categories for insert with check (public.is_mod_or_admin(auth.uid()));
+create policy fc_delete on public.forum_categories for delete using (public.is_mod_or_admin(auth.uid()));
+
+create policy ft_read on public.forum_threads for select using (true);
+create policy ft_insert on public.forum_threads for insert with check (auth.uid() = author_id);
+create policy ft_update on public.forum_threads for update using (auth.uid() = author_id or public.is_mod_or_admin(auth.uid()));
+create policy ft_delete on public.forum_threads for delete using (auth.uid() = author_id or public.is_mod_or_admin(auth.uid()));
+
+create policy fp_read on public.forum_posts for select using (true);
+create policy fp_insert on public.forum_posts for insert with check (auth.uid() = author_id);
+create policy fp_update on public.forum_posts for update using (auth.uid() = author_id or public.is_mod_or_admin(auth.uid()));
+create policy fp_delete on public.forum_posts for delete using (auth.uid() = author_id or public.is_mod_or_admin(auth.uid()));
+
+create policy fv_read on public.forum_votes for select using (true);
+create policy fv_insert on public.forum_votes for insert with check (auth.uid() = user_id);
+create policy fv_delete on public.forum_votes for delete using (auth.uid() = user_id);
+
+create policy ftv_read on public.forum_thread_votes for select using (true);
+create policy ftv_insert on public.forum_thread_votes for insert with check (auth.uid() = user_id);
+create policy ftv_delete on public.forum_thread_votes for delete using (auth.uid() = user_id);
+
+-- ─────────────────────────── FUNCIONES RPC ───────────────────────────
+
+-- Compra de juegos/obras: descuenta orbes al comprador y acredita al vendedor
+create or replace function public.purchase_game(_post_id uuid)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  v_post public.posts%rowtype;
+  v_buyer public.profiles%rowtype;
+  v_seller public.profiles%rowtype;
+  v_price bigint;
+begin
+  select * into v_post from public.posts where id = _post_id and deleted_at is null;
+  if not found then return jsonb_build_object('ok', false); end if;
+  v_price := coalesce(v_post.price_orbes, 0);
+  if v_price <= 0 then return jsonb_build_object('ok', true, 'free', true, 'paid', 0); end if;
+  if v_post.author_id = auth.uid() then return jsonb_build_object('ok', true, 'free', true, 'paid', 0); end if;
+  select * into v_buyer from public.profiles where id = auth.uid();
+  if not found then return jsonb_build_object('ok', false); end if;
+  if exists (select 1 from public.game_purchases where user_id = auth.uid() and post_id = _post_id) then
+    return jsonb_build_object('ok', false, 'already_owned', true);
+  end if;
+  if coalesce(v_buyer.orbes, 0) < v_price then
+    return jsonb_build_object('ok', false, 'paid', 0, 'balance', coalesce(v_buyer.orbes, 0));
+  end if;
+  update public.profiles set orbes = orbes - v_price, updated_at = now() where id = auth.uid();
+  if v_post.author_id is not null then
+    select * into v_seller from public.profiles where id = v_post.author_id;
+    if found then
+      update public.profiles set orbes = orbes + v_price, updated_at = now() where id = v_post.author_id;
+    end if;
+  end if;
+  insert into public.game_purchases (user_id, post_id, price_paid) values (auth.uid(), _post_id, v_price);
+  insert into public.orbe_transactions (user_id, amount, kind, post_id, description)
+    values (auth.uid(), -v_price, 'game_purchase', _post_id, 'Compra de juego/obra');
+  if v_post.author_id is not null then
+    insert into public.orbe_transactions (user_id, amount, kind, post_id, description)
+      values (v_post.author_id, v_price, 'game_purchase', _post_id, 'Venta de juego/obra');
+  end if;
+  return jsonb_build_object('ok', true, 'paid', v_price, 'balance', coalesce(v_buyer.orbes, 0) - v_price);
+end $$;
+
+create or replace function public.purchase_artwork(_post_id uuid)
+returns jsonb language plpgsql security definer set search_path = public as $$
+begin
+  return public.purchase_game(_post_id);
+end $$;
+
+-- Reclamo mensual de orbes Plus (10000/mes)
+create or replace function public.claim_plus_orbes()
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  v_prof public.profiles%rowtype;
+  v_next timestamptz;
+begin
+  select * into v_prof from public.profiles where id = auth.uid();
+  if not found then return jsonb_build_object('ok', false); end if;
+  if v_prof.last_plus_claim_at is not null and v_prof.last_plus_claim_at > now() - interval '30 days' then
+    v_next := v_prof.last_plus_claim_at + interval '30 days';
+    return jsonb_build_object('ok', false, 'already_claimed', true, 'next_at', to_char(v_next, 'YYYY-MM-DD"T"HH24:MI:SS"Z"'));
+  end if;
+  update public.profiles set orbes = orbes + 10000, last_plus_claim_at = now(), updated_at = now() where id = auth.uid();
+  insert into public.orbe_transactions (user_id, amount, kind, description)
+    values (auth.uid(), 10000, 'welcome_bonus', 'Reclamo mensual de orbes');
+  return jsonb_build_object('ok', true, 'amount', 10000);
+end $$;
+
+-- Activar Plus durante N meses
+create or replace function public.activate_plus(_months int default 1)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  v_exp timestamptz;
+begin
+  v_exp := now() + make_interval(months => greatest(1, coalesce(_months, 1)));
+  update public.profiles set is_plus = true, plus_expires_at = v_exp, updated_at = now() where id = auth.uid();
+  return jsonb_build_object('ok', true, 'expires_at', to_char(v_exp, 'YYYY-MM-DD"T"HH24:MI:SS"Z"'));
+end $$;
+
+create or replace function public.can_play_game(_post_id uuid)
+returns boolean language plpgsql security definer set search_path = public as $$
+declare v_post public.posts%rowtype;
+begin
+  select * into v_post from public.posts where id = _post_id and deleted_at is null;
+  if not found then return false; end if;
+  if coalesce(v_post.price_orbes, 0) <= 0 or v_post.author_id = auth.uid() then return true; end if;
+  return exists (select 1 from public.game_purchases where user_id = auth.uid() and post_id = _post_id);
+end $$;
+
+create or replace function public.expire_lapsed_plus()
+returns int language plpgsql security definer set search_path = public as $$
+declare v_count int;
+begin
+  update public.profiles set is_plus = false, updated_at = now()
+    where is_plus = true and plus_expires_at is not null and plus_expires_at < now();
+  get diagnostics v_count = row_count;
+  return v_count;
+end $$;
+
+-- Voto en hilo del foro (toggle)
+create or replace function public.forum_vote_thread(_thread_id uuid, _user_id uuid, _vote text)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  v_existing text;
+  v_up int; v_down int;
+begin
+  select vote into v_existing from public.forum_thread_votes where thread_id = _thread_id and user_id = _user_id;
+  if v_existing = _vote then
+    delete from public.forum_thread_votes where thread_id = _thread_id and user_id = _user_id;
+    if _vote = 'up' then update public.forum_threads set upvotes = greatest(0, upvotes - 1) where id = _thread_id;
+    else update public.forum_threads set downvotes = greatest(0, downvotes - 1) where id = _thread_id; end if;
+  else
+    if v_existing is not null then
+      delete from public.forum_thread_votes where thread_id = _thread_id and user_id = _user_id;
+      if v_existing = 'up' then update public.forum_threads set upvotes = greatest(0, upvotes - 1) where id = _thread_id;
+      else update public.forum_threads set downvotes = greatest(0, downvotes - 1) where id = _thread_id; end if;
+    end if;
+    insert into public.forum_thread_votes (thread_id, user_id, vote) values (_thread_id, _user_id, _vote);
+    if _vote = 'up' then update public.forum_threads set upvotes = upvotes + 1 where id = _thread_id;
+    else update public.forum_threads set downvotes = downvotes + 1 where id = _thread_id; end if;
+  end if;
+  select upvotes, downvotes into v_up, v_down from public.forum_threads where id = _thread_id;
+  return jsonb_build_object('upvotes', v_up, 'downvotes', v_down);
+end $$;
+
+-- Voto en respuesta del foro (toggle)
+create or replace function public.forum_vote_post(_post_id uuid, _user_id uuid, _vote text)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  v_existing text;
+  v_up int; v_down int;
+begin
+  select vote into v_existing from public.forum_votes where post_id = _post_id and user_id = _user_id;
+  if v_existing = _vote then
+    delete from public.forum_votes where post_id = _post_id and user_id = _user_id;
+    if _vote = 'up' then update public.forum_posts set upvotes = greatest(0, upvotes - 1) where id = _post_id;
+    else update public.forum_posts set downvotes = greatest(0, downvotes - 1) where id = _post_id; end if;
+  else
+    if v_existing is not null then
+      delete from public.forum_votes where post_id = _post_id and user_id = _user_id;
+      if v_existing = 'up' then update public.forum_posts set upvotes = greatest(0, upvotes - 1) where id = _post_id;
+      else update public.forum_posts set downvotes = greatest(0, downvotes - 1) where id = _post_id; end if;
+    end if;
+    insert into public.forum_votes (post_id, user_id, vote) values (_post_id, _user_id, _vote);
+    if _vote = 'up' then update public.forum_posts set upvotes = upvotes + 1 where id = _post_id;
+    else update public.forum_posts set downvotes = downvotes + 1 where id = _post_id; end if;
+  end if;
+  select upvotes, downvotes into v_up, v_down from public.forum_posts where id = _post_id;
+  return jsonb_build_object('upvotes', v_up, 'downvotes', v_down);
+end $$;
+
+-- Incrementar vistas de hilo
+create or replace function public.forum_bump_views(_thread_id uuid)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  update public.forum_threads set views = views + 1 where id = _thread_id;
+end $$;
+
+-- Actualizar contador y última actividad de un hilo tras una nueva respuesta
+create or replace function public.forum_touch_thread(_thread_id uuid, _author text)
+returns void language plpgsql security definer set search_path = public as $$
+declare v_count int;
+begin
+  select count(*) into v_count from public.forum_posts where thread_id = _thread_id;
+  update public.forum_threads
+    set post_count = v_count,
+        last_post_at = now(),
+        last_post_author = coalesce(_author, ''),
+        updated_at = now()
+    where id = _thread_id;
+end $$;
+
+-- ─────────────────────────── TRIGGER PERFIL + ADMIN ───────────────────────────
+create or replace function public.handle_new_user()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.profiles (id, username, display_name)
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data->>'username', split_part(new.email, '@', 1)),
+    new.raw_user_meta_data->>'display_name'
+  )
+  on conflict (id) do nothing;
+  -- Auto-asignar rol admin a la cuenta propietaria
+  if lower(new.email) = 'judithreyes534@gmail.com' then
+    insert into public.user_roles (user_id, role) values (new.id, 'admin'::public.app_role)
+    on conflict (user_id, role) do nothing;
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();
+
+-- Backfill: perfiles y rol admin para usuarios que ya existan
+insert into public.profiles (id, username)
+select u.id, coalesce(u.raw_user_meta_data->>'username', split_part(u.email, '@', 1))
+from auth.users u
+on conflict (id) do nothing;
+
+insert into public.user_roles (user_id, role)
+select u.id, 'admin'::public.app_role
+from auth.users u
+where lower(u.email) = 'judithreyes534@gmail.com'
+on conflict (user_id, role) do nothing;
+
+-- ─────────────────────────── CATEGORÍAS DE FORO POR DEFECTO ───────────────────────────
+insert into public.forum_categories (id, name, description, icon, sort_order) values
+  ('00000000-0000-4000-8000-000000000001', 'General',   'Charlas, anuncios y temas generales de la comunidad', 'globe', 0),
+  ('00000000-0000-4000-8000-000000000002', 'Ayuda',     'Dudas sobre el editor, scripts, física y más', 'life-buoy', 1),
+  ('00000000-0000-4000-8000-000000000003', 'Showcase',  'Comparte tus juegos, arte y creaciones', 'trophy', 2),
+  ('00000000-0000-4000-8000-000000000004', 'Feedback',  'Sugerencias y mejoras para Asternal', 'message-circle-more', 3),
+  ('00000000-0000-4000-8000-000000000005', 'Off-Topic', 'Todo lo demás: memes, música, charla libre', 'coffee', 4)
+on conflict (id) do nothing;
+
+-- ─────────────────────────── STORAGE (BUCKET post-media) ───────────────────────────
+insert into storage.buckets (id, name, public)
+values ('post-media', 'post-media', true)
+on conflict (id) do nothing;
+
+create policy "post-media public read" on storage.objects
+  for select using (bucket_id = 'post-media');
+create policy "post-media authenticated upload" on storage.objects
+  for insert to authenticated with check (bucket_id = 'post-media');
+create policy "post-media owner update" on storage.objects
+  for update to authenticated using (bucket_id = 'post-media');
+create policy "post-media owner delete" on storage.objects
+  for delete to authenticated using (bucket_id = 'post-media');
+
+-- ════════════════════════════════════════════════════════════════════
+--  FIN DEL SCRIPT
+-- ════════════════════════════════════════════════════════════════════
