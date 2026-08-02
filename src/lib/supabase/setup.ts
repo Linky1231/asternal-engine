@@ -104,31 +104,55 @@ export async function runSchemaSetup(accessToken: string): Promise<SetupResult> 
   if (!token.startsWith("sbp_")) {
     return { ok: false, message: "El token debe empezar por sbp_ (token de acceso personal)." };
   }
-  try {
-    const res = await fetch(`https://api.supabase.com/v1/projects/${ref}/database/query`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ query: schemaSql, read_only: false, parameters: [] }),
-    });
-    const text = await res.text();
-    if (!res.ok) {
-      let msg = text;
-      try { msg = (JSON.parse(text) as { message?: string })?.message ?? text; } catch { /* noop */ }
-      return { ok: false, message: msg.slice(0, 500) };
+
+  const body = JSON.stringify({ query: schemaSql, read_only: false, parameters: [] });
+  const headers = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  };
+
+  // 1) Ruta por el proxy del dev server (mismo origen → sin CORS).
+  //    Disponible cuando la app corre sobre el dev server de Vite.
+  // 2) Ruta directa a la Management API (solo funciona si el origen está
+  //    permitido por Supabase; en general dará error CORS desde el navegador).
+  const routes: { url: string; viaProxy: boolean }[] = [
+    { url: `/__supabase-mgmt/projects/${ref}/database/query`, viaProxy: true },
+    { url: `https://api.supabase.com/v1/projects/${ref}/database/query`, viaProxy: false },
+  ];
+
+  let lastError = "";
+  for (const route of routes) {
+    try {
+      const res = await fetch(route.url, { method: "POST", headers, body });
+      const text = await res.text();
+      // El proxy del dev server devuelve el HTML de la app (200) si la ruta no
+      // se reenvía (p. ej. en build estático). Si no es JSON, ignoramos la ruta.
+      const looksJson = text.trim().startsWith("{") || text.trim().startsWith("[");
+      if (!looksJson) {
+        lastError = "La ruta no devolvió JSON (proxy no disponible).";
+        continue;
+      }
+      if (!res.ok) {
+        let msg = text;
+        try { msg = (JSON.parse(text) as { message?: string })?.message ?? text; } catch { /* noop */ }
+        return { ok: false, message: msg.slice(0, 500) };
+      }
+      return { ok: true, message: "Esquema creado correctamente. Ya puedes usar la plataforma." };
+    } catch (e) {
+      const err = e as Error;
+      const msg = err?.message ?? "Error desconocido";
+      if (/Failed to fetch|NetworkError|Load failed|CORS/i.test(msg)) {
+        lastError = "Bloqueo CORS de Supabase en esta ruta.";
+      } else {
+        lastError = msg;
+      }
     }
-    return { ok: true, message: "Esquema creado correctamente. Ya puedes usar la plataforma." };
-  } catch (e) {
-    const err = e as Error;
-    // CORS / red: la Management API solo acepta llamadas desde supabase.com.
-    if (/Failed to fetch|NetworkError|Load failed|CORS/i.test(err?.message ?? "")) {
-      return {
-        ok: false,
-        message: "El navegador no puede llamar a la Management API de Supabase (bloqueo CORS). Usa la opción 'Copiar SQL' y pégalo en el SQL Editor de tu proyecto.",
-      };
-    }
-    return { ok: false, message: err?.message ?? "Error desconocido" };
   }
+
+  return {
+    ok: false,
+    message:
+      "No se pudo ejecutar el SQL desde el navegador (" + lastError + "). " +
+      "Usa la opción 'Copiar SQL' y pégalo en el SQL Editor de tu proyecto, o ejecuta la app desde el dev server para que el botón automático funcione.",
+  };
 }

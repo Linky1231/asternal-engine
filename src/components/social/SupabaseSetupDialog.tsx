@@ -22,7 +22,7 @@ import {
   saveSupabaseCredentials,
 } from "@/integrations/supabase/client";
 import {
-  Database, Loader2, CheckCircle2, AlertTriangle, ShieldCheck, KeyRound, ExternalLink, Plug, RefreshCw, Save, Link2, Copy, TerminalSquare, Download,
+  Database, Loader2, CheckCircle2, AlertTriangle, ShieldCheck, KeyRound, ExternalLink, Plug, RefreshCw, Save, Link2, Copy, TerminalSquare, Download, Sparkles,
 } from "lucide-react";
 
 type Status = "checking" | "local" | "ready" | "missing";
@@ -61,6 +61,11 @@ export function SupabaseSetupDialog({ open, onOpenChange }: { open: boolean; onO
     setResult(r);
     if (r.ok) setStatus("ready");
     setBusy(false);
+  };
+
+  const recheck = () => {
+    setStatus("checking");
+    checkSchemaReady().then(ready => setStatus(ready ? "ready" : "missing"));
   };
 
   const saveAndConnect = () => {
@@ -258,24 +263,83 @@ export function SupabaseSetupDialog({ open, onOpenChange }: { open: boolean; onO
                     <div className="font-semibold text-foreground">La base de datos está vacía</div>
                     <div className="mt-0.5">
                       Tu clave anon no puede crear tablas (es una medida de seguridad de Supabase).
-                      Elige una de estas dos formas de crear el esquema:
+                      Con tu token de acceso personal la app crea todo el esquema automáticamente.
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* ── Plan A: SQL Editor (recomendado, sin CORS) ── */}
+              {/* ── Opción 1 (principal): automático con el token ── */}
+              <div className="rounded-xl border border-primary/25 bg-primary/[0.05] p-3.5 space-y-2.5">
+                <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                  <Sparkles size={14} className="shrink-0 mt-0.5 text-primary" />
+                  <div>
+                    <div className="font-semibold text-foreground">Opción 1 · Automático (solo pega el token)</div>
+                    <div className="mt-0.5 leading-relaxed">
+                      Pega tu token y pulsa el botón: la app crea tablas, funciones, permisos y almacenamiento al instante.
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5">
+                    <KeyRound size={12} /> Token de acceso personal (sbp_…)
+                  </label>
+                  <input
+                    value={token}
+                    onChange={e => setToken(e.target.value)}
+                    type="password"
+                    placeholder="sbp_xxxxxxxxxxxxxxxx"
+                    autoComplete="off"
+                    className="w-full bg-white/70 dark:bg-input/40 border border-border/60 rounded-xl px-3.5 py-2.5 text-sm font-mono outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all"
+                  />
+                  <p className="text-[10px] text-muted-foreground/50 leading-relaxed flex items-start gap-1.5">
+                    <ExternalLink size={10} className="shrink-0 mt-0.5" />
+                    Cómo obtenerlo: Supabase Dashboard → <b>Account → Access Tokens → Generate new token</b>.
+                    El token solo se usa para esta instalación y no se guarda.
+                  </p>
+                </div>
+
+                <button
+                  onClick={doSetup}
+                  disabled={busy || !token.trim().startsWith("sbp_")}
+                  className="w-full py-2.5 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-xs font-display font-semibold tracking-wider disabled:opacity-40 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md shadow-primary/20"
+                >
+                  {busy ? <Loader2 size={14} className="animate-spin" /> : <Plug size={14} />}
+                  {busy ? "CREANDO ESQUEMA…" : "CREAR ESQUEMA AUTOMÁTICAMENTE"}
+                </button>
+
+                {result && (
+                  <div className={`rounded-xl border p-3 text-[11px] flex items-start gap-2 ${
+                    result.ok
+                      ? "border-emerald-200/60 bg-emerald-50/60 text-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-300"
+                      : "border-rose-200/60 bg-rose-50/60 text-rose-800 dark:bg-rose-950/20 dark:text-rose-300"
+                  }`}>
+                    {result.ok ? <CheckCircle2 size={13} className="shrink-0 mt-0.5" /> : <AlertTriangle size={13} className="shrink-0 mt-0.5" />}
+                    <span className="break-words">{result.message}</span>
+                  </div>
+                )}
+
+                <button
+                  onClick={recheck}
+                  className="w-full py-2 rounded-xl border border-border/70 bg-background text-muted-foreground text-[11px] font-semibold tracking-wide hover:bg-muted/60 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
+                >
+                  <RefreshCw size={12} /> COMPROBAR DE NUEVO
+                </button>
+              </div>
+
+              {/* ── Opción 2 (respaldo): SQL Editor manual ── */}
               <div className="rounded-xl border border-emerald-200/60 bg-emerald-50/50 dark:bg-emerald-950/15 dark:border-emerald-800/40 p-3.5 space-y-2.5">
                 <div className="flex items-start gap-2 text-xs text-muted-foreground">
                   <TerminalSquare size={14} className="shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
                   <div>
-                    <div className="font-semibold text-foreground">Opción 1 · SQL Editor (recomendado)</div>
+                    <div className="font-semibold text-foreground">Opción 2 · SQL Editor (manual)</div>
                     <div className="mt-0.5 leading-relaxed">
-                      El navegador no puede ejecutar la Management API por un bloqueo de seguridad (CORS).
-                      Lo más fiable: copia el SQL de abajo y pégalo en el SQL Editor de tu proyecto.
+                      Si el botón automático no está disponible, copia el SQL y pégalo en el SQL Editor de tu proyecto.
                     </div>
                   </div>
                 </div>
+
                 <button
                   onClick={copySql}
                   className="w-full py-2.5 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-xs font-display font-semibold tracking-wider active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md shadow-primary/20"
@@ -300,29 +364,6 @@ export function SupabaseSetupDialog({ open, onOpenChange }: { open: boolean; onO
                   >
                     <ExternalLink size={12} /> ABRIR SQL EDITOR DE MI PROYECTO
                   </a>
-                )}
-
-                {showSqlRaw && (
-                  <div className="space-y-1.5">
-                    <p className="text-[10px] text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
-                      <AlertTriangle size={10} className="shrink-0 mt-0.5" />
-                      El portapapeles está bloqueado aquí. Pulsa «Seleccionar todo», luego copia manteniendo pulsado el texto.
-                    </p>
-                    <button
-                      onClick={() => selectAllSql(document.getElementById("sb-setup-sql-raw") as HTMLTextAreaElement | null)}
-                      className="w-full py-2 rounded-xl border border-primary/30 bg-primary/5 text-primary text-[11px] font-semibold tracking-wide hover:bg-primary/10 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
-                    >
-                      <CheckCircle2 size={12} /> SELECCIONAR TODO
-                    </button>
-                    <textarea
-                      id="sb-setup-sql-raw"
-                      readOnly
-                      value={getSchemaSql()}
-                      onFocus={e => e.currentTarget.select()}
-                      spellCheck={false}
-                      className="w-full h-44 font-mono text-[10px] leading-relaxed bg-white/70 dark:bg-black/25 border border-border/70 rounded-xl p-3 outline-none focus:border-primary/40 resize-y"
-                    />
-                  </div>
                 )}
 
                 <button
@@ -359,69 +400,33 @@ export function SupabaseSetupDialog({ open, onOpenChange }: { open: boolean; onO
                   <Copy size={12} /> {showSqlRaw ? "OCULTAR TEXTO SQL" : "VER TEXTO SQL MANUALMENTE"}
                 </button>
 
+                {showSqlRaw && (
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+                      <AlertTriangle size={10} className="shrink-0 mt-0.5" />
+                      El portapapeles está bloqueado aquí. Pulsa «Seleccionar todo», luego copia manteniendo pulsado el texto.
+                    </p>
+                    <button
+                      onClick={() => selectAllSql(document.getElementById("sb-setup-sql-raw") as HTMLTextAreaElement | null)}
+                      className="w-full py-2 rounded-xl border border-primary/30 bg-primary/5 text-primary text-[11px] font-semibold tracking-wide hover:bg-primary/10 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
+                    >
+                      <CheckCircle2 size={12} /> SELECCIONAR TODO
+                    </button>
+                    <textarea
+                      id="sb-setup-sql-raw"
+                      readOnly
+                      value={getSchemaSql()}
+                      onFocus={e => e.currentTarget.select()}
+                      spellCheck={false}
+                      className="w-full h-44 font-mono text-[10px] leading-relaxed bg-white/70 dark:bg-black/25 border border-border/70 rounded-xl p-3 outline-none focus:border-primary/40 resize-y"
+                    />
+                  </div>
+                )}
+
                 <p className="text-[10px] text-muted-foreground/60 leading-relaxed">
                   Después de pegar el SQL en el editor: pulsa <b>Run</b> y espera a que termine (~10 s). Luego vuelve aquí y pulsa «Comprobar de nuevo».
                 </p>
               </div>
-
-              {/* ── Plan B: Management API (si falla por CORS, usar Opción 1) ── */}
-              <div className="rounded-xl border border-border/60 bg-muted/30 p-3.5 space-y-2.5">
-                <div className="flex items-start gap-2 text-xs text-muted-foreground">
-                  <KeyRound size={14} className="shrink-0 mt-0.5 text-primary" />
-                  <div>
-                    <div className="font-semibold text-foreground">Opción 2 · Automático con token (puede fallar por CORS)</div>
-                    <div className="mt-0.5">
-                      Si prefieres intentarlo automático con tu token de acceso personal:
-                    </div>
-                  </div>
-                </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5">
-                  <KeyRound size={12} /> Token de acceso personal (sbp_…)
-                </label>
-                <input
-                  value={token}
-                  onChange={e => setToken(e.target.value)}
-                  type="password"
-                  placeholder="sbp_xxxxxxxxxxxxxxxx"
-                  autoComplete="off"
-                  className="w-full bg-white/70 dark:bg-input/40 border border-border/60 rounded-xl px-3.5 py-2.5 text-sm font-mono outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all"
-                />
-                <p className="text-[10px] text-muted-foreground/50 leading-relaxed flex items-start gap-1.5">
-                  <ExternalLink size={10} className="shrink-0 mt-0.5" />
-                  Cómo obtenerlo: Supabase Dashboard → <b>Account → Access Tokens → Generate new token</b>.
-                  El token solo se usa para esta instalación y no se guarda.
-                </p>
-              </div>
-
-              <button
-                onClick={() => { setStatus("checking"); checkSchemaReady().then(ready => setStatus(ready ? "ready" : "missing")); }}
-                className="w-full py-2 rounded-xl border border-border/70 bg-background text-muted-foreground text-[11px] font-semibold tracking-wide hover:bg-muted/60 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
-              >
-                <RefreshCw size={12} /> COMPROBAR DE NUEVO
-              </button>
-              </div>
-
-              <button
-                onClick={doSetup}
-                disabled={busy || !token.trim().startsWith("sbp_")}
-                className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-display font-semibold tracking-wider disabled:opacity-40 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md shadow-primary/20"
-              >
-                {busy ? <Loader2 size={14} className="animate-spin" /> : <Plug size={14} />}
-                {busy ? "CREANDO ESQUEMA…" : "CREAR ESQUEMA AUTOMÁTICAMENTE"}
-              </button>
-
-              {result && (
-                <div className={`rounded-xl border p-3 text-[11px] flex items-start gap-2 ${
-                  result.ok
-                    ? "border-emerald-200/60 bg-emerald-50/60 text-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-300"
-                    : "border-rose-200/60 bg-rose-50/60 text-rose-800 dark:bg-rose-950/20 dark:text-rose-300"
-                }`}>
-                  {result.ok ? <CheckCircle2 size={13} className="shrink-0 mt-0.5" /> : <AlertTriangle size={13} className="shrink-0 mt-0.5" />}
-                  <span className="break-words">{result.message}</span>
-                </div>
-              )}
             </div>
           )}
         </div>

@@ -78,5 +78,18 @@ export default defineConfig({
     hmr: {
       overlay: false,
     },
+    // Proxy del dev server a la Management API de Supabase.
+    // La Management API solo permite CORS desde supabase.com; al enrutarla por
+    // el dev server (mismo origen), la app puede crear el esquema pegando solo
+    // el token sbp_… sin necesidad del SQL Editor. En producción (build
+    // estático) no aplica; ahí se usa la ruta directa o el SQL manual.
+    proxy: {
+      "/__supabase-mgmt": {
+        target: "https://api.supabase.com",
+        changeOrigin: true,
+        secure: true,
+        rewrite: (p) => p.replace(/^\/__supabase-mgmt/, "/v1"),
+      },
+    },
   },
 });
