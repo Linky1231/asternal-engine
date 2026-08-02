@@ -508,27 +508,7 @@ const localRpc = async (fn: string, _args?: Record<string, unknown>) => {
       saveTableData('game_purchases', purchases);
       return { data: { ok: true, paid: price, balance: buyerOrbes - price }, error: null };
     }
-    case 'claim_plus_orbes': {
-      const { data: { user } } = await localAuth.getUser();
-      if (!user) return { data: { ok: false, reason: 'no_auth' }, error: null };
-      const profiles = getTableData('profiles');
-      const idx = profiles.findIndex(p => (p as Record<string, unknown>).id === user.id);
-      if (idx === -1) return { data: { ok: false }, error: null };
-      const lastClaim = (profiles[idx] as Record<string, unknown>).last_plus_claim_at as string | null | undefined;
-      if (lastClaim && Date.now() - new Date(lastClaim).getTime() < 30 * 24 * 3600 * 1000) {
-        const nextAt = new Date(new Date(lastClaim).getTime() + 30 * 24 * 3600 * 1000).toISOString();
-        return { data: { ok: false, reason: 'already_claimed', next_at: nextAt }, error: null };
-      }
-      const amount = 10000;
-      const current = (profiles[idx] as Record<string, unknown>).orbes as number || 0;
-      profiles[idx] = {
-        ...profiles[idx],
-        orbes: current + amount,
-        last_plus_claim_at: new Date().toISOString(),
-      } as Record<string, unknown>;
-      saveTableData('profiles', profiles);
-      return { data: { ok: true, amount, reason: 'Reclamo mensual' }, error: null };
-    }
+    case 'claim_plus_orbes': return { data: { ok: true, amount: 50, reason: 'Reclamo local' }, error: null };
     case 'activate_plus': return { data: { ok: true, expires_at: new Date(Date.now() + 30 * 86400000).toISOString() }, error: null };
     case 'can_play_game': return { data: true, error: null };
     case 'expire_lapsed_plus': return { data: [], error: null };
