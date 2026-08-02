@@ -15,6 +15,7 @@ import { GallerySection } from "@/components/social/GallerySection";
 import { EventsSection } from "@/components/social/EventsSection";
 import { HistorySection } from "@/components/social/HistorySection";
 import { SupabaseSetupDialog } from "@/components/social/SupabaseSetupDialog";
+import { checkSchemaReady, hasSupabaseConfig } from "@/lib/supabase/setup";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -53,6 +54,7 @@ function HomePage() {
   const [menuVisible, setMenuVisible] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [inPreview, setInPreview] = useState(false);
+  const [schemaWarning, setSchemaWarning] = useState(false);
 
   // When the app runs embedded in the Freebuff preview (inside an iframe), the
   // platform's floating button overlaps the top-right of the app. Push the
@@ -83,6 +85,9 @@ function HomePage() {
         setMod(await isMod());
         setAdmin(await isAdmin());
         await reload(tab);
+        // Si Supabase está conectado pero el esquema aún no existe, avisamos
+        // amablemente en vez de mostrar un error críptico.
+        if (hasSupabaseConfig() && !(await checkSchemaReady())) setSchemaWarning(true);
       } catch (e) {
         // No romper la preview si el esquema aún no está creado en Supabase.
         console.warn("[home] error de carga inicial (¿esquema sin crear?):", e);
@@ -208,6 +213,20 @@ function HomePage() {
           </div>
         </div>
       </header>
+
+      {/* Aviso de esquema pendiente */}
+      {schemaWarning && (
+        <button
+          onClick={() => setSetupOpen(true)}
+          className="max-w-2xl mx-auto mt-3 w-[calc(100%-24px)] flex items-center gap-2.5 rounded-xl border border-amber-300/60 bg-amber-50/80 dark:bg-amber-950/25 dark:border-amber-800/50 px-3.5 py-3 text-left active:scale-[0.99] transition-all"
+        >
+          <Database size={16} className="shrink-0 text-amber-600 dark:text-amber-400" />
+          <span className="text-[11px] leading-relaxed text-amber-800 dark:text-amber-300">
+            <b>Base de datos conectada, pero vacía.</b>{" "}
+            Toca aquí para crear el esquema automáticamente (☰ → SISTEMA → Supabase).
+          </span>
+        </button>
+      )}
 
       {/* Content */}
       <main className="flex-1 max-w-2xl mx-auto w-full px-3 py-3 space-y-3 pb-24">
