@@ -49,9 +49,8 @@ export type Profile = {
 };
 
 export function isPlusActive(p: Profile | null | undefined): boolean {
-  if (!p?.is_plus) return false;
-  if (!p.plus_expires_at) return true;
-  return new Date(p.plus_expires_at).getTime() > Date.now();
+  // Plus es gratuito para todos: la barrera de suscripción se eliminó.
+  return true;
 }
 
 export function daysUntilPlusExpires(p: Profile | null | undefined): number | null {

@@ -1,15 +1,15 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
-  ArrowLeft, Star, Palette, Rocket, Link2, Check, Loader2, Shield,
+  ArrowLeft, Star, Palette, Rocket, Link2, Check, Loader2,
   Youtube, Instagram, Music2, Globe, Gift, Sparkles as SparklesIcon,
-  Wand2, IdCard, AlertTriangle, RefreshCw,
+  Wand2, IdCard,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import {
-  getMyProfile, claimPlusOrbes, updatePlusSettings, togglePlusStatus,
-  activatePlus, isPlusActive, daysUntilPlusExpires, isAdmin,
+  getMyProfile, claimPlusOrbes, updatePlusSettings,
+  isPlusActive,
   type Profile, type SocialLinks, type CreatorCardStyle,
 } from "@/lib/social/api";
 import { UserName } from "@/components/social/UserName";
@@ -23,20 +23,6 @@ export const Route = createFileRoute("/plus")({
   }),
   component: PlusPage,
 });
-
-declare module "react" {
-  namespace JSX {
-    interface IntrinsicElements {
-      "stripe-buy-button": React.DetailedHTMLProps<
-        React.HTMLAttributes<HTMLElement> & {
-          "buy-button-id": string;
-          "publishable-key": string;
-        },
-        HTMLElement
-      >;
-    }
-  }
-}
 
 const FRAMES = [
   { id: "aurora", label: "Aurora", css: "linear-gradient(135deg, #1AA6D6, #2FD9D2, #7BE7FF)" },
@@ -81,9 +67,7 @@ function PlusPage() {
   const [claimMsg, setClaimMsg] = useState<string | null>(null);
   const [socials, setSocials] = useState<SocialLinks>({});
   const [savedSocials, setSavedSocials] = useState<null | "saving" | "saved">(null);
-  const [scriptLoaded, setScriptLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [isAdminUser, setIsAdminUser] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -92,22 +76,11 @@ function PlusPage() {
       const p = await getMyProfile();
       setMe(p);
       setSocials((p?.social_links as SocialLinks) ?? {});
-      setIsAdminUser(await isAdmin());
       setLoading(false);
     })();
   }, [navigate]);
 
   const isPlus = isPlusActive(me);
-
-  useEffect(() => {
-    if (isPlus) return;
-    if (document.querySelector('script[src="https://js.stripe.com/v3/buy-button.js"]')) { setScriptLoaded(true); return; }
-    const s = document.createElement("script");
-    s.src = "https://js.stripe.com/v3/buy-button.js";
-    s.async = true;
-    s.onload = () => setScriptLoaded(true);
-    document.head.appendChild(s);
-  }, [isPlus]);
 
   const refresh = async () => setMe(await getMyProfile());
 
@@ -161,20 +134,6 @@ function PlusPage() {
     setTimeout(() => setSavedSocials(null), 1500);
   };
 
-  const doActivate = async () => {
-    setBusy(true);
-    try { await activatePlus(1); await refresh(); }
-    finally { setBusy(false); }
-  };
-
-  const doDeactivate = async () => {
-    setBusy(true);
-    try { await togglePlusStatus(false); await refresh(); }
-    finally { setBusy(false); }
-  };
-
-  const daysLeft = daysUntilPlusExpires(me);
-  const expiredButFlagged = !!me?.is_plus && daysLeft !== null && daysLeft <= 0;
   const canClaim = isPlus && (!me?.last_plus_claim_at || (Date.now() - new Date(me.last_plus_claim_at).getTime()) > 30 * 24 * 3600 * 1000);
 
   if (loading) return <div className="min-h-screen grid place-items-center"><Loader2 className="animate-spin" /></div>;
@@ -214,33 +173,10 @@ function PlusPage() {
             <p className="mt-1 text-sm text-muted-foreground">
               {isPlus
                 ? "Todos tus beneficios están activos. Gestiónalos desde aquí."
-                : <>Todos los beneficios premium por <span className="text-foreground font-semibold">$1/mes</span>.</>}
+                : <>Todos los beneficios premium <span className="text-foreground font-semibold">gratis para todos</span>.</>}
             </p>
           </div>
         </section>
-
-        {/* Expiry banner */}
-        {isPlus && daysLeft !== null && daysLeft <= 7 && (
-          <ExpiryBanner
-            tone="warning"
-            title={`Tu Plus vence en ${daysLeft} ${daysLeft === 1 ? "día" : "días"}`}
-            desc="Renueva tu suscripción para no perder los beneficios."
-          />
-        )}
-        {expiredButFlagged && (
-          <ExpiryBanner
-            tone="danger"
-            title="Tu Plus ha expirado"
-            desc="Renueva para reactivar todos tus efectos, fondos y beneficios."
-          />
-        )}
-        {!isPlus && me?.plus_expires_at && !me?.is_plus && (
-          <ExpiryBanner
-            tone="danger"
-            title="Plus desactivado"
-            desc={`Tu suscripción expiró el ${new Date(me.plus_expires_at).toLocaleDateString()}.`}
-          />
-        )}
 
         {/* Reclamar orbes */}
         <FeatureCard icon={<Gift size={18} />} title="10.000 Orbes mensuales"
@@ -374,121 +310,26 @@ function PlusPage() {
           </div>
         </FeatureCard>
 
-        {/* CTA suscripción */}
-        {/* ── ADMIN DEV: Botón para activar Plus gratis ── */}
-        {isAdminUser && (
-          <section className="relative overflow-hidden rounded-2xl border-2 p-5 space-y-3"
-            style={{
-              borderColor: "oklch(0.65 0.14 220 / 0.4)",
-              background: "linear-gradient(135deg, oklch(0.65 0.14 220 / 0.08), oklch(0.78 0.13 195 / 0.04))",
-            }}>
-            <div className="flex items-center gap-2.5">
-              <Shield size={18} style={{ color: "var(--plus)" }} />
-              <div>
-                <div className="font-display text-sm font-semibold">Panel de administrador</div>
-                <div className="text-[10px] text-muted-foreground/60">Activa Plus sin costo para probar todas las funciones</div>
-              </div>
+        {/* Plus gratuito para todos */}
+        <section className="relative overflow-hidden rounded-2xl border-2 p-5 space-y-3"
+          style={{
+            borderColor: "color-mix(in oklab, var(--plus) 40%, transparent)",
+            background: "linear-gradient(135deg, color-mix(in oklab, var(--plus) 12%, transparent), transparent)",
+          }}>
+          <div className="flex items-center gap-2.5">
+            <Gift size={18} style={{ color: "var(--plus)" }} />
+            <div>
+              <div className="font-display text-sm font-semibold">Plus gratis para todos</div>
+              <div className="text-[10px] text-muted-foreground/60">La suscripción ya no es necesaria: todos los beneficios están desbloqueados.</div>
             </div>
-            <div className="flex gap-2">
-              {!isPlus ? (
-                <button disabled={busy} onClick={async () => {
-                  setBusy(true);
-                  try { await togglePlusStatus(true); await refresh(); }
-                  finally { setBusy(false); }
-                }}
-                  className="flex-1 h-11 rounded-xl text-xs font-display tracking-wider text-white active:scale-[0.97] transition shadow-lg flex items-center justify-center gap-2"
-                  style={{ background: "var(--gradient-plus)", boxShadow: "var(--shadow-plus)" }}>
-                  {busy ? <Loader2 size={14} className="animate-spin" /> : <Star size={14} fill="currentColor" />}
-                  ACTIVAR PLUS COMPLETO
-                </button>
-              ) : (
-                <>
-                  <button disabled={busy} onClick={async () => {
-                    setBusy(true);
-                    try { await activatePlus(12); await refresh(); }
-                    finally { setBusy(false); }
-                  }}
-                    className="flex-1 h-11 rounded-xl text-xs font-display tracking-wider text-white active:scale-[0.97] transition shadow-lg flex items-center justify-center gap-2"
-                    style={{ background: "var(--gradient-plus)", boxShadow: "var(--shadow-plus)" }}>
-                    {busy ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
-                    +12 MESES
-                  </button>
-                  <button disabled={busy} onClick={async () => {
-                    setBusy(true);
-                    try { await togglePlusStatus(false); await refresh(); }
-                    finally { setBusy(false); }
-                  }}
-                    className="flex-1 h-11 rounded-xl text-xs font-display tracking-wider border active:scale-[0.97] transition flex items-center justify-center gap-2"
-                    style={{ borderColor: "oklch(0.65 0.14 220 / 0.4)", color: "var(--plus)" }}>
-                    {busy ? <Loader2 size={14} className="animate-spin" /> : <Shield size={14} />}
-                    DESACTIVAR PLUS
-                  </button>
-                </>
-              )}
-            </div>
-          </section>
-        )}
-
-        {/* CTA suscripción */}
-        {!isPlus && (
-          <section className="panel rounded-2xl border p-4 flex flex-col items-center gap-3"
-            style={{ borderColor: "color-mix(in oklab, var(--plus) 40%, transparent)" }}>
-            <div className="text-[10px] font-display tracking-[0.2em]" style={{ color: "var(--plus)" }}>SUSCRÍBETE VÍA STRIPE</div>
-            {scriptLoaded && (
-              <stripe-buy-button
-                buy-button-id="buy_btn_1TtZCXFTesVtHowJZ7ndRXHF"
-                publishable-key="pk_test_51RK4ggFTesVtHowJmcCePIAMnhNx3RH7oucLsPZQetXDHWbsz1N4yHjhiLjcwMeyyHhuqI3O2WgfFn1qx8ARYAj100kKXSeiwb"
-              />
-            )}
-            <p className="text-[10px] text-muted-foreground text-center max-w-xs">
-              Pago seguro procesado por Stripe. Cancela cuando quieras.
-            </p>
-          </section>
-        )}
-
-        {isPlus && (
-          <div className="text-center space-y-2">
-            {me?.plus_expires_at && (
-              <div className="text-[11px] text-muted-foreground">
-                Renovación: {new Date(me.plus_expires_at).toLocaleDateString()}
-              </div>
-            )}
-            {!isAdminUser && (
-              <div className="flex items-center justify-center gap-4">
-                <button disabled={busy} onClick={doActivate}
-                  className="text-[10px] text-muted-foreground underline flex items-center gap-1 disabled:opacity-40">
-                  <RefreshCw size={10} /> Renovar 1 mes
-                </button>
-                <button disabled={busy} onClick={doDeactivate}
-                  className="text-[10px] text-muted-foreground underline disabled:opacity-40">
-                  (dev) Expirar ahora
-                </button>
-              </div>
-            )}
           </div>
-        )}
+        </section>
 
         <div className="text-center pt-2">
           <Link to="/" className="text-[11px] text-muted-foreground underline">Volver al inicio</Link>
         </div>
       </main>
     </div>
-  );
-}
-
-function ExpiryBanner({ tone, title, desc }: { tone: "warning" | "danger"; title: string; desc: string }) {
-  const colors = tone === "warning"
-    ? { bg: "linear-gradient(135deg, oklch(0.85 0.15 80 / 0.25), oklch(0.75 0.18 55 / 0.15))", border: "oklch(0.75 0.18 55 / 0.5)", fg: "oklch(0.45 0.15 55)" }
-    : { bg: "linear-gradient(135deg, oklch(0.75 0.2 25 / 0.2), oklch(0.65 0.22 15 / 0.12))", border: "oklch(0.65 0.22 15 / 0.5)", fg: "oklch(0.5 0.2 20)" };
-  return (
-    <section className="rounded-2xl border p-4 flex items-start gap-3"
-      style={{ background: colors.bg, borderColor: colors.border }}>
-      <AlertTriangle size={20} style={{ color: colors.fg }} className="shrink-0 mt-0.5" />
-      <div className="flex-1 min-w-0">
-        <div className="text-sm font-display font-semibold" style={{ color: colors.fg }}>{title}</div>
-        <div className="text-[11px] text-muted-foreground mt-0.5">{desc}</div>
-      </div>
-    </section>
   );
 }
 
