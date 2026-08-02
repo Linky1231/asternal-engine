@@ -16,6 +16,17 @@ export const SUPABASE_ACCESS_TOKEN = import.meta.env.VITE_SUPABASE_ACCESS_TOKEN 
 
 export { getSupabaseUrl, getSupabaseAnonKey };
 
+/** El script SQL completo del esquema (para copiar en el SQL Editor). */
+export function getSchemaSql(): string {
+  return schemaSql;
+}
+
+/** Enlace directo al SQL Editor del proyecto (para pegar el script). */
+export function sqlEditorUrl(url: string): string | null {
+  const ref = projectRefFromUrl(url);
+  return ref ? `https://supabase.com/dashboard/project/${ref}/sql/new` : null;
+}
+
 /** ¿Está configurado el modo real (URL + anon key)? */
 export function hasSupabaseConfig(): boolean {
   return Boolean(getSupabaseUrl() && getSupabaseAnonKey());
@@ -76,6 +87,14 @@ export async function runSchemaSetup(accessToken: string): Promise<SetupResult> 
     }
     return { ok: true, message: "Esquema creado correctamente. Ya puedes usar la plataforma." };
   } catch (e) {
-    return { ok: false, message: (e as Error).message };
+    const err = e as Error;
+    // CORS / red: la Management API solo acepta llamadas desde supabase.com.
+    if (/Failed to fetch|NetworkError|Load failed|CORS/i.test(err?.message ?? "")) {
+      return {
+        ok: false,
+        message: "El navegador no puede llamar a la Management API de Supabase (bloqueo CORS). Usa la opción 'Copiar SQL' y pégalo en el SQL Editor de tu proyecto.",
+      };
+    }
+    return { ok: false, message: err?.message ?? "Error desconocido" };
   }
 }

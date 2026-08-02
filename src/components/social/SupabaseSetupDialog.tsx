@@ -12,6 +12,8 @@ import {
   hasSupabaseConfig,
   getSupabaseUrl,
   getSupabaseAnonKey,
+  getSchemaSql,
+  sqlEditorUrl,
   SUPABASE_ACCESS_TOKEN,
   type SetupResult,
 } from "@/lib/supabase/setup";
@@ -19,7 +21,7 @@ import {
   saveSupabaseCredentials,
 } from "@/integrations/supabase/client";
 import {
-  Database, Loader2, CheckCircle2, AlertTriangle, ShieldCheck, KeyRound, ExternalLink, Plug, RefreshCw, Save, Link2,
+  Database, Loader2, CheckCircle2, AlertTriangle, ShieldCheck, KeyRound, ExternalLink, Plug, RefreshCw, Save, Link2, Copy, TerminalSquare,
 } from "lucide-react";
 
 type Status = "checking" | "local" | "ready" | "missing";
@@ -30,6 +32,7 @@ export function SupabaseSetupDialog({ open, onOpenChange }: { open: boolean; onO
   const [urlInput, setUrlInput] = useState("");
   const [anonInput, setAnonInput] = useState("");
   const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [result, setResult] = useState<SetupResult | null>(null);
 
   useEffect(() => {
@@ -61,6 +64,18 @@ export function SupabaseSetupDialog({ open, onOpenChange }: { open: boolean; onO
   };
 
   const canSave = urlInput.trim().startsWith("https://") && anonInput.trim().length > 20;
+
+  const copySql = async () => {
+    try {
+      await navigator.clipboard.writeText(getSchemaSql());
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      /* clipboard no disponible */
+    }
+  };
+
+  const editorUrl = sqlEditorUrl(urlInput.trim() || getSupabaseUrl() || "");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -205,11 +220,57 @@ export function SupabaseSetupDialog({ open, onOpenChange }: { open: boolean; onO
                     <div className="font-semibold text-foreground">La base de datos está vacía</div>
                     <div className="mt-0.5">
                       Tu clave anon no puede crear tablas (es una medida de seguridad de Supabase).
-                      Pega tu <b>token de acceso personal</b> y la app creará todo el esquema automáticamente.
+                      Elige una de estas dos formas de crear el esquema:
                     </div>
                   </div>
                 </div>
               </div>
+
+              {/* ── Plan A: SQL Editor (recomendado, sin CORS) ── */}
+              <div className="rounded-xl border border-emerald-200/60 bg-emerald-50/50 dark:bg-emerald-950/15 dark:border-emerald-800/40 p-3.5 space-y-2.5">
+                <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                  <TerminalSquare size={14} className="shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
+                  <div>
+                    <div className="font-semibold text-foreground">Opción 1 · SQL Editor (recomendado)</div>
+                    <div className="mt-0.5 leading-relaxed">
+                      El navegador no puede ejecutar la Management API por un bloqueo de seguridad (CORS).
+                      Lo más fiable: copia el SQL de abajo y pégalo en el SQL Editor de tu proyecto.
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={copySql}
+                  className="w-full py-2.5 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-xs font-display font-semibold tracking-wider active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md shadow-primary/20"
+                >
+                  {copied ? <CheckCircle2 size={14} /> : <Copy size={14} />}
+                  {copied ? "¡SQL COPIADO!" : "COPIAR TODO EL SQL"}
+                </button>
+                {editorUrl && (
+                  <a
+                    href={editorUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="w-full py-2 rounded-xl border border-border/70 bg-background text-muted-foreground text-[11px] font-semibold tracking-wide hover:bg-muted/60 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
+                  >
+                    <ExternalLink size={12} /> ABRIR SQL EDITOR DE MI PROYECTO
+                  </a>
+                )}
+                <p className="text-[10px] text-muted-foreground/60 leading-relaxed">
+                  Después de pegar el SQL en el editor: pulsa <b>Run</b> y espera a que termine (~10 s). Luego vuelve aquí y pulsa «Comprobar de nuevo».
+                </p>
+              </div>
+
+              {/* ── Plan B: Management API (si falla por CORS, usar Opción 1) ── */}
+              <div className="rounded-xl border border-border/60 bg-muted/30 p-3.5 space-y-2.5">
+                <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                  <KeyRound size={14} className="shrink-0 mt-0.5 text-primary" />
+                  <div>
+                    <div className="font-semibold text-foreground">Opción 2 · Automático con token (puede fallar por CORS)</div>
+                    <div className="mt-0.5">
+                      Si prefieres intentarlo automático con tu token de acceso personal:
+                    </div>
+                  </div>
+                </div>
 
               <div className="space-y-1.5">
                 <label className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5">
@@ -228,6 +289,14 @@ export function SupabaseSetupDialog({ open, onOpenChange }: { open: boolean; onO
                   Cómo obtenerlo: Supabase Dashboard → <b>Account → Access Tokens → Generate new token</b>.
                   El token solo se usa para esta instalación y no se guarda.
                 </p>
+              </div>
+
+              <button
+                onClick={() => { setStatus("checking"); checkSchemaReady().then(ready => setStatus(ready ? "ready" : "missing")); }}
+                className="w-full py-2 rounded-xl border border-border/70 bg-background text-muted-foreground text-[11px] font-semibold tracking-wide hover:bg-muted/60 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
+              >
+                <RefreshCw size={12} /> COMPROBAR DE NUEVO
+              </button>
               </div>
 
               <button
