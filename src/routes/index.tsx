@@ -277,28 +277,31 @@ function HomePage() {
         <Plus size={18} /> CREAR
       </Link>
 
-      {/* Menu drawer */}
+      {/* Menu drawer — dos AnimatePresence separados (el fragment <> no desmonta en exit) */}
       <AnimatePresence>
         {menuOpen && (
-          <>
-            <motion.div
-              key="menu-overlay"
-              className="fixed inset-0 z-[100] bg-black/55 backdrop-blur-md"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.22, ease: "easeOut" }}
-              onClick={closeMenu}
-            />
-            <motion.div
-              key="menu-drawer"
-              onClick={e => e.stopPropagation()}
-              className="fixed right-0 top-0 h-full w-[86vw] max-w-xs bg-background border-l border-border shadow-xl p-4 flex flex-col gap-2 overflow-y-auto"
-              initial={{ x: "100%", opacity: 0.4 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: "100%", opacity: 0 }}
-              transition={{ type: "spring", stiffness: 340, damping: 34 }}
-            >
+          <motion.div
+            key="menu-overlay"
+            className="fixed inset-0 z-[100] bg-black/55 backdrop-blur-md"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.22, ease: "easeOut" }}
+            onClick={closeMenu}
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {menuOpen && (
+          <motion.div
+            key="menu-drawer"
+            onClick={e => e.stopPropagation()}
+            className="fixed right-0 top-0 z-[101] h-full w-[86vw] max-w-xs bg-background border-l border-border shadow-xl p-4 flex flex-col gap-2 overflow-y-auto"
+            initial={{ x: "100%", opacity: 0.4 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: "100%", opacity: 0 }}
+            transition={{ type: "spring", stiffness: 340, damping: 34 }}
+          >
             <div className="flex items-center justify-between mb-2">
               <div className="font-display text-xs tracking-widest text-primary-glow">MENÚ</div>
               <button onClick={closeMenu} className="w-8 h-8 rounded-lg border border-border grid place-items-center active:scale-95 bg-background"><X size={14}/></button>
@@ -329,7 +332,6 @@ function HomePage() {
               <LogOut size={16} /> <span className="text-sm font-medium">Cerrar sesión</span>
             </button>
           </motion.div>
-          </>
         )}
       </AnimatePresence>
 
