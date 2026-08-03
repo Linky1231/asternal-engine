@@ -12,8 +12,9 @@ import {
   COMMUNITY_CHAT_NAME,
   type ChatMessage,
 } from "@/lib/social/chat";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, hasSupabaseConfig, saveSupabaseCredentials } from "@/integrations/supabase/client";
 import { UserName } from "./UserName";
+import { getMyProfile } from "@/lib/social/api";
 import type { Profile } from "@/lib/social/api";
 
 function fmtTime(iso: string): string {
@@ -118,6 +119,10 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
   const [signedStickers, setSignedStickers] = useState<Map<string, string>>(new Map());
   const [stickerUploading, setStickerUploading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [isLocal, setIsLocal] = useState<boolean>(() => !hasSupabaseConfig());
+  const [connecting, setConnecting] = useState(false);
+  const [connectUrl, setConnectUrl] = useState("https://gxpgczwkovertezeydkt.supabase.co");
+  const [connectKey, setConnectKey] = useState("");
 
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -129,14 +134,47 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
     const ids = Array.from(new Set(msgs.map((m) => m.sender_id).filter(Boolean))) as string[];
     const missing = ids.filter((id) => !sendersRef.current.has(id));
     if (!missing.length) return;
-    const pmap = await fetchProfiles(missing);
-    for (const id of missing) sendersRef.current.add(id);
-    setSenders((prev) => {
-      const next = new Map(prev);
-      for (const [id, p] of pmap) next.set(id, p);
-      return next;
-    });
+    try {
+      const pmap = await fetchProfiles(missing);
+      for (const id of missing) sendersRef.current.add(id);
+      setSenders((prev) => {
+        const next = new Map(prev);
+        for (const [id, p] of pmap) next.set(id, p);
+        return next;
+      });
+    } catch {
+      /* noop */
+    }
   }, []);
+
+  // Mi propio perfil siempre disponible (evita "anon" si la carga de perfiles falla)
+  useEffect(() => {
+    if (!myId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const p = await getMyProfile();
+        if (cancelled || !p) return;
+        sendersRef.current.add(p.id);
+        setSenders((prev) => {
+          if (prev.has(p.id)) return prev;
+          const next = new Map(prev);
+          next.set(p.id, p);
+          return next;
+        });
+      } catch {
+        /* noop */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [myId]);
+
+  const doConnect = useCallback(() => {
+    saveSupabaseCredentials(connectUrl.trim(), connectKey.trim());
+    window.location.reload();
+  }, [connectUrl, connectKey]);
 
   // Preparar el chat comunitario + cargar mensajes
   useEffect(() => {
@@ -287,6 +325,21 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
         </div>
       </header>
 
+      {/* Aviso de modo local */}
+      {isLocal && (
+        <div className="shrink-0 mx-3 mt-2 px-3 py-2 rounded-xl border border-amber-500/30 bg-amber-500/10 flex items-center gap-2">
+          <span className="flex-1 text-[11px] text-amber-700 dark:text-amber-300">
+            Modo local: los mensajes no se comparten entre dispositivos. Conecta tu base de datos para el chat comunitario.
+          </span>
+          <button
+            onClick={() => setConnecting(true)}
+            className="shrink-0 px-2.5 py-1 rounded-lg bg-gradient-to-br from-primary to-accent text-primary-foreground text-[10px] font-display tracking-widest active:scale-95 transition"
+          >
+            CONECTAR
+          </button>
+        </div>
+      )}
+
       {/* ───── Mensajes ───── */}
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-3 no-scrollbar min-h-0">
         {loading ? (
@@ -435,6 +488,61 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
           </AnimatePresence>
         </div>
       </div>
+
+      {/* Diálogo de conexión (solo modo local) */}
+      <AnimatePresence>
+        {connecting && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-[95] bg-black/55 backdrop-blur-md grid place-items-center p-4"
+            onClick={() => setConnecting(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.96, y: 8 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.96, y: 8 }}
+              transition={{ duration: 0.16, ease: "easeOut" }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm bg-card border border-border rounded-2xl p-4 shadow-xl"
+            >
+              <div className="text-sm font-semibold mb-0.5">Conectar Supabase</div>
+              <p className="text-[11px] text-muted-foreground mb-3">
+                Pega la URL y la anon key de tu proyecto (están en Keys como V1 y V2). Los mensajes y la comunidad se sincronizarán entre dispositivos.
+              </p>
+              <input
+                value={connectUrl}
+                onChange={(e) => setConnectUrl(e.target.value)}
+                placeholder="https://xxxx.supabase.co"
+                className="w-full bg-input/50 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40 border border-border/60 mb-2"
+              />
+              <input
+                value={connectKey}
+                onChange={(e) => setConnectKey(e.target.value)}
+                placeholder="eyJhbGciOi… (anon key)"
+                className="w-full bg-input/50 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40 border border-border/60 mb-3"
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setConnecting(false)}
+                  className="flex-1 py-2 rounded-xl border border-border bg-background text-xs font-display tracking-widest active:scale-[0.98] transition"
+                >
+                  CANCELAR
+                </button>
+                <button
+                  onClick={doConnect}
+                  disabled={!connectUrl.trim() || !connectKey.trim()}
+                  className="flex-1 py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-xs font-display tracking-widest active:scale-[0.98] transition disabled:opacity-40"
+                >
+                  CONECTAR
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
