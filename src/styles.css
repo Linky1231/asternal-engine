@@ -634,3 +634,19 @@
   from { transform: rotate(360deg); }
   to   { transform: rotate(0deg); }
 }
+
+/* ============ Rendimiento: reduce motion ============ */
+@media (prefers-reduced-motion: reduce) {
+  .animate-mesh-grad,
+  .animate-mesh-grad-alt,
+  .animate-float-icon,
+  .animate-shimmer-text,
+  .animate-shimmer-border,
+  [style*="bob"],
+  [style*="twinkle"],
+  [style*="orbit-slow"],
+  [style*="orbit-slow-rev"],
+  [style*="drift-slow"] {
+    animation: none !important;
+  }
+}

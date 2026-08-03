@@ -190,7 +190,7 @@ function PlayPanel() {
 function HeroScene() {
   return (
     <div className="relative w-full h-[230px] lg:h-[440px] select-none pointer-events-none">
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 origin-center scale-[0.6] lg:scale-100">
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 origin-center scale-[0.6] lg:scale-100" style={{ willChange: "transform" }}>
         <div className="relative w-[460px] h-[460px]">
 
           {/* Ambient glows */}
@@ -200,7 +200,7 @@ function HeroScene() {
             style={{ background: "radial-gradient(circle, oklch(0.72 0.11 260 / 0.12), transparent 60%)" }} />
 
           {/* Orbit rings (tilted 3D) */}
-          <div className="absolute left-1/2 top-[42%] -translate-x-1/2 -translate-y-1/2" style={{ perspective: "700px" }}>
+          <div className="absolute left-1/2 top-[42%] -translate-x-1/2 -translate-y-1/2" style={{ perspective: "700px", willChange: "transform" }}>
             <div className="relative w-[380px] h-[380px]">
               <div className="absolute inset-0 rounded-full border border-primary/15" style={{ transform: "rotateX(68deg)" }} />
               <div className="absolute inset-8 rounded-full border border-accent/10" style={{ transform: "rotateX(68deg)" }} />
@@ -221,7 +221,7 @@ function HeroScene() {
           <div className="absolute left-1/2 top-[63%] -translate-x-1/2">
             <div className="absolute left-1/2 -translate-x-1/2 top-[38px] w-[330px] h-[70px] rounded-[50%] bg-primary/10 blur-2xl" />
             {/* Robot */}
-            <div className="relative z-10 flex justify-center" style={{ animation: "bob 4s ease-in-out infinite" }}>
+            <div className="relative z-10 flex justify-center" style={{ animation: "bob 4s ease-in-out infinite", willChange: "transform" }}>
               <CreatorRobot />
             </div>
             {/* Crystal */}
@@ -243,23 +243,23 @@ function HeroScene() {
           </div>
 
           {/* Floating UI panels */}
-          <div className="absolute left-[3%] top-[20%] animate-float-icon" style={{ animationDelay: "0.4s" }}>
+          <div className="absolute left-[3%] top-[20%] animate-float-icon" style={{ animationDelay: "0.4s", willChange: "transform" }}>
             <SpritePanel />
           </div>
-          <div className="absolute right-[1%] top-[30%] animate-float-icon" style={{ animationDelay: "1.1s" }}>
+          <div className="absolute right-[1%] top-[30%] animate-float-icon" style={{ animationDelay: "1.1s", willChange: "transform" }}>
             <BlockPanel />
           </div>
-          <div className="absolute right-[9%] bottom-[9%] animate-float-icon" style={{ animationDelay: "1.7s" }}>
+          <div className="absolute right-[9%] bottom-[9%] animate-float-icon" style={{ animationDelay: "1.7s", willChange: "transform" }}>
             <PlayPanel />
           </div>
-          <div className="absolute left-[8%] bottom-[20%] animate-float-icon" style={{ animationDelay: "2.3s" }}>
+          <div className="absolute left-[8%] bottom-[20%] animate-float-icon" style={{ animationDelay: "2.3s", willChange: "transform" }}>
             <div className="w-9 h-9 rounded-full bg-white/70 backdrop-blur-md border border-white/60 grid place-items-center shadow-lg shadow-primary/15">
               <Sparkles size={15} className="text-accent" />
             </div>
           </div>
 
           {/* Tiny stars inside the scene */}
-          {Array.from({ length: 10 }).map((_, i) => (
+          {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="absolute rounded-full pointer-events-none"
               style={{
                 width: 1 + (i % 2), height: 1 + (i % 2),
@@ -515,7 +515,7 @@ function AuthPage() {
       <ConfettiBurst active={!!successMsg} />
 
       {/* ─── Background layers ─── */}
-      <div className="fixed inset-0 pointer-events-none select-none overflow-hidden">
+      <div className="fixed inset-0 pointer-events-none select-none overflow-hidden" style={{ transform: "translateZ(0)" }}>
         {/* Base glow */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,oklch(0.488_0.185_264/0.09),transparent)]" />
         {/* Mesh blobs */}
@@ -524,7 +524,7 @@ function AuthPage() {
         <div className="absolute -bottom-[30%] -right-[20%] w-[70%] h-[70%] opacity-50 animate-mesh-grad-alt"
           style={{ background: "radial-gradient(circle at 70% 50%, oklch(0.72 0.11 260 / 0.06), transparent 60%)" }} />
         {/* Stars */}
-        {Array.from({ length: 26 }).map((_, i) => <Star key={i} index={i} />)}
+        {Array.from({ length: 16 }).map((_, i) => <Star key={i} index={i} />)}
         {/* Circuit lines */}
         <CircuitLines />
         {/* Dot grid */}
@@ -620,7 +620,7 @@ function AuthPage() {
               <TiltCard>
                 {/* Tarjeta premium: borde degradado + sombras en capas + radius 24px */}
                 <div className="relative rounded-3xl p-px bg-gradient-to-b from-white/70 via-white/25 to-primary/15 shadow-[0_30px_80px_-20px_oklch(0.488_0.185_264/0.3),0_10px_30px_-10px_oklch(0.488_0.185_264/0.18)]">
-                  <div className="relative bg-white/75 backdrop-blur-2xl rounded-[calc(1.5rem-1px)] p-7 overflow-hidden group/form-card">
+                  <div className="relative bg-white/75 backdrop-blur-md rounded-[calc(1.5rem-1px)] p-7 overflow-hidden group/form-card">
 
                     {/* Shine superior */}
                     <div className="absolute top-0 left-1/2 -translate-x-1/2 h-px w-3/4 bg-gradient-to-r from-transparent via-white/90 to-transparent" />
