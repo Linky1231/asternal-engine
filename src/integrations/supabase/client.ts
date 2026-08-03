@@ -692,13 +692,13 @@ function writeLocal(key: string, value: string | null): void {
 export function getSupabaseUrl(): string | undefined {
   const local = readLocal(LOCAL_SB_URL_KEY);
   if (local && local.trim()) return local.trim();
-  return import.meta.env.VITE_SUPABASE_URL as string | undefined;
+  return (import.meta.env.V1 ?? import.meta.env.VITE_SUPABASE_URL) as string | undefined;
 }
 
 export function getSupabaseAnonKey(): string | undefined {
   const local = readLocal(LOCAL_SB_ANON_KEY);
   if (local && local.trim()) return local.trim();
-  return import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+  return (import.meta.env.V2 ?? import.meta.env.VITE_SUPABASE_ANON_KEY) as string | undefined;
 }
 
 /** Guarda (o borra) las credenciales escritas a mano en el diálogo de configuración. */

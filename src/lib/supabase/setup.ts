@@ -12,7 +12,12 @@ import { supabase, getSupabaseUrl, getSupabaseAnonKey } from "@/integrations/sup
 // Importa el script SQL completo como texto crudo (Vite ?raw)
 import schemaSql from "../../../supabase-setup.sql?raw";
 
-export const SUPABASE_ACCESS_TOKEN = import.meta.env.VITE_SUPABASE_ACCESS_TOKEN as string | undefined;
+/**
+ * Token de acceso personal de Supabase (sbp_...).
+ * Se lee de las variables del proyecto en orden:
+ *   V3 (variable personalizada del tab Keys) → VITE_SUPABASE_ACCESS_TOKEN
+ */
+export const SUPABASE_ACCESS_TOKEN = (import.meta.env.V3 ?? import.meta.env.VITE_SUPABASE_ACCESS_TOKEN) as string | undefined;
 
 export { getSupabaseUrl, getSupabaseAnonKey };
 

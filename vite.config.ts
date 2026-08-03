@@ -6,6 +6,9 @@ import { defineConfig } from "vite";
 
 // https://vite.dev/config/
 export default defineConfig({
+  // Exponer también V1/V2/V3 (variables personalizadas del tab Keys) en
+  // import.meta.env además del prefijo estándar VITE_.
+  envPrefix: ["VITE_", "V1", "V2", "V3"],
   plugins: [react(), vlyPlugin(), tailwindcss()],
   resolve: {
     alias: {
