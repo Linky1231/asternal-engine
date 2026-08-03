@@ -6,6 +6,11 @@
 
 create extension if not exists pgcrypto;
 
+-- Permite crear funciones SQL que referencian tablas definidas más abajo en
+-- este mismo script (p. ej. has_role usa user_roles). Sin esto, PostgreSQL
+-- valida el cuerpo al crearlas y falla en una base vacía.
+set check_function_bodies = off;
+
 -- ─────────────────────────── ENUMS ───────────────────────────
 do $$ begin
   create type public.app_role as enum ('admin','moderator','user');
