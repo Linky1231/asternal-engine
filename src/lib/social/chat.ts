@@ -1,6 +1,6 @@
 // @ts-nocheck — Chat adapter (same Supabase client + helpers as api.ts)
 import { supabase } from "@/integrations/supabase/client";
-import { signMediaUrls, uploadMedia, type Profile } from "@/lib/social/api";
+import { signMediaUrls, uploadMedia } from "@/lib/social/api";
 
 export type ChatMessage = {
   id: string;
@@ -12,14 +12,9 @@ export type ChatMessage = {
   created_at: string;
 };
 
-export type ChatWithMeta = {
-  chat: Record<string, any>;
-  members: Profile[];
-  other: Profile | null;
-  last_message: ChatMessage | null;
-  unread: number;
-  last_read_at: string | null;
-};
+// Chat único de la comunidad: un ID fijo evita duplicados en carreras de creación.
+export const COMMUNITY_CHAT_ID = "c0000000-0000-4000-8000-000000000000";
+export const COMMUNITY_CHAT_NAME = "Asternal · Comunidad";
 
 async function getMeId(): Promise<string | null> {
   const {
@@ -28,120 +23,58 @@ async function getMeId(): Promise<string | null> {
   return user?.id ?? null;
 }
 
-export async function listMyChats(): Promise<ChatWithMeta[]> {
+/**
+ * Devuelve el chat compartido de la comunidad. Si no existe (primer usuario),
+ * lo crea con el ID fijo; en cualquier caso añade al usuario actual como miembro
+ * (auto-join) y devuelve el número de miembros.
+ */
+export async function getCommunityChat(): Promise<{ id: string; name: string; memberCount: number }> {
   const me = await getMeId();
-  if (!me) return [];
-  const { data: myMemberships } = await supabase
+  if (!me) throw new Error("Not authenticated");
+
+  let { data: chat } = await supabase
+    .from("chats")
+    .select("*")
+    .eq("is_community", true)
+    .limit(1)
+    .maybeSingle();
+
+  if (!chat) {
+    const { data: created } = await supabase
+      .from("chats")
+      .insert({
+        id: COMMUNITY_CHAT_ID,
+        type: "group",
+        name: COMMUNITY_CHAT_NAME,
+        created_by: me,
+        is_community: true,
+      })
+      .select()
+      .single()
+      .catch(() => ({ data: null }));
+    if (created) {
+      chat = created;
+    } else {
+      // Carrera: otro usuario lo creó justo en este instante → lo buscamos por ID fijo.
+      const { data: existing } = await supabase.from("chats").select("*").eq("id", COMMUNITY_CHAT_ID).maybeSingle();
+      chat = existing ?? null;
+    }
+  }
+  if (!chat) throw new Error("No se pudo preparar el chat de la comunidad");
+
+  // Auto-join (la política de chat_members permite a cada usuario añadirse a sí mismo).
+  const { data: member } = await supabase
     .from("chat_members")
-    .select("chat_id")
-    .eq("user_id", me);
-  const chatIds = (myMemberships ?? []).map((m) => m.chat_id);
-  if (!chatIds.length) return [];
-
-  const [{ data: chats }, { data: members }, { data: messages }] = await Promise.all([
-    supabase.from("chats").select("*").in("id", chatIds).order("updated_at", { ascending: false }).limit(100),
-    supabase.from("chat_members").select("*").in("chat_id", chatIds),
-    supabase
-      .from("chat_messages")
-      .select("id, chat_id, sender_id, content, media_url, reply_to_id, created_at")
-      .in("chat_id", chatIds)
-      .order("created_at", { ascending: false })
-      .limit(300),
-  ]);
-
-  const memberIds = Array.from(new Set((members ?? []).map((m) => m.user_id)));
-  const { data: profiles } = await supabase.from("profiles").select("*").in("id", memberIds);
-  const pmap = new Map((profiles ?? []).map((p) => [p.id, p]));
-
-  const membersByChat = new Map<string, Profile[]>();
-  for (const m of members ?? []) {
-    const arr = membersByChat.get(m.chat_id) ?? [];
-    arr.push((pmap.get(m.user_id) ?? { id: m.user_id }) as Profile);
-    membersByChat.set(m.chat_id, arr);
+    .select("id")
+    .eq("chat_id", chat.id)
+    .eq("user_id", me)
+    .maybeSingle();
+  if (!member) {
+    await supabase.from("chat_members").insert({ chat_id: chat.id, user_id: me, role: "member" });
   }
 
-  const lastReadByChat = new Map<string, string>();
-  for (const m of members ?? []) {
-    if (m.user_id === me && m.last_read_at) lastReadByChat.set(m.chat_id, m.last_read_at);
-  }
-
-  const lastByChat = new Map<string, ChatMessage>();
-  const unreadByChat = new Map<string, number>();
-  for (const msg of (messages ?? []) as ChatMessage[]) {
-    if (!lastByChat.has(msg.chat_id)) lastByChat.set(msg.chat_id, msg);
-    const lastRead = lastReadByChat.get(msg.chat_id);
-    if (msg.sender_id !== me && (!lastRead || new Date(msg.created_at) > new Date(lastRead))) {
-      unreadByChat.set(msg.chat_id, (unreadByChat.get(msg.chat_id) ?? 0) + 1);
-    }
-  }
-
-  return (chats ?? []).map((c) => {
-    const ms = membersByChat.get(c.id) ?? [];
-    const other = c.type === "direct" ? (ms.find((m) => m.id !== me) ?? null) : null;
-    return {
-      chat: c,
-      members: ms,
-      other,
-      last_message: lastByChat.get(c.id) ?? null,
-      unread: unreadByChat.get(c.id) ?? 0,
-      last_read_at: lastReadByChat.get(c.id) ?? null,
-    };
-  });
-}
-
-export async function getOrCreateDirectChat(otherUserId: string): Promise<string> {
-  const me = await getMeId();
-  if (!me) throw new Error("Not authenticated");
-  if (otherUserId === me) throw new Error("No puedes chatear contigo mismo");
-
-  const { data: mine } = await supabase.from("chat_members").select("chat_id").eq("user_id", me);
-  const myIds = (mine ?? []).map((m) => m.chat_id);
-  if (myIds.length) {
-    const { data: theirs } = await supabase
-      .from("chat_members")
-      .select("chat_id")
-      .eq("user_id", otherUserId)
-      .in("chat_id", myIds);
-    if ((theirs ?? []).length) {
-      const { data: existing } = await supabase
-        .from("chats")
-        .select("*")
-        .eq("id", theirs[0].chat_id)
-        .maybeSingle();
-      if (existing) return existing.id;
-    }
-  }
-
-  const { data: chat, error: chatErr } = await supabase
-    .from("chats")
-    .insert({ type: "direct", created_by: me })
-    .select()
-    .single();
-  if (chatErr) throw chatErr;
-  await supabase.from("chat_members").insert([
-    { chat_id: chat.id, user_id: me, role: "admin" },
-    { chat_id: chat.id, user_id: otherUserId, role: "member" },
-  ]);
-  return chat.id;
-}
-
-export async function createGroupChat(name: string, memberIds: string[]): Promise<string> {
-  const me = await getMeId();
-  if (!me) throw new Error("Not authenticated");
-  const { data: chat, error: chatErr } = await supabase
-    .from("chats")
-    .insert({ type: "group", name: name.trim() || "Chat grupal", created_by: me })
-    .select()
-    .single();
-  if (chatErr) throw chatErr;
-  const rows = [
-    { chat_id: chat.id, user_id: me, role: "admin" },
-    ...Array.from(new Set(memberIds))
-      .filter((id) => id !== me)
-      .map((id) => ({ chat_id: chat.id, user_id: id, role: "member" })),
-  ];
-  await supabase.from("chat_members").insert(rows);
-  return chat.id;
+  const { data: members } = await supabase.from("chat_members").select("id").eq("chat_id", chat.id);
+  return { id: chat.id, name: chat.name || COMMUNITY_CHAT_NAME, memberCount: (members ?? []).length };
 }
 
 export async function fetchChatMessages(chatId: string): Promise<ChatMessage[]> {
@@ -196,30 +129,6 @@ export function subscribeToChat(chatId: string, onMessage: (msg: ChatMessage) =>
       /* noop */
     }
   };
-}
-
-export async function markChatRead(chatId: string): Promise<void> {
-  const me = await getMeId();
-  if (!me) return;
-  await supabase
-    .from("chat_members")
-    .update({ last_read_at: new Date().toISOString() })
-    .eq("chat_id", chatId)
-    .eq("user_id", me);
-}
-
-export async function searchUsers(query: string): Promise<Profile[]> {
-  const me = await getMeId();
-  const q = query.trim();
-  if (!q) return [];
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("*")
-    .or(`username.ilike.%${q}%,display_name.ilike.%${q}%`)
-    .neq("id", me ?? "")
-    .limit(20);
-  if (error) throw error;
-  return (data ?? []) as Profile[];
 }
 
 export async function uploadSticker(file: File): Promise<string> {
