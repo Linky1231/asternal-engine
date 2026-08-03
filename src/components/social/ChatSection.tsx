@@ -13,6 +13,7 @@ import {
   type ChatMessage,
 } from "@/lib/social/chat";
 import { supabase } from "@/integrations/supabase/client";
+import { UserName } from "./UserName";
 import type { Profile } from "@/lib/social/api";
 
 function fmtTime(iso: string): string {
@@ -45,7 +46,7 @@ function Avatar({ p, name, size = 40 }: { p?: Profile | null; name?: string; siz
 
 function BubbleActions({ mine, copied, onCopy, onReply }: { mine: boolean; copied: boolean; onCopy: () => void; onReply: () => void }) {
   return (
-    <div className={`absolute -top-3 ${mine ? "-left-2" : "-right-2"} hidden group-hover:flex gap-0.5 bg-background border border-border rounded-lg p-0.5 shadow-md z-10`}>
+    <div className={`absolute top-1/2 -translate-y-1/2 ${mine ? "-left-2" : "-right-2"} hidden group-hover:flex gap-0.5 bg-background border border-border rounded-lg p-0.5 shadow-md z-10`}>
       <button onClick={onCopy} title="Copiar" className="w-6 h-6 grid place-items-center rounded-md hover:bg-muted/70 text-muted-foreground">
         {copied ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
       </button>
@@ -76,7 +77,10 @@ function MessageBubble({
   return (
     <div className={`group relative flex gap-2 ${mine ? "justify-end pl-10" : "justify-start pr-10"}`}>
       {!mine && <Avatar p={sender} size={28} />}
-      <div className="max-w-[78%]">
+      <div className={`flex flex-col min-w-0 max-w-[78%] ${mine ? "items-end" : "items-start"}`}>
+        <div className={`mb-0.5 ${mine ? "pr-1" : "pl-1"}`}>
+          <UserName p={sender} size="xs" />
+        </div>
         <div
           className={
             mine
@@ -84,11 +88,6 @@ function MessageBubble({
               : "bg-card border border-border rounded-2xl rounded-bl-md px-3 py-2 shadow-sm"
           }
         >
-          {!mine && (
-            <div className="text-[10px] font-display tracking-wider text-primary mb-0.5">
-              {sender?.display_name || sender?.username || "Usuario"}
-            </div>
-          )}
           {reply && (
             <div className="mb-1.5 border-l-2 border-primary/50 pl-2 py-0.5 rounded-r-md bg-black/5 dark:bg-white/5 text-[11px] text-muted-foreground line-clamp-2">
               {reply.media_url ? "🖼️ Sticker" : reply.content || "Mensaje"}
@@ -101,6 +100,7 @@ function MessageBubble({
           <div className={`text-[9px] mt-1 ${mine ? "text-primary-foreground/70" : "text-muted-foreground/70"} text-right`}>{fmtTime(m.created_at)}</div>
         </div>
       </div>
+      {mine && <Avatar p={sender} size={28} />}
       <BubbleActions mine={mine} copied={copied} onCopy={onCopy} onReply={onReply} />
     </div>
   );
