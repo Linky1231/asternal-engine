@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Gamepad2, Newspaper, Search, LogOut, Wrench, Plus, ShieldCheck, User, Sparkles, Star, Menu, Bell, X, Home, Users, Flame, MessageSquare, Palette, Trophy, History, Clock, BarChart3, ChevronDown, ChevronRight, Globe, Heart, Megaphone } from "lucide-react";
+import { Gamepad2, Newspaper, Search, LogOut, Wrench, Plus, ShieldCheck, User, Sparkles, Star, Menu, MessageCircle, Bell, X, Home, Users, Flame, MessageSquare, Palette, Trophy, History, Clock, BarChart3, ChevronDown, ChevronRight, Globe, Heart, Megaphone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchFeed, fetchGames, getMyProfile, isMod, isAdmin, type PostWithMeta, type Profile } from "@/lib/social/api";
 import { PostComposer } from "@/components/social/PostComposer";
@@ -10,6 +10,7 @@ import { GamesHome } from "@/components/social/GamesHome";
 import { NotificationBell } from "@/components/social/NotificationBell";
 import { ProfilePanel } from "@/components/social/ProfilePanel";
 import { NotificationsInline } from "@/components/social/NotificationsInline";
+import ChatSection from "@/components/social/ChatSection";
 import { ForumSection } from "@/components/social/ForumSection";
 import { GallerySection } from "@/components/social/GallerySection";
 import { EventsSection } from "@/components/social/EventsSection";
@@ -47,8 +48,7 @@ function HomePage() {
   const [search, setSearch] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [menuMounted, setMenuMounted] = useState(false);
-  const [menuVisible, setMenuVisible] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [inPreview, setInPreview] = useState(false);
 
@@ -91,32 +91,8 @@ function HomePage() {
 
   useEffect(() => { if (myId) reload(tab); }, [tab, reload, myId]);
 
-  // Clean two-phase mount/animate for the drawer.
-  useEffect(() => {
-    if (menuOpen) {
-      setMenuMounted(true);
-      // Wait one paint after mount, then flip data-open to trigger the transition.
-      let raf1 = 0;
-      let raf2 = 0;
-      raf1 = requestAnimationFrame(() => {
-        raf2 = requestAnimationFrame(() => setMenuVisible(true));
-      });
-      return () => {
-        cancelAnimationFrame(raf1);
-        cancelAnimationFrame(raf2);
-      };
-    }
-    if (!menuMounted) return;
-    setMenuVisible(false);
-    const t = window.setTimeout(() => {
-      setMenuMounted(false);
-      setNotifOpen(false);
-    }, 360);
-    return () => window.clearTimeout(t);
-  }, [menuOpen, menuMounted]);
-
   const logout = async () => { await supabase.auth.signOut(); navigate({ to: "/auth" }); };
-  const closeMenu = () => setMenuOpen(false);
+  const closeMenu = () => { setMenuOpen(false); setNotifOpen(false); };
 
   return (
     <div className="min-h-screen w-screen flex flex-col bg-background text-foreground">
@@ -302,23 +278,34 @@ function HomePage() {
       </Link>
 
       {/* Menu drawer */}
-      {menuMounted && (
-        <div
-          className="fixed inset-0 z-[100] asternal-menu-overlay"
-          data-open={menuVisible ? "true" : "false"}
-          onClick={closeMenu}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            className="absolute right-0 top-0 h-full w-[86vw] max-w-xs bg-background border-l border-border shadow-lg p-4 flex flex-col gap-2 asternal-menu-drawer overflow-y-auto"
-            data-open={menuVisible ? "true" : "false"}
-          >
+      <AnimatePresence>
+        {menuOpen && (
+          <>
+            <motion.div
+              key="menu-overlay"
+              className="fixed inset-0 z-[100] bg-black/55 backdrop-blur-md"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
+              onClick={closeMenu}
+            />
+            <motion.div
+              key="menu-drawer"
+              onClick={e => e.stopPropagation()}
+              className="fixed right-0 top-0 h-full w-[86vw] max-w-xs bg-background border-l border-border shadow-xl p-4 flex flex-col gap-2 overflow-y-auto"
+              initial={{ x: "100%", opacity: 0.4 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: "100%", opacity: 0 }}
+              transition={{ type: "spring", stiffness: 340, damping: 34 }}
+            >
             <div className="flex items-center justify-between mb-2">
               <div className="font-display text-xs tracking-widest text-primary-glow">MENÚ</div>
               <button onClick={closeMenu} className="w-8 h-8 rounded-lg border border-border grid place-items-center active:scale-95 bg-background"><X size={14}/></button>
             </div>
             {/* Categoría: SOCIAL */}
             <CategoryHeader label="SOCIAL" />
+            <MenuItem icon={<MessageCircle size={16} className="text-primary-glow"/>} label="Chats" onClick={() => { setChatOpen(true); closeMenu(); }} />
             <MenuItem icon={<Search size={16}/>} label="Buscar" onClick={() => { setShowSearch(s => !s); closeMenu(); }} />
             <MenuItem icon={<Bell size={16}/>} label="Notificaciones" onClick={() => setNotifOpen(o => !o)} />
             {notifOpen && <NotificationsInline />}
@@ -341,9 +328,13 @@ function HomePage() {
               className="flex items-center gap-3 px-3 h-11 rounded-xl border border-border bg-background text-destructive active:scale-[0.98] transition">
               <LogOut size={16} /> <span className="text-sm font-medium">Cerrar sesión</span>
             </button>
-          </div>
-        </div>
-      )}
+          </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Full-screen chat */}
+      {chatOpen && <ChatSection myId={myId} onClose={() => setChatOpen(false)} />}
     </div>
   );
 }

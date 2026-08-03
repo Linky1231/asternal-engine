@@ -232,39 +232,6 @@
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { scrollbar-width: none; }
 
-/* ============ Menu drawer — clean two-state slide ============ */
-.asternal-menu-overlay {
-  background: oklch(0 0 0 / 0);
-  backdrop-filter: blur(0);
-  -webkit-backdrop-filter: blur(0);
-  transition: background-color 280ms var(--ease-out-smooth), backdrop-filter 280ms var(--ease-out-smooth);
-  will-change: background-color, backdrop-filter;
-}
-.asternal-menu-overlay[data-open="true"] {
-  background: oklch(0 0 0 / 0.55);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-}
-.asternal-menu-drawer {
-  transform: translate3d(100%, 0, 0);
-  opacity: 0;
-  transition:
-    transform 340ms cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 220ms ease-out;
-  will-change: transform, opacity;
-}
-.asternal-menu-drawer[data-open="true"] {
-  transform: translate3d(0, 0, 0);
-  opacity: 1;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .asternal-menu-overlay,
-  .asternal-menu-drawer {
-    transition-duration: 1ms !important;
-  }
-}
-
 /* ============ Header stability — kills the "tambaleo" on scroll ============ */
 .app-header {
   transform: translateZ(0);
