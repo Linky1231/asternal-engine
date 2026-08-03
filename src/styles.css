@@ -608,3 +608,29 @@
 .animate-cursor-blink {
   animation: cursor-blink 1s step-end infinite;
 }
+
+/* ============ Auth hero: twinkle stars ============ */
+@keyframes twinkle {
+  0%, 100% { opacity: 0.1; transform: scale(0.75); }
+  50%      { opacity: 0.9; transform: scale(1.3); }
+}
+
+/* ============ Auth hero: gentle vertical bob ============ */
+@keyframes bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-8px); }
+}
+@keyframes bob-slow {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+
+/* ============ Auth hero: orbital rotation ============ */
+@keyframes orbit-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes orbit-slow-rev {
+  from { transform: rotate(360deg); }
+  to   { transform: rotate(0deg); }
+}
