@@ -10,10 +10,12 @@ import {
   subscribeToChat,
   uploadSticker,
   fetchMyStickers,
+  deleteSticker,
   signMedia,
   COMMUNITY_CHAT_NAME,
   CHAT_ERR,
   type ChatMessage,
+  type ChatSticker,
 } from "@/lib/social/chat";
 import { supabase, hasSupabaseConfig, saveSupabaseCredentials, isSchemaMissing } from "@/integrations/supabase/client";
 import { UserName } from "./UserName";
@@ -134,7 +136,7 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
   const [draft, setDraft] = useState("");
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
   const [stickersOpen, setStickersOpen] = useState(false);
-  const [myStickers, setMyStickers] = useState<{ path: string; title: string }[]>([]);
+  const [myStickers, setMyStickers] = useState<ChatSticker[]>([]);
   const [signedStickers, setSignedStickers] = useState<Map<string, string>>(new Map());
   const [stickerUploading, setStickerUploading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -328,21 +330,33 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
   const onPickStickerFile = useCallback(
     async (file: File | null) => {
       if (!file || !chatInfo) return;
-      setStickerUploading(true);
-      try {
-        const path = await uploadSticker(file);
-        const [signed] = await signMedia([path]);
-        const sent = await sendChatMessage(chatInfo.id, { mediaUrl: signed, replyToId: replyTo?.id ?? null });
-        setMessages((prev) => (prev.some((m) => m.id === sent.id) ? prev : [...prev, sent]));
-        setReplyTo(null);
-      } catch {
-        toast.error("No se pudo subir el sticker");
-      } finally {
-        setStickerUploading(false);
-      }
-    },
-    [chatInfo, replyTo]
-  );
+    setStickerUploading(true);
+    try {
+      const { path, id } = await uploadSticker(file);
+      const [signed] = await signMedia([path]);
+      // Aparece al instante en la biblioteca de stickers de la cuenta.
+      if (id) setMyStickers((prev) => [{ id, path, title: "Sticker" }, ...prev.filter((s) => s.path !== path)]);
+      setSignedStickers((prev) => new Map(prev).set(path, signed));
+      const sent = await sendChatMessage(chatInfo.id, { mediaUrl: signed, replyToId: replyTo?.id ?? null });
+      setMessages((prev) => (prev.some((m) => m.id === sent.id) ? prev : [...prev, sent]));
+      setReplyTo(null);
+    } catch {
+      toast.error("No se pudo subir el sticker");
+    } finally {
+      setStickerUploading(false);
+    }
+  },
+  [chatInfo, replyTo]
+);
+
+  const onDeleteSticker = useCallback(async (id: string) => {
+    try {
+      await deleteSticker(id);
+      setMyStickers((prev) => prev.filter((s) => s.id !== id));
+    } catch {
+      toast.error("No se pudo eliminar el sticker");
+    }
+  }, []);
 
   const textareaAutoGrow = (el: HTMLTextAreaElement) => {
     el.style.height = "auto";
@@ -589,22 +603,42 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
                 transition={{ duration: 0.16, ease: "easeOut" }}
                 className="absolute bottom-full left-0 right-0 mb-2 bg-card border border-border rounded-2xl shadow-xl p-3 z-20"
               >
-                <div className="text-[10px] font-display tracking-widest text-muted-foreground mb-2">TUS DIBUJOS DE GALERÍA</div>
+                <div className="text-[10px] font-display tracking-widest text-muted-foreground mb-2">
+                  TUS STICKERS{myStickers.length > 0 ? ` (${myStickers.length})` : ""} · se guardan en tu cuenta
+                </div>
                 {myStickers.length === 0 ? (
                   <div className="text-[11px] text-muted-foreground text-center py-4">
-                    Aún no tienes dibujos en la galería.
+                    Aún no tienes stickers guardados. Sube el primero 👇
                   </div>
                 ) : (
                   <div className="grid grid-cols-4 gap-2">
                     {myStickers.map((s) => (
-                      <button
-                        key={s.path}
-                        onClick={() => void handleSend(signedStickers.get(s.path) ?? s.path)}
-                        title={s.title}
-                        className="aspect-square rounded-xl overflow-hidden border border-border hover:border-primary/50 hover:scale-105 active:scale-95 transition"
+                      <div
+                        key={s.id}
+                        className="relative aspect-square rounded-xl overflow-hidden border border-border hover:border-primary/50 group/st"
                       >
-                        <img src={signedStickers.get(s.path) ?? s.path} alt={s.title} className="w-full h-full object-cover" />
-                      </button>
+                        <button
+                          onClick={() => void handleSend(signedStickers.get(s.path) ?? s.path)}
+                          title={s.title}
+                          className="w-full h-full active:scale-95 transition"
+                        >
+                          <img
+                            src={signedStickers.get(s.path) ?? s.path}
+                            alt={s.title}
+                            className="w-full h-full object-cover group-hover/st:scale-105 transition-transform"
+                          />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void onDeleteSticker(s.id);
+                          }}
+                          title="Eliminar sticker"
+                          className="absolute top-1 right-1 w-5 h-5 rounded-md bg-black/60 text-white grid place-items-center opacity-0 group-hover/st:opacity-100 transition active:scale-90"
+                        >
+                          <X size={11} />
+                        </button>
+                      </div>
                     ))}
                   </div>
                 )}

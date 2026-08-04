@@ -199,28 +199,47 @@ export function subscribeToChat(chatId: string, onMessage: (msg: ChatMessage) =>
   };
 }
 
-export async function uploadSticker(file: File): Promise<string> {
+export type ChatSticker = { id: string; path: string; title: string };
+
+/**
+ * Sube un sticker y lo guarda en la biblioteca de stickers de la cuenta.
+ * Devuelve la ruta del archivo y el id de la fila creada en la tabla stickers.
+ */
+export async function uploadSticker(file: File): Promise<{ path: string; id: string }> {
   const me = await requireMe();
-  return uploadMedia(file, me.id);
+  const path = await uploadMedia(file, me.id);
+  const { data, error } = await supabase
+    .from("stickers")
+    .insert({ user_id: me.id, path })
+    .select("id")
+    .single();
+  if (error) throw error;
+  const row = data as { id?: string } | null;
+  return { path, id: row?.id ?? "" };
 }
 
-export async function fetchMyStickers(): Promise<{ path: string; title: string }[]> {
+/** Stickers guardados de la cuenta actual (persisten entre sesiones y dispositivos). */
+export async function fetchMyStickers(): Promise<ChatSticker[]> {
   const me = await getMeId();
   if (!me) return [];
   const { data, error } = await supabase
-    .from("posts")
-    .select("id, media_urls, content, price_orbes")
-    .eq("author_id", me.id)
-    .eq("category", "artwork")
+    .from("stickers")
+    .select("id, path")
+    .eq("user_id", me.id)
     .order("created_at", { ascending: false })
-    .limit(30);
+    .limit(60);
   if (error) throw error;
-  const out: { path: string; title: string }[] = [];
-  for (const p of data ?? []) {
-    const path = Array.isArray(p.media_urls) ? p.media_urls[0] : null;
-    if (path) out.push({ path, title: (p.content || "").replace(/^🎨\s*/, "").trim() || "Arte" });
-  }
-  return out;
+  return (data ?? []).map((s) => {
+    const row = s as { id: string; path: string };
+    return { id: row.id, path: row.path, title: "Sticker" };
+  });
+}
+
+/** Elimina un sticker de la biblioteca de la cuenta actual. */
+export async function deleteSticker(id: string): Promise<void> {
+  const me = await requireMe();
+  const { error } = await supabase.from("stickers").delete().eq("id", id).eq("user_id", me.id);
+  if (error) throw error;
 }
 
 export async function signMedia(paths: string[]): Promise<string[]> {

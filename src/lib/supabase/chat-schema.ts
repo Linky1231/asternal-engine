@@ -1,5 +1,6 @@
 /**
- * DDL de las tablas del chat comunitario (chats / chat_members / chat_messages).
+ * DDL de las tablas del chat comunitario (chats / chat_members / chat_messages)
+ * y de la biblioteca de stickers por cuenta (stickers).
  *
  * Este bloque es idempotente: puede ejecutarse completo o por partes, tantas
  * veces como sea necesario (create table/index if not exists + limpieza total
@@ -43,9 +44,22 @@ create table if not exists public.chat_messages (
 create index if not exists chat_messages_chat_created_idx on public.chat_messages (chat_id, created_at);
 create index if not exists chat_members_user_idx on public.chat_members (user_id);
 
+-- ─────── BIBLIOTECA DE STICKERS POR CUENTA ───────
+-- Cada usuario guarda sus propios stickers; persisten entre sesiones y
+-- dispositivos. Solo el dueño puede verlos, añadirlos y eliminarlos.
+create table if not exists public.stickers (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  path text not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists stickers_user_idx on public.stickers (user_id);
+
 alter table public.chats enable row level security;
 alter table public.chat_members enable row level security;
 alter table public.chat_messages enable row level security;
+alter table public.stickers enable row level security;
 
 -- Limpieza total: elimina CUALQUIER política previa de las tablas del chat,
 -- incluidas las de instalaciones antiguas con otros nombres que provocan el
@@ -55,7 +69,7 @@ do $$
 declare _t text;
 declare _p record;
 begin
-  for _t in select unnest(array['chats', 'chat_members', 'chat_messages']) loop
+  for _t in select unnest(array['chats', 'chat_members', 'chat_messages', 'stickers']) loop
     for _p in
       select policyname from pg_policies
       where schemaname = 'public' and tablename = _t
@@ -77,6 +91,11 @@ create policy chat_members_self_delete on public.chat_members for delete using (
 -- chat_messages: lectura pública, cada usuario escribe con su propia identidad
 create policy chat_messages_read on public.chat_messages for select using (true);
 create policy chat_messages_insert on public.chat_messages for insert with check (auth.uid() = sender_id);
+
+-- stickers: biblioteca privada de cada cuenta
+create policy stickers_select on public.stickers for select using (auth.uid() = user_id);
+create policy stickers_insert on public.stickers for insert with check (auth.uid() = user_id);
+create policy stickers_delete on public.stickers for delete using (auth.uid() = user_id);
 
 -- Realtime: los mensajes nuevos llegan al instante a todos los clientes conectados.
 -- Se protege por si la publicación ya existe o el proyecto no la tiene.
