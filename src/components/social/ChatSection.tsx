@@ -143,7 +143,7 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
   const [connectUrl, setConnectUrl] = useState("https://gxpgczwkovertezeydkt.supabase.co");
   const [connectKey, setConnectKey] = useState("");
   const [connectError, setConnectError] = useState<string | null>(null);
-  const [initError, setInitError] = useState<"schema" | "conn" | "auth" | null>(null);
+  const [initError, setInitError] = useState<"schema" | "conn" | "auth" | "rls" | null>(null);
   const [errorDetail, setErrorDetail] = useState("");
   const [retryKey, setRetryKey] = useState(0);
   const [installOpen, setInstallOpen] = useState(false);
@@ -230,7 +230,15 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
         if (code === CHAT_ERR.AUTH_REQUIRED || code === CHAT_ERR.REAL_AUTH_REQUIRED) {
           setInitError("auth");
         } else {
-          setInitError(isSchemaMissing(err) ? "schema" : "conn");
+          const msg = (err as Error)?.message ?? "";
+          if (isSchemaMissing(err)) {
+            setInitError("schema");
+          } else if (/infinite recursion|recursion detected|permission denied|row-level security|42501|PGRST301/i.test(msg)) {
+            // Permisos (RLS) del chat desactualizados: se reparan reinstalando las tablas.
+            setInitError("rls");
+          } else {
+            setInitError("conn");
+          }
         }
         setErrorDetail((err as Error)?.message ?? "");
       } finally {
@@ -407,6 +415,13 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
                   <span className="font-mono">sbp_…</span> de Supabase) o abre el menú (⋮) → <b>Supabase</b> →{" "}
                   <b>Crear esquema</b>.
                 </>
+              ) : initError === "rls" ? (
+                <>
+                  <span className="font-semibold text-foreground">Permisos del chat desactualizados</span>{" "}
+                  (una instalación anterior dejó políticas antiguas que se bloquean entre sí). Pulsa{" "}
+                  <b>«Instalar chat»</b> con tu token <span className="font-mono">sbp_…</span> para limpiarlas y
+                  reinstalarlas correctamente.
+                </>
               ) : initError === "auth" ? (
                 <>
                   <span className="font-semibold text-foreground">Inicia sesión para usar el chat.</span>{" "}
@@ -422,13 +437,13 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
               )}
             </div>
           </div>
-          {initError === "conn" && errorDetail && (
+          {(initError === "conn" || initError === "rls") && errorDetail && (
             <p className="text-[10px] font-mono text-muted-foreground/50 break-words bg-black/[0.03] dark:bg-white/[0.04] rounded-lg px-2 py-1.5">
               {errorDetail.slice(0, 220)}
             </p>
           )}
           <div className="flex gap-2">
-            {initError === "schema" && (
+            {(initError === "schema" || initError === "rls") && (
               <button
                 onClick={() => {
                   setInstallToken(SUPABASE_ACCESS_TOKEN ?? "");
