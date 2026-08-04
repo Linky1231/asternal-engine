@@ -226,7 +226,7 @@ export function GameCard({
                 onClick={e => e.stopPropagation()}
                 className={`text-[10px] font-mono truncate hover:underline ${post.signed_cover ? "text-white/80" : "text-muted-foreground"}`}
               >
-                @{post.author?.username ?? "anon"} · {timeAgo(post.created_at)}
+                @{post.author?.username ?? "jugador"} · {timeAgo(post.created_at)}
               </Link>
             </div>
           </div>

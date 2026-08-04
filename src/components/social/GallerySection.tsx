@@ -368,7 +368,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
                           )}
                         </div>
                         <span className="text-[10px] font-mono text-muted-foreground truncate group-hover/author:text-foreground transition">
-                          @{art.author?.username ?? "anon"}
+                          @{art.author?.username ?? "jugador"}
                         </span>
                       </Link>
 

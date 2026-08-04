@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, Copy, Check, Reply, SmilePlus, ImagePlus, Loader2, Users } from "lucide-react";
+import { X, Send, Copy, Check, Reply, SmilePlus, ImagePlus, Loader2, Users, WifiOff, Database, Plug, RefreshCw, KeyRound, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { toast } from "sonner";
 import {
   getCommunityChat,
   fetchChatMessages,
@@ -12,10 +14,11 @@ import {
   COMMUNITY_CHAT_NAME,
   type ChatMessage,
 } from "@/lib/social/chat";
-import { supabase, hasSupabaseConfig, saveSupabaseCredentials } from "@/integrations/supabase/client";
+import { supabase, hasSupabaseConfig, saveSupabaseCredentials, isSchemaMissing } from "@/integrations/supabase/client";
 import { UserName } from "./UserName";
 import { getMyProfile } from "@/lib/social/api";
 import type { Profile } from "@/lib/social/api";
+import { runChatSchemaSetup, SUPABASE_ACCESS_TOKEN } from "@/lib/supabase/setup";
 
 function fmtTime(iso: string): string {
   const d = new Date(iso);
@@ -80,7 +83,9 @@ function MessageBubble({
       {!mine && <Avatar p={sender} size={28} />}
       <div className={`flex flex-col min-w-0 max-w-[78%] ${mine ? "items-end" : "items-start"}`}>
         <div className={`mb-0.5 ${mine ? "pr-1" : "pl-1"}`}>
-          <UserName p={sender} size="xs" />
+          <Link to="/profile/$userId" params={{ userId: m.sender_id }} className="hover:opacity-80 transition-opacity">
+            <UserName p={sender} size="xs" />
+          </Link>
         </div>
         <div
           className={
@@ -123,6 +128,13 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
   const [connecting, setConnecting] = useState(false);
   const [connectUrl, setConnectUrl] = useState("https://gxpgczwkovertezeydkt.supabase.co");
   const [connectKey, setConnectKey] = useState("");
+  const [initError, setInitError] = useState<"schema" | "conn" | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
+  const [installOpen, setInstallOpen] = useState(false);
+  const [installToken, setInstallToken] = useState(SUPABASE_ACCESS_TOKEN ?? "");
+  const [installing, setInstalling] = useState(false);
+  const [installResult, setInstallResult] = useState<string | null>(null);
+  const [installOk, setInstallOk] = useState(false);
 
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -179,6 +191,8 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
   // Preparar el chat comunitario + cargar mensajes
   useEffect(() => {
     let cancelled = false;
+    setInitError(null);
+    setLoading(true);
     (async () => {
       try {
         const info = await getCommunityChat();
@@ -188,8 +202,9 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
         if (cancelled) return;
         setMessages(msgs);
         await loadSenders(msgs);
-      } catch {
-        /* sin conexión / esquema no listo */
+      } catch (err) {
+        if (cancelled) return;
+        setInitError(isSchemaMissing(err) ? "schema" : "conn");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -197,7 +212,7 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
     return () => {
       cancelled = true;
     };
-  }, [loadSenders]);
+  }, [loadSenders, retryKey]);
 
   // Suscripción en tiempo real una vez que conocemos el chat
   useEffect(() => {
@@ -235,7 +250,12 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
   const handleSend = useCallback(
     async (mediaUrl?: string) => {
       const content = draft.trim();
-      if (!chatInfo) return;
+      if (!chatInfo) {
+        toast.error("El chat aún no está conectado", {
+          description: initError === "schema" ? "Instala las tablas del chat con el botón de abajo." : "Reintenta en unos segundos.",
+        });
+        return;
+      }
       if (!content && !mediaUrl) return;
       try {
         const sent = await sendChatMessage(chatInfo.id, {
@@ -250,10 +270,12 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
         setStickersOpen(false);
         if (inputRef.current) inputRef.current.style.height = "auto";
       } catch {
-        /* noop */
+        toast.error("No se pudo enviar el mensaje", {
+          description: "Comprueba tu conexión e inténtalo de nuevo.",
+        });
       }
     },
-    [chatInfo, draft, replyTo]
+    [chatInfo, draft, replyTo, initError]
   );
 
   const copyMessage = useCallback(async (m: ChatMessage) => {
@@ -278,7 +300,7 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
         setMessages((prev) => (prev.some((m) => m.id === sent.id) ? prev : [...prev, sent]));
         setReplyTo(null);
       } catch {
-        /* noop */
+        toast.error("No se pudo subir el sticker");
       } finally {
         setStickerUploading(false);
       }
@@ -315,7 +337,11 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
               <div className="text-[10px] text-muted-foreground">
                 {chatInfo
                   ? `${chatInfo.memberCount} ${chatInfo.memberCount === 1 ? "miembro" : "miembros"} · chat compartido`
-                  : "Conectando…"}
+                  : loading
+                    ? "Conectando…"
+                    : initError
+                      ? "Sin conexión"
+                      : "Conectando…"}
               </div>
             </div>
           </div>
@@ -340,13 +366,57 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
         </div>
       )}
 
+      {/* Error de conexión / esquema del chat */}
+      {initError && !chatInfo && !loading && (
+        <div className="shrink-0 mx-3 mt-2 px-3 py-3 rounded-xl border border-rose-500/25 bg-rose-500/[0.06] space-y-2.5">
+          <div className="flex items-start gap-2.5">
+            <WifiOff size={15} className="text-rose-500 shrink-0 mt-0.5" />
+            <div className="text-[11px] leading-relaxed text-muted-foreground">
+              {initError === "schema" ? (
+                <>
+                  <span className="font-semibold text-foreground">Las tablas del chat no existen</span>{" "}
+                  en tu base de datos. Pulsa «Instalar chat» (necesita tu token{" "}
+                  <span className="font-mono">sbp_…</span> de Supabase) o abre el menú (⋮) → <b>Supabase</b> →{" "}
+                  <b>Crear esquema</b>.
+                </>
+              ) : (
+                <>
+                  <span className="font-semibold text-foreground">No se pudo conectar al chat.</span>{" "}
+                  Revisa que la URL y la anon key de Supabase sean correctas y vuelve a intentarlo.
+                </>
+              )}
+            </div>
+          </div>
+          <div className="flex gap-2">
+            {initError === "schema" && (
+              <button
+                onClick={() => {
+                  setInstallToken(SUPABASE_ACCESS_TOKEN ?? "");
+                  setInstallResult(null);
+                  setInstallOpen(true);
+                }}
+                className="flex-1 py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-[10px] font-display tracking-widest active:scale-[0.98] transition flex items-center justify-center gap-1.5"
+              >
+                <Database size={12} /> INSTALAR CHAT
+              </button>
+            )}
+            <button
+              onClick={() => setRetryKey((k) => k + 1)}
+              className="flex-1 py-2 rounded-xl border border-border bg-background text-[10px] font-display tracking-widest active:scale-[0.98] transition flex items-center justify-center gap-1.5"
+            >
+              <RefreshCw size={12} /> REINTENTAR
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ───── Mensajes ───── */}
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-3 no-scrollbar min-h-0">
         {loading ? (
           <div className="flex justify-center py-10">
             <Loader2 size={18} className="animate-spin text-muted-foreground" />
           </div>
-        ) : !messages.length ? (
+        ) : !chatInfo ? null : !messages.length ? (
           <div className="text-center text-xs text-muted-foreground py-10">
             Sé el primero en saludar a la comunidad 👋
           </div>
@@ -510,7 +580,7 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
             >
               <div className="text-sm font-semibold mb-0.5">Conectar Supabase</div>
               <p className="text-[11px] text-muted-foreground mb-3">
-                Pega la URL y la anon key de tu proyecto (están en Keys como V1 y V2). Los mensajes y la comunidad se sincronizarán entre dispositivos.
+                Pega la URL y la anon key de tu proyecto (están en Keys como V1 y V2). Los mensajes y la comunidad se sincronizarán entre dispositivos. Si tras conectar el chat sigue sin cargar, instala las tablas del chat con el botón «Instalar chat» que aparece abajo.
               </p>
               <input
                 value={connectUrl}
@@ -537,6 +607,90 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
                   className="flex-1 py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-xs font-display tracking-widest active:scale-[0.98] transition disabled:opacity-40"
                 >
                   CONECTAR
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Diálogo de instalación de las tablas del chat */}
+      <AnimatePresence>
+        {installOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-[95] bg-black/55 backdrop-blur-md grid place-items-center p-4"
+            onClick={() => setInstallOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.96, y: 8 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.96, y: 8 }}
+              transition={{ duration: 0.16, ease: "easeOut" }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm bg-card border border-border rounded-2xl p-4 shadow-xl"
+            >
+              <div className="text-sm font-semibold mb-0.5 flex items-center gap-2">
+                <Database size={15} className="text-primary" /> Instalar tablas del chat
+              </div>
+              <p className="text-[11px] text-muted-foreground mb-3">
+                Tu clave anon no puede crear tablas. Pega tu token de acceso personal (Supabase Dashboard →{" "}
+                <b>Account → Access Tokens → Generate new token</b>) y la app creará{" "}
+                <b>chats</b>, <b>chat_members</b> y <b>chat_messages</b> al instante.
+              </p>
+              <label className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5 mb-1.5">
+                <KeyRound size={12} /> Token de acceso personal (sbp_…)
+              </label>
+              <input
+                value={installToken}
+                onChange={(e) => setInstallToken(e.target.value)}
+                type="password"
+                placeholder="sbp_xxxxxxxxxxxxxxxx"
+                autoComplete="off"
+                className="w-full bg-input/50 rounded-xl px-3 py-2 text-sm font-mono outline-none focus:ring-2 focus:ring-primary/40 border border-border/60 mb-3"
+              />
+              {installResult && (
+                <div
+                  className={`mb-3 rounded-xl border p-2.5 text-[11px] flex items-start gap-2 ${
+                    installOk
+                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                      : "border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-300"
+                  }`}
+                >
+                  {installOk ? <CheckCircle2 size={13} className="shrink-0 mt-0.5" /> : <AlertTriangle size={13} className="shrink-0 mt-0.5" />}
+                  <span className="break-words">{installResult}</span>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setInstallOpen(false)}
+                  className="flex-1 py-2 rounded-xl border border-border bg-background text-xs font-display tracking-widest active:scale-[0.98] transition"
+                >
+                  CANCELAR
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!installToken.trim().startsWith("sbp_")) return;
+                    setInstalling(true);
+                    setInstallResult(null);
+                    const r = await runChatSchemaSetup(installToken.trim());
+                    setInstalling(false);
+                    setInstallResult(r.message);
+                    setInstallOk(r.ok);
+                    if (r.ok) {
+                      toast.success("Tablas del chat instaladas");
+                      setInstallOpen(false);
+                      setRetryKey((k) => k + 1);
+                    }
+                  }}
+                  disabled={installing || !installToken.trim().startsWith("sbp_")}
+                  className="flex-1 py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-xs font-display tracking-widest active:scale-[0.98] transition disabled:opacity-40 flex items-center justify-center gap-1.5"
+                >
+                  {installing ? <Loader2 size={13} className="animate-spin" /> : <Plug size={13} />}
+                  {installing ? "INSTALANDO…" : "INSTALAR"}
                 </button>
               </div>
             </motion.div>

@@ -17,10 +17,26 @@ export const COMMUNITY_CHAT_ID = "c0000000-0000-4000-8000-000000000000";
 export const COMMUNITY_CHAT_NAME = "Asternal · Comunidad";
 
 async function getMeId(): Promise<string | null> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return user?.id ?? null;
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user?.id) return user.id;
+  } catch {
+    /* noop */
+  }
+  // Puente: si la app ya usa Supabase real pero la sesión activa es la local
+  // (cuenta creada antes de conectar), mantenemos la misma identidad.
+  try {
+    const raw = localStorage.getItem("_local_auth_session");
+    if (raw) {
+      const s = JSON.parse(raw) as { userId?: string; expiresAt?: string };
+      if (s.userId && s.expiresAt && new Date(s.expiresAt) > new Date()) return s.userId;
+    }
+  } catch {
+    /* noop */
+  }
+  return null;
 }
 
 /**

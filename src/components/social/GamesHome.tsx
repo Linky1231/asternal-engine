@@ -177,7 +177,7 @@ function FeaturedBanner({ post, onPlay }: { post: PostWithMeta; onPlay: () => vo
         <div>
           <div className="text-white font-display text-xl leading-tight drop-shadow">{title}</div>
           <div className="text-white/80 text-[11px] font-mono truncate">
-            @{post.author?.username ?? "anon"}
+            @{post.author?.username ?? "jugador"}
           </div>
         </div>
         <div className="flex items-center gap-2">

@@ -11,6 +11,7 @@
 import { supabase, getSupabaseUrl, getSupabaseAnonKey } from "@/integrations/supabase/client";
 // Importa el script SQL completo como texto crudo (Vite ?raw)
 import schemaSql from "../../../supabase-setup.sql?raw";
+import { CHAT_SCHEMA_SQL } from "./chat-schema";
 
 /**
  * Token de acceso personal de Supabase (sbp_...).
@@ -23,7 +24,7 @@ export { getSupabaseUrl, getSupabaseAnonKey };
 
 /** El script SQL completo del esquema (para copiar en el SQL Editor). */
 export function getSchemaSql(): string {
-  return schemaSql;
+  return schemaSql + "\n\n" + CHAT_SCHEMA_SQL;
 }
 
 /**
@@ -48,6 +49,8 @@ export function getSchemaSqlBlocks(): { title: string; sql: string }[] {
 
   return ranges.map(([s, e], i) => {
     const part = lines.slice(s, e);
+    const isLast = i === ranges.length - 1;
+    const sql = part.join("\n") + (isLast ? "\n\n" + CHAT_SCHEMA_SQL : "");
     const names = part
       .filter(l => /^--\s*─/.test(l))
       .map(l => (l.match(/──\s*(.+?)\s*──/) ?? [null, ""])[1])
@@ -55,7 +58,7 @@ export function getSchemaSqlBlocks(): { title: string; sql: string }[] {
       .slice(0, 3);
     return {
       title: `Bloque ${i + 1}${names.length ? " · " + names.join(", ") : ""}`,
-      sql: part.join("\n"),
+      sql,
     };
   });
 }
@@ -97,10 +100,11 @@ export async function checkSchemaReady(): Promise<boolean> {
 export type SetupResult = { ok: boolean; message: string };
 
 /**
- * Ejecuta todo el script SQL (esquema completo) vía Management API.
+ * Ejecuta un script SQL en el proyecto vía Management API.
  * @param accessToken Token de acceso personal de Supabase (sbp_...).
+ * @param sql Script SQL a ejecutar.
  */
-export async function runSchemaSetup(accessToken: string): Promise<SetupResult> {
+async function runSqlOnProject(accessToken: string, sql: string): Promise<SetupResult> {
   const url = getSupabaseUrl();
   if (!url) return { ok: false, message: "Falta la URL de Supabase. Pégala en el paso anterior o añádela en Keys (VITE_SUPABASE_URL)." };
   const ref = projectRefFromUrl(url);
@@ -110,7 +114,7 @@ export async function runSchemaSetup(accessToken: string): Promise<SetupResult> 
     return { ok: false, message: "El token debe empezar por sbp_ (token de acceso personal)." };
   }
 
-  const body = JSON.stringify({ query: schemaSql, read_only: false, parameters: [] });
+  const body = JSON.stringify({ query: sql, read_only: false, parameters: [] });
   const headers = {
     "Content-Type": "application/json",
     Authorization: `Bearer ${token}`,
@@ -160,4 +164,22 @@ export async function runSchemaSetup(accessToken: string): Promise<SetupResult> 
       "No se pudo ejecutar el SQL desde el navegador (" + lastError + "). " +
       "Usa la opción 'Copiar SQL' y pégalo en el SQL Editor de tu proyecto, o ejecuta la app desde el dev server para que el botón automático funcione.",
   };
+}
+
+/**
+ * Ejecuta todo el script SQL (esquema completo) vía Management API.
+ * @param accessToken Token de acceso personal de Supabase (sbp_...).
+ */
+export async function runSchemaSetup(accessToken: string): Promise<SetupResult> {
+  return runSqlOnProject(accessToken, getSchemaSql());
+}
+
+/**
+ * Ejecuta solo el bloque de las tablas del chat (chats, chat_members,
+ * chat_messages + RLS + realtime). Útil para instalar el chat sin re-ejecutar
+ * todo el esquema cuando ya está montado el resto de la plataforma.
+ * @param accessToken Token de acceso personal de Supabase (sbp_...).
+ */
+export async function runChatSchemaSetup(accessToken: string): Promise<SetupResult> {
+  return runSqlOnProject(accessToken, CHAT_SCHEMA_SQL);
 }

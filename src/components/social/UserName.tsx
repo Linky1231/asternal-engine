@@ -14,8 +14,8 @@ export function UserName({
   showBadge?: boolean;
   className?: string;
 }) {
-  const name = p?.display_name || p?.username || "anon";
-  const plusActive = isPlusActive(p);
+  const name = p?.display_name || p?.username || "Jugador";
+  const plusActive = !!p && isPlusActive(p);
   const effect = plusActive && p?.name_effect ? p.name_effect : null;
   const badge = plusActive && (p?.show_plus_badge ?? true);
 
