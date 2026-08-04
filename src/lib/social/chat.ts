@@ -8,6 +8,7 @@ export type ChatMessage = {
   sender_id: string;
   content: string | null;
   media_url: string | null;
+  media_type: string | null;
   reply_to_id: string | null;
   created_at: string;
 };
@@ -159,7 +160,7 @@ export async function fetchChatMessages(chatId: string): Promise<ChatMessage[]> 
 
 export async function sendChatMessage(
   chatId: string,
-  opts: { content?: string; mediaUrl?: string; replyToId?: string | null }
+  opts: { content?: string; mediaUrl?: string; mediaType?: "image" | "audio"; replyToId?: string | null }
 ): Promise<ChatMessage> {
   const me = await requireMe();
   const { data, error } = await supabase
@@ -169,6 +170,7 @@ export async function sendChatMessage(
       sender_id: me.id,
       content: opts.content ?? null,
       media_url: opts.mediaUrl ?? null,
+      media_type: opts.mediaType ?? (opts.mediaUrl ? "image" : null),
       reply_to_id: opts.replyToId ?? null,
     })
     .select()
@@ -176,6 +178,10 @@ export async function sendChatMessage(
   if (error) throw error;
   await supabase.from("chats").update({ updated_at: new Date().toISOString() }).eq("id", chatId);
   return data as ChatMessage;
+}
+
+export function isAudioMessage(m: Pick<ChatMessage, "media_type" | "media_url">): boolean {
+  return !!m.media_url && (m.media_type === "audio" || /^audio\//.test(m.media_url ?? ""));
 }
 
 export function subscribeToChat(chatId: string, onMessage: (msg: ChatMessage) => void): () => void {

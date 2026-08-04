@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, Copy, Check, Reply, SmilePlus, ImagePlus, Loader2, Users, WifiOff, Database, Plug, RefreshCw, KeyRound, CheckCircle2, AlertTriangle } from "lucide-react";
+import { X, Send, Copy, Check, Reply, SmilePlus, ImagePlus, Loader2, Users, WifiOff, Database, Plug, RefreshCw, KeyRound, CheckCircle2, AlertTriangle, Mic, Play, Pause, Trash2 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
@@ -12,6 +12,7 @@ import {
   fetchMyStickers,
   deleteSticker,
   signMedia,
+  isAudioMessage,
   COMMUNITY_CHAT_NAME,
   CHAT_ERR,
   type ChatMessage,
@@ -19,7 +20,7 @@ import {
 } from "@/lib/social/chat";
 import { supabase, hasSupabaseConfig, saveSupabaseCredentials, isSchemaMissing } from "@/integrations/supabase/client";
 import { UserName } from "./UserName";
-import { getMyProfile } from "@/lib/social/api";
+import { getMyProfile, uploadMedia } from "@/lib/social/api";
 import type { Profile } from "@/lib/social/api";
 import { runChatSchemaSetup, SUPABASE_ACCESS_TOKEN } from "@/lib/supabase/setup";
 
@@ -77,6 +78,114 @@ function BubbleActions({ mine, copied, onCopy, onReply }: { mine: boolean; copie
   );
 }
 
+/** Formatea segundos como m:ss (o ss) para la duración del audio. */
+function fmtDur(s: number): string {
+  if (!isFinite(s) || s < 0) s = 0;
+  const secs = Math.round(s);
+  const m = Math.floor(secs / 60);
+  const r = secs % 60;
+  return m > 0 ? `${m}:${String(r).padStart(2, "0")}` : `${r}s`;
+}
+
+// Elemento de audio que está sonando en este momento (solo uno a la vez).
+let currentAudio: HTMLAudioElement | null = null;
+
+/** Burbuja de audio de voz: play/pausa, forma de onda animada y duración. */
+function AudioBubble({ url, mine, duration }: { url: string; mine: boolean; duration: number }) {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [playing, setPlaying] = useState(false);
+  const [progress, setProgress] = useState(0); // 0..1
+  const [time, setTime] = useState(0);
+  const [dur, setDur] = useState(duration || 0);
+
+  // Barras decorativas de la forma de onda (estáticas; el progreso las ilumina).
+  const bars = useRef<number[]>([]);
+  if (!bars.current.length) {
+    bars.current = Array.from({ length: 22 }, () => 0.35 + Math.random() * 0.65);
+  }
+
+  const toggle = () => {
+    const el = audioRef.current;
+    if (!el) return;
+    if (playing) {
+      el.pause();
+    } else {
+      // Pausa cualquier otro audio que esté sonando.
+      if (currentAudio && currentAudio !== el) {
+        try {
+          currentAudio.pause();
+          currentAudio.currentTime = 0;
+        } catch { /* noop */ }
+      }
+      currentAudio = el;
+      void el.play().catch(() => setPlaying(false));
+    }
+  };
+
+  return (
+    <div className={`flex items-center gap-2 min-w-[200px] max-w-[240px] ${mine ? "flex-row" : "flex-row-reverse"}`}>
+      <button
+        onClick={toggle}
+        className={`w-8 h-8 rounded-full grid place-items-center shrink-0 transition active:scale-90 ${
+          mine ? "bg-white/25 text-white hover:bg-white/30" : "bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-sm"
+        }`}
+      >
+        {playing ? <Pause size={13} /> : <Play size={13} className="ml-0.5" />}
+      </button>
+      <div className="flex-1 min-w-0">
+        {/* Forma de onda */}
+        <div className={`flex items-center gap-[2px] h-8 ${mine ? "justify-start" : "justify-end"}`}>
+          {bars.current.map((h, i) => {
+            const lit = progress * bars.current.length >= i;
+            return (
+              <span
+                key={i}
+                className={`w-[3px] rounded-full transition-colors duration-100 ${
+                  mine ? "bg-white/25" : "bg-primary/20"
+                } ${lit ? (mine ? "!bg-white" : "!bg-primary") : ""}`}
+                style={{ height: `${Math.round(h * 32)}px` }}
+              />
+            );
+          })}
+        </div>
+        {/* Progreso + duración */}
+        <div className={`flex items-center gap-1.5 text-[9px] ${mine ? "text-white/70" : "text-muted-foreground/70"}`}>
+          <span className="font-mono tabular-nums">{fmtDur(progress > 0 ? time : dur)}</span>
+          <div className="flex-1 h-1 rounded-full overflow-hidden bg-black/10 dark:bg-white/10">
+            <div
+              className={`h-full rounded-full ${mine ? "bg-white/80" : "bg-primary"}`}
+              style={{ width: `${Math.round(progress * 100)}%` }}
+            />
+          </div>
+          <span className="font-mono tabular-nums">{fmtDur(dur)}</span>
+        </div>
+      </div>
+      <audio
+        ref={audioRef}
+        src={url}
+        preload="metadata"
+        onLoadedMetadata={(e) => {
+          const d = e.currentTarget.duration;
+          if (isFinite(d) && d > 0) setDur(d);
+        }}
+        onTimeUpdate={(e) => {
+          const el = e.currentTarget;
+          setTime(el.currentTime);
+          if (isFinite(el.duration) && el.duration > 0) setProgress(el.currentTime / el.duration);
+        }}
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+        onEnded={() => {
+          setPlaying(false);
+          setProgress(0);
+          setTime(0);
+        }}
+        className="hidden"
+      />
+    </div>
+  );
+}
+
 function MessageBubble({
   m,
   mine,
@@ -112,13 +221,15 @@ function MessageBubble({
         >
           {reply && (
             <div className="mb-1.5 border-l-2 border-primary/50 pl-2 py-0.5 rounded-r-md bg-black/5 dark:bg-white/5 text-[11px] text-muted-foreground line-clamp-2">
-              {reply.media_url ? "🖼️ Sticker" : reply.content || "Mensaje"}
+              {isAudioMessage(reply) ? "🎤 Audio de voz" : reply.media_url ? "🖼️ Sticker" : reply.content || "Mensaje"}
             </div>
           )}
           {m.content && <div className="text-[13px] leading-snug whitespace-pre-wrap break-words">{m.content}</div>}
-          {m.media_url && (
+          {m.media_url && isAudioMessage(m) ? (
+            <AudioBubble url={m.media_url} mine={mine} duration={0} />
+          ) : m.media_url ? (
             <img src={m.media_url} alt="Sticker" className="max-w-44 max-h-44 rounded-xl mt-0.5 object-contain" draggable={false} />
-          )}
+          ) : null}
           <div className={`text-[9px] mt-1 ${mine ? "text-primary-foreground/70" : "text-muted-foreground/70"} text-right`}>{fmtTime(m.created_at)}</div>
         </div>
       </div>
@@ -139,6 +250,12 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
   const [myStickers, setMyStickers] = useState<ChatSticker[]>([]);
   const [signedStickers, setSignedStickers] = useState<Map<string, string>>(new Map());
   const [stickerUploading, setStickerUploading] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [recSeconds, setRecSeconds] = useState(0);
+  const [sendingAudio, setSendingAudio] = useState(false);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const recChunksRef = useRef<Blob[]>([]);
+  const recTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isLocal, setIsLocal] = useState<boolean>(() => !hasSupabaseConfig());
   const [connecting, setConnecting] = useState(false);
@@ -358,6 +475,104 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
     }
   }, []);
 
+  // ───── Audio de voz ─────
+  const startRecording = useCallback(async () => {
+    if (recording || sendingAudio) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mime = MediaRecorder.isTypeSupported("audio/webm")
+        ? "audio/webm"
+        : MediaRecorder.isTypeSupported("audio/mp4")
+          ? "audio/mp4"
+          : "";
+      const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+      recChunksRef.current = [];
+      rec.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) recChunksRef.current.push(e.data);
+      };
+      rec.onstop = () => {
+        stream.getTracks().forEach((t) => t.stop());
+      };
+      rec.start();
+      recorderRef.current = rec;
+      setRecording(true);
+      setRecSeconds(0);
+      setStickersOpen(false);
+      recTimerRef.current = setInterval(() => setRecSeconds((s) => s + 1), 1000);
+    } catch {
+      toast.error("No se pudo acceder al micrófono", {
+        description: "Permite el acceso al micrófono en el navegador e inténtalo de nuevo.",
+      });
+    }
+  }, [recording, sendingAudio]);
+
+  const stopRecording = useCallback(
+    async (send: boolean) => {
+      const rec = recorderRef.current;
+      if (!rec || rec.state === "inactive") {
+        setRecording(false);
+        if (recTimerRef.current) clearInterval(recTimerRef.current);
+        return;
+      }
+      if (recTimerRef.current) clearInterval(recTimerRef.current);
+      setRecording(false);
+      if (!send) {
+        try {
+          rec.onstop = null;
+          rec.stop();
+        } catch { /* noop */ }
+        recChunksRef.current = [];
+        return;
+      }
+
+      const done = new Promise<Blob>((resolve) => {
+        rec.onstop = () => {
+          rec.stream?.getTracks().forEach((t) => t.stop());
+          // El último dataavailable se entrega justo antes de stop: leemos el ref aquí.
+          const blob = new Blob(recChunksRef.current, { type: rec.mimeType || "audio/webm" });
+          recChunksRef.current = [];
+          resolve(blob);
+        };
+      });
+      rec.stop();
+      const blob = await done;
+      if (!blob.size || !chatInfo) {
+        toast.error("La grabación quedó vacía");
+        return;
+      }
+      setSendingAudio(true);
+      try {
+        const path = await uploadMedia(new File([blob], "voice.webm", { type: blob.type || "audio/webm" }), myId ?? "me");
+        const [signed] = await signMedia([path]);
+        const sent = await sendChatMessage(chatInfo.id, {
+          mediaUrl: signed,
+          mediaType: "audio",
+          replyToId: replyTo?.id ?? null,
+        });
+        setMessages((prev) => (prev.some((m) => m.id === sent.id) ? prev : [...prev, sent]));
+        setReplyTo(null);
+      } catch {
+        toast.error("No se pudo enviar el audio");
+      } finally {
+        setSendingAudio(false);
+      }
+    },
+    [chatInfo, replyTo, myId]
+  );
+
+  // Si cierras el chat grabando, detén el micrófono y el timer.
+  useEffect(() => {
+    return () => {
+      if (recorderRef.current && recorderRef.current.state !== "inactive") {
+        try {
+          recorderRef.current.onstop = null;
+          recorderRef.current.stop();
+        } catch { /* noop */ }
+      }
+      if (recTimerRef.current) clearInterval(recTimerRef.current);
+    };
+  }, []);
+
   const textareaAutoGrow = (el: HTMLTextAreaElement) => {
     el.style.height = "auto";
     el.style.height = Math.min(el.scrollHeight, 120) + "px";
@@ -548,7 +763,7 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
                   ""}
               </div>
               <div className="text-[11px] text-muted-foreground truncate">
-                {replyTo.media_url ? "🖼️ Sticker" : replyTo.content || ""}
+                {isAudioMessage(replyTo) ? "🎤 Audio de voz" : replyTo.media_url ? "🖼️ Sticker" : replyTo.content || ""}
               </div>
             </div>
             <button onClick={() => setReplyTo(null)} className="w-6 h-6 grid place-items-center rounded-md hover:bg-muted/70 text-muted-foreground shrink-0">
@@ -561,6 +776,32 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
       {/* ───── Barra de escritura ───── */}
       <div className="shrink-0 px-3 pb-[max(env(safe-area-inset-bottom),12px)] pt-1.5">
         <div className="relative flex items-end gap-2 bg-card border border-border rounded-2xl px-3 py-2 shadow-sm">
+          {recording ? (
+            /* ── Grabando: timer + cancelar + enviar ── */
+            <div className="flex-1 flex items-center gap-2 py-1">
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse shrink-0" />
+              <span className="font-mono tabular-nums text-sm">
+                {String(Math.floor(recSeconds / 60)).padStart(2, "0")}:{String(recSeconds % 60).padStart(2, "0")}
+              </span>
+              <span className="text-[11px] text-muted-foreground truncate flex-1">Grabando… mantén cerca el teléfono</span>
+              <button
+                onClick={() => void stopRecording(false)}
+                title="Descartar grabación"
+                className="w-9 h-9 rounded-xl border border-border grid place-items-center text-muted-foreground active:scale-95 transition shrink-0"
+              >
+                <Trash2 size={15} />
+              </button>
+              <button
+                onClick={() => void stopRecording(true)}
+                disabled={sendingAudio}
+                className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500 to-rose-600 text-white grid place-items-center active:scale-95 transition shrink-0 shadow-[0_4px_12px_-5px_oklch(0.577_0.245_27.3/0.5)] disabled:opacity-50"
+                title="Enviar audio"
+              >
+                {sendingAudio ? <Loader2 size={16} className="animate-spin" /> : <Send size={15} />}
+              </button>
+            </div>
+          ) : (
+            <>
           <button
             onClick={() => setStickersOpen((o) => !o)}
             className={`w-9 h-9 rounded-xl grid place-items-center active:scale-95 transition shrink-0 ${stickersOpen ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted/60"}`}
@@ -592,6 +833,16 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
           >
             <Send size={15} />
           </button>
+          <button
+            onClick={() => void startRecording()}
+            disabled={sendingAudio}
+            title="Grabar audio de voz"
+            className="w-9 h-9 rounded-xl border border-border/70 grid place-items-center text-muted-foreground hover:text-rose-500 hover:border-rose-400/40 active:scale-95 transition shrink-0 disabled:opacity-40"
+          >
+            <Mic size={16} />
+          </button>
+            </>
+          )}
 
           {/* Panel de stickers */}
           <AnimatePresence>

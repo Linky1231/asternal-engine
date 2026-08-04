@@ -37,9 +37,13 @@ create table if not exists public.chat_messages (
   sender_id uuid not null references public.profiles(id) on delete cascade,
   content text,
   media_url text,
+  media_type text not null default 'image',
   reply_to_id uuid references public.chat_messages(id) on delete set null,
   created_at timestamptz not null default now()
 );
+
+-- Para instalaciones previas que aún no tienen la columna (audio de voz)
+alter table public.chat_messages add column if not exists media_type text not null default 'image';
 
 create index if not exists chat_messages_chat_created_idx on public.chat_messages (chat_id, created_at);
 create index if not exists chat_members_user_idx on public.chat_members (user_id);
