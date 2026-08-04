@@ -381,6 +381,17 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
               </div>
             </div>
           </div>
+          <button
+            onClick={() => {
+              setInstallToken(SUPABASE_ACCESS_TOKEN ?? "");
+              setInstallResult(null);
+              setInstallOpen(true);
+            }}
+            title="Instalar / reparar tablas del chat"
+            className="w-9 h-9 rounded-xl border border-border/70 bg-background grid place-items-center active:scale-95 transition shrink-0 hover:border-primary/40 hover:text-primary"
+          >
+            <Database size={15} />
+          </button>
           <button onClick={onClose} className="w-9 h-9 rounded-xl border border-border/70 bg-background grid place-items-center active:scale-95 transition shrink-0">
             <X size={16} />
           </button>
