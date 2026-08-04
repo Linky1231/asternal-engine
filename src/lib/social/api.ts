@@ -135,13 +135,14 @@ const MEDIA_BUCKET = "post-media";
 
 export async function signMediaUrls(paths: string[]): Promise<string[]> {
   if (!paths.length) return [];
-  const out: string[] = [];
-  for (const p of paths) {
-    if (/^https?:\/\//.test(p)) { out.push(p); continue; }
-    const { data } = await supabase.storage.from(MEDIA_BUCKET).createSignedUrl(p, 60 * 60 * 24 * 7);
-    if (data?.signedUrl) out.push(data.signedUrl);
-  }
-  return out;
+  // Paralelo: los chats con muchos stickers/audios firman todas las URLs a la vez.
+  return Promise.all(
+    paths.map(async (p) => {
+      if (/^https?:\/\//.test(p)) return p;
+      const { data } = await supabase.storage.from(MEDIA_BUCKET).createSignedUrl(p, 60 * 60 * 24 * 7);
+      return data?.signedUrl ?? "";
+    })
+  );
 }
 
 export async function uploadMedia(file: File, userId: string): Promise<string> {

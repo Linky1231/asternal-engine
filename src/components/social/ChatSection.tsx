@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, Copy, Check, Reply, SmilePlus, ImagePlus, Loader2, Users, WifiOff, Database, Plug, RefreshCw, KeyRound, CheckCircle2, AlertTriangle, Mic, Play, Pause, Trash2 } from "lucide-react";
+import { X, Send, Copy, Check, Reply, SmilePlus, ImagePlus, Loader2, Users, WifiOff, Database, Plug, RefreshCw, KeyRound, CheckCircle2, AlertTriangle, Mic, Play, Pause, Trash2, ArrowDown } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
@@ -186,11 +186,20 @@ function AudioBubble({ url, mine, duration }: { url: string; mine: boolean; dura
   );
 }
 
+/** URL lista para el <img>/<audio>: las URLs http se usan tal cual (legado);
+ *  las rutas se resuelven con la firma cacheada (permanente). */
+function resolveMediaUrl(u: string | null | undefined, cache: Map<string, string>): string | null {
+  if (!u) return null;
+  if (/^https?:/.test(u)) return u;
+  return cache.get(u) ?? null;
+}
+
 function MessageBubble({
   m,
   mine,
   sender,
   reply,
+  mediaUrl,
   copied,
   onCopy,
   onReply,
@@ -199,6 +208,7 @@ function MessageBubble({
   mine: boolean;
   sender?: Profile | null;
   reply?: ChatMessage | null;
+  mediaUrl: string | null;
   copied: boolean;
   onCopy: () => void;
   onReply: () => void;
@@ -225,10 +235,14 @@ function MessageBubble({
             </div>
           )}
           {m.content && <div className="text-[13px] leading-snug whitespace-pre-wrap break-words">{m.content}</div>}
-          {m.media_url && isAudioMessage(m) ? (
-            <AudioBubble url={m.media_url} mine={mine} duration={0} />
-          ) : m.media_url ? (
-            <img src={m.media_url} alt="Sticker" className="max-w-44 max-h-44 rounded-xl mt-0.5 object-contain" draggable={false} />
+          {mediaUrl && isAudioMessage(m) ? (
+            <AudioBubble url={mediaUrl} mine={mine} duration={0} />
+          ) : m.media_url && !mediaUrl ? (
+            <div className="text-[10px] text-muted-foreground/70 py-1.5 flex items-center gap-1.5">
+              <Loader2 size={11} className="animate-spin" /> Cargando media…
+            </div>
+          ) : mediaUrl ? (
+            <img src={mediaUrl} alt="Sticker" className="max-w-44 max-h-44 rounded-xl mt-0.5 object-contain" draggable={false} />
           ) : null}
           <div className={`text-[9px] mt-1 ${mine ? "text-primary-foreground/70" : "text-muted-foreground/70"} text-right`}>{fmtTime(m.created_at)}</div>
         </div>
@@ -270,11 +284,22 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
   const [installing, setInstalling] = useState(false);
   const [installResult, setInstallResult] = useState<string | null>(null);
   const [installOk, setInstallOk] = useState(false);
+  // Paginación por cursor + scroll infinito
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [unseen, setUnseen] = useState(0);
+  // URLs firmadas de los media de los mensajes (cacheadas: nunca expiran en la base)
+  const [signedMedia, setSignedMedia] = useState<Map<string, string>>(new Map());
 
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const sendersRef = useRef<Set<string>>(new Set());
+  const listRef = useRef<HTMLDivElement>(null);
+  const stickToBottomRef = useRef(true);
+  const cursorRef = useRef<{ created_at: string; id: string } | null>(null);
+  const prevScrollHeightRef = useRef(0);
+  const signedMediaRef = useRef<Map<string, string>>(new Map());
 
   // Load senders for a batch of messages
   const loadSenders = useCallback(async (msgs: ChatMessage[]) => {
@@ -339,9 +364,12 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
         const info = await getCommunityChat();
         if (cancelled) return;
         setChatInfo(info);
-        const msgs = await fetchChatMessages(info.id);
+        const { messages: msgs, hasMore: more } = await fetchChatMessages(info.id);
         if (cancelled) return;
         setMessages(msgs);
+        setHasMore(more);
+        if (msgs.length) cursorRef.current = { created_at: msgs[0].created_at, id: msgs[0].id };
+        stickToBottomRef.current = true;
         await loadSenders(msgs);
       } catch (err) {
         if (cancelled) return;
@@ -369,20 +397,107 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
     };
   }, [loadSenders, retryKey]);
 
-  // Suscripción en tiempo real una vez que conocemos el chat
+  // Suscripción en tiempo real: INSERT (nuevos), UPDATE (ediciones), DELETE (eliminaciones)
   useEffect(() => {
     if (!chatInfo) return;
-    const unsub = subscribeToChat(chatInfo.id, (msg) => {
-      setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]));
-      loadSenders([msg]);
+    const unsub = subscribeToChat(chatInfo.id, (ev) => {
+      if (ev.type === "INSERT") {
+        setMessages((prev) => (prev.some((m) => m.id === ev.message.id) ? prev : [...prev, ev.message]));
+        loadSenders([ev.message]);
+        if (!stickToBottomRef.current) setUnseen((n) => n + 1);
+      } else if (ev.type === "UPDATE") {
+        setMessages((prev) => prev.map((m) => (m.id === ev.message.id ? { ...m, ...ev.message } : m)));
+      } else if (ev.type === "DELETE") {
+        setMessages((prev) => prev.filter((m) => m.id !== ev.message.id));
+      }
     });
     return unsub;
   }, [chatInfo, loadSenders]);
 
-  // Auto-scroll al final
+  // Auto-scroll solo si el usuario está pegado al final (nunca al cargar histórico)
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    if (stickToBottomRef.current && !loading) {
+      endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    }
   }, [messages.length, loading]);
+
+  // Firma las rutas de media de los mensajes al cargarlos (cacheada). Los mensajes
+  // guardan la RUTA del archivo (no una URL firmada que expira), así el media
+  // permanece accesible siempre mientras se re-firma al abrir el chat.
+  useEffect(() => {
+    if (!messages.length) return;
+    const paths = Array.from(
+      new Set(messages.map((m) => m.media_url).filter((u): u is string => !!u && !/^https?:/.test(u)))
+    );
+    const need = paths.filter((p) => !signedMediaRef.current.has(p));
+    if (!need.length) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const signed = await signMedia(need);
+        if (cancelled) return;
+        const fresh = new Map<string, string>();
+        need.forEach((p, i) => {
+          if (signed[i]) fresh.set(p, signed[i]);
+        });
+        if (!fresh.size) return;
+        signedMediaRef.current = new Map([...signedMediaRef.current, ...fresh]);
+        setSignedMedia(signedMediaRef.current);
+      } catch {
+        /* noop: se reintenta en el próximo cambio de mensajes */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [messages]);
+
+  // Carga la página anterior (scroll infinito hacia arriba)
+  const loadOlder = useCallback(async () => {
+    if (!chatInfo || loadingMore || !hasMore || !cursorRef.current) return;
+    setLoadingMore(true);
+    const el = listRef.current;
+    prevScrollHeightRef.current = el?.scrollHeight ?? 0;
+    try {
+      const { messages: older, hasMore: more } = await fetchChatMessages(chatInfo.id, {
+        before: cursorRef.current,
+      });
+      if (!older.length) {
+        setHasMore(false);
+        return;
+      }
+      cursorRef.current = { created_at: older[0].created_at, id: older[0].id };
+      setMessages((prev) => {
+        const seen = new Set(prev.map((m) => m.id));
+        return [...older.filter((m) => !seen.has(m.id)), ...prev];
+      });
+      setHasMore(more);
+      // Mantener la posición visual tras insertar mensajes antiguos arriba.
+      requestAnimationFrame(() => {
+        const el2 = listRef.current;
+        if (el2) el2.scrollTop = el2.scrollHeight - prevScrollHeightRef.current;
+      });
+    } catch {
+      toast.error("No se pudieron cargar mensajes anteriores");
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [chatInfo, hasMore, loadingMore]);
+
+  const onScrollList = useCallback(() => {
+    const el = listRef.current;
+    if (!el) return;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    stickToBottomRef.current = nearBottom;
+    if (nearBottom && unseen > 0) setUnseen(0);
+    if (el.scrollTop < 60 && hasMore && !loadingMore) void loadOlder();
+  }, [hasMore, loadingMore, loadOlder, unseen]);
+
+  const jumpToBottom = useCallback(() => {
+    stickToBottomRef.current = true;
+    setUnseen(0);
+    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, []);
 
   // Cargar stickers al abrir el panel
   useEffect(() => {
@@ -454,7 +569,10 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
       // Aparece al instante en la biblioteca de stickers de la cuenta.
       if (id) setMyStickers((prev) => [{ id, path, title: "Sticker" }, ...prev.filter((s) => s.path !== path)]);
       setSignedStickers((prev) => new Map(prev).set(path, signed));
-      const sent = await sendChatMessage(chatInfo.id, { mediaUrl: signed, replyToId: replyTo?.id ?? null });
+      signedMediaRef.current = new Map(signedMediaRef.current).set(path, signed);
+      setSignedMedia(signedMediaRef.current);
+      // Guardamos la RUTA (no una URL firmada que expira): el media es permanente.
+      const sent = await sendChatMessage(chatInfo.id, { mediaUrl: path, replyToId: replyTo?.id ?? null });
       setMessages((prev) => (prev.some((m) => m.id === sent.id) ? prev : [...prev, sent]));
       setReplyTo(null);
     } catch {
@@ -544,8 +662,11 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
       try {
         const path = await uploadMedia(new File([blob], "voice.webm", { type: blob.type || "audio/webm" }), myId ?? "me");
         const [signed] = await signMedia([path]);
+        signedMediaRef.current = new Map(signedMediaRef.current).set(path, signed);
+        setSignedMedia(signedMediaRef.current);
+        // Guardamos la RUTA: la URL se firma en pantalla y nunca expira en la base.
         const sent = await sendChatMessage(chatInfo.id, {
-          mediaUrl: signed,
+          mediaUrl: path,
           mediaType: "audio",
           replyToId: replyTo?.id ?? null,
         });
@@ -714,7 +835,12 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
       )}
 
       {/* ───── Mensajes ───── */}
-      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-3 no-scrollbar min-h-0">
+      <div ref={listRef} onScroll={onScrollList} className="relative flex-1 overflow-y-auto px-3 py-4 space-y-3 no-scrollbar min-h-0">
+        {loadingMore && (
+          <div className="flex justify-center py-1">
+            <Loader2 size={14} className="animate-spin text-muted-foreground" />
+          </div>
+        )}
         {loading ? (
           <div className="flex justify-center py-10">
             <Loader2 size={18} className="animate-spin text-muted-foreground" />
@@ -731,6 +857,7 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
               mine={m.sender_id === myId}
               sender={senders.get(m.sender_id)}
               reply={m.reply_to_id ? messages.find((x) => x.id === m.reply_to_id) ?? null : null}
+              mediaUrl={resolveMediaUrl(m.media_url, signedMedia)}
               copied={copiedId === m.id}
               onCopy={() => void copyMessage(m)}
               onReply={() => {
@@ -742,6 +869,14 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
           ))
         )}
         <div ref={endRef} />
+        {unseen > 0 && (
+          <button
+            onClick={jumpToBottom}
+            className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground text-[11px] font-display tracking-wide shadow-lg active:scale-95 transition"
+          >
+            <ArrowDown size={12} /> {unseen} nuevo{unseen > 1 ? "s" : ""}
+          </button>
+        )}
       </div>
 
       {/* ───── Barra de respuesta ───── */}

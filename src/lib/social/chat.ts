@@ -147,15 +147,32 @@ export async function getCommunityChat(): Promise<{ id: string; name: string; me
   return { id: chatRow.id, name: chatRow.name || COMMUNITY_CHAT_NAME, memberCount: (members ?? []).length };
 }
 
-export async function fetchChatMessages(chatId: string): Promise<ChatMessage[]> {
-  const { data, error } = await supabase
+/** Cursor de paginación: el mensaje más antiguo de la página actual. */
+export type MessageCursor = { created_at: string; id: string };
+
+/**
+ * Paginación por cursor: devuelve la página de mensajes MÁS RECIENTES (o los
+ * anteriores a `before`) ordenados de antiguo a nuevo, listos para renderizar.
+ * `hasMore` indica si existen mensajes más antiguos que cargar.
+ */
+export async function fetchChatMessages(
+  chatId: string,
+  opts: { before?: MessageCursor; limit?: number } = {}
+): Promise<{ messages: ChatMessage[]; hasMore: boolean }> {
+  const limit = opts.limit ?? 60;
+  let q = supabase
     .from("chat_messages")
     .select("*")
     .eq("chat_id", chatId)
-    .order("created_at", { ascending: true })
-    .limit(500);
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(limit + 1); // +1 para detectar si hay más páginas
+  if (opts.before) q = q.lt("created_at", opts.before.created_at);
+  const { data, error } = await q;
   if (error) throw error;
-  return (data ?? []) as ChatMessage[];
+  const rows = (data ?? []) as ChatMessage[];
+  const hasMore = rows.length > limit;
+  return { messages: rows.slice(0, limit).reverse(), hasMore };
 }
 
 export async function sendChatMessage(
@@ -184,17 +201,29 @@ export function isAudioMessage(m: Pick<ChatMessage, "media_type" | "media_url">)
   return !!m.media_url && (m.media_type === "audio" || /^audio\//.test(m.media_url ?? ""));
 }
 
-export function subscribeToChat(chatId: string, onMessage: (msg: ChatMessage) => void): () => void {
+export type ChatEvent =
+  | { type: "INSERT"; message: ChatMessage }
+  | { type: "UPDATE"; message: ChatMessage }
+  | { type: "DELETE"; message: ChatMessage };
+
+/**
+ * Realtime del chat: INSERT (mensajes nuevos), UPDATE (ediciones) y DELETE
+ * (eliminaciones) llegan al instante y la UI los aplica sin recargar.
+ */
+export function subscribeToChat(chatId: string, onEvent: (ev: ChatEvent) => void): () => void {
   if (typeof supabase.channel !== "function") return () => {};
+  const opts = { schema: "public", table: "chat_messages", filter: `chat_id=eq.${chatId}` } as const;
   const channel = supabase
     .channel(`chat-${chatId}`)
-    .on(
-      "postgres_changes",
-      { event: "INSERT", schema: "public", table: "chat_messages", filter: `chat_id=eq.${chatId}` },
-      (payload: any) => {
-        onMessage(payload.new as ChatMessage);
-      }
-    )
+    .on("postgres_changes", { ...opts, event: "INSERT" }, (payload: any) => {
+      onEvent({ type: "INSERT", message: payload.new as ChatMessage });
+    })
+    .on("postgres_changes", { ...opts, event: "UPDATE" }, (payload: any) => {
+      onEvent({ type: "UPDATE", message: payload.new as ChatMessage });
+    })
+    .on("postgres_changes", { ...opts, event: "DELETE" }, (payload: any) => {
+      onEvent({ type: "DELETE", message: payload.old as ChatMessage });
+    })
     .subscribe();
   return () => {
     try {

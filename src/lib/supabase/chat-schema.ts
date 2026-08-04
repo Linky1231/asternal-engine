@@ -92,9 +92,11 @@ create policy chat_members_read on public.chat_members for select using (true);
 create policy chat_members_self_insert on public.chat_members for insert with check (auth.uid() = user_id);
 create policy chat_members_self_delete on public.chat_members for delete using (auth.uid() = user_id);
 
--- chat_messages: lectura pública, cada usuario escribe con su propia identidad
+-- chat_messages: lectura pública, cada usuario escribe/edita/elimina solo lo suyo
 create policy chat_messages_read on public.chat_messages for select using (true);
 create policy chat_messages_insert on public.chat_messages for insert with check (auth.uid() = sender_id);
+create policy chat_messages_update on public.chat_messages for update using (auth.uid() = sender_id);
+create policy chat_messages_delete on public.chat_messages for delete using (auth.uid() = sender_id);
 
 -- stickers: biblioteca privada de cada cuenta
 create policy stickers_select on public.stickers for select using (auth.uid() = user_id);
