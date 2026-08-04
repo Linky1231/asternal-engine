@@ -86,18 +86,25 @@ export async function getCommunityChat(): Promise<{ id: string; name: string; me
     .maybeSingle();
 
   if (!chat) {
-    const { data: created } = await supabase
-      .from("chats")
-      .insert({
-        id: COMMUNITY_CHAT_ID,
-        type: "group",
-        name: COMMUNITY_CHAT_NAME,
-        created_by: me,
-        is_community: true,
-      })
-      .select()
-      .single()
-      .catch(() => ({ data: null }));
+    // Nota: los builders de supabase-js implementan .then() pero no .catch(),
+    // así que el manejo de errores debe hacerse con try/catch + await.
+    let created: any = null;
+    try {
+      const res = await supabase
+        .from("chats")
+        .insert({
+          id: COMMUNITY_CHAT_ID,
+          type: "group",
+          name: COMMUNITY_CHAT_NAME,
+          created_by: me,
+          is_community: true,
+        })
+        .select()
+        .single();
+      created = res.data;
+    } catch {
+      /* carrera: otro usuario lo creó justo en este instante */
+    }
     if (created) {
       chat = created;
     } else {
