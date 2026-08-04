@@ -5,7 +5,7 @@ import { schedulePushToCloud } from "@/lib/engine/cloud-sync";
 import { Link } from "@tanstack/react-router";
 import { PublishGameDialog } from "./PublishGameDialog";
 import type { EntityKind, Project, SpriteAsset, Entity, Scene, Hitbox, SceneLayer } from "@/lib/engine/core";
-import { newScene, uid, DEFAULT_SETTINGS, ensureSceneLayers, DEFAULT_LAYER_ID } from "@/lib/engine/core";
+import { newScene, uid, ensureSceneLayers, DEFAULT_LAYER_ID } from "@/lib/engine/core";
 import { loadProject, loadProjectById, saveProject, saveProjectById, getCurrentProjectId, setCurrentProjectId } from "@/lib/engine/storage";
 import { useFormFactor } from "@/hooks/use-mobile";
 import { fileToDataURL } from "@/lib/engine/images";
@@ -976,34 +976,7 @@ function SettingsPanel({ project, onChange }: { project: Project; onChange: (p: 
 
 
 
-      <SectionTitle>DATOS</SectionTitle>
-      <div className="grid grid-cols-2 gap-2">
-        <button
-          onClick={() => exportProject(project)}
-          className="py-2.5 rounded-xl bg-primary/15 border border-primary/50 text-primary-glow font-display text-xs tracking-widest active:scale-[0.97] transition"
-        >⤓ EXPORTAR JSON</button>
-        <button
-          onClick={() => importProject().then(p => p && onChange(p)).catch(e => alert(String(e)))}
-          className="py-2.5 rounded-xl bg-accent/15 border border-accent/50 text-primary-glow font-display text-xs tracking-widest active:scale-[0.97] transition"
-        >⤒ IMPORTAR JSON</button>
-      </div>
-      <button
-        onClick={() => {
-          if (confirm("¿Restaurar ajustes por defecto? Las escenas y assets se conservan.")) {
-            onChange({ ...project, settings: { ...DEFAULT_SETTINGS } });
-          }
-        }}
-        className="w-full py-2.5 rounded-xl bg-primary/20 border border-primary/50 text-primary-glow font-display text-xs tracking-widest glow-border active:scale-[0.98] transition"
-      >↺ RESTAURAR AJUSTES</button>
-      <button
-        onClick={() => {
-          if (confirm("¿Reiniciar todo el proyecto? Se perderán todas las escenas.")) {
-            localStorage.removeItem("asternal:project");
-            location.reload();
-          }
-        }}
-        className="w-full py-2.5 rounded-xl bg-destructive/20 border border-destructive/50 text-destructive font-display text-xs tracking-widest active:scale-[0.98] transition"
-      >REINICIAR PROYECTO</button>
+
 
       <div className="pt-6 text-center text-[10px] font-mono text-muted-foreground">
         ASTERNAL ENGINE · HECHO PARA MÓVIL
