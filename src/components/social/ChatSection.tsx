@@ -37,6 +37,8 @@ function fmtDay(iso: string): string {
 function connHint(msg: string): string {
   if (/invalid api key|apikey|401|invalid key/i.test(msg))
     return "La anon key guardada no es válida. Cópiala de Supabase → Project Settings → API Keys (empieza por eyJ… o sb_publishable_) y guárdala en ⋮ → Supabase → «Pegar claves». Si el error persiste, usa «Restablecer la conexión» en el login.";
+  if (/infinite recursion|recursion detected|recursive/i.test(msg))
+    return "Hay políticas RLS antiguas en las tablas del chat (de una instalación previa) que causan un bucle de seguridad. Pulsa «Instalar chat» para limpiarlas y reinstalarlas bien (necesita tu token sbp_…).";
   if (/permission denied|row-level security|42501|PGRST301|new row violates|violates row-level/i.test(msg))
     return "Las tablas existen pero los permisos (RLS) bloquean el chat: suele pasar si se instaló un esquema antiguo o la sesión no coincide. Pulsa «Instalar chat» para reinstalar los permisos, o entra de nuevo con tu cuenta.";
   if (/failed to fetch|networkerror|load failed|network request failed|ERR_/i.test(msg))

@@ -2,8 +2,8 @@
  * DDL de las tablas del chat comunitario (chats / chat_members / chat_messages).
  *
  * Este bloque es idempotente: puede ejecutarse completo o por partes, tantas
- * veces como sea necesario (create table/index if not exists + drop policy
- * antes de cada create policy + publicación realtime protegida).
+ * veces como sea necesario (create table/index if not exists + limpieza total
+ * de políticas + publicación realtime protegida).
  *
  * Se usa desde:
  *  - El instalador general de esquema (setup.ts), que lo añade al SQL completo.
@@ -47,24 +47,35 @@ alter table public.chats enable row level security;
 alter table public.chat_members enable row level security;
 alter table public.chat_messages enable row level security;
 
+-- Limpieza total: elimina CUALQUIER política previa de las tablas del chat,
+-- incluidas las de instalaciones antiguas con otros nombres que provocan el
+-- error «infinite recursion detected in policy for relation chat_members».
+-- Después se recrean abajo las políticas definitivas.
+do $$
+declare _t text;
+declare _p record;
+begin
+  for _t in select unnest(array['chats', 'chat_members', 'chat_messages']) loop
+    for _p in
+      select policyname from pg_policies
+      where schemaname = 'public' and tablename = _t
+    loop
+      execute format('drop policy if exists %I on public.%I', _p.policyname, _t);
+    end loop;
+  end loop;
+end $$;
+
 -- chats: lectura pública, creación por el propio usuario
-drop policy if exists chats_read on public.chats;
 create policy chats_read on public.chats for select using (true);
-drop policy if exists chats_insert on public.chats;
 create policy chats_insert on public.chats for insert with check (auth.uid() = created_by);
 
 -- chat_members: lectura pública, cada usuario se añade/elimina a sí mismo
-drop policy if exists chat_members_read on public.chat_members;
 create policy chat_members_read on public.chat_members for select using (true);
-drop policy if exists chat_members_self_insert on public.chat_members;
 create policy chat_members_self_insert on public.chat_members for insert with check (auth.uid() = user_id);
-drop policy if exists chat_members_self_delete on public.chat_members;
 create policy chat_members_self_delete on public.chat_members for delete using (auth.uid() = user_id);
 
 -- chat_messages: lectura pública, cada usuario escribe con su propia identidad
-drop policy if exists chat_messages_read on public.chat_messages;
 create policy chat_messages_read on public.chat_messages for select using (true);
-drop policy if exists chat_messages_insert on public.chat_messages;
 create policy chat_messages_insert on public.chat_messages for insert with check (auth.uid() = sender_id);
 
 -- Realtime: los mensajes nuevos llegan al instante a todos los clientes conectados.
