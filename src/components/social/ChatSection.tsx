@@ -12,6 +12,7 @@ import {
   fetchMyStickers,
   signMedia,
   COMMUNITY_CHAT_NAME,
+  CHAT_ERR,
   type ChatMessage,
 } from "@/lib/social/chat";
 import { supabase, hasSupabaseConfig, saveSupabaseCredentials, isSchemaMissing } from "@/integrations/supabase/client";
@@ -30,6 +31,17 @@ function fmtDay(iso: string): string {
   const today = new Date();
   if (d.toDateString() === today.toDateString()) return fmtTime(iso);
   return d.toLocaleDateString([], { day: "2-digit", month: "short" });
+}
+
+/** Convierte el error técnico del chat en una pista útil para el usuario. */
+function connHint(msg: string): string {
+  if (/invalid api key|apikey|401|invalid key/i.test(msg))
+    return "La anon key guardada no es válida. Cópiala de Supabase → Project Settings → API Keys (empieza por eyJ… o sb_publishable_) y guárdala en ⋮ → Supabase → «Pegar claves». Si el error persiste, usa «Restablecer la conexión» en el login.";
+  if (/permission denied|row-level security|42501|PGRST301|new row violates|violates row-level/i.test(msg))
+    return "Las tablas existen pero los permisos (RLS) bloquean el chat: suele pasar si se instaló un esquema antiguo o la sesión no coincide. Pulsa «Instalar chat» para reinstalar los permisos, o entra de nuevo con tu cuenta.";
+  if (/failed to fetch|networkerror|load failed|network request failed|ERR_/i.test(msg))
+    return "No hay conexión con Supabase (red o dominio bloqueado). Comprueba tu internet y vuelve a intentarlo.";
+  return "Revisa que la URL y la anon key sean correctas (Supabase → Project Settings → API Keys).";
 }
 
 function Avatar({ p, name, size = 40 }: { p?: Profile | null; name?: string; size?: number }) {
@@ -129,7 +141,8 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
   const [connectUrl, setConnectUrl] = useState("https://gxpgczwkovertezeydkt.supabase.co");
   const [connectKey, setConnectKey] = useState("");
   const [connectError, setConnectError] = useState<string | null>(null);
-  const [initError, setInitError] = useState<"schema" | "conn" | null>(null);
+  const [initError, setInitError] = useState<"schema" | "conn" | "auth" | null>(null);
+  const [errorDetail, setErrorDetail] = useState("");
   const [retryKey, setRetryKey] = useState(0);
   const [installOpen, setInstallOpen] = useState(false);
   const [installToken, setInstallToken] = useState(SUPABASE_ACCESS_TOKEN ?? "");
@@ -198,6 +211,7 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
   useEffect(() => {
     let cancelled = false;
     setInitError(null);
+    setErrorDetail("");
     setLoading(true);
     (async () => {
       try {
@@ -210,7 +224,13 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
         await loadSenders(msgs);
       } catch (err) {
         if (cancelled) return;
-        setInitError(isSchemaMissing(err) ? "schema" : "conn");
+        const code = (err as { code?: string })?.code;
+        if (code === CHAT_ERR.AUTH_REQUIRED || code === CHAT_ERR.REAL_AUTH_REQUIRED) {
+          setInitError("auth");
+        } else {
+          setInitError(isSchemaMissing(err) ? "schema" : "conn");
+        }
+        setErrorDetail((err as Error)?.message ?? "");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -372,7 +392,7 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
         </div>
       )}
 
-      {/* Error de conexión / esquema del chat */}
+      {/* Error de conexión / esquema / sesión del chat */}
       {initError && !chatInfo && !loading && (
         <div className="shrink-0 mx-3 mt-2 px-3 py-3 rounded-xl border border-rose-500/25 bg-rose-500/[0.06] space-y-2.5">
           <div className="flex items-start gap-2.5">
@@ -385,14 +405,26 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
                   <span className="font-mono">sbp_…</span> de Supabase) o abre el menú (⋮) → <b>Supabase</b> →{" "}
                   <b>Crear esquema</b>.
                 </>
+              ) : initError === "auth" ? (
+                <>
+                  <span className="font-semibold text-foreground">Inicia sesión para usar el chat.</span>{" "}
+                  {errorDetail.includes("base de datos está conectada")
+                    ? "Tu base está conectada pero esta cuenta es local: los permisos de Supabase exigen la cuenta real. Entra con ella y vuelve."
+                    : "El chat comunitario necesita una sesión activa."}
+                </>
               ) : (
                 <>
                   <span className="font-semibold text-foreground">No se pudo conectar al chat.</span>{" "}
-                  Revisa que la URL y la anon key de Supabase sean correctas y vuelve a intentarlo.
+                  {connHint(errorDetail)}
                 </>
               )}
             </div>
           </div>
+          {initError === "conn" && errorDetail && (
+            <p className="text-[10px] font-mono text-muted-foreground/50 break-words bg-black/[0.03] dark:bg-white/[0.04] rounded-lg px-2 py-1.5">
+              {errorDetail.slice(0, 220)}
+            </p>
+          )}
           <div className="flex gap-2">
             {initError === "schema" && (
               <button
@@ -405,6 +437,14 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
               >
                 <Database size={12} /> INSTALAR CHAT
               </button>
+            )}
+            {initError === "auth" && (
+              <Link
+                to="/auth"
+                className="flex-1 py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-[10px] font-display tracking-widest active:scale-[0.98] transition flex items-center justify-center gap-1.5"
+              >
+                <KeyRound size={12} /> INICIAR SESIÓN
+              </Link>
             )}
             <button
               onClick={() => setRetryKey((k) => k + 1)}

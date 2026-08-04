@@ -1,5 +1,5 @@
 // @ts-nocheck — Chat adapter (same Supabase client + helpers as api.ts)
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, hasSupabaseConfig } from "@/integrations/supabase/client";
 import { signMediaUrls, uploadMedia } from "@/lib/social/api";
 
 export type ChatMessage = {
@@ -16,12 +16,25 @@ export type ChatMessage = {
 export const COMMUNITY_CHAT_ID = "c0000000-0000-4000-8000-000000000000";
 export const COMMUNITY_CHAT_NAME = "Asternal · Comunidad";
 
-async function getMeId(): Promise<string | null> {
+export const CHAT_ERR = {
+  AUTH_REQUIRED: "AUTH_REQUIRED",
+  REAL_AUTH_REQUIRED: "REAL_AUTH_REQUIRED",
+} as const;
+
+function chatError(code: string, message: string): Error {
+  return Object.assign(new Error(message), { code });
+}
+
+/**
+ * Identidad actual del usuario. Distingue si viene de una sesión real de
+ * Supabase o de la cuenta local del navegador (creada antes de conectar).
+ */
+async function getMeId(): Promise<{ id: string; isLocal: boolean } | null> {
   try {
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (user?.id) return user.id;
+    if (user?.id) return { id: user.id, isLocal: false };
   } catch {
     /* noop */
   }
@@ -31,7 +44,7 @@ async function getMeId(): Promise<string | null> {
     const raw = localStorage.getItem("_local_auth_session");
     if (raw) {
       const s = JSON.parse(raw) as { userId?: string; expiresAt?: string };
-      if (s.userId && s.expiresAt && new Date(s.expiresAt) > new Date()) return s.userId;
+      if (s.userId && s.expiresAt && new Date(s.expiresAt) > new Date()) return { id: s.userId, isLocal: true };
     }
   } catch {
     /* noop */
@@ -40,13 +53,30 @@ async function getMeId(): Promise<string | null> {
 }
 
 /**
+ * Igual que getMeId pero lanza errores con código para que la UI muestre la
+ * acción correcta: iniciar sesión (sin sesión) o entrar con la cuenta real
+ * cuando la base está conectada pero la sesión activa sigue siendo local
+ * (los permisos RLS de Supabase exigen un usuario real de auth).
+ */
+async function requireMe(): Promise<{ id: string; isLocal: boolean }> {
+  const me = await getMeId();
+  if (!me) throw chatError(CHAT_ERR.AUTH_REQUIRED, "Inicia sesión para usar el chat");
+  if (me.isLocal && hasSupabaseConfig()) {
+    throw chatError(
+      CHAT_ERR.REAL_AUTH_REQUIRED,
+      "Tu base de datos está conectada, pero esta cuenta es local. Entra con tu cuenta para usar el chat comunitario."
+    );
+  }
+  return me;
+}
+
+/**
  * Devuelve el chat compartido de la comunidad. Si no existe (primer usuario),
  * lo crea con el ID fijo; en cualquier caso añade al usuario actual como miembro
  * (auto-join) y devuelve el número de miembros.
  */
 export async function getCommunityChat(): Promise<{ id: string; name: string; memberCount: number }> {
-  const me = await getMeId();
-  if (!me) throw new Error("Not authenticated");
+  const me = await requireMe();
 
   let { data: chat } = await supabase
     .from("chats")
@@ -108,8 +138,7 @@ export async function sendChatMessage(
   chatId: string,
   opts: { content?: string; mediaUrl?: string; replyToId?: string | null }
 ): Promise<ChatMessage> {
-  const me = await getMeId();
-  if (!me) throw new Error("Not authenticated");
+  const me = await requireMe();
   const { data, error } = await supabase
     .from("chat_messages")
     .insert({
@@ -148,9 +177,8 @@ export function subscribeToChat(chatId: string, onMessage: (msg: ChatMessage) =>
 }
 
 export async function uploadSticker(file: File): Promise<string> {
-  const me = await getMeId();
-  if (!me) throw new Error("Not authenticated");
-  return uploadMedia(file, me);
+  const me = await requireMe();
+  return uploadMedia(file, me.id);
 }
 
 export async function fetchMyStickers(): Promise<{ path: string; title: string }[]> {
@@ -159,7 +187,7 @@ export async function fetchMyStickers(): Promise<{ path: string; title: string }
   const { data, error } = await supabase
     .from("posts")
     .select("id, media_urls, content, price_orbes")
-    .eq("author_id", me)
+    .eq("author_id", me.id)
     .eq("category", "artwork")
     .order("created_at", { ascending: false })
     .limit(30);

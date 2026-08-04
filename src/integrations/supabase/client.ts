@@ -689,10 +689,11 @@ function writeLocal(key: string, value: string | null): void {
   } catch { /* ignore quota/private-mode errors */ }
 }
 
-/** ¿Tiene pinta de anon key de Supabase (JWT) o de service-role key? */
+/** ¿Tiene pinta de anon/publishable key de Supabase (JWT o sb_publishable_)? */
 function looksLikeSupabaseKey(key: string): boolean {
   if (!key) return false;
-  if (key.startsWith('sb_secret_')) return true; // service role (formato actual)
+  if (key.startsWith('sb_publishable_')) return true; // clave pública (formato nuevo)
+  if (key.startsWith('sb_secret_') || key.startsWith('sbp_')) return false; // service role / token personal: NO
   const parts = key.split('.');
   return parts.length === 3 && parts[0].startsWith('eyJ') && parts[0].length > 20;
 }
