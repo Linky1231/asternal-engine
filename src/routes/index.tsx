@@ -14,7 +14,6 @@ import ChatSection from "@/components/social/ChatSection";
 import { ForumSection } from "@/components/social/ForumSection";
 import { GallerySection } from "@/components/social/GallerySection";
 import { EventsSection } from "@/components/social/EventsSection";
-import { HistorySection } from "@/components/social/HistorySection";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -31,7 +30,7 @@ export const Route = createFileRoute("/")({
   component: HomePage,
 });
 
-type Tab = "games" | "feed" | "gallery" | "events" | "profile" | "history";
+type Tab = "games" | "feed" | "gallery" | "events" | "profile";
 type FeedSub = "forYou" | "following" | "trending" | "forums";
 
 function HomePage() {
@@ -99,7 +98,7 @@ function HomePage() {
       {/* Header */}
       <header className="app-header sticky top-0 z-20 bg-background/92 backdrop-blur-xl border-b border-border/60">
         <div className={`max-w-2xl mx-auto flex items-center gap-2 px-4 ${inPreview ? "pt-14 pb-3" : "py-3"}`}>
-          <button onClick={() => setTab("profile")} title="Mi perfil"
+          <button onClick={() => navigate({ to: "/profile" })} title="Mi perfil"
             className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-accent grid place-items-center shadow-[0_2px_10px_-3px_oklch(0.488_0.185_264/0.45)] active:scale-95 transition overflow-hidden shrink-0">
             {me?.avatar_url ? (
               <img src={me.avatar_url} alt="avatar" className="w-full h-full object-cover" />
@@ -254,8 +253,6 @@ function HomePage() {
               <GallerySection myId={myId} isMod={mod} />
             ) : tab === "events" ? (
               <EventsSection isAdmin={admin} />
-            ) : tab === "history" ? (
-              <HistorySection />
             ) : (
               <motion.div
                 initial={{ opacity: 0 }}
@@ -315,7 +312,7 @@ function HomePage() {
 
             {/* Categoría: COMUNIDAD */}
             <CategoryHeader label="COMUNIDAD" />
-            <MenuItem icon={<BarChart3 size={16} className="text-primary-glow"/>} label="Historial" onClick={() => { setTab("history"); closeMenu(); }} />
+            <MenuLink icon={<BarChart3 size={16} className="text-primary-glow"/>} label="Historial" to="/history" onClick={closeMenu} />
             <MenuLink icon={<Megaphone size={16} className="text-primary"/>} label="Panel de Orbes" to="/orbes" onClick={closeMenu} />
             {(mod || admin) && (
               <MenuLink icon={<ShieldCheck size={16} className="text-primary-glow"/>} label="Moderación" to="/admin" onClick={closeMenu} />

@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as HistoryRouteImport } from './routes/history'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PlusRouteImport } from './routes/plus'
 import { Route as OrbesRouteImport } from './routes/orbes'
@@ -24,6 +25,11 @@ import { Route as PaintRouteImport } from './routes/paint'
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HistoryRoute = HistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProfileRoute = ProfileRouteImport.update({
@@ -84,6 +90,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/editor': typeof EditorRoute
   '/feed': typeof FeedRoute
+  '/history': typeof HistoryRoute
   '/orbes': typeof OrbesRoute
   '/paint': typeof PaintRoute
   '/plus': typeof PlusRoute
@@ -97,6 +104,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/editor': typeof EditorRoute
   '/feed': typeof FeedRoute
+  '/history': typeof HistoryRoute
   '/orbes': typeof OrbesRoute
   '/paint': typeof PaintRoute
   '/plus': typeof PlusRoute
@@ -111,6 +119,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/editor': typeof EditorRoute
   '/feed': typeof FeedRoute
+  '/history': typeof HistoryRoute
   '/orbes': typeof OrbesRoute
   '/paint': typeof PaintRoute
   '/plus': typeof PlusRoute
@@ -126,6 +135,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/editor'
     | '/feed'
+    | '/history'
     | '/orbes'
     | '/paint'
     | '/plus'
@@ -139,6 +149,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/editor'
     | '/feed'
+    | '/history'
     | '/orbes'
     | '/paint'
     | '/plus'
@@ -152,6 +163,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/editor'
     | '/feed'
+    | '/history'
     | '/orbes'
     | '/paint'
     | '/plus'
@@ -166,6 +178,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   EditorRoute: typeof EditorRoute
   FeedRoute: typeof FeedRoute
+  HistoryRoute: typeof HistoryRoute
   OrbesRoute: typeof OrbesRoute
   PaintRoute: typeof PaintRoute
   PlusRoute: typeof PlusRoute
@@ -187,6 +200,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/history': {
+      id: '/history'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof HistoryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/plus': {
@@ -272,6 +292,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   EditorRoute: EditorRoute,
   FeedRoute: FeedRoute,
+  HistoryRoute: HistoryRoute,
   OrbesRoute: OrbesRoute,
   PaintRoute: PaintRoute,
   PlusRoute: PlusRoute,
