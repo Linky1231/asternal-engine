@@ -1,5 +1,5 @@
 // @ts-nocheck — Chat adapter (same Supabase client + helpers as api.ts)
-import { supabase, hasSupabaseConfig } from "@/integrations/supabase/client";
+import { supabase, hasSupabaseConfig, isSchemaMissing } from "@/integrations/supabase/client";
 import { signMediaUrls, uploadMedia } from "@/lib/social/api";
 
 export type ChatMessage = {
@@ -77,18 +77,23 @@ async function requireMe(): Promise<{ id: string; isLocal: boolean }> {
  */
 export async function getCommunityChat(): Promise<{ id: string; name: string; memberCount: number }> {
   const me = await requireMe();
+  const meId = me.id;
 
-  let { data: chat } = await supabase
+  // Si las tablas no existen (esquema sin instalar) o la anon key es inválida,
+  // el error real se propaga para que la UI muestre la acción correcta
+  // («Instalar chat» o revisar las claves) en lugar de un mensaje genérico.
+  const { data: chat, error: findErr } = await supabase
     .from("chats")
     .select("*")
     .eq("is_community", true)
     .limit(1)
     .maybeSingle();
+  if (findErr) throw findErr;
 
-  if (!chat) {
+  let chatRow = chat;
+  if (!chatRow) {
     // Nota: los builders de supabase-js implementan .then() pero no .catch(),
     // así que el manejo de errores debe hacerse con try/catch + await.
-    let created: any = null;
     try {
       const res = await supabase
         .from("chats")
@@ -96,38 +101,49 @@ export async function getCommunityChat(): Promise<{ id: string; name: string; me
           id: COMMUNITY_CHAT_ID,
           type: "group",
           name: COMMUNITY_CHAT_NAME,
-          created_by: me,
+          created_by: meId,
           is_community: true,
         })
         .select()
         .single();
-      created = res.data;
-    } catch {
-      /* carrera: otro usuario lo creó justo en este instante */
+      if (res.error) throw res.error;
+      chatRow = res.data;
+    } catch (err) {
+      // Esquema ausente, clave inválida o RLS → propagar para mostrar la acción
+      // correcta. Solo se trata como carrera de creación cuando es un duplicado.
+      const msg = (err as Error)?.message ?? "";
+      if (!/duplicate key|already exists/i.test(msg)) throw err;
     }
-    if (created) {
-      chat = created;
-    } else {
+    if (!chatRow) {
       // Carrera: otro usuario lo creó justo en este instante → lo buscamos por ID fijo.
-      const { data: existing } = await supabase.from("chats").select("*").eq("id", COMMUNITY_CHAT_ID).maybeSingle();
-      chat = existing ?? null;
+      const { data: existing, error: existingErr } = await supabase
+        .from("chats")
+        .select("*")
+        .eq("id", COMMUNITY_CHAT_ID)
+        .maybeSingle();
+      if (existingErr) throw existingErr;
+      chatRow = existing ?? null;
     }
   }
-  if (!chat) throw new Error("No se pudo preparar el chat de la comunidad");
+  if (!chatRow) throw new Error("No se pudo preparar el chat de la comunidad");
 
   // Auto-join (la política de chat_members permite a cada usuario añadirse a sí mismo).
-  const { data: member } = await supabase
+  const { data: member, error: memberErr } = await supabase
     .from("chat_members")
     .select("id")
-    .eq("chat_id", chat.id)
-    .eq("user_id", me)
+    .eq("chat_id", chatRow.id)
+    .eq("user_id", meId)
     .maybeSingle();
+  if (memberErr && !isSchemaMissing(memberErr)) throw memberErr;
   if (!member) {
-    await supabase.from("chat_members").insert({ chat_id: chat.id, user_id: me, role: "member" });
+    const { error: joinErr } = await supabase
+      .from("chat_members")
+      .insert({ chat_id: chatRow.id, user_id: meId, role: "member" });
+    if (joinErr && !isSchemaMissing(joinErr) && !/permission denied|row-level security/i.test(joinErr.message)) throw joinErr;
   }
 
-  const { data: members } = await supabase.from("chat_members").select("id").eq("chat_id", chat.id);
-  return { id: chat.id, name: chat.name || COMMUNITY_CHAT_NAME, memberCount: (members ?? []).length };
+  const { data: members } = await supabase.from("chat_members").select("id").eq("chat_id", chatRow.id);
+  return { id: chatRow.id, name: chatRow.name || COMMUNITY_CHAT_NAME, memberCount: (members ?? []).length };
 }
 
 export async function fetchChatMessages(chatId: string): Promise<ChatMessage[]> {
@@ -150,7 +166,7 @@ export async function sendChatMessage(
     .from("chat_messages")
     .insert({
       chat_id: chatId,
-      sender_id: me,
+      sender_id: me.id,
       content: opts.content ?? null,
       media_url: opts.mediaUrl ?? null,
       reply_to_id: opts.replyToId ?? null,
