@@ -689,22 +689,72 @@ function writeLocal(key: string, value: string | null): void {
   } catch { /* ignore quota/private-mode errors */ }
 }
 
+/** ¿Tiene pinta de anon key de Supabase (JWT) o de service-role key? */
+function looksLikeSupabaseKey(key: string): boolean {
+  if (!key) return false;
+  if (key.startsWith('sb_secret_')) return true; // service role (formato actual)
+  const parts = key.split('.');
+  return parts.length === 3 && parts[0].startsWith('eyJ') && parts[0].length > 20;
+}
+
+/** ¿Tiene pinta de URL de proyecto Supabase? */
+function looksLikeSupabaseUrl(url: string): boolean {
+  if (!url) return false;
+  try {
+    const u = new URL(url);
+    return (u.protocol === 'https:' || u.protocol === 'http:')
+      && (/\.supabase\.co$/i.test(u.hostname) || /(^|\.)localhost$/.test(u.hostname) || /^127\./.test(u.hostname));
+  } catch { return false; }
+}
+
 export function getSupabaseUrl(): string | undefined {
   const local = readLocal(LOCAL_SB_URL_KEY);
-  if (local && local.trim()) return local.trim();
+  if (local && local.trim()) {
+    if (looksLikeSupabaseUrl(local.trim())) return local.trim();
+    // Credencial guardada con formato inválido: se descarta sola para que la
+    // app no quede bloqueada y se usa la URL del entorno (Keys) en su lugar.
+    writeLocal(LOCAL_SB_URL_KEY, null);
+  }
   return (import.meta.env.V1 ?? import.meta.env.VITE_SUPABASE_URL) as string | undefined;
 }
 
 export function getSupabaseAnonKey(): string | undefined {
   const local = readLocal(LOCAL_SB_ANON_KEY);
-  if (local && local.trim()) return local.trim();
+  if (local && local.trim()) {
+    if (looksLikeSupabaseKey(local.trim())) return local.trim();
+    // Caso típico de bloqueo: un token de acceso personal (sbp_…) pegado por
+    // error como anon key → cada petición falla con "Invalid API key" y la app
+    // ni siquiera deja entrar. Lo limpiamos y usamos la clave del entorno.
+    writeLocal(LOCAL_SB_ANON_KEY, null);
+  }
   return (import.meta.env.V2 ?? import.meta.env.VITE_SUPABASE_ANON_KEY) as string | undefined;
 }
 
-/** Guarda (o borra) las credenciales escritas a mano en el diálogo de configuración. */
-export function saveSupabaseCredentials(url: string, anonKey: string): void {
-  writeLocal(LOCAL_SB_URL_KEY, url.trim() ? url : null);
-  writeLocal(LOCAL_SB_ANON_KEY, anonKey.trim() ? anonKey : null);
+export type SaveCredentialsResult = { ok: boolean; error?: string };
+
+/**
+ * Guarda (o borra) las credenciales escritas a mano en el diálogo de
+ * configuración. Valida el formato antes de guardar para evitar guardar un
+ * token de acceso personal (sbp_…) como anon key, que rompería toda la app
+ * con "Invalid API key".
+ */
+export function saveSupabaseCredentials(url: string, anonKey: string): SaveCredentialsResult {
+  const cleanUrl = url.trim();
+  const cleanKey = anonKey.trim();
+  if (cleanKey && !looksLikeSupabaseKey(cleanKey)) {
+    return {
+      ok: false,
+      error: cleanKey.startsWith('sbp_')
+        ? 'Ese es un token de acceso personal (sbp_…), no la anon key. La anon key empieza por eyJ…'
+        : 'Esa anon key no parece válida (debe ser un JWT que empieza por eyJ…).',
+    };
+  }
+  if (cleanUrl && !looksLikeSupabaseUrl(cleanUrl)) {
+    return { ok: false, error: 'La URL no parece la de un proyecto Supabase (https://xxxx.supabase.co).' };
+  }
+  writeLocal(LOCAL_SB_URL_KEY, cleanUrl ? cleanUrl : null);
+  writeLocal(LOCAL_SB_ANON_KEY, cleanKey ? cleanKey : null);
+  return { ok: true };
 }
 
 export function clearSupabaseCredentials(): void {

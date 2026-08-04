@@ -38,6 +38,7 @@ export function SupabaseSetupDialog({ open, onOpenChange }: { open: boolean; onO
   const [showSqlRaw, setShowSqlRaw] = useState(false);
   const [showBlocks, setShowBlocks] = useState(false);
   const [result, setResult] = useState<SetupResult | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const sqlBlocks = getSchemaSqlBlocks();
 
   useEffect(() => {
@@ -69,7 +70,11 @@ export function SupabaseSetupDialog({ open, onOpenChange }: { open: boolean; onO
   };
 
   const saveAndConnect = () => {
-    saveSupabaseCredentials(urlInput, anonInput);
+    const res = saveSupabaseCredentials(urlInput, anonInput);
+    if (!res.ok) {
+      setSaveError(res.error ?? "No se pudieron guardar las credenciales");
+      return;
+    }
     window.location.reload();
   };
 
@@ -215,14 +220,26 @@ export function SupabaseSetupDialog({ open, onOpenChange }: { open: boolean; onO
                   </label>
                   <input
                     value={anonInput}
-                    onChange={e => setAnonInput(e.target.value)}
+                    onChange={e => { setAnonInput(e.target.value); setSaveError(null); }}
                     type="password"
-                    placeholder="sb_publishable_… o eyJhbGciOi…"
+                    placeholder="eyJhbGciOi… (anon key — nunca tu token sbp_…)"
                     autoComplete="off"
                     spellCheck={false}
                     className="w-full bg-white/70 dark:bg-input/40 border border-border/60 rounded-xl px-3.5 py-2.5 text-sm font-mono outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all"
                   />
                 </div>
+                <p className="text-[10px] text-muted-foreground/60 leading-relaxed">
+                  ⚠️ El token de acceso personal (sbp_…) <b>solo</b> se usa en el botón de creación del
+                  esquema y no se guarda. Si lo pegas aquí como anon key, toda la app fallará con «Invalid
+                  API key». La anon key es el JWT que empieza por <span className="font-mono">eyJ…</span>.
+                </p>
+
+                {saveError && (
+                  <div className="rounded-xl border border-rose-200/60 bg-rose-50/60 dark:bg-rose-950/20 dark:border-rose-800/40 p-3 text-[11px] text-rose-800 dark:text-rose-300 flex items-start gap-2">
+                    <AlertTriangle size={13} className="shrink-0 mt-0.5" />
+                    <span className="break-words">{saveError}</span>
+                  </div>
+                )}
 
                 <button
                   onClick={saveAndConnect}

@@ -128,6 +128,7 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
   const [connecting, setConnecting] = useState(false);
   const [connectUrl, setConnectUrl] = useState("https://gxpgczwkovertezeydkt.supabase.co");
   const [connectKey, setConnectKey] = useState("");
+  const [connectError, setConnectError] = useState<string | null>(null);
   const [initError, setInitError] = useState<"schema" | "conn" | null>(null);
   const [retryKey, setRetryKey] = useState(0);
   const [installOpen, setInstallOpen] = useState(false);
@@ -184,7 +185,12 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
   }, [myId]);
 
   const doConnect = useCallback(() => {
-    saveSupabaseCredentials(connectUrl.trim(), connectKey.trim());
+    const res = saveSupabaseCredentials(connectUrl.trim(), connectKey.trim());
+    if (!res.ok) {
+      setConnectError(res.error ?? "No se pudieron guardar las credenciales");
+      return;
+    }
+    setConnectError(null);
     window.location.reload();
   }, [connectUrl, connectKey]);
 
@@ -590,10 +596,24 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
               />
               <input
                 value={connectKey}
-                onChange={(e) => setConnectKey(e.target.value)}
-                placeholder="eyJhbGciOi… (anon key)"
-                className="w-full bg-input/50 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40 border border-border/60 mb-3"
+                onChange={(e) => {
+                  setConnectKey(e.target.value);
+                  setConnectError(null);
+                }}
+                placeholder="eyJhbGciOi… (anon key, no tu token sbp_…)"
+                className="w-full bg-input/50 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40 border border-border/60 mb-2"
               />
+              {connectError && (
+                <div className="mb-3 rounded-lg border border-rose-500/30 bg-rose-500/[0.06] px-3 py-2 text-[11px] text-rose-700 dark:text-rose-300 flex items-start gap-1.5">
+                  <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+                  <span>{connectError}</span>
+                </div>
+              )}
+              <p className="text-[10px] text-muted-foreground/60 leading-relaxed mb-3">
+                ⚠️ <b>No pegues aquí tu token de acceso personal (sbp_…)</b> — ese solo sirve para instalar
+                tablas y rompería la app con «Invalid API key». La anon key es el JWT que empieza por{" "}
+                <span className="font-mono">eyJ…</span> (Project Settings → API Keys).
+              </p>
               <div className="flex gap-2">
                 <button
                   onClick={() => setConnecting(false)}
@@ -678,7 +698,13 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
                     setInstallResult(null);
                     const r = await runChatSchemaSetup(installToken.trim());
                     setInstalling(false);
-                    setInstallResult(r.message);
+                    let msg = r.message;
+                    if (!r.ok && /invalid api key|unauthorized|401|forbidden/i.test(r.message)) {
+                      msg =
+                        "Tu token de acceso (sbp_…) no es válido o expiró. Genérate uno nuevo en Supabase → Account → Access Tokens. " +
+                        "Recuerda: el token sbp_ no es la anon key (esa empieza por eyJ…).";
+                    }
+                    setInstallResult(msg);
                     setInstallOk(r.ok);
                     if (r.ok) {
                       toast.success("Tablas del chat instaladas");
