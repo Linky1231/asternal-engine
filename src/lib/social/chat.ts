@@ -212,26 +212,48 @@ export type ChatEvent =
  */
 export function subscribeToChat(chatId: string, onEvent: (ev: ChatEvent) => void): () => void {
   if (typeof supabase.channel !== "function") return () => {};
-  const opts = { schema: "public", table: "chat_messages", filter: `chat_id=eq.${chatId}` } as const;
-  const channel = supabase
-    .channel(`chat-${chatId}`)
-    .on("postgres_changes", { ...opts, event: "INSERT" }, (payload: any) => {
-      onEvent({ type: "INSERT", message: payload.new as ChatMessage });
-    })
-    .on("postgres_changes", { ...opts, event: "UPDATE" }, (payload: any) => {
-      onEvent({ type: "UPDATE", message: payload.new as ChatMessage });
-    })
-    .on("postgres_changes", { ...opts, event: "DELETE" }, (payload: any) => {
-      onEvent({ type: "DELETE", message: payload.old as ChatMessage });
-    })
-    .subscribe();
-  return () => {
-    try {
-      supabase.removeChannel(channel);
-    } catch {
-      /* noop */
+  const filter = `chat_id=eq.${chatId}`;
+  const listeners: Array<{ event: "INSERT" | "UPDATE" | "DELETE"; cb: (p: any) => void }> = [
+    { event: "INSERT", cb: (p) => onEvent({ type: "INSERT", message: p.new as ChatMessage }) },
+    { event: "UPDATE", cb: (p) => onEvent({ type: "UPDATE", message: p.new as ChatMessage }) },
+    { event: "DELETE", cb: (p) => onEvent({ type: "DELETE", message: p.old as ChatMessage }) },
+  ];
+  try {
+    const base: any = supabase.channel(`chat-${chatId}`);
+    if (!base || typeof base.on !== "function") return () => {};
+
+    const first: any = base.on(
+      "postgres_changes",
+      { schema: "public", table: "chat_messages", filter, event: "INSERT" },
+      listeners[0].cb
+    );
+    // Adaptador local: .on() devuelve { subscribe, unsubscribe } sin .on().
+    if (!first || typeof first.on !== "function") {
+      if (typeof first?.subscribe === "function") first.subscribe();
+      const single = first;
+      return () => {
+        try {
+          supabase.removeChannel(single);
+        } catch {
+          /* noop */
+        }
+      };
     }
-  };
+    // supabase-js real: encadenamos los 3 eventos y suscribimos.
+    const chained: any = first
+      .on("postgres_changes", { schema: "public", table: "chat_messages", filter, event: "UPDATE" }, listeners[1].cb)
+      .on("postgres_changes", { schema: "public", table: "chat_messages", filter, event: "DELETE" }, listeners[2].cb);
+    chained.subscribe();
+    return () => {
+      try {
+        supabase.removeChannel(chained);
+      } catch {
+        /* noop */
+      }
+    };
+  } catch {
+    return () => {};
+  }
 }
 
 export type ChatSticker = { id: string; path: string; title: string };

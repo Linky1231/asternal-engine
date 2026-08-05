@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useState, useCallback } from "react";
+import { Component, useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Gamepad2, Newspaper, Search, LogOut, Wrench, Plus, ShieldCheck, User, Sparkles, Star, Menu, MessageCircle, Bell, X, Home, Users, Flame, MessageSquare, Palette, Trophy, History, Clock, BarChart3, ChevronDown, ChevronRight, Globe, Heart, Megaphone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,6 +32,42 @@ export const Route = createFileRoute("/")({
 
 type Tab = "games" | "feed" | "gallery" | "events" | "profile";
 type FeedSub = "forYou" | "following" | "trending" | "forums";
+
+/**
+ * Aisla el chat: si algo falla dentro de él (error inesperado de render o
+ * efecto), solo se cierra el chat con un aviso en vez de tumbar toda la app
+ * con la página de error de la ruta.
+ */
+class ChatBoundary extends Component<{ onClose: () => void; children: React.ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  render() {
+    if (this.state.failed) {
+      return (
+        <div className="fixed inset-0 z-[90] bg-background/97 backdrop-blur-xl grid place-items-center p-6">
+          <div className="text-center max-w-xs">
+            <div className="w-12 h-12 mx-auto mb-3 rounded-2xl bg-rose-500/10 grid place-items-center">
+              <MessageCircle size={20} className="text-rose-500" />
+            </div>
+            <p className="text-sm font-semibold mb-1">El chat tuvo un problema</p>
+            <p className="text-xs text-muted-foreground mb-4 leading-relaxed">
+              Cierra y vuelve a abrirlo. Si persiste, revisa la conexión de Supabase.
+            </p>
+            <button
+              onClick={this.props.onClose}
+              className="px-4 py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-xs font-display tracking-widest active:scale-95 transition"
+            >
+              VOLVER
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 function HomePage() {
   const navigate = useNavigate();
@@ -333,7 +369,11 @@ function HomePage() {
       </AnimatePresence>
 
       {/* Full-screen chat */}
-      {chatOpen && <ChatSection myId={myId} onClose={() => setChatOpen(false)} />}
+      {chatOpen && (
+        <ChatBoundary onClose={() => setChatOpen(false)}>
+          <ChatSection myId={myId} onClose={() => setChatOpen(false)} />
+        </ChatBoundary>
+      )}
     </div>
   );
 }
