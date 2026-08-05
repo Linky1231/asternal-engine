@@ -129,22 +129,40 @@ export async function getCommunityChat(): Promise<{ id: string; name: string; me
   if (!chatRow) throw new Error("No se pudo preparar el chat de la comunidad");
 
   // Auto-join (la política de chat_members permite a cada usuario añadirse a sí mismo).
+  // chat_members NO tiene columna "id" (la clave es chat_id+user_id), así que
+  // las consultas usan user_id. Además, si una instalación anterior dejó
+  // políticas RLS rotas («infinite recursion»/permisos), el chat no debe
+  // quedarse bloqueado: chat_messages sigue siendo legible/escribible, así que
+  // degradamos a «miembro no registrado» (memberOk=false) y la UI muestra un
+  // aviso para reparar las políticas con «Instalar chat».
+  const RLS_RE = /infinite recursion|recursion detected|permission denied|row-level security|42501|PGRST301/i;
+  let memberOk = true;
   const { data: member, error: memberErr } = await supabase
     .from("chat_members")
-    .select("id")
+    .select("user_id")
     .eq("chat_id", chatRow.id)
     .eq("user_id", meId)
     .maybeSingle();
-  if (memberErr && !isSchemaMissing(memberErr)) throw memberErr;
+  if (memberErr && !isSchemaMissing(memberErr) && !RLS_RE.test(memberErr.message)) throw memberErr;
+  if (memberErr) memberOk = false;
   if (!member) {
     const { error: joinErr } = await supabase
       .from("chat_members")
       .insert({ chat_id: chatRow.id, user_id: meId, role: "member" });
-    if (joinErr && !isSchemaMissing(joinErr) && !/permission denied|row-level security/i.test(joinErr.message)) throw joinErr;
+    if (joinErr && !isSchemaMissing(joinErr) && !RLS_RE.test(joinErr.message)) throw joinErr;
+    if (joinErr) memberOk = false;
   }
 
-  const { data: members } = await supabase.from("chat_members").select("id").eq("chat_id", chatRow.id);
-  return { id: chatRow.id, name: chatRow.name || COMMUNITY_CHAT_NAME, memberCount: (members ?? []).length };
+  let memberCount = 0;
+  const { data: members, error: countErr } = await supabase
+    .from("chat_members")
+    .select("user_id")
+    .eq("chat_id", chatRow.id);
+  if (countErr && !isSchemaMissing(countErr) && !RLS_RE.test(countErr.message)) throw countErr;
+  if (countErr) memberOk = false;
+  else memberCount = (members ?? []).length;
+
+  return { id: chatRow.id, name: chatRow.name || COMMUNITY_CHAT_NAME, memberCount, memberOk };
 }
 
 /** Cursor de paginación: el mensaje más antiguo de la página actual. */

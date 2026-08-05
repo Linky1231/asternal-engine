@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, Copy, Check, Reply, SmilePlus, ImagePlus, Loader2, Users, WifiOff, Database, Plug, RefreshCw, KeyRound, CheckCircle2, AlertTriangle, Mic, Play, Pause, Trash2, ArrowDown } from "lucide-react";
+import { X, Send, Copy, Check, Reply, SmilePlus, ImagePlus, Loader2, Users, WifiOff, Database, Plug, RefreshCw, KeyRound, CheckCircle2, AlertTriangle, Mic, Play, Pause, Trash2, ArrowDown, ExternalLink } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
@@ -18,11 +18,12 @@ import {
   type ChatMessage,
   type ChatSticker,
 } from "@/lib/social/chat";
-import { supabase, hasSupabaseConfig, saveSupabaseCredentials, isSchemaMissing } from "@/integrations/supabase/client";
+import { supabase, hasSupabaseConfig, saveSupabaseCredentials, isSchemaMissing, getSupabaseUrl } from "@/integrations/supabase/client";
 import { UserName } from "./UserName";
 import { getMyProfile, uploadMedia } from "@/lib/social/api";
 import type { Profile } from "@/lib/social/api";
-import { runChatSchemaSetup, SUPABASE_ACCESS_TOKEN } from "@/lib/supabase/setup";
+import { runChatSchemaSetup, SUPABASE_ACCESS_TOKEN, sqlEditorUrl } from "@/lib/supabase/setup";
+import { CHAT_SCHEMA_SQL } from "@/lib/supabase/chat-schema";
 
 function fmtTime(iso: string): string {
   const d = new Date(iso);
@@ -254,7 +255,7 @@ function MessageBubble({
 }
 
 export default function ChatSection({ myId, onClose }: { myId: string | null; onClose: () => void }) {
-  const [chatInfo, setChatInfo] = useState<{ id: string; name: string; memberCount: number } | null>(null);
+  const [chatInfo, setChatInfo] = useState<{ id: string; name: string; memberCount: number; memberOk?: boolean } | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [senders, setSenders] = useState<Map<string, Profile>>(new Map());
   const [loading, setLoading] = useState(true);
@@ -284,6 +285,7 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
   const [installing, setInstalling] = useState(false);
   const [installResult, setInstallResult] = useState<string | null>(null);
   const [installOk, setInstallOk] = useState(false);
+  const [copiedSql, setCopiedSql] = useState(false);
   // Paginación por cursor + scroll infinito
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -342,6 +344,18 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
       cancelled = true;
     };
   }, [myId]);
+
+  const copyChatSql = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(CHAT_SCHEMA_SQL);
+      setCopiedSql(true);
+      setTimeout(() => setCopiedSql(false), 2500);
+    } catch {
+      toast.error("No se pudo copiar el SQL", {
+        description: "Cópialo manualmente o usa el botón «Instalar» si tu token sbp_… funciona.",
+      });
+    }
+  }, []);
 
   const doConnect = useCallback(() => {
     const res = saveSupabaseCredentials(connectUrl.trim(), connectKey.trim());
@@ -722,7 +736,9 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
               <div className="text-sm font-semibold truncate">{chatInfo?.name ?? COMMUNITY_CHAT_NAME}</div>
               <div className="text-[10px] text-muted-foreground">
                 {chatInfo
-                  ? `${chatInfo.memberCount} ${chatInfo.memberCount === 1 ? "miembro" : "miembros"} · chat compartido`
+                  ? chatInfo.memberOk === false
+                    ? "chat compartido · permisos por reparar"
+                    : `${chatInfo.memberCount} ${chatInfo.memberCount === 1 ? "miembro" : "miembros"} · chat compartido`
                   : loading
                     ? "Conectando…"
                     : initError
@@ -779,9 +795,10 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
               ) : initError === "rls" ? (
                 <>
                   <span className="font-semibold text-foreground">Permisos del chat desactualizados</span>{" "}
-                  (una instalación anterior dejó políticas antiguas que se bloquean entre sí). Pulsa{" "}
+                  (una instalación anterior dejó políticas que se bloquean entre sí). Pulsa{" "}
                   <b>«Instalar chat»</b> con tu token <span className="font-mono">sbp_…</span> para limpiarlas y
-                  reinstalarlas correctamente.
+                  reinstalarlas. La anon key <span className="font-mono">eyJ…</span> no puede reparar
+                  permisos: solo sirve para leer y escribir.
                 </>
               ) : initError === "auth" ? (
                 <>
@@ -831,6 +848,28 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
               <RefreshCw size={12} /> REINTENTAR
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Aviso no bloqueante: las políticas de miembros quedaron rotas pero el chat sigue usable */}
+      {chatInfo && chatInfo.memberOk === false && (
+        <div className="shrink-0 mx-3 mt-2 px-3 py-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 flex items-start gap-2">
+          <AlertTriangle size={13} className="text-amber-500 shrink-0 mt-0.5" />
+          <span className="flex-1 text-[11px] leading-relaxed text-amber-700 dark:text-amber-300">
+            <span className="font-semibold">Los mensajes cargan, pero quedaron políticas antiguas</span> que
+            bloquean el registro de miembros. Pulsa{" "}
+            <button
+              onClick={() => {
+                setInstallToken(SUPABASE_ACCESS_TOKEN ?? "");
+                setInstallResult(null);
+                setInstallOpen(true);
+              }}
+              className="underline font-semibold active:opacity-70"
+            >
+              «Instalar chat»
+            </button>{" "}
+            para repararlo (necesita tu token <span className="font-mono">sbp_…</span>).
+          </span>
         </div>
       )}
 
@@ -1206,6 +1245,33 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
                   {installing ? <Loader2 size={13} className="animate-spin" /> : <Plug size={13} />}
                   {installing ? "INSTALANDO…" : "INSTALAR"}
                 </button>
+              </div>
+
+              {/* Respaldo manual: copiar el SQL / abrir el SQL Editor */}
+              <div className="mt-3 pt-3 border-t border-border/60 space-y-2">
+                <div className="text-[10px] text-muted-foreground/70 leading-relaxed">
+                  ¿El botón de arriba falla (CORS o token)? Copia el SQL y pégalo en el SQL Editor de tu
+                  proyecto (limpia las políticas antiguas y las reinstala).
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => void copyChatSql()}
+                    className="flex-1 py-2 rounded-xl border border-border bg-background text-[10px] font-display tracking-widest active:scale-[0.98] transition flex items-center justify-center gap-1.5"
+                  >
+                    {copiedSql ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+                    {copiedSql ? "¡COPIADO!" : "COPIAR SQL"}
+                  </button>
+                  {sqlEditorUrl(getSupabaseUrl() ?? "") && (
+                    <a
+                      href={sqlEditorUrl(getSupabaseUrl() ?? "") ?? "#"}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex-1 py-2 rounded-xl border border-border bg-background text-[10px] font-display tracking-widest transition flex items-center justify-center gap-1.5 hover:text-primary hover:border-primary/40"
+                    >
+                      <ExternalLink size={12} /> ABRIR SQL EDITOR
+                    </a>
+                  )}
+                </div>
               </div>
             </motion.div>
           </motion.div>
