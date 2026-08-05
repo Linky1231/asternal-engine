@@ -109,12 +109,44 @@ function HomePage() {
   useEffect(() => {
     (async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) { navigate({ to: "/auth" }); return; }
-        setMyId(session.user.id);
-        setMe(await getMyProfile());
-        setMod(await isMod());
-        setAdmin(await isAdmin());
+        let session = null;
+        try {
+          const res = await supabase.auth.getSession();
+          session = res.data?.session ?? null;
+        } catch {
+          /* Credenciales de Supabase rotas/inaccesibles → se intenta la cuenta local */
+        }
+        let uid: string | null = session?.user?.id ?? null;
+        let localSession = false;
+        if (!uid) {
+          // Puente: cuenta local creada antes de conectar Supabase (o credenciales
+          // inválidas). La app sigue funcionando en modo local en lugar de
+          // redirigir en bucle a /auth.
+          try {
+            const raw = localStorage.getItem("_local_auth_session");
+            if (raw) {
+              const s = JSON.parse(raw) as { userId?: string; expiresAt?: string };
+              if (s.userId && s.expiresAt && new Date(s.expiresAt) > new Date()) {
+                uid = s.userId;
+                localSession = true;
+              }
+            }
+          } catch { /* noop */ }
+        }
+        if (!uid) { navigate({ to: "/auth" }); return; }
+        setMyId(uid);
+        let prof: Profile | null = null;
+        try { prof = await getMyProfile(); } catch { /* noop */ }
+        if (!prof && localSession) {
+          // El perfil de la cuenta local vive en localStorage.
+          try {
+            const rows = JSON.parse(localStorage.getItem("_local_data_profiles") || "[]") as Profile[];
+            prof = rows.find((p) => p.id === uid) ?? null;
+          } catch { /* noop */ }
+        }
+        if (prof) setMe(prof);
+        try { setMod(await isMod()); } catch { /* noop */ }
+        try { setAdmin(await isAdmin()); } catch { /* noop */ }
         await reload(tab);
       } catch (e) {
         // No romper la preview si el esquema aún no está creado en Supabase.

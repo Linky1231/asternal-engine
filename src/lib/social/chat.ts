@@ -1,6 +1,7 @@
 // @ts-nocheck — Chat adapter (same Supabase client + helpers as api.ts)
 import { supabase, hasSupabaseConfig, isSchemaMissing } from "@/integrations/supabase/client";
 import { signMediaUrls, uploadMedia } from "@/lib/social/api";
+import type { Profile } from "@/lib/social/api";
 
 export type ChatMessage = {
   id: string;
@@ -29,6 +30,9 @@ function chatError(code: string, message: string): Error {
 /**
  * Identidad actual del usuario. Distingue si viene de una sesión real de
  * Supabase o de la cuenta local del navegador (creada antes de conectar).
+ * Devuelve `isLocal: true` SOLO cuando la app tiene credenciales de Supabase
+ * pero la sesión activa sigue siendo la cuenta local (entonces el chat opera
+ * contra el almacenamiento local en vez de bloquearse).
  */
 async function getMeId(): Promise<{ id: string; isLocal: boolean } | null> {
   try {
@@ -37,7 +41,7 @@ async function getMeId(): Promise<{ id: string; isLocal: boolean } | null> {
     } = await supabase.auth.getUser();
     if (user?.id) return { id: user.id, isLocal: false };
   } catch {
-    /* noop */
+    /* Credenciales rotas/inaccesibles → se comprueba la cuenta local */
   }
   // Puente: si la app ya usa Supabase real pero la sesión activa es la local
   // (cuenta creada antes de conectar), mantenemos la misma identidad.
@@ -54,21 +58,74 @@ async function getMeId(): Promise<{ id: string; isLocal: boolean } | null> {
 }
 
 /**
- * Igual que getMeId pero lanza errores con código para que la UI muestre la
- * acción correcta: iniciar sesión (sin sesión) o entrar con la cuenta real
- * cuando la base está conectada pero la sesión activa sigue siendo local
- * (los permisos RLS de Supabase exigen un usuario real de auth).
+ * Igual que getMeId pero lanza un error con código cuando no hay NINGUNA
+ * identidad (ni real ni local) para que la UI muestre la acción correcta.
+ * Nota: ya NO bloquea la cuenta local cuando Supabase está conectado; en ese
+ * caso el chat degrada a modo local (los datos viven en el navegador) en vez
+ * de dejar al usuario sin chat.
  */
 async function requireMe(): Promise<{ id: string; isLocal: boolean }> {
   const me = await getMeId();
   if (!me) throw chatError(CHAT_ERR.AUTH_REQUIRED, "Inicia sesión para usar el chat");
-  if (me.isLocal && hasSupabaseConfig()) {
-    throw chatError(
-      CHAT_ERR.REAL_AUTH_REQUIRED,
-      "Tu base de datos está conectada, pero esta cuenta es local. Entra con tu cuenta para usar el chat comunitario."
-    );
-  }
   return me;
+}
+
+/**
+ * ¿La sesión activa es la cuenta local del navegador mientras la app tiene
+ * credenciales de Supabase? En ese caso el chat debe operar contra el
+ * almacenamiento local (modo local) porque las políticas RLS de Supabase
+ * exigen un usuario real.
+ */
+async function isLocalIdentity(): Promise<boolean> {
+  const me = await getMeId();
+  return !!me?.isLocal;
+}
+
+// ───── Adaptador local (localStorage) ─────
+// Mismo formato de claves que el cliente local de integrations/supabase/client.ts
+// (`_local_data_<tabla>` y `_local_storage_<bucket>_<ruta>`), para que el chat
+// funcione igual cuando la cuenta activa es local aunque haya credenciales.
+
+function localRows<T = Record<string, unknown>>(table: string): T[] {
+  try {
+    const raw = localStorage.getItem(`_local_data_${table}`);
+    return raw ? (JSON.parse(raw) as T[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function localSave(table: string, rows: unknown[]): void {
+  try {
+    localStorage.setItem(`_local_data_${table}`, JSON.stringify(rows));
+  } catch {
+    /* sin espacio (modo local): se ignora */
+  }
+}
+
+function localStorePath(path: string): string | null {
+  try {
+    return localStorage.getItem(`_local_storage_post-media_${path}`);
+  } catch {
+    return null;
+  }
+}
+
+async function localUploadMedia(file: File, userId: string): Promise<string> {
+  const ext = file.name.split(".").pop() || "bin";
+  const path = `${userId}/${crypto.randomUUID()}.${ext}`;
+  const url = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(new Error("No se pudo leer el archivo"));
+    reader.readAsDataURL(file);
+  });
+  try {
+    localStorage.setItem(`_local_storage_post-media_${path}`, url);
+  } catch {
+    throw new Error("Sin espacio de almacenamiento local");
+  }
+  return path;
 }
 
 /**
@@ -76,9 +133,35 @@ async function requireMe(): Promise<{ id: string; isLocal: boolean }> {
  * lo crea con el ID fijo; en cualquier caso añade al usuario actual como miembro
  * (auto-join) y devuelve el número de miembros.
  */
-export async function getCommunityChat(): Promise<{ id: string; name: string; memberCount: number }> {
+export async function getCommunityChat(): Promise<{ id: string; name: string; memberCount: number; memberOk: boolean; local: boolean }> {
   const me = await requireMe();
   const meId = me.id;
+
+  // ── Modo local (cuenta local + Supabase conectado) ──
+  if (me.isLocal) {
+    const chats = localRows<Record<string, unknown>>("chats");
+    let chatRow = chats.find((c) => c.is_community === true) ?? null;
+    if (!chatRow) {
+      chatRow = {
+        id: COMMUNITY_CHAT_ID,
+        type: "group",
+        name: COMMUNITY_CHAT_NAME,
+        created_by: meId,
+        is_community: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      chats.push(chatRow);
+      localSave("chats", chats);
+    }
+    const members = localRows<Record<string, unknown>>("chat_members");
+    if (!members.some((m) => m.chat_id === chatRow.id && m.user_id === meId)) {
+      members.push({ chat_id: chatRow.id, user_id: meId, role: "member", joined_at: new Date().toISOString() });
+      localSave("chat_members", members);
+    }
+    const count = members.filter((m) => m.chat_id === chatRow.id).length;
+    return { id: chatRow.id as string, name: String(chatRow.name || COMMUNITY_CHAT_NAME), memberCount: count, memberOk: true, local: true };
+  }
 
   // Si las tablas no existen (esquema sin instalar) o la anon key es inválida,
   // el error real se propaga para que la UI muestre la acción correcta
@@ -162,7 +245,7 @@ export async function getCommunityChat(): Promise<{ id: string; name: string; me
   if (countErr) memberOk = false;
   else memberCount = (members ?? []).length;
 
-  return { id: chatRow.id, name: chatRow.name || COMMUNITY_CHAT_NAME, memberCount, memberOk };
+  return { id: chatRow.id, name: chatRow.name || COMMUNITY_CHAT_NAME, memberCount, memberOk, local: false };
 }
 
 /** Cursor de paginación: el mensaje más antiguo de la página actual. */
@@ -178,6 +261,22 @@ export async function fetchChatMessages(
   opts: { before?: MessageCursor; limit?: number } = {}
 ): Promise<{ messages: ChatMessage[]; hasMore: boolean }> {
   const limit = opts.limit ?? 60;
+  const me = await getMeId();
+
+  // ── Modo local ──
+  if (me?.isLocal) {
+    let rows = localRows<ChatMessage>("chat_messages").filter((m) => m.chat_id === chatId);
+    if (opts.before) {
+      const b = opts.before;
+      rows = rows.filter(
+        (m) => m.created_at < b.created_at || (m.created_at === b.created_at && m.id < b.id)
+      );
+    }
+    rows.sort((a, b) => b.created_at.localeCompare(a.created_at) || b.id.localeCompare(a.id));
+    const hasMore = rows.length > limit;
+    return { messages: rows.slice(0, limit).reverse(), hasMore };
+  }
+
   let q = supabase
     .from("chat_messages")
     .select("*")
@@ -198,6 +297,25 @@ export async function sendChatMessage(
   opts: { content?: string; mediaUrl?: string; mediaType?: "image" | "audio"; replyToId?: string | null }
 ): Promise<ChatMessage> {
   const me = await requireMe();
+
+  // ── Modo local ──
+  if (me.isLocal) {
+    const row: ChatMessage = {
+      id: crypto.randomUUID(),
+      chat_id: chatId,
+      sender_id: me.id,
+      content: opts.content ?? null,
+      media_url: opts.mediaUrl ?? null,
+      media_type: opts.mediaType ?? (opts.mediaUrl ? "image" : null),
+      reply_to_id: opts.replyToId ?? null,
+      created_at: new Date().toISOString(),
+    };
+    const rows = localRows<ChatMessage>("chat_messages");
+    rows.push(row);
+    localSave("chat_messages", rows);
+    return row;
+  }
+
   const { data, error } = await supabase
     .from("chat_messages")
     .insert({
@@ -227,8 +345,18 @@ export type ChatEvent =
 /**
  * Realtime del chat: INSERT (mensajes nuevos), UPDATE (ediciones) y DELETE
  * (eliminaciones) llegan al instante y la UI los aplica sin recargar.
+ * En modo local no hay realtime (los datos viven en este navegador).
  */
 export function subscribeToChat(chatId: string, onEvent: (ev: ChatEvent) => void): () => void {
+  let cleanup: () => void = () => {};
+  void getMeId().then((me) => {
+    if (me?.isLocal) return; // sin realtime en modo local
+    cleanup = realSubscribe(chatId, onEvent);
+  });
+  return () => cleanup();
+}
+
+function realSubscribe(chatId: string, onEvent: (ev: ChatEvent) => void): () => void {
   if (typeof supabase.channel !== "function") return () => {};
   const filter = `chat_id=eq.${chatId}`;
   const listeners: Array<{ event: "INSERT" | "UPDATE" | "DELETE"; cb: (p: any) => void }> = [
@@ -282,6 +410,17 @@ export type ChatSticker = { id: string; path: string; title: string };
  */
 export async function uploadSticker(file: File): Promise<{ path: string; id: string }> {
   const me = await requireMe();
+
+  // ── Modo local ──
+  if (me.isLocal) {
+    const path = await localUploadMedia(file, me.id);
+    const id = crypto.randomUUID();
+    const rows = localRows<Record<string, unknown>>("stickers");
+    rows.push({ id, user_id: me.id, path, created_at: new Date().toISOString() });
+    localSave("stickers", rows);
+    return { path, id };
+  }
+
   const path = await uploadMedia(file, me.id);
   const { data, error } = await supabase
     .from("stickers")
@@ -297,6 +436,16 @@ export async function uploadSticker(file: File): Promise<{ path: string; id: str
 export async function fetchMyStickers(): Promise<ChatSticker[]> {
   const me = await getMeId();
   if (!me) return [];
+
+  // ── Modo local ──
+  if (me.isLocal) {
+    const rows = localRows<Record<string, unknown>>("stickers")
+      .filter((s) => s.user_id === me.id)
+      .sort((a, b) => String(b.created_at ?? "").localeCompare(String(a.created_at ?? "")))
+      .slice(0, 60);
+    return rows.map((s) => ({ id: String(s.id), path: String(s.path), title: "Sticker" }));
+  }
+
   const { data, error } = await supabase
     .from("stickers")
     .select("id, path")
@@ -313,10 +462,47 @@ export async function fetchMyStickers(): Promise<ChatSticker[]> {
 /** Elimina un sticker de la biblioteca de la cuenta actual. */
 export async function deleteSticker(id: string): Promise<void> {
   const me = await requireMe();
+
+  // ── Modo local ──
+  if (me.isLocal) {
+    const rows = localRows<Record<string, unknown>>("stickers").filter(
+      (s) => !(s.id === id && s.user_id === me.id)
+    );
+    localSave("stickers", rows);
+    return;
+  }
+
   const { error } = await supabase.from("stickers").delete().eq("id", id).eq("user_id", me.id);
   if (error) throw error;
 }
 
+/** Resuelve rutas de media a URLs listas para <img>/<audio>. En modo local usa los data-URLs guardados. */
 export async function signMedia(paths: string[]): Promise<string[]> {
+  const me = await getMeId();
+  if (me?.isLocal) {
+    return paths.map((p) => {
+      if (/^https?:/.test(p) || /^data:/.test(p)) return p;
+      return localStorePath(p) ?? "";
+    });
+  }
   return signMediaUrls(paths);
+}
+
+/** Sube un media (sticker/audio) respetando el modo activo del chat. */
+export async function uploadChatMedia(file: File, userId: string): Promise<string> {
+  const me = await getMeId();
+  if (me?.isLocal) return localUploadMedia(file, me.id);
+  return uploadMedia(file, userId);
+}
+
+/** Perfiles de los remitentes respetando el modo activo del chat. */
+export async function fetchChatProfiles(ids: string[]): Promise<Map<string, Profile>> {
+  if (!ids.length) return new Map();
+  const me = await getMeId();
+  if (me?.isLocal) {
+    const rows = localRows<Profile>("profiles").filter((p) => ids.includes(p.id));
+    return new Map(rows.map((p) => [p.id, p]));
+  }
+  const { data } = await supabase.from("profiles").select("*").in("id", ids);
+  return new Map(((data ?? []) as Profile[]).map((p) => [p.id, p]));
 }

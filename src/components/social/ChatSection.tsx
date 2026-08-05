@@ -13,14 +13,16 @@ import {
   deleteSticker,
   signMedia,
   isAudioMessage,
+  uploadChatMedia,
+  fetchChatProfiles,
   COMMUNITY_CHAT_NAME,
   CHAT_ERR,
   type ChatMessage,
   type ChatSticker,
 } from "@/lib/social/chat";
-import { supabase, hasSupabaseConfig, saveSupabaseCredentials, isSchemaMissing, getSupabaseUrl } from "@/integrations/supabase/client";
+import { hasSupabaseConfig, saveSupabaseCredentials, isSchemaMissing, getSupabaseUrl } from "@/integrations/supabase/client";
 import { UserName } from "./UserName";
-import { getMyProfile, uploadMedia } from "@/lib/social/api";
+import { getMyProfile } from "@/lib/social/api";
 import type { Profile } from "@/lib/social/api";
 import { runChatSchemaSetup, SUPABASE_ACCESS_TOKEN, sqlEditorUrl } from "@/lib/supabase/setup";
 import { CHAT_SCHEMA_SQL } from "@/lib/supabase/chat-schema";
@@ -255,7 +257,7 @@ function MessageBubble({
 }
 
 export default function ChatSection({ myId, onClose }: { myId: string | null; onClose: () => void }) {
-  const [chatInfo, setChatInfo] = useState<{ id: string; name: string; memberCount: number; memberOk?: boolean } | null>(null);
+  const [chatInfo, setChatInfo] = useState<{ id: string; name: string; memberCount: number; memberOk?: boolean; local?: boolean } | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [senders, setSenders] = useState<Map<string, Profile>>(new Map());
   const [loading, setLoading] = useState(true);
@@ -309,7 +311,7 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
     const missing = ids.filter((id) => !sendersRef.current.has(id));
     if (!missing.length) return;
     try {
-      const pmap = await fetchProfiles(missing);
+      const pmap = await fetchChatProfiles(missing);
       for (const id of missing) sendersRef.current.add(id);
       setSenders((prev) => {
         const next = new Map(prev);
@@ -326,19 +328,29 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
     if (!myId) return;
     let cancelled = false;
     (async () => {
+      let p: Profile | null = null;
       try {
-        const p = await getMyProfile();
-        if (cancelled || !p) return;
-        sendersRef.current.add(p.id);
-        setSenders((prev) => {
-          if (prev.has(p.id)) return prev;
-          const next = new Map(prev);
-          next.set(p.id, p);
-          return next;
-        });
+        p = await getMyProfile();
       } catch {
         /* noop */
       }
+      if (!p) {
+        // Cuenta local (o credenciales rotas): el perfil vive en localStorage.
+        try {
+          const rows = JSON.parse(localStorage.getItem("_local_data_profiles") || "[]") as Profile[];
+          p = rows.find((x) => x.id === myId) ?? null;
+        } catch {
+          /* noop */
+        }
+      }
+      if (cancelled || !p) return;
+      sendersRef.current.add(p.id);
+      setSenders((prev) => {
+        if (prev.has(p.id)) return prev;
+        const next = new Map(prev);
+        next.set(p.id, p);
+        return next;
+      });
     })();
     return () => {
       cancelled = true;
@@ -378,6 +390,9 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
         const info = await getCommunityChat();
         if (cancelled) return;
         setChatInfo(info);
+        // El aviso de «modo local» depende del modo activo real del chat
+        // (cuenta local + Supabase conectado también opera en local).
+        setIsLocal(!hasSupabaseConfig() || !!info.local);
         const { messages: msgs, hasMore: more } = await fetchChatMessages(info.id);
         if (cancelled) return;
         setMessages(msgs);
@@ -674,7 +689,7 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
       }
       setSendingAudio(true);
       try {
-        const path = await uploadMedia(new File([blob], "voice.webm", { type: blob.type || "audio/webm" }), myId ?? "me");
+        const path = await uploadChatMedia(new File([blob], "voice.webm", { type: blob.type || "audio/webm" }), myId ?? "me");
         const [signed] = await signMedia([path]);
         signedMediaRef.current = new Map(signedMediaRef.current).set(path, signed);
         setSignedMedia(signedMediaRef.current);
@@ -768,7 +783,9 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
       {isLocal && (
         <div className="shrink-0 mx-3 mt-2 px-3 py-2 rounded-xl border border-amber-500/30 bg-amber-500/10 flex items-center gap-2">
           <span className="flex-1 text-[11px] text-amber-700 dark:text-amber-300">
-            Modo local: los mensajes no se comparten entre dispositivos. Conecta tu base de datos para el chat comunitario.
+            {hasSupabaseConfig()
+              ? "Chat local: tu cuenta actual no está en Supabase, así que los mensajes se guardan solo en este dispositivo. Entra con tu cuenta de Supabase (⋮ → Cerrar sesión → login) para compartirlos con la comunidad."
+              : "Modo local: los mensajes no se comparten entre dispositivos. Conecta tu base de datos para el chat comunitario."}
           </span>
           <button
             onClick={() => setConnecting(true)}
@@ -1281,9 +1298,4 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
   );
 }
 
-// Local helper: fetch profiles for a set of ids
-async function fetchProfiles(ids: string[]): Promise<Map<string, Profile>> {
-  const { data } = await supabase.from("profiles").select("*").in("id", ids);
-  const rows = (data ?? []) as Profile[];
-  return new Map(rows.map((p) => [p.id, p]));
-}
+
