@@ -18,6 +18,7 @@ import {
   isNetworkError,
   queuePendingMessage,
   flushPendingMessages,
+  isChatSchemaOutdated,
   COMMUNITY_CHAT_NAME,
   CHAT_ERR,
   type ChatMessage,
@@ -56,7 +57,7 @@ function connHint(msg: string): string {
 }
 
 /** Explica el motivo REAL de un fallo de envío, en lugar de culpar a la conexión del usuario. */
-function sendErrorDetail(err: unknown): { title: string; desc: string } {
+function sendErrorDetail(err: unknown): { title: string; desc: string; action?: "install" } {
   const msg = (err as Error)?.message ?? "";
   const code = (err as { code?: string })?.code;
   if (code === CHAT_ERR.AUTH_REQUIRED || code === CHAT_ERR.REAL_AUTH_REQUIRED) {
@@ -77,11 +78,13 @@ function sendErrorDetail(err: unknown): { title: string; desc: string } {
     return {
       title: "Los permisos bloquean el envío",
       desc: "Reinstala las tablas del chat con «Instalar chat» (necesita tu token sbp_…) o entra con tu cuenta de Supabase.",
+      action: "install",
     };
   if (/schema cache/i.test(msg) || /could not find the .* column/i.test(msg) || code === "PGRST204")
     return {
       title: "La tabla del chat está desactualizada",
       desc: "Falta una columna en chat_messages (suele pasar si instalaste el chat antes de que existiera el audio de voz). Pulsa «Instalar chat» con tu token sbp_ para actualizar la tabla y vuelve a enviar.",
+      action: "install",
     };
   if (/foreign key|23503|does not exist|undefined_table|42p01/i.test(msg))
     return {
@@ -338,6 +341,8 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
   const [unseen, setUnseen] = useState(0);
   // URLs firmadas de los media de los mensajes (cacheadas: nunca expiran en la base)
   const [signedMedia, setSignedMedia] = useState<Map<string, string>>(new Map());
+  // ¿La tabla del chat está desactualizada (sin la columna media_type)?
+  const [schemaOutdated, setSchemaOutdated] = useState(false);
 
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -444,6 +449,13 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
         if (msgs.length) cursorRef.current = { created_at: msgs[0].created_at, id: msgs[0].id };
         stickToBottomRef.current = true;
         await loadSenders(msgs);
+        // Comprueba si la tabla del chat está desactualizada (sin media_type)
+        // para avisar de reinstalar el esquema antes de que falle un audio.
+        isChatSchemaOutdated()
+          .then((outdated) => {
+            if (!cancelled) setSchemaOutdated(outdated);
+          })
+          .catch(() => {});
       } catch (err) {
         if (cancelled) return;
         const code = (err as { code?: string })?.code;
@@ -613,6 +625,25 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
     })();
   }, [stickersOpen]);
 
+  /** Muestra el motivo real de un fallo de envío, con acción directa si aplica (instalar esquema). */
+  const reportSendError = useCallback((err: unknown) => {
+    const detail = sendErrorDetail(err);
+    toast.error(detail.title, {
+      description: detail.desc,
+      action:
+        detail.action === "install"
+          ? {
+              label: "INSTALAR CHAT",
+              onClick: () => {
+                setInstallToken(SUPABASE_ACCESS_TOKEN ?? "");
+                setInstallResult(null);
+                setInstallOpen(true);
+              },
+            }
+          : undefined,
+    });
+  }, []);
+
   const handleSend = useCallback(
     async (mediaUrl?: string) => {
       const content = draft.trim();
@@ -644,7 +675,6 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
           })
           .catch(() => {});
       } catch (err) {
-        const detail = sendErrorDetail(err);
         // Fallo de red: guardamos el mensaje en la cola local y se reenviará solo.
         if (isNetworkError(err) && chatInfo) {
           queuePendingMessage(chatInfo.id, {
@@ -654,7 +684,7 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
             replyToId: replyTo?.id ?? null,
           });
         }
-        toast.error(detail.title, { description: detail.desc });
+        reportSendError(err);
       }
     },
     [chatInfo, draft, replyTo, initError]
@@ -688,15 +718,13 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
         setMessages((prev) => (prev.some((m) => m.id === sent.id) ? prev : [...prev, sent]));
         setReplyTo(null);
       } catch (err) {
-        const detail = sendErrorDetail(err);
         if (isNetworkError(err)) {
           queuePendingMessage(chatInfo.id, { mediaUrl: path, mediaType: "image", replyToId: replyTo?.id ?? null });
         }
-        toast.error(detail.title, { description: detail.desc });
+        reportSendError(err);
       }
     } catch (err) {
-      const detail = sendErrorDetail(err);
-      toast.error("No se pudo subir el sticker", { description: detail.desc });
+      toast.error("No se pudo subir el sticker", { description: sendErrorDetail(err).desc });
     } finally {
       setStickerUploading(false);
     }
@@ -795,11 +823,10 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
         setMessages((prev) => (prev.some((m) => m.id === sent.id) ? prev : [...prev, sent]));
         setReplyTo(null);
       } catch (err) {
-        const detail = sendErrorDetail(err);
         if (audioPath && isNetworkError(err) && chatInfo) {
           queuePendingMessage(chatInfo.id, { mediaUrl: audioPath, mediaType: "audio", replyToId: replyTo?.id ?? null });
         }
-        toast.error(detail.title, { description: detail.desc });
+        reportSendError(err);
       } finally {
         setSendingAudio(false);
       }
@@ -971,6 +998,29 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
               <RefreshCw size={12} /> REINTENTAR
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Aviso: la tabla del chat está desactualizada (falta media_type) */}
+      {chatInfo && schemaOutdated && (
+        <div className="shrink-0 mx-3 mt-2 px-3 py-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 flex items-start gap-2">
+          <AlertTriangle size={13} className="text-amber-500 shrink-0 mt-0.5" />
+          <span className="flex-1 text-[11px] leading-relaxed text-amber-700 dark:text-amber-300">
+            <span className="font-semibold">La tabla del chat está desactualizada:</span> falta la columna
+            para el audio de voz. Pulsa{" "}
+            <button
+              onClick={() => {
+                setInstallToken(SUPABASE_ACCESS_TOKEN ?? "");
+                setInstallResult(null);
+                setInstallOpen(true);
+              }}
+              className="underline font-semibold active:opacity-70"
+            >
+              «Instalar chat»
+            </button>{" "}
+            con tu token <span className="font-mono">sbp_…</span> para actualizarla (los mensajes de texto y
+            los stickers funcionan igualmente).
+          </span>
         </div>
       )}
 
