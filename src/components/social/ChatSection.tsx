@@ -15,6 +15,9 @@ import {
   isAudioMessage,
   uploadChatMedia,
   fetchChatProfiles,
+  isNetworkError,
+  queuePendingMessage,
+  flushPendingMessages,
   COMMUNITY_CHAT_NAME,
   CHAT_ERR,
   type ChatMessage,
@@ -48,8 +51,44 @@ function connHint(msg: string): string {
   if (/permission denied|row-level security|42501|PGRST301|new row violates|violates row-level/i.test(msg))
     return "Las tablas existen pero los permisos (RLS) bloquean el chat: suele pasar si se instaló un esquema antiguo o la sesión no coincide. Pulsa «Instalar chat» para reinstalar los permisos, o entra de nuevo con tu cuenta.";
   if (/failed to fetch|networkerror|load failed|network request failed|ERR_/i.test(msg))
-    return "No hay conexión con Supabase (red o dominio bloqueado). Comprueba tu internet y vuelve a intentarlo.";
+    return "El servidor de Supabase no respondió. No es necesariamente tu internet: puede ser un bloqueo temporal o del dominio en esta vista previa. Reintenta en unos segundos o revisa la URL y la anon key (⋮ → Supabase).";
   return "Revisa que la URL y la anon key sean correctas (Supabase → Project Settings → API Keys).";
+}
+
+/** Explica el motivo REAL de un fallo de envío, en lugar de culpar a la conexión del usuario. */
+function sendErrorDetail(err: unknown): { title: string; desc: string } {
+  const msg = (err as Error)?.message ?? "";
+  const code = (err as { code?: string })?.code;
+  if (code === CHAT_ERR.AUTH_REQUIRED || code === CHAT_ERR.REAL_AUTH_REQUIRED) {
+    return {
+      title: "Inicia sesión para enviar mensajes",
+      desc:
+        code === CHAT_ERR.REAL_AUTH_REQUIRED
+          ? "Tu base de datos está conectada pero esta cuenta es local. Entra con tu cuenta de Supabase (⋮ → Cerrar sesión → login) y vuelve."
+          : "El chat necesita una sesión activa. Inicia sesión y vuelve.",
+    };
+  }
+  if (/invalid api key|401|apikey|invalid key/i.test(msg))
+    return {
+      title: "La clave de Supabase no es válida",
+      desc: "Revisa la anon key (empieza por eyJ… o sb_publishable_) en ⋮ → Supabase y guárdala de nuevo.",
+    };
+  if (/permission denied|row-level security|42501|pgrst301|new row violates|infinite recursion/i.test(msg))
+    return {
+      title: "Los permisos bloquean el envío",
+      desc: "Reinstala las tablas del chat con «Instalar chat» (necesita tu token sbp_…) o entra con tu cuenta de Supabase.",
+    };
+  if (/foreign key|23503|does not exist|undefined_table|42p01/i.test(msg))
+    return {
+      title: "Falta algo en la base de datos",
+      desc: "Parece que tu cuenta no tiene perfil en la base o falta una tabla. Entra con tu cuenta de Supabase y, si persiste, pulsa «Instalar chat».",
+    };
+  if (isNetworkError(err))
+    return {
+      title: "El servidor del chat no respondió",
+      desc: "No es un problema de tu internet: el servidor no respondió. Tu mensaje quedó guardado y se enviará solo cuando se restablezca.",
+    };
+  return { title: "No se pudo enviar el mensaje", desc: msg.slice(0, 220) || "Error desconocido. Reinténtalo." };
 }
 
 function Avatar({ p, name, size = 40 }: { p?: Profile | null; name?: string; size?: number }) {
@@ -443,6 +482,29 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
     return unsub;
   }, [chatInfo, loadSenders]);
 
+  // Reenvía automáticamente los mensajes que quedaron pendientes por un fallo de
+  // red (el servidor no respondió) cuando el chat está listo o vuelve la conexión.
+  useEffect(() => {
+    if (!chatInfo) return;
+    let cancelled = false;
+    const flush = async () => {
+      try {
+        const sent = await flushPendingMessages();
+        if (cancelled || !sent) return;
+        toast.success(sent === 1 ? "Tu mensaje pendiente se envió ✓" : `Se enviaron ${sent} mensajes pendientes ✓`);
+      } catch {
+        /* noop */
+      }
+    };
+    void flush();
+    const onOnline = () => void flush();
+    window.addEventListener("online", onOnline);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("online", onOnline);
+    };
+  }, [chatInfo]);
+
   // Auto-scroll solo si el usuario está pegado al final (nunca al cargar histórico)
   useEffect(() => {
     if (stickToBottomRef.current && !loading) {
@@ -568,10 +630,26 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
         setReplyTo(null);
         setStickersOpen(false);
         if (inputRef.current) inputRef.current.style.height = "auto";
-      } catch {
-        toast.error("No se pudo enviar el mensaje", {
-          description: "Comprueba tu conexión e inténtalo de nuevo.",
-        });
+        // Si hay mensajes pendientes por un fallo de red anterior, la conexión
+        // acaba de funcionar: los reenviamos ahora mismo.
+        void flushPendingMessages()
+          .then((n) => {
+            if (n > 0)
+              toast.success(n === 1 ? "Tu mensaje pendiente se envió ✓" : `Se enviaron ${n} mensajes pendientes ✓`);
+          })
+          .catch(() => {});
+      } catch (err) {
+        const detail = sendErrorDetail(err);
+        // Fallo de red: guardamos el mensaje en la cola local y se reenviará solo.
+        if (isNetworkError(err) && chatInfo) {
+          queuePendingMessage(chatInfo.id, {
+            content: content || undefined,
+            mediaUrl,
+            mediaType: mediaUrl ? "image" : undefined,
+            replyToId: replyTo?.id ?? null,
+          });
+        }
+        toast.error(detail.title, { description: detail.desc });
       }
     },
     [chatInfo, draft, replyTo, initError]
@@ -590,8 +668,7 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
 
   const onPickStickerFile = useCallback(
     async (file: File | null) => {
-      if (!file || !chatInfo) return;
-    setStickerUploading(true);
+      if (!file || !chatInfo) return;      setStickerUploading(true);
     try {
       const { path, id } = await uploadSticker(file);
       const [signed] = await signMedia([path]);
@@ -601,11 +678,20 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
       signedMediaRef.current = new Map(signedMediaRef.current).set(path, signed);
       setSignedMedia(signedMediaRef.current);
       // Guardamos la RUTA (no una URL firmada que expira): el media es permanente.
-      const sent = await sendChatMessage(chatInfo.id, { mediaUrl: path, replyToId: replyTo?.id ?? null });
-      setMessages((prev) => (prev.some((m) => m.id === sent.id) ? prev : [...prev, sent]));
-      setReplyTo(null);
-    } catch {
-      toast.error("No se pudo subir el sticker");
+      try {
+        const sent = await sendChatMessage(chatInfo.id, { mediaUrl: path, replyToId: replyTo?.id ?? null });
+        setMessages((prev) => (prev.some((m) => m.id === sent.id) ? prev : [...prev, sent]));
+        setReplyTo(null);
+      } catch (err) {
+        const detail = sendErrorDetail(err);
+        if (isNetworkError(err)) {
+          queuePendingMessage(chatInfo.id, { mediaUrl: path, mediaType: "image", replyToId: replyTo?.id ?? null });
+        }
+        toast.error(detail.title, { description: detail.desc });
+      }
+    } catch (err) {
+      const detail = sendErrorDetail(err);
+      toast.error("No se pudo subir el sticker", { description: detail.desc });
     } finally {
       setStickerUploading(false);
     }
@@ -688,8 +774,10 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
         return;
       }
       setSendingAudio(true);
+      let audioPath: string | null = null;
       try {
         const path = await uploadChatMedia(new File([blob], "voice.webm", { type: blob.type || "audio/webm" }), myId ?? "me");
+        audioPath = path;
         const [signed] = await signMedia([path]);
         signedMediaRef.current = new Map(signedMediaRef.current).set(path, signed);
         setSignedMedia(signedMediaRef.current);
@@ -701,8 +789,12 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
         });
         setMessages((prev) => (prev.some((m) => m.id === sent.id) ? prev : [...prev, sent]));
         setReplyTo(null);
-      } catch {
-        toast.error("No se pudo enviar el audio");
+      } catch (err) {
+        const detail = sendErrorDetail(err);
+        if (audioPath && isNetworkError(err) && chatInfo) {
+          queuePendingMessage(chatInfo.id, { mediaUrl: audioPath, mediaType: "audio", replyToId: replyTo?.id ?? null });
+        }
+        toast.error(detail.title, { description: detail.desc });
       } finally {
         setSendingAudio(false);
       }
@@ -787,12 +879,21 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
               ? "Chat local: tu cuenta actual no está en Supabase, así que los mensajes se guardan solo en este dispositivo. Entra con tu cuenta de Supabase (⋮ → Cerrar sesión → login) para compartirlos con la comunidad."
               : "Modo local: los mensajes no se comparten entre dispositivos. Conecta tu base de datos para el chat comunitario."}
           </span>
-          <button
-            onClick={() => setConnecting(true)}
-            className="shrink-0 px-2.5 py-1 rounded-lg bg-gradient-to-br from-primary to-accent text-primary-foreground text-[10px] font-display tracking-widest active:scale-95 transition"
-          >
-            CONECTAR
-          </button>
+          {hasSupabaseConfig() ? (
+            <Link
+              to="/auth"
+              className="shrink-0 px-2.5 py-1 rounded-lg bg-gradient-to-br from-primary to-accent text-primary-foreground text-[10px] font-display tracking-widest active:scale-95 transition"
+            >
+              INICIAR SESIÓN
+            </Link>
+          ) : (
+            <button
+              onClick={() => setConnecting(true)}
+              className="shrink-0 px-2.5 py-1 rounded-lg bg-gradient-to-br from-primary to-accent text-primary-foreground text-[10px] font-display tracking-widest active:scale-95 transition"
+            >
+              CONECTAR
+            </button>
+          )}
         </div>
       )}
 

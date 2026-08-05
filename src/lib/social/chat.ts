@@ -506,3 +506,87 @@ export async function fetchChatProfiles(ids: string[]): Promise<Map<string, Prof
   const { data } = await supabase.from("profiles").select("*").in("id", ids);
   return new Map(((data ?? []) as Profile[]).map((p) => [p.id, p]));
 }
+
+// ───── Cola de mensajes pendientes ─────
+// Si un envío falla porque el servidor no responde (red), el mensaje se guarda
+// en esta cola local y se reenvía automáticamente cuando vuelve la conexión o
+// al abrir el chat de nuevo. Así el usuario nunca pierde un mensaje ni ve un
+// aviso de «sin internet» cuando su conexión está bien.
+type PendingSend = {
+  chatId: string;
+  content?: string;
+  mediaUrl?: string;
+  mediaType?: "image" | "audio";
+  replyToId?: string | null;
+  queuedAt: string;
+};
+
+const PENDING_KEY = "_chat_pending_queue";
+
+/** ¿Es un fallo de red (el servidor no respondió) en lugar de un error de la app? */
+export function isNetworkError(err: unknown): boolean {
+  const msg = (err as Error)?.message ?? "";
+  return /failed to fetch|networkerror|load failed|network request failed|err_|abort|timeout/i.test(msg);
+}
+
+/** Guarda un mensaje en la cola local para reenviarlo cuando haya conexión. */
+export function queuePendingMessage(
+  chatId: string,
+  opts: { content?: string; mediaUrl?: string; mediaType?: "image" | "audio"; replyToId?: string | null }
+): void {
+  try {
+    const list: PendingSend[] = JSON.parse(localStorage.getItem(PENDING_KEY) || "[]");
+    list.push({
+      chatId,
+      content: opts.content,
+      mediaUrl: opts.mediaUrl,
+      mediaType: opts.mediaType,
+      replyToId: opts.replyToId ?? null,
+      queuedAt: new Date().toISOString(),
+    });
+    localStorage.setItem(PENDING_KEY, JSON.stringify(list.slice(-50)));
+  } catch {
+    /* noop */
+  }
+}
+
+/**
+ * Reenvía los mensajes pendientes. Devuelve cuántos se enviaron.
+ * - Si la red sigue caída, los no enviados permanecen en la cola.
+ * - Los que fallan por un motivo permanente (permisos, clave inválida…) se
+ *   descartan para no quedarse reintentando en bucle.
+ */
+export async function flushPendingMessages(): Promise<number> {
+  let list: PendingSend[] = [];
+  try {
+    list = JSON.parse(localStorage.getItem(PENDING_KEY) || "[]") as PendingSend[];
+  } catch {
+    /* noop */
+  }
+  if (!list.length) return 0;
+  let sent = 0;
+  const remaining: PendingSend[] = [];
+  for (const item of list) {
+    try {
+      await sendChatMessage(item.chatId, {
+        content: item.content,
+        mediaUrl: item.mediaUrl,
+        mediaType: item.mediaType,
+        replyToId: item.replyToId ?? null,
+      });
+      sent += 1;
+    } catch (err) {
+      if (isNetworkError(err)) {
+        remaining.push(item);
+        break; // la red sigue caída: no machacar con más peticiones
+      }
+      // Error permanente (permisos, clave…): se descarta para evitar bucle.
+    }
+  }
+  try {
+    localStorage.setItem(PENDING_KEY, JSON.stringify(remaining));
+  } catch {
+    /* noop */
+  }
+  return sent;
+}
