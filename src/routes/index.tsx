@@ -165,9 +165,9 @@ function HomePage() {
     <div className="min-h-screen w-screen flex flex-col bg-background text-foreground">
       {/* Header */}
       <header className="app-header sticky top-0 z-20 bg-background/92 backdrop-blur-xl border-b border-border/60">
-        <div className={`max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto flex items-center gap-2 px-4 ${inPreview ? "pt-14 pb-3" : "py-3"}`}>
+        <div className={`max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto flex items-center gap-1.5 sm:gap-2.5 px-3 sm:px-4 ${inPreview ? "pt-14 pb-3" : "py-3"}`}>
           <button onClick={() => navigate({ to: "/profile" })} title="Mi perfil"
-            className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-accent grid place-items-center shadow-[0_2px_10px_-3px_oklch(0.488_0.185_264/0.45)] active:scale-95 transition overflow-hidden shrink-0">
+            className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-gradient-to-br from-primary to-accent grid place-items-center shadow-[0_2px_10px_-3px_oklch(0.488_0.185_264/0.45)] active:scale-95 transition overflow-hidden shrink-0">
             {me?.avatar_url ? (
               <img src={me.avatar_url} alt="avatar" className="w-full h-full object-cover" />
             ) : (
@@ -177,22 +177,23 @@ function HomePage() {
             )}
           </button>
           <div className="flex-1 min-w-0">
-            <div className="font-display text-sm font-semibold text-foreground leading-none truncate">Asternal</div>
-            <div className="text-[11px] text-muted-foreground/70 truncate mt-0.5">@{me?.username ?? "…"}</div>
+            <div className="font-display text-[13px] sm:text-sm font-semibold text-foreground leading-none truncate">Asternal</div>
+            <div className="text-[10px] sm:text-[11px] text-muted-foreground/70 truncate mt-1">@{me?.username ?? "…"}</div>
           </div>
           {typeof me?.orbes === "number" && me?.show_orbes !== false && (
             <Link
               to="/orbes"
               title={`${me.orbes} orbes · Ver panel`}
-              className="flex items-center gap-1 px-2 h-9 rounded-xl bg-primary/10 border border-primary/20 shadow-sm active:scale-95 shrink-0"
+              className="flex items-center gap-1 px-1.5 sm:px-2 h-8 sm:h-9 rounded-lg sm:rounded-xl bg-primary/10 border border-primary/20 shadow-sm active:scale-95 shrink-0"
             >
-              <Sparkles size={13} className="text-primary" fill="currentColor" />
-              <span className="text-xs font-display font-semibold tabular-nums">{me.orbes}</span>
+              <Sparkles size={12} className="text-primary shrink-0" fill="currentColor" />
+              <span className="text-[11px] sm:text-xs font-display font-semibold tabular-nums">{me.orbes}</span>
             </Link>
           )}
           <button onClick={() => setMenuOpen(true)} title="Menú"
-            className="w-9 h-9 rounded-xl border border-border/70 hover:bg-muted/60 bg-background grid place-items-center active:scale-95 transition shrink-0">
-            <Menu size={16} />
+            className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl border border-border/70 hover:bg-muted/60 bg-background grid place-items-center active:scale-95 transition shrink-0">
+            <Menu size={15} className="sm:hidden" />
+            <Menu size={16} className="hidden sm:block" />
           </button>
         </div>
 
