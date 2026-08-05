@@ -78,6 +78,11 @@ function sendErrorDetail(err: unknown): { title: string; desc: string } {
       title: "Los permisos bloquean el envío",
       desc: "Reinstala las tablas del chat con «Instalar chat» (necesita tu token sbp_…) o entra con tu cuenta de Supabase.",
     };
+  if (/schema cache/i.test(msg) || /could not find the .* column/i.test(msg) || code === "PGRST204")
+    return {
+      title: "La tabla del chat está desactualizada",
+      desc: "Falta una columna en chat_messages (suele pasar si instalaste el chat antes de que existiera el audio de voz). Pulsa «Instalar chat» con tu token sbp_ para actualizar la tabla y vuelve a enviar.",
+    };
   if (/foreign key|23503|does not exist|undefined_table|42p01/i.test(msg))
     return {
       title: "Falta algo en la base de datos",

@@ -316,16 +316,23 @@ export async function sendChatMessage(
     return row;
   }
 
+  // Construimos el payload sin `media_type` salvo en audio: así los mensajes de
+  // texto y los stickers funcionan aunque la base tenga la tabla con un esquema
+  // antiguo (sin la columna media_type, añadida para el audio de voz). La
+  // columna solo es imprescindible para el audio; si falta, el error resultante
+  // se detecta en la UI para avisar de reinstalar el esquema.
+  const payload: Record<string, unknown> = {
+    chat_id: chatId,
+    sender_id: me.id,
+    content: opts.content ?? null,
+    media_url: opts.mediaUrl ?? null,
+    reply_to_id: opts.replyToId ?? null,
+  };
+  if (opts.mediaType === "audio") payload.media_type = "audio";
+
   const { data, error } = await supabase
     .from("chat_messages")
-    .insert({
-      chat_id: chatId,
-      sender_id: me.id,
-      content: opts.content ?? null,
-      media_url: opts.mediaUrl ?? null,
-      media_type: opts.mediaType ?? (opts.mediaUrl ? "image" : null),
-      reply_to_id: opts.replyToId ?? null,
-    })
+    .insert(payload)
     .select()
     .single();
   if (error) throw error;
