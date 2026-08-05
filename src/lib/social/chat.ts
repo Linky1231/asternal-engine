@@ -597,3 +597,21 @@ export async function flushPendingMessages(): Promise<number> {
   }
   return sent;
 }
+
+/**
+ * ¿La tabla del chat está desactualizada (sin la columna media_type)?
+ * Se usa al abrir el chat para avisar de reinstalar el esquema antes de que
+ * falle el envío de audios. En modo local no aplica (no hay esquema real).
+ */
+export async function isChatSchemaOutdated(): Promise<boolean> {
+  const me = await getMeId();
+  if (me?.isLocal) return false;
+  try {
+    const { error } = await supabase.from("chat_messages").select("media_type").limit(1);
+    if (!error) return false;
+    const msg = (error as Error)?.message ?? "";
+    return error.code === "PGRST204" || /schema cache/i.test(msg) || /could not find the .* column/i.test(msg);
+  } catch {
+    return false;
+  }
+}
