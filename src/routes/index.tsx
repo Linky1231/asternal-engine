@@ -165,7 +165,7 @@ function HomePage() {
     <div className="min-h-screen w-screen flex flex-col bg-background text-foreground">
       {/* Header */}
       <header className="app-header sticky top-0 z-20 bg-background/92 backdrop-blur-xl border-b border-border/60">
-        <div className={`max-w-2xl mx-auto flex items-center gap-2 px-4 ${inPreview ? "pt-14 pb-3" : "py-3"}`}>
+        <div className={`max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto flex items-center gap-2 px-4 ${inPreview ? "pt-14 pb-3" : "py-3"}`}>
           <button onClick={() => navigate({ to: "/profile" })} title="Mi perfil"
             className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-accent grid place-items-center shadow-[0_2px_10px_-3px_oklch(0.488_0.185_264/0.45)] active:scale-95 transition overflow-hidden shrink-0">
             {me?.avatar_url ? (
@@ -200,7 +200,7 @@ function HomePage() {
 
 
         {showSearch && (
-          <div className="max-w-2xl mx-auto px-3 pb-2 flex gap-2 animate-in fade-in slide-in-from-top-2">
+          <div className="max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto px-3 pb-2 flex gap-2 animate-in fade-in slide-in-from-top-2">
             <input value={search} onChange={e => setSearch(e.target.value)}
               onKeyDown={e => e.key === "Enter" && reload(tab)}
               placeholder={tab === "games" ? "Buscar juegos…" : "Buscar publicaciones…"}
@@ -210,7 +210,7 @@ function HomePage() {
         )}
 
         {/* Tabs */}
-        <div className="max-w-2xl mx-auto px-3 pb-2">
+        <div className="max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto px-3 pb-2">
           <div className="relative flex bg-muted/50 rounded-2xl p-0.5">
             <button
               onClick={() => setTab("games")}
@@ -251,7 +251,7 @@ function HomePage() {
       </header>
 
       {/* Content */}
-      <main className="flex-1 max-w-2xl mx-auto w-full px-3 py-3 space-y-3 pb-24">
+      <main className="flex-1 max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto w-full px-3 py-3 space-y-3 pb-24">
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.div
             key={tab}
@@ -266,7 +266,7 @@ function HomePage() {
                 <GamesHome games={games} myId={myId} isMod={mod} onChange={() => reload("games")} />
               )
             ) : tab === "feed" ? (
-              <>
+              <div className="max-w-2xl md:max-w-3xl mx-auto w-full">
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -316,7 +316,7 @@ function HomePage() {
                     ));
                   })()}
                 </motion.div>
-              </>
+              </div>
             ) : tab === "gallery" ? (
               <GallerySection myId={myId} isMod={mod} />
             ) : tab === "events" ? (
@@ -327,7 +327,11 @@ function HomePage() {
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.15, ease: "easeOut" }}
               >
-                {myId && <ProfilePanel userId={myId} myId={myId} isMod={mod} viewingOwn={true} onProfileChange={setMe} />}
+                {myId && (
+                  <div className="max-w-2xl md:max-w-3xl lg:max-w-4xl mx-auto w-full">
+                    <ProfilePanel userId={myId} myId={myId} isMod={mod} viewingOwn={true} onProfileChange={setMe} />
+                  </div>
+                )}
               </motion.div>
             )}
           </motion.div>

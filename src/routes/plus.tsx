@@ -141,7 +141,7 @@ function PlusPage() {
   return (
     <div className="min-h-screen w-screen flex flex-col bg-background text-foreground">
       <header className="sticky top-0 z-20 panel border-b backdrop-blur-xl">
-        <div className="max-w-2xl mx-auto flex items-center gap-2 px-3 py-2.5">
+        <div className="max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto flex items-center gap-2 px-3 py-2.5">
           <button onClick={() => navigate({ to: "/" })}
             className="w-9 h-9 rounded-xl border border-border grid place-items-center active:scale-95 transition">
             <ArrowLeft size={16} />
@@ -156,7 +156,7 @@ function PlusPage() {
         </div>
       </header>
 
-      <main className="flex-1 max-w-2xl mx-auto w-full px-3 py-5 pb-24 space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+      <main className="flex-1 max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto w-full px-3 py-5 pb-24 space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
         {/* Hero */}
         <section className="relative overflow-hidden rounded-3xl p-6 shadow-lg border"
           style={{
@@ -207,7 +207,7 @@ function PlusPage() {
         {/* Name effects — NEW */}
         <FeatureCard icon={<Wand2 size={18} />} title="Efectos de nombre"
           desc="Haz que tu nombre destaque en publicaciones y perfil." locked={!isPlus}>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
             <button onClick={() => setNameFx(null)} disabled={!isPlus}
               className={`h-12 rounded-xl border-2 text-xs font-display transition ${!me?.name_effect ? "border-foreground" : "border-border"} disabled:opacity-40`}>
               Ninguno
@@ -227,7 +227,7 @@ function PlusPage() {
         {/* Post entrance effects — NEW */}
         <FeatureCard icon={<SparklesIcon size={18} />} title="Efectos al publicar"
           desc="Tus próximas publicaciones aparecerán con animación." locked={!isPlus}>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
             <button onClick={() => setPostFx(null)} disabled={!isPlus}
               className={`h-11 rounded-xl border-2 text-xs font-display transition ${!me?.post_effect ? "border-foreground" : "border-border"} disabled:opacity-40`}>
               Ninguno
@@ -245,7 +245,7 @@ function PlusPage() {
         <FeatureCard icon={<IdCard size={18} />} title="Tarjeta de creador"
           desc="Tu identidad como desarrollador en un vistazo." locked={!isPlus}>
           <CreatorCardPreview profile={me} />
-          <div className="grid grid-cols-5 gap-2 mt-3">
+          <div className="grid grid-cols-5 md:grid-cols-10 gap-2 mt-3">
             {CARD_THEMES.map(t => {
               const active = (me?.creator_card_style?.theme ?? "dark") === t.id;
               return (
@@ -264,7 +264,7 @@ function PlusPage() {
         {/* Frames */}
         <FeatureCard icon={<Palette size={18} />} title="Marcos premium"
           desc="Marco animado para tu foto de perfil." locked={!isPlus}>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
             <button onClick={() => setFrame(null)} disabled={!isPlus}
               className={`aspect-square rounded-xl border-2 grid place-items-center text-[10px] font-mono transition ${!me?.avatar_frame ? "border-foreground" : "border-border"}`}>
               Ninguno

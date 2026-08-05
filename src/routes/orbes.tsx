@@ -59,7 +59,7 @@ function OrbesPage() {
   return (
     <div className="min-h-screen w-screen flex flex-col bg-background text-foreground">
       <header className="sticky top-0 z-20 panel border-b backdrop-blur-xl">
-        <div className="max-w-2xl mx-auto flex items-center gap-2 px-3 py-2.5">
+        <div className="max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto flex items-center gap-2 px-3 py-2.5">
           <button onClick={() => navigate({ to: "/profile" })}
             className="w-9 h-9 rounded-xl border border-border grid place-items-center active:scale-95 transition">
             <ArrowLeft size={16} />
@@ -70,7 +70,7 @@ function OrbesPage() {
         </div>
       </header>
 
-      <main className="flex-1 max-w-2xl mx-auto w-full px-3 py-4 pb-24 space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+      <main className="flex-1 max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto w-full px-3 py-4 pb-24 space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
         {/* Balance card */}
         <section className="relative overflow-hidden rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/15 via-accent/10 to-transparent p-5 shadow-lg">
           <div className="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-primary/20 blur-3xl" />

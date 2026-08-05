@@ -103,7 +103,7 @@ export function GamesHome({
           <TrendChip active={trend === "rated"} onClick={() => setTrend("rated")} icon={<Heart size={12} />} label="Mejor valorados" />
           <TrendChip active={trend === "new"} onClick={() => setTrend("new")} icon={<SparklesIcon size={12} />} label="Nuevos" />
         </div>
-        <div className="grid grid-cols-4 xs:grid-cols-5 sm:grid-cols-6 gap-3 gap-y-4 pt-1">
+        <div className="grid grid-cols-4 xs:grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-3 gap-y-4 pt-1">
           {trendList.slice(0, 18).map(g => (
             <GameIcon key={g.id} post={g} onOpen={() => setSelected(g)} />
           ))}
@@ -134,7 +134,7 @@ function Section({ title, subtitle, children }: { title: string; subtitle?: stri
 
 function IconRow({ games, onOpen }: { games: PostWithMeta[]; onOpen: (g: PostWithMeta) => void }) {
   return (
-    <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-3 px-3 pb-1">
+    <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-3 px-3 pb-1 md:flex-wrap md:overflow-visible md:justify-start">
       {games.map(g => (
         <GameIcon key={g.id} post={g} onOpen={() => onOpen(g)} />
       ))}
@@ -162,7 +162,7 @@ function FeaturedBanner({ post, onPlay }: { post: PostWithMeta; onPlay: () => vo
   const active = 1 + Math.floor((post.likes + post.comments_count) * 1.3);
   return (
     <div className="relative rounded-3xl overflow-hidden border border-primary/30 shadow-lg">
-      <div className="relative aspect-[16/10] w-full">
+      <div className="relative aspect-[16/10] w-full md:aspect-[21/9]">
         {post.signed_cover ? (
           <img src={post.signed_cover} alt={title} className="absolute inset-0 w-full h-full object-cover" />
         ) : (

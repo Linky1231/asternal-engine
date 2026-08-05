@@ -74,7 +74,7 @@ function FeedPage() {
         </div>
       )}
 
-      <main className="flex-1 p-3 space-y-3 max-w-2xl mx-auto w-full pb-[env(safe-area-inset-bottom)]">
+      <main className="flex-1 p-3 space-y-3 max-w-2xl md:max-w-3xl lg:max-w-4xl mx-auto w-full pb-[env(safe-area-inset-bottom)]">
         <PostComposer onCreated={reload} />
         {loading ? (
           <div className="text-center text-xs text-muted-foreground py-10">Cargando…</div>

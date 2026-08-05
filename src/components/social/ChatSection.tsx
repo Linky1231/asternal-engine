@@ -858,12 +858,12 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2, ease: "easeOut" }}
-      className="fixed inset-0 z-[90] bg-background/97 backdrop-blur-xl flex flex-col"
+      className="fixed inset-0 z-[90] bg-background/97 backdrop-blur-xl flex flex-col md:mx-auto md:max-w-3xl md:border-x md:border-border/60 md:shadow-2xl"
       style={{ height: "100dvh" }}
     >
       {/* ───── Header ───── */}
       <header className="shrink-0 border-b border-border/60 bg-background/80 backdrop-blur-md">
-        <div className="max-w-2xl mx-auto flex items-center gap-2 px-4 py-3">
+        <div className="max-w-2xl md:max-w-full mx-auto flex items-center gap-2 px-4 py-3">
           <div className="flex items-center gap-2.5 flex-1 min-w-0">
             <div
               className="rounded-full grid place-items-center shrink-0 font-display font-semibold text-primary-foreground"

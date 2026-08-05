@@ -139,14 +139,14 @@ function AdminPage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-10 panel border-b">
-        <div className="max-w-2xl mx-auto flex items-center gap-2 px-3 py-2.5">
+        <div className="max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto flex items-center gap-2 px-3 py-2.5">
           <Link to="/" className="w-9 h-9 rounded-xl border border-border grid place-items-center active:scale-95"><ArrowLeft size={16} /></Link>
           <div className="flex-1 min-w-0">
             <div className="font-display text-sm text-primary-glow glow-text leading-none flex items-center gap-1.5"><ShieldCheck size={14}/> MODERACIÓN</div>
             <div className="text-[10px] font-mono text-muted-foreground">{admin ? "Administrador" : "Moderador"}</div>
           </div>
         </div>
-        <div className="max-w-2xl mx-auto px-3 pb-2">
+        <div className="max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto px-3 pb-2">
           <div className="relative flex bg-muted/50 rounded-2xl p-0.5">
             {(["mods", "bans", "foros", "eventos"] as const).map(t => (
               <button key={t} onClick={() => setTab(t)}
@@ -164,7 +164,7 @@ function AdminPage() {
           </div>
         </div>
         {tab === "mods" && admin && (
-          <div className="max-w-2xl mx-auto px-3 pb-3 flex gap-2">
+          <div className="max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto px-3 pb-3 flex gap-2">
             <div className="flex-1 flex items-center gap-2 bg-input/50 rounded-xl px-3">
               <Search size={14} className="text-muted-foreground" />
               <input value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === "Enter" && load(q)}
@@ -175,7 +175,7 @@ function AdminPage() {
         )}
       </header>
 
-      <main className="max-w-2xl mx-auto px-3 py-3 space-y-2">
+      <main className="max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto px-3 py-3 space-y-2">
         {loading ? (
           <div className="text-center text-xs text-muted-foreground py-10"><Loader2 className="inline animate-spin mr-2" size={14}/>Cargando…</div>
         ) : tab === "mods" ? (

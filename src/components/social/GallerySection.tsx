@@ -241,7 +241,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
 
       {/* ====== ARTWORKS GRID ====== */}
       {loading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="space-y-2">
               <div className="aspect-square rounded-2xl bg-muted/30 animate-pulse" />
@@ -279,7 +279,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
           </button>
         </motion.div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
           {filtered.map((art, i) => {
             const imgUrl = art.signed_media?.[0] ?? art.signed_cover;
             const price = art.price_orbes ?? 0;
