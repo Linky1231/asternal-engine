@@ -207,7 +207,7 @@ function HomePage() {
               className="flex items-center gap-1 px-1.5 sm:px-2 h-8 sm:h-9 rounded-lg sm:rounded-xl bg-primary/10 border border-primary/20 shadow-sm active:scale-95 shrink-0"
             >
               <Sparkles size={12} className="text-primary shrink-0" fill="currentColor" />
-              <span className="text-[11px] sm:text-xs font-display font-semibold tabular-nums">{me.orbes}</span>
+              <span className="hidden sm:inline text-[11px] sm:text-xs font-display font-semibold tabular-nums">{me.orbes}</span>
             </Link>
           )}
           <button
@@ -252,31 +252,31 @@ function HomePage() {
           <div className="relative flex bg-muted/50 rounded-2xl p-0.5">
             <button
               onClick={() => setTab("games")}
-              className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-display tracking-widest transition-colors duration-200 ${tab === "games" ? "text-primary-foreground" : "text-muted-foreground"}`}
+              className={`relative z-10 flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-2 rounded-xl text-[10px] sm:text-[11px] font-display tracking-wider sm:tracking-widest transition-colors duration-200 ${tab === "games" ? "text-primary-foreground" : "text-muted-foreground"}`}
             >
               <Gamepad2 size={14} /> JUEGOS
             </button>
             <button
               onClick={() => setTab("feed")}
-              className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-display tracking-widest transition-colors duration-200 ${tab === "feed" ? "text-primary-foreground" : "text-muted-foreground"}`}
+              className={`relative z-10 flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-2 rounded-xl text-[10px] sm:text-[11px] font-display tracking-wider sm:tracking-widest transition-colors duration-200 ${tab === "feed" ? "text-primary-foreground" : "text-muted-foreground"}`}
             >
               <Newspaper size={14} /> FEED
             </button>
             <button
               onClick={() => setTab("gallery")}
-              className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-display tracking-widest transition-colors duration-200 ${tab === "gallery" ? "text-primary-foreground" : "text-muted-foreground"}`}
+              className={`relative z-10 flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-2 rounded-xl text-[10px] sm:text-[11px] font-display tracking-wider sm:tracking-widest transition-colors duration-200 ${tab === "gallery" ? "text-primary-foreground" : "text-muted-foreground"}`}
             >
               <Palette size={14} /> GALERÍA
             </button>
             <button
               onClick={() => setTab("events")}
-              className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-display tracking-widest transition-colors duration-200 ${tab === "events" ? "text-primary-foreground" : "text-muted-foreground"}`}
+              className={`relative z-10 flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-2 rounded-xl text-[10px] sm:text-[11px] font-display tracking-wider sm:tracking-widest transition-colors duration-200 ${tab === "events" ? "text-primary-foreground" : "text-muted-foreground"}`}
             >
               <Trophy size={14} /> EVENTOS
             </button>
             <button
               onClick={() => setTab("profile")}
-              className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-display tracking-widest transition-colors duration-200 ${tab === "profile" ? "text-primary-foreground" : "text-muted-foreground"}`}
+              className={`relative z-10 flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-2 rounded-xl text-[10px] sm:text-[11px] font-display tracking-wider sm:tracking-widest transition-colors duration-200 ${tab === "profile" ? "text-primary-foreground" : "text-muted-foreground"}`}
             >
               <User size={14} /> PERFIL
             </button>

@@ -114,7 +114,7 @@ function VoteBtn({ dir, active, count, onClick }: { dir: "up" | "down"; active: 
     : "text-rose-500 bg-rose-50 border-rose-200 shadow-sm shadow-rose-10 dark:text-rose-400 dark:bg-rose-950/30 dark:border-rose-800/40";
   return (
     <button onClick={e => { e.stopPropagation(); onClick(); }}
-      className={`flex items-center gap-1.5 text-[11px] px-2.5 py-1.5 rounded-lg border transition-all duration-200 active:scale-90 hover:shadow-sm ${
+      className={`flex items-center gap-1.5 text-[11px] px-2 sm:px-2.5 py-1.5 rounded-lg border transition-all duration-200 active:scale-90 hover:shadow-sm ${
         active
           ? activeColors
           : "text-muted-foreground/40 border-transparent hover:border-border/60 hover:text-foreground/60 hover:bg-muted/20"
@@ -367,8 +367,8 @@ function ThreadListView({
           <ArrowLeft size={15} />
         </motion.button>
 
-        <div className="flex-1 min-w-0 flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary/10 to-accent/10 border border-primary/10 grid place-items-center shrink-0">
+        <div className="flex-1 min-w-0 flex items-center gap-2">
+          <div className="hidden min-[400px]:grid w-8 h-8 rounded-xl bg-gradient-to-br from-primary/10 to-accent/10 border border-primary/10 place-items-center shrink-0">
             {CAT_ICONS[
               categoryId === "general" ? "globe" :
               categoryId === "help" ? "life-buoy" :
@@ -384,7 +384,7 @@ function ThreadListView({
 
         {myId && (
           <motion.button whileTap={{ scale: 0.95 }} onClick={() => setShowNew(s => !s)}
-            className="flex items-center gap-2 h-9 px-4 rounded-xl bg-primary text-primary-foreground text-[11px] font-display tracking-wider active:scale-95 transition shadow-md shadow-primary/25 hover:shadow-lg hover:shadow-primary/30"
+            className="flex items-center gap-1.5 h-9 px-3 sm:px-4 rounded-xl bg-primary text-primary-foreground text-[10px] sm:text-[11px] font-display tracking-wider active:scale-95 transition shadow-md shadow-primary/25 hover:shadow-lg hover:shadow-primary/30 shrink-0"
           >
             <Plus size={14} /> NUEVO HILO
           </motion.button>
@@ -730,18 +730,18 @@ function ThreadDetailView({
         <div className="flex items-center gap-1.5 shrink-0">
           {canPin && (
             <motion.button whileTap={{ scale: 0.9 }} onClick={() => { togglePinThread(threadId).then(load); }}
-              className={`h-8 px-3 rounded-xl border text-[10px] font-medium flex items-center gap-1.5 transition-all ${
+              className={`h-8 w-8 sm:w-auto sm:px-3 rounded-xl border text-[10px] font-medium flex items-center justify-center gap-1.5 transition-all ${
                 thread.pinned
                   ? "border-primary/25 bg-primary/8 text-primary shadow-sm"
                   : "border-border/50 text-muted-foreground/60 hover:text-primary hover:border-primary/25"
               }`}>
-              <Pin size={11} /> {thread.pinned ? "FIJADO" : "FIJAR"}
+              <Pin size={11} /> <span className="hidden sm:inline">{thread.pinned ? "FIJADO" : "FIJAR"}</span>
             </motion.button>
           )}
           {isOwner && !isClosed && (
             <motion.button whileTap={{ scale: 0.9 }} onClick={() => { toggleCloseThread(threadId).then(load); }}
-              className="h-8 px-3 rounded-xl border border-border/50 text-[10px] font-medium flex items-center gap-1.5 hover:text-rose-500 hover:border-rose-200 transition-all">
-              <Lock size={11} /> CERRAR
+              className="h-8 w-8 sm:w-auto sm:px-3 rounded-xl border border-border/50 text-[10px] font-medium flex items-center justify-center gap-1.5 hover:text-rose-500 hover:border-rose-200 transition-all">
+              <Lock size={11} /> <span className="hidden sm:inline">CERRAR</span>
             </motion.button>
           )}
         </div>
@@ -906,8 +906,8 @@ function ThreadDetailView({
                   </div>
                 )}
 
-                {/* Action bar */}
-                <div className="flex items-center gap-1.5 mt-2.5 opacity-0 group-hover/post:opacity-100 transition-all duration-200">
+                {/* Action bar: visible siempre en táctil (sin hover); en escritorio aparece al pasar el cursor */}
+                <div className="flex flex-wrap items-center gap-1.5 mt-2.5 opacity-100 sm:opacity-0 sm:group-hover/post:opacity-100 transition-all duration-200">
                   <button onClick={() => handlePostVote(p.id, "up")}
                     className={`flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-lg border transition-all active:scale-90 ${
                       p.myVote === "up"

@@ -217,11 +217,11 @@ export function PostCard({
         </div>
       )}
 
-      <footer className="flex items-center gap-1 pt-1 text-[11px] text-muted-foreground">
-        <button onClick={() => react("like")} className={`flex items-center gap-1 px-2 py-1 rounded ${post.my_like ? "text-primary-glow" : ""}`}>♥ {post.likes}</button>
-        <button onClick={() => react("favorite")} className={`flex items-center gap-1 px-2 py-1 rounded ${post.my_favorite ? "text-primary-glow" : ""}`}>★ {post.favorites}</button>
-        <button onClick={() => setOpenComments(o => !o)} className="flex items-center gap-1 px-2 py-1 rounded">💬 {post.comments_count}</button>
-        <button onClick={repost} className={`flex items-center gap-1 px-2 py-1 rounded ${post.my_repost ? "text-primary-glow" : ""}`}>↻ {post.reposts_count}</button>
+      <footer className="flex items-center justify-between gap-0.5 pt-1 text-[11px] text-muted-foreground">
+        <button onClick={() => react("like")} className={`flex-1 flex items-center justify-center gap-1 px-1 py-1.5 rounded-md transition-colors ${post.my_like ? "text-primary-glow" : "hover:bg-muted/40"}`}>♥ <span className="tabular-nums">{post.likes}</span></button>
+        <button onClick={() => react("favorite")} className={`flex-1 flex items-center justify-center gap-1 px-1 py-1.5 rounded-md transition-colors ${post.my_favorite ? "text-primary-glow" : "hover:bg-muted/40"}`}>★ <span className="tabular-nums">{post.favorites}</span></button>
+        <button onClick={() => setOpenComments(o => !o)} className="flex-1 flex items-center justify-center gap-1 px-1 py-1.5 rounded-md transition-colors hover:bg-muted/40">💬 <span className="tabular-nums">{post.comments_count}</span></button>
+        <button onClick={repost} className={`flex-1 flex items-center justify-center gap-1 px-1 py-1.5 rounded-md transition-colors ${post.my_repost ? "text-primary-glow" : "hover:bg-muted/40"}`}>↻ <span className="tabular-nums">{post.reposts_count}</span></button>
       </footer>
 
       {openComments && <CommentSection postId={post.id} myId={myId} isMod={isMod} onChange={onChange} />}
