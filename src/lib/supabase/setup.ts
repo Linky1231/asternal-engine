@@ -81,8 +81,9 @@ export function projectRefFromUrl(url: string): string | null {
 }
 
 /**
- * Comprueba si el esquema existe. Verifica dos tablas clave: `posts` (creada al
- * inicio del script) y `forum_categories` (casi al final), para detectar tanto
+ * Comprueba si el esquema existe. Verifica tres tablas clave: `posts` (creada al
+ * inicio del script), `user_projects` (guarda la sincronización de proyectos
+ * entre dispositivos) y `forum_categories` (casi al final), para detectar tanto
  * esquemas inexistentes como instalaciones parciales.
  */
 export async function checkSchemaReady(): Promise<boolean> {
@@ -90,8 +91,13 @@ export async function checkSchemaReady(): Promise<boolean> {
   try {
     const { error } = await supabase.from("posts").select("id").limit(1);
     if (error) return false;
-    const { error: err2 } = await supabase.from("forum_categories").select("id").limit(1);
-    return !err2;
+    // Sin user_projects los juegos no se respaldan en la nube (la sincronización
+    // entre dispositivos falla en silencio) aunque el resto de la plataforma
+    // funcione: se considera instalación incompleta.
+    const { error: err2 } = await supabase.from("user_projects").select("id").limit(1);
+    if (err2) return false;
+    const { error: err3 } = await supabase.from("forum_categories").select("id").limit(1);
+    return !err3;
   } catch {
     return false;
   }

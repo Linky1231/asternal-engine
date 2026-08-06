@@ -285,8 +285,8 @@ export function ProjectManager({
             {!hasSupabaseConfig() && (
               <div className="px-1">
                 <div className="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-md px-2 py-1.5">
-                  ⚠ Modo local: la clave de Supabase está guardada solo en este navegador. Para ver tus juegos en otro
-                  dispositivo, configura la misma URL y anon key allí (botón 🗄 de configuración del chat) o en el tab Keys.
+                  ⚠ Modo local: tus juegos se guardan solo en este navegador. Para verlos en otro dispositivo,
+                  conecta la nube con el icono ☁ del inicio (o el tab Keys) y entra con la misma cuenta.
                 </div>
               </div>
             )}

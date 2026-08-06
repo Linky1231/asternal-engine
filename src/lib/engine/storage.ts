@@ -136,7 +136,10 @@ export function saveProjectById(id: string, p: Project) {
     localStorage.setItem(ITEM_PREFIX + id, JSON.stringify(p));
     const idx = readIndex();
     const i = idx.findIndex(m => m.id === id);
-    const meta: ProjectMeta = { id, name: p.name || "Untitled Game", updatedAt: Date.now() };
+    // Conserva el cloudId: sin él, cada autoguardado del editor rompería el
+    // vínculo con la nube y el siguiente push crearía un duplicado.
+    const prev = i >= 0 ? idx[i] : undefined;
+    const meta: ProjectMeta = { id, name: p.name || "Untitled Game", updatedAt: Date.now(), cloudId: prev?.cloudId };
     if (i >= 0) idx[i] = meta; else idx.push(meta);
     writeIndex(idx);
   } catch { /* quota */ }

@@ -1,8 +1,10 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { Component, useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Gamepad2, Newspaper, Search, LogOut, Wrench, Plus, ShieldCheck, User, Sparkles, Star, Menu, MessageCircle, Bell, X, Home, Users, Flame, MessageSquare, Palette, Trophy, History, Clock, BarChart3, ChevronDown, ChevronRight, Globe, Heart, Megaphone } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { Gamepad2, Newspaper, Search, LogOut, Wrench, Plus, ShieldCheck, User, Sparkles, Star, Menu, MessageCircle, Bell, X, Home, Users, Flame, MessageSquare, Palette, Trophy, History, Clock, BarChart3, ChevronDown, ChevronRight, Globe, Heart, Megaphone, Cloud, CloudOff } from "lucide-react";
+import { supabase, hasSupabaseConfig } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { SupabaseSetupDialog } from "@/components/social/SupabaseSetupDialog";
 import { fetchFeed, fetchGames, getMyProfile, isMod, isAdmin, type PostWithMeta, type Profile } from "@/lib/social/api";
 import { syncAllProjects } from "@/lib/engine/cloud-sync";
 import { PostComposer } from "@/components/social/PostComposer";
@@ -87,6 +89,8 @@ function HomePage() {
   const [chatOpen, setChatOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [inPreview, setInPreview] = useState(false);
+  const [setupOpen, setSetupOpen] = useState(false);
+  const [cloudMode, setCloudMode] = useState<"cloud" | "local" | "localAccount">("local");
 
   // When the app runs embedded in the Freebuff preview (inside an iframe), the
   // platform's floating button overlaps the top-right of the app. Push the
@@ -136,11 +140,20 @@ function HomePage() {
         }
         if (!uid) { navigate({ to: "/auth" }); return; }
         setMyId(uid);
+        // Estado de la nube: conectada (claves reales + cuenta real), cuenta
+        // local con Supabase conectado, o modo local puro (todo en el navegador).
+        setCloudMode(localSession ? "localAccount" : hasSupabaseConfig() ? "cloud" : "local");
         // Sincroniza los proyectos con la nube (sube los locales sin respaldo y
         // descarga los de la cuenta) para que los juegos aparezcan en cualquier
         // dispositivo con la misma cuenta. Silencioso: no bloquea la carga.
         if (!localSession) {
-          syncAllProjects().catch(() => {/* noop */});
+          syncAllProjects().then(r => {
+            if (r.pushed > 0 || r.imported > 0) {
+              toast.success(
+                `Nube sincronizada: ${r.pushed} subido${r.pushed === 1 ? "" : "s"} · ${r.imported} descargado${r.imported === 1 ? "" : "s"}`
+              );
+            }
+          }).catch(() => {/* noop */});
         }
         let prof: Profile | null = null;
         try { prof = await getMyProfile(); } catch { /* noop */ }
@@ -197,6 +210,23 @@ function HomePage() {
               <span className="text-[11px] sm:text-xs font-display font-semibold tabular-nums">{me.orbes}</span>
             </Link>
           )}
+          <button
+            onClick={() => setSetupOpen(true)}
+            title={cloudMode === "cloud"
+              ? "Nube conectada · tus juegos se sincronizan entre dispositivos"
+              : cloudMode === "localAccount"
+                ? "Supabase conectado pero esta cuenta es local · toca para configurar"
+                : "Modo local · tus juegos solo están en este dispositivo. Toca para conectar la nube"}
+            className={`relative w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl border grid place-items-center active:scale-95 transition shrink-0 ${
+              cloudMode === "cloud"
+                ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"
+                : "border-amber-400/40 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20"
+            }`}
+          >
+            {cloudMode === "local" ? <CloudOff size={15} className="sm:hidden" /> : <Cloud size={15} className="sm:hidden" />}
+            {cloudMode === "local" ? <CloudOff size={16} className="hidden sm:block" /> : <Cloud size={16} className="hidden sm:block" />}
+            <span className={`absolute top-1 right-1 w-1.5 h-1.5 rounded-full ${cloudMode === "cloud" ? "bg-emerald-400" : "bg-amber-400"} animate-pulse`} />
+          </button>
           <button onClick={() => setMenuOpen(true)} title="Menú"
             className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl border border-border/70 hover:bg-muted/60 bg-background grid place-items-center active:scale-95 transition shrink-0">
             <Menu size={15} className="sm:hidden" />
@@ -392,6 +422,15 @@ function HomePage() {
 
             {/* Categoría: COMUNIDAD */}
             <CategoryHeader label="COMUNIDAD" />
+            <MenuItem
+              icon={<Cloud size={16} className={cloudMode === "cloud" ? "text-emerald-500" : "text-primary-glow"} />}
+              label="Sincronización"
+              onClick={() => { setSetupOpen(true); closeMenu(); }}
+            >
+              <span className={`text-[9px] font-display tracking-wider ${cloudMode === "cloud" ? "text-emerald-500" : "text-amber-500"}`}>
+                {cloudMode === "cloud" ? "NUBE" : cloudMode === "localAccount" ? "CUENTA LOCAL" : "MODO LOCAL"}
+              </span>
+            </MenuItem>
             <MenuLink icon={<BarChart3 size={16} className="text-primary-glow"/>} label="Historial" to="/history" onClick={closeMenu} />
             <MenuLink icon={<Megaphone size={16} className="text-primary"/>} label="Panel de Orbes" to="/orbes" onClick={closeMenu} />
             {(mod || admin) && (
@@ -418,6 +457,9 @@ function HomePage() {
           <ChatSection myId={myId} onClose={() => setChatOpen(false)} />
         </ChatBoundary>
       )}
+
+      {/* Configuración de Supabase / sincronización en la nube */}
+      <SupabaseSetupDialog open={setupOpen} onOpenChange={setSetupOpen} />
     </div>
   );
 }
