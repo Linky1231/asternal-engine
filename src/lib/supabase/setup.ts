@@ -36,7 +36,7 @@ export function getSchemaSqlBlocks(): { title: string; sql: string }[] {
   // Líneas (1-based) donde empieza cada gran sección: PROFILES, POLLS, FOLLOWS,
   // RLS POLICIES, FUNCIONES RPC, TRIGGER. Si el archivo cambia, el fallback
   // devuelve un único bloque con todo el SQL.
-  const cutLines = [46, 208, 295, 381, 496, 666].filter(c => c > 0 && c < lines.length);
+  const cutLines = [86, 388, 576, 746, 782, 791].filter(c => c > 0 && c < lines.length);
   if (!cutLines.length) return [{ title: "Bloque 1 · Todo el esquema", sql: schemaSql }];
 
   const ranges: [number, number][] = [];

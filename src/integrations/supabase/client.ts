@@ -680,7 +680,7 @@ function createLocalClient(): LocalClient {
  */
 
 const DEFAULT_SUPABASE_URL: string = "https://gxpgczwkovertezeydkt.supabase.co";
-const DEFAULT_SUPABASE_ANON_KEY: string = ""; // ← anon key del proyecto (empieza por eyJ… o sb_publishable_)
+const DEFAULT_SUPABASE_ANON_KEY: string = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd4cGdjendrb3ZlcnRlemV5ZGt0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU2MTk5NTUsImV4cCI6MjEwMTE5NTk1NX0.GGGjdgi2l2NmQBQ1pS8k37npT3p6hx9Sl5JF0DdQ9cM"; // anon key del proyecto — pública por diseño; así TODOS los dispositivos se conectan sin configurar nada
 let _warnedMissingAnon = false;
 
 const LOCAL_SB_URL_KEY = '_ast_supabase_url';

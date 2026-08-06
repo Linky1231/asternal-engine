@@ -361,9 +361,11 @@ create table if not exists public.forum_posts (
 );
 alter table public.forum_posts enable row level security;
 
-alter table public.forum_threads
-  add constraint forum_threads_solution_fk foreign key (solution_post_id)
-  references public.forum_posts(id) on delete set null;
+do $$ begin
+  alter table public.forum_threads
+    add constraint forum_threads_solution_fk foreign key (solution_post_id)
+    references public.forum_posts(id) on delete set null;
+exception when duplicate_object then null; end $$;
 
 create table if not exists public.forum_votes (
   post_id uuid not null references public.forum_posts(id) on delete cascade,
@@ -386,116 +388,189 @@ alter table public.forum_thread_votes enable row level security;
 -- ─────────────────────────── RLS POLICIES ───────────────────────────
 
 -- profiles: lectura pública, edición propia o staff
+drop policy if exists profiles_read on public.profiles;
 create policy profiles_read on public.profiles for select using (true);
+drop policy if exists profiles_insert on public.profiles;
 create policy profiles_insert on public.profiles for insert with check (auth.uid() = id);
+drop policy if exists profiles_update on public.profiles;
 create policy profiles_update on public.profiles for update using (auth.uid() = id or public.is_mod_or_admin(auth.uid()));
 
 -- tags
+drop policy if exists tags_read on public.tags;
 create policy tags_read on public.tags for select using (true);
+drop policy if exists tags_insert on public.tags;
 create policy tags_insert on public.tags for insert with check (true);
 
 -- posts: lectura pública (no borrados), insert/update/delete autor o staff
+drop policy if exists posts_read on public.posts;
 create policy posts_read on public.posts for select using (deleted_at is null or author_id = auth.uid());
+drop policy if exists posts_insert on public.posts;
 create policy posts_insert on public.posts for insert with check (auth.uid() = author_id);
+drop policy if exists posts_update on public.posts;
 create policy posts_update on public.posts for update using (auth.uid() = author_id or public.is_mod_or_admin(auth.uid()));
+drop policy if exists posts_delete on public.posts;
 create policy posts_delete on public.posts for delete using (auth.uid() = author_id or public.is_mod_or_admin(auth.uid()));
 
 -- comments
+drop policy if exists comments_read on public.comments;
 create policy comments_read on public.comments for select using (true);
+drop policy if exists comments_insert on public.comments;
 create policy comments_insert on public.comments for insert with check (auth.uid() = author_id);
+drop policy if exists comments_update on public.comments;
 create policy comments_update on public.comments for update using (auth.uid() = author_id or public.is_mod_or_admin(auth.uid()));
+drop policy if exists comments_delete on public.comments;
 create policy comments_delete on public.comments for delete using (auth.uid() = author_id or public.is_mod_or_admin(auth.uid()));
 
 -- reactions
+drop policy if exists reactions_read on public.reactions;
 create policy reactions_read on public.reactions for select using (true);
+drop policy if exists reactions_insert on public.reactions;
 create policy reactions_insert on public.reactions for insert with check (auth.uid() = user_id);
+drop policy if exists reactions_delete on public.reactions;
 create policy reactions_delete on public.reactions for delete using (auth.uid() = user_id);
 
 -- reposts
+drop policy if exists reposts_read on public.reposts;
 create policy reposts_read on public.reposts for select using (true);
+drop policy if exists reposts_insert on public.reposts;
 create policy reposts_insert on public.reposts for insert with check (auth.uid() = user_id);
+drop policy if exists reposts_delete on public.reposts;
 create policy reposts_delete on public.reposts for delete using (auth.uid() = user_id);
 
 -- notifications: solo el dueño
+drop policy if exists notif_read on public.notifications;
 create policy notif_read on public.notifications for select using (auth.uid() = user_id);
+drop policy if exists notif_insert on public.notifications;
 create policy notif_insert on public.notifications for insert with check (auth.uid() = user_id);
+drop policy if exists notif_update on public.notifications;
 create policy notif_update on public.notifications for update using (auth.uid() = user_id);
 
 -- reports
+drop policy if exists reports_read on public.reports;
 create policy reports_read on public.reports for select using (public.is_mod_or_admin(auth.uid()));
+drop policy if exists reports_insert on public.reports;
 create policy reports_insert on public.reports for insert with check (auth.uid() = reporter_id);
 
 -- blocks
+drop policy if exists blocks_read on public.blocks;
 create policy blocks_read on public.blocks for select using (auth.uid() = blocker_id);
+drop policy if exists blocks_insert on public.blocks;
 create policy blocks_insert on public.blocks for insert with check (auth.uid() = blocker_id);
+drop policy if exists blocks_delete on public.blocks;
 create policy blocks_delete on public.blocks for delete using (auth.uid() = blocker_id);
 
 -- game_purchases: lectura pública (para saber qué se posee), inserción vía RPC
+drop policy if exists purchases_read on public.game_purchases;
 create policy purchases_read on public.game_purchases for select using (true);
+drop policy if exists purchases_insert on public.game_purchases;
 create policy purchases_insert on public.game_purchases for insert with check (auth.uid() = user_id);
 
 -- orbe_transactions: solo el dueño
+drop policy if exists orbex_read on public.orbe_transactions;
 create policy orbex_read on public.orbe_transactions for select using (auth.uid() = user_id);
 
 -- polls
+drop policy if exists polls_read on public.post_polls;
 create policy polls_read on public.post_polls for select using (true);
+drop policy if exists polls_insert on public.post_polls;
 create policy polls_insert on public.post_polls for insert with check (true);
+drop policy if exists poll_votes_read on public.post_poll_votes;
 create policy poll_votes_read on public.post_poll_votes for select using (true);
+drop policy if exists poll_votes_insert on public.post_poll_votes;
 create policy poll_votes_insert on public.post_poll_votes for insert with check (auth.uid() = user_id);
+drop policy if exists poll_votes_delete on public.post_poll_votes;
 create policy poll_votes_delete on public.post_poll_votes for delete using (auth.uid() = user_id);
+drop policy if exists post_tags_read on public.post_tags;
 create policy post_tags_read on public.post_tags for select using (true);
+drop policy if exists post_tags_insert on public.post_tags;
 create policy post_tags_insert on public.post_tags for insert with check (true);
 
 -- user_projects: solo el dueño
+drop policy if exists projects_read on public.user_projects;
 create policy projects_read on public.user_projects for select using (auth.uid() = user_id);
+drop policy if exists projects_insert on public.user_projects;
 create policy projects_insert on public.user_projects for insert with check (auth.uid() = user_id);
+drop policy if exists projects_update on public.user_projects;
 create policy projects_update on public.user_projects for update using (auth.uid() = user_id);
+drop policy if exists projects_delete on public.user_projects;
 create policy projects_delete on public.user_projects for delete using (auth.uid() = user_id);
 
 -- user_roles: lectura pública (para saber mods/admin), gestión staff
+drop policy if exists roles_read on public.user_roles;
 create policy roles_read on public.user_roles for select using (true);
+drop policy if exists roles_insert on public.user_roles;
 create policy roles_insert on public.user_roles for insert with check (public.has_role('admin', auth.uid()));
+drop policy if exists roles_delete on public.user_roles;
 create policy roles_delete on public.user_roles for delete using (public.has_role('admin', auth.uid()));
 
 -- banned_emails: solo staff
+drop policy if exists bans_read on public.banned_emails;
 create policy bans_read on public.banned_emails for select using (public.is_mod_or_admin(auth.uid()));
+drop policy if exists bans_insert on public.banned_emails;
 create policy bans_insert on public.banned_emails for insert with check (public.is_mod_or_admin(auth.uid()));
+drop policy if exists bans_delete on public.banned_emails;
 create policy bans_delete on public.banned_emails for delete using (public.is_mod_or_admin(auth.uid()));
 
 -- events: lectura pública, creación/gestión solo admin
+drop policy if exists events_read on public.events;
 create policy events_read on public.events for select using (true);
+drop policy if exists events_insert on public.events;
 create policy events_insert on public.events for insert with check (public.has_role('admin', auth.uid()));
+drop policy if exists events_update on public.events;
 create policy events_update on public.events for update using (public.has_role('admin', auth.uid()));
+drop policy if exists events_delete on public.events;
 create policy events_delete on public.events for delete using (public.has_role('admin', auth.uid()));
+drop policy if exists subs_read on public.event_submissions;
 create policy subs_read on public.event_submissions for select using (true);
+drop policy if exists subs_insert on public.event_submissions;
 create policy subs_insert on public.event_submissions for insert with check (auth.uid() = author_id);
 
 -- follows
+drop policy if exists follows_read on public.follows;
 create policy follows_read on public.follows for select using (true);
+drop policy if exists follows_insert on public.follows;
 create policy follows_insert on public.follows for insert with check (auth.uid() = follower_id);
+drop policy if exists follows_delete on public.follows;
 create policy follows_delete on public.follows for delete using (auth.uid() = follower_id);
 
 -- foros
+drop policy if exists fc_read on public.forum_categories;
 create policy fc_read on public.forum_categories for select using (true);
+drop policy if exists fc_insert on public.forum_categories;
 create policy fc_insert on public.forum_categories for insert with check (public.is_mod_or_admin(auth.uid()));
+drop policy if exists fc_delete on public.forum_categories;
 create policy fc_delete on public.forum_categories for delete using (public.is_mod_or_admin(auth.uid()));
 
+drop policy if exists ft_read on public.forum_threads;
 create policy ft_read on public.forum_threads for select using (true);
+drop policy if exists ft_insert on public.forum_threads;
 create policy ft_insert on public.forum_threads for insert with check (auth.uid() = author_id);
+drop policy if exists ft_update on public.forum_threads;
 create policy ft_update on public.forum_threads for update using (auth.uid() = author_id or public.is_mod_or_admin(auth.uid()));
+drop policy if exists ft_delete on public.forum_threads;
 create policy ft_delete on public.forum_threads for delete using (auth.uid() = author_id or public.is_mod_or_admin(auth.uid()));
 
+drop policy if exists fp_read on public.forum_posts;
 create policy fp_read on public.forum_posts for select using (true);
+drop policy if exists fp_insert on public.forum_posts;
 create policy fp_insert on public.forum_posts for insert with check (auth.uid() = author_id);
+drop policy if exists fp_update on public.forum_posts;
 create policy fp_update on public.forum_posts for update using (auth.uid() = author_id or public.is_mod_or_admin(auth.uid()));
+drop policy if exists fp_delete on public.forum_posts;
 create policy fp_delete on public.forum_posts for delete using (auth.uid() = author_id or public.is_mod_or_admin(auth.uid()));
 
+drop policy if exists fv_read on public.forum_votes;
 create policy fv_read on public.forum_votes for select using (true);
+drop policy if exists fv_insert on public.forum_votes;
 create policy fv_insert on public.forum_votes for insert with check (auth.uid() = user_id);
+drop policy if exists fv_delete on public.forum_votes;
 create policy fv_delete on public.forum_votes for delete using (auth.uid() = user_id);
 
+drop policy if exists ftv_read on public.forum_thread_votes;
 create policy ftv_read on public.forum_thread_votes for select using (true);
+drop policy if exists ftv_insert on public.forum_thread_votes;
 create policy ftv_insert on public.forum_thread_votes for insert with check (auth.uid() = user_id);
+drop policy if exists ftv_delete on public.forum_thread_votes;
 create policy ftv_delete on public.forum_thread_votes for delete using (auth.uid() = user_id);
 
 -- ─────────────────────────── FUNCIONES RPC ───────────────────────────
@@ -718,12 +793,16 @@ insert into storage.buckets (id, name, public)
 values ('post-media', 'post-media', true)
 on conflict (id) do nothing;
 
+drop policy if exists "post-media public read" on storage.objects;
 create policy "post-media public read" on storage.objects
   for select using (bucket_id = 'post-media');
+drop policy if exists "post-media authenticated upload" on storage.objects;
 create policy "post-media authenticated upload" on storage.objects
   for insert to authenticated with check (bucket_id = 'post-media');
+drop policy if exists "post-media owner update" on storage.objects;
 create policy "post-media owner update" on storage.objects
   for update to authenticated using (bucket_id = 'post-media');
+drop policy if exists "post-media owner delete" on storage.objects;
 create policy "post-media owner delete" on storage.objects
   for delete to authenticated using (bucket_id = 'post-media');
 
