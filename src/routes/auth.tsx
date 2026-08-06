@@ -6,6 +6,26 @@ import {
   Check, AlertCircle, Sparkles, PencilRuler, Blocks, Rocket, Users, Play, RefreshCw,
 } from "lucide-react";
 
+/* ─── Traduce errores de Supabase a mensajes claros en español ─── */
+function friendlyAuthError(msg: string): string {
+  const m = msg.toLowerCase();
+  // Límite de envíos de correo (registros / OTP / recuperación): se bloquea
+  // temporalmente por seguridad tras varios intentos seguidos.
+  if (/rate limit|rate_limit|over.?request.?rate|too many (requests|attempts)|email.*send/i.test(m)) {
+    return "Demasiados intentos en poco tiempo. Supabase bloquea temporalmente el envío de correos de verificación por seguridad — espera aproximadamente 1 hora y vuelve a intentarlo (o, como admin, sube el límite en Authentication → Rate Limits).";
+  }
+  if (/invalid login credentials|invalid credentials|incorrect (email|password)|password.*does not match/i.test(m)) {
+    return "Email o contraseña incorrectos. Revísalos e inténtalo de nuevo.";
+  }
+  if (/user already registered|already registered|email.*already.*exist/i.test(m)) {
+    return "Ese email ya tiene una cuenta. Pulsa ACCEDER para entrar.";
+  }
+  if (/email not confirmed|confirm your email|verify your email/i.test(m)) {
+    return "Aún no has confirmado tu email. Revisa tu bandeja de entrada (y la carpeta de spam).";
+  }
+  return msg;
+}
+
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Asternal — Acceso a la plataforma" }] }),
   component: AuthPage,
@@ -508,11 +528,12 @@ function AuthPage() {
       }
     } catch (e) {
       const msg = (e as Error).message;
-      setErr(msg);
-      if (msg.toLowerCase().includes("email") || msg.toLowerCase().includes("user"))
-        setFieldErrors(prev => ({ ...prev, email: msg }));
-      else if (msg.toLowerCase().includes("password") || msg.toLowerCase().includes("contraseña"))
-        setFieldErrors(prev => ({ ...prev, password: msg }));
+      const friendly = friendlyAuthError(msg);
+      setErr(friendly);
+      if (/email|user|rate/i.test(msg))
+        setFieldErrors(prev => ({ ...prev, email: friendly }));
+      else if (/password|contraseña/i.test(msg))
+        setFieldErrors(prev => ({ ...prev, password: friendly }));
     } finally { setBusy(false); }
   };
 
@@ -752,7 +773,7 @@ function AuthPage() {
                               const { error } = await supabase.auth.resetPasswordForEmail(email.value);
                               if (error) throw error;
                               setSuccessMsg("Revisa tu bandeja de entrada");
-                            } catch (e) { setErr((e as Error).message); }
+                            } catch (e) { setErr(friendlyAuthError((e as Error).message)); }
                             finally { setBusy(false); }
                           }} className="text-[12px] text-muted-foreground/50 hover:text-primary transition-colors">
                             ¿Olvidaste tu contraseña?
