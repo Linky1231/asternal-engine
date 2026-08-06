@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Gamepad2, Newspaper, Search, LogOut, Wrench, Plus, ShieldCheck, User, Sparkles, Star, Menu, MessageCircle, Bell, X, Home, Users, Flame, MessageSquare, Palette, Trophy, History, Clock, BarChart3, ChevronDown, ChevronRight, Globe, Heart, Megaphone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchFeed, fetchGames, getMyProfile, isMod, isAdmin, type PostWithMeta, type Profile } from "@/lib/social/api";
+import { syncAllProjects } from "@/lib/engine/cloud-sync";
 import { PostComposer } from "@/components/social/PostComposer";
 import { PostCard } from "@/components/social/PostCard";
 import { GamesHome } from "@/components/social/GamesHome";
@@ -135,6 +136,12 @@ function HomePage() {
         }
         if (!uid) { navigate({ to: "/auth" }); return; }
         setMyId(uid);
+        // Sincroniza los proyectos con la nube (sube los locales sin respaldo y
+        // descarga los de la cuenta) para que los juegos aparezcan en cualquier
+        // dispositivo con la misma cuenta. Silencioso: no bloquea la carga.
+        if (!localSession) {
+          syncAllProjects().catch(() => {/* noop */});
+        }
         let prof: Profile | null = null;
         try { prof = await getMyProfile(); } catch { /* noop */ }
         if (!prof && localSession) {

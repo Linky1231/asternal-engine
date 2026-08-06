@@ -13,9 +13,10 @@ import {
   type ProjectMeta,
 } from "@/lib/engine/storage";
 import type { Project } from "@/lib/engine/core";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, hasSupabaseConfig } from "@/integrations/supabase/client";
 import { cloudSaveProject, cloudListProjects, cloudDeleteProject, type CloudProject } from "@/lib/social/api";
-import { Cloud, CloudDownload, CloudUpload, Loader2 } from "lucide-react";
+import { syncAllProjects } from "@/lib/engine/cloud-sync";
+import { Cloud, CloudDownload, CloudUpload, Loader2, RefreshCw } from "lucide-react";
 
 
 function timeAgo(t: number) {
@@ -43,6 +44,8 @@ export function ProjectManager({
   const [cloudList, setCloudList] = useState<CloudProject[]>([]);
   const [cloudBusy, setCloudBusy] = useState<string | null>(null);
   const [cloudErr, setCloudErr] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncNote, setSyncNote] = useState<string | null>(null);
 
   const refresh = () => setItems(listProjects());
   const refreshCloud = async () => {
@@ -53,7 +56,25 @@ export function ProjectManager({
       setCloudList(await cloudListProjects());
     } catch (e) { setCloudErr((e as Error).message); }
   };
-  useEffect(() => { refresh(); refreshCloud(); }, []);
+
+  /** Sincronización automática al abrir: sube lo local sin respaldo y descarga lo de la nube. */
+  const runAutoSync = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      setSignedIn(!!session);
+      if (!session) return;
+      setSyncing(true); setCloudErr(null);
+      const r = await syncAllProjects();
+      refresh();
+      setCloudList(await cloudListProjects());
+      setSyncNote(r.pushed > 0 || r.imported > 0
+        ? `${r.pushed} subido${r.pushed === 1 ? "" : "s"} · ${r.imported} descargado${r.imported === 1 ? "" : "s"}`
+        : null);
+    } catch (e) { setCloudErr((e as Error).message); }
+    finally { setSyncing(false); }
+  };
+
+  useEffect(() => { refresh(); refreshCloud(); runAutoSync(); }, []);
 
   const pushLocalToCloud = async (m: ProjectMeta) => {
     setCloudBusy(m.id); setCloudErr(null);
@@ -249,9 +270,26 @@ export function ProjectManager({
             <div className="flex items-center gap-2 px-1">
               <Cloud size={14} className="text-primary-glow" />
               <div className="font-display text-[11px] tracking-widest text-primary-glow">EN LA NUBE</div>
-              <div className="text-[10px] font-mono text-muted-foreground ml-auto">{cloudList.length}</div>
+              <div className="text-[10px] font-mono text-muted-foreground ml-auto">
+                {syncing ? <Loader2 size={12} className="animate-spin inline"/> : null}
+                {cloudList.length}
+              </div>
             </div>
+            {(syncNote || syncing) && (
+              <div className="flex items-center gap-1.5 text-[10px] text-primary-glow px-1">
+                {syncing ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} />}
+                {syncing ? "Sincronizando con la nube…" : syncNote}
+              </div>
+            )}
             {cloudErr && <div className="text-[10px] text-destructive px-1">{cloudErr}</div>}
+            {!hasSupabaseConfig() && (
+              <div className="px-1">
+                <div className="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-md px-2 py-1.5">
+                  ⚠ Modo local: la clave de Supabase está guardada solo en este navegador. Para ver tus juegos en otro
+                  dispositivo, configura la misma URL y anon key allí (botón 🗄 de configuración del chat) o en el tab Keys.
+                </div>
+              </div>
+            )}
             {cloudList.length === 0 ? (
               <div className="text-[10px] text-muted-foreground px-1">Nada guardado en la nube todavía. Usa el botón <CloudUpload size={10} className="inline"/> para respaldar un proyecto y acceder a él desde cualquier dispositivo.</div>
             ) : (
