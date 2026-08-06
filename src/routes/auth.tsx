@@ -12,7 +12,7 @@ function friendlyAuthError(msg: string): string {
   // Límite de envíos de correo (registros / OTP / recuperación): se bloquea
   // temporalmente por seguridad tras varios intentos seguidos.
   if (/rate limit|rate_limit|over.?request.?rate|too many (requests|attempts)|email.*send/i.test(m)) {
-    return "Demasiados intentos en poco tiempo. Supabase bloquea temporalmente el envío de correos de verificación por seguridad — espera aproximadamente 1 hora y vuelve a intentarlo (o, como admin, sube el límite en Authentication → Rate Limits).";
+    return "Límite de envíos de correo alcanzado (el servicio integrado de Supabase permite ~2 por hora). Registrarte y acceder NO requieren correo, así que puedes intentarlo de nuevo de inmediato. Si el error aparece en «¿Olvidaste tu contraseña?», espera ~1 hora o conecta un SMTP personalizado (ej. Resend) para subir el límite.";
   }
   if (/invalid login credentials|invalid credentials|incorrect (email|password)|password.*does not match/i.test(m)) {
     return "Email o contraseña incorrectos. Revísalos e inténtalo de nuevo.";
