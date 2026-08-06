@@ -216,7 +216,7 @@ export function EventsSection({ isAdmin }: { isAdmin: boolean }) {
                             <div className="flex items-center gap-2 pt-1">
                               {!isPast && (
                                 <button
-                                  className="h-8 px-4 rounded-lg bg-primary text-primary-foreground text-[11px] font-medium hover:bg-primary/90 active:scale-[0.98] transition"
+                                  className="h-8 px-4 rounded-lg bg-gradient-to-r from-primary to-accent text-primary-foreground text-[11px] font-medium hover:brightness-110 active:scale-[0.98] transition shadow-sm shadow-primary/20"
                                   onClick={() => {/* Participar */ }}
                                 >
                                   Participar
