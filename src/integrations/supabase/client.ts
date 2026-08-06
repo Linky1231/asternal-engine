@@ -679,8 +679,8 @@ function createLocalClient(): LocalClient {
  *      seguridad real la da RLS en la base de datos.
  */
 
-const DEFAULT_SUPABASE_URL = "https://gxpgczwkovertezeydkt.supabase.co";
-const DEFAULT_SUPABASE_ANON_KEY = ""; // ← anon key del proyecto (empieza por eyJ… o sb_publishable_)
+const DEFAULT_SUPABASE_URL: string = "https://gxpgczwkovertezeydkt.supabase.co";
+const DEFAULT_SUPABASE_ANON_KEY: string = ""; // ← anon key del proyecto (empieza por eyJ… o sb_publishable_)
 
 const LOCAL_SB_URL_KEY = '_ast_supabase_url';
 const LOCAL_SB_ANON_KEY = '_ast_supabase_anon';
