@@ -673,7 +673,14 @@ function createLocalClient(): LocalClient {
  *      variables de entorno al compilar.
  *   2. Variables de entorno de Vite (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY)
  *      inyectadas por el entorno desde el tab Keys.
+ *   3. Credenciales por defecto incrustadas aquí (configuración única del
+ *      administrador): así TODOS los dispositivos usan la misma base sin que
+ *      nadie tenga que pegar claves. La anon key es pública por diseño — la
+ *      seguridad real la da RLS en la base de datos.
  */
+
+const DEFAULT_SUPABASE_URL = "https://gxpgczwkovertezeydkt.supabase.co";
+const DEFAULT_SUPABASE_ANON_KEY = ""; // ← anon key del proyecto (empieza por eyJ… o sb_publishable_)
 
 const LOCAL_SB_URL_KEY = '_ast_supabase_url';
 const LOCAL_SB_ANON_KEY = '_ast_supabase_anon';
@@ -713,10 +720,12 @@ export function getSupabaseUrl(): string | undefined {
   if (local && local.trim()) {
     if (looksLikeSupabaseUrl(local.trim())) return local.trim();
     // Credencial guardada con formato inválido: se descarta sola para que la
-    // app no quede bloqueada y se usa la URL del entorno (Keys) en su lugar.
+    // app no quede bloqueada y se usa la URL del entorno (Keys) o la por defecto.
     writeLocal(LOCAL_SB_URL_KEY, null);
   }
-  return (import.meta.env.V1 ?? import.meta.env.VITE_SUPABASE_URL) as string | undefined;
+  const env = (import.meta.env.V1 ?? import.meta.env.VITE_SUPABASE_URL) as string | undefined;
+  if (env && env.trim()) return env.trim();
+  return DEFAULT_SUPABASE_URL.trim() || undefined;
 }
 
 export function getSupabaseAnonKey(): string | undefined {
@@ -728,7 +737,9 @@ export function getSupabaseAnonKey(): string | undefined {
     // ni siquiera deja entrar. Lo limpiamos y usamos la clave del entorno.
     writeLocal(LOCAL_SB_ANON_KEY, null);
   }
-  return (import.meta.env.V2 ?? import.meta.env.VITE_SUPABASE_ANON_KEY) as string | undefined;
+  const env = (import.meta.env.V2 ?? import.meta.env.VITE_SUPABASE_ANON_KEY) as string | undefined;
+  if (env && env.trim()) return env.trim();
+  return (DEFAULT_SUPABASE_ANON_KEY && DEFAULT_SUPABASE_ANON_KEY.trim()) || undefined;
 }
 
 export type SaveCredentialsResult = { ok: boolean; error?: string };
