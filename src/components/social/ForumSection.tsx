@@ -114,7 +114,7 @@ function VoteBtn({ dir, active, count, onClick }: { dir: "up" | "down"; active: 
     : "text-rose-500 bg-rose-50 border-rose-200 shadow-sm shadow-rose-10 dark:text-rose-400 dark:bg-rose-950/30 dark:border-rose-800/40";
   return (
     <button onClick={e => { e.stopPropagation(); onClick(); }}
-      className={`flex items-center gap-1.5 text-[11px] px-2 sm:px-2.5 py-1.5 rounded-lg border transition-all duration-200 active:scale-90 hover:shadow-sm ${
+      className={`flex items-center gap-1 text-[11px] px-1.5 sm:px-2 sm:px-2.5 py-1.5 rounded-lg border transition-all duration-200 active:scale-90 hover:shadow-sm ${
         active
           ? activeColors
           : "text-muted-foreground/40 border-transparent hover:border-border/60 hover:text-foreground/60 hover:bg-muted/20"
@@ -264,7 +264,7 @@ function CategoryListView({ onSelect }: { onSelect: (id: string, name: string) =
         {cats.map(cat => (
           <motion.button key={cat.id} variants={stagger.item} layout
             onClick={() => onSelect(cat.id, cat.name)}
-            className="group w-full text-left p-4 rounded-2xl border border-border/40 bg-white/60 hover:bg-white/90 hover:border-primary/20 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 active:scale-[0.98]"
+            className="group w-full text-left p-3.5 sm:p-4 rounded-2xl border border-border/40 bg-white/60 hover:bg-white/90 hover:border-primary/20 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 active:scale-[0.98]"
           >
             <div className="flex items-start gap-3.5">
               {/* Icon bubble */}
@@ -384,7 +384,7 @@ function ThreadListView({
 
         {myId && (
           <motion.button whileTap={{ scale: 0.95 }} onClick={() => setShowNew(s => !s)}
-            className="flex items-center gap-1.5 h-9 px-3 sm:px-4 rounded-xl bg-primary text-primary-foreground text-[10px] sm:text-[11px] font-display tracking-wider active:scale-95 transition shadow-md shadow-primary/25 hover:shadow-lg hover:shadow-primary/30 shrink-0"
+            className="flex items-center gap-1.5 h-9 px-2.5 sm:px-4 rounded-xl bg-primary text-primary-foreground text-[10px] sm:text-[11px] font-display tracking-wider active:scale-95 transition shadow-md shadow-primary/25 hover:shadow-lg hover:shadow-primary/30 shrink-0"
           >
             <Plus size={14} /> NUEVO HILO
           </motion.button>
@@ -524,7 +524,7 @@ function ThreadListView({
         ) : filtered.map((t, idx) => (
           <motion.button key={t.id} variants={stagger.item} layout
             onClick={() => onSelect(t.id)}
-            className="group w-full text-left p-4 rounded-2xl border border-border/30 bg-white/60 hover:bg-white/95 hover:border-primary/15 hover:shadow-lg hover:shadow-primary/5 transition-all duration-250 active:scale-[0.99]"
+            className="group w-full text-left p-3 sm:p-4 rounded-2xl border border-border/30 bg-white/60 hover:bg-white/95 hover:border-primary/15 hover:shadow-lg hover:shadow-primary/5 transition-all duration-250 active:scale-[0.99]"
           >
             <div className="flex items-start gap-3.5">
               {/* ── Vote column ── */}
@@ -839,7 +839,7 @@ function ThreadDetailView({
           const isSolution = thread.solutionPostId === p.id;
           return (
           <motion.div key={p.id} variants={stagger.item} layout
-            className={`group/post p-4 rounded-2xl border transition-all duration-200 ${
+            className={`group/post p-3 sm:p-4 rounded-2xl border transition-all duration-200 ${
               isSolution
                 ? "border-emerald-300/40 bg-emerald-50/30 hover:bg-emerald-50/60 dark:bg-emerald-950/10 dark:border-emerald-800/30"
                 : "border-border/25 bg-white/50 hover:bg-white/80 hover:border-border/40"
@@ -907,9 +907,9 @@ function ThreadDetailView({
                 )}
 
                 {/* Action bar: visible siempre en táctil (sin hover); en escritorio aparece al pasar el cursor */}
-                <div className="flex flex-wrap items-center gap-1.5 mt-2.5 opacity-100 sm:opacity-0 sm:group-hover/post:opacity-100 transition-all duration-200">
+                <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 mt-2.5 opacity-100 sm:opacity-0 sm:group-hover/post:opacity-100 transition-all duration-200">
                   <button onClick={() => handlePostVote(p.id, "up")}
-                    className={`flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-lg border transition-all active:scale-90 ${
+                    className={`flex items-center gap-1 text-[10px] px-2 sm:px-2.5 py-1 rounded-lg border transition-all active:scale-90 ${
                       p.myVote === "up"
                         ? "text-primary bg-primary/10 border-primary/20 shadow-sm"
                         : "text-muted-foreground/40 border-transparent hover:text-primary hover:border-border/50"
@@ -918,7 +918,7 @@ function ThreadDetailView({
                     {p.upvotes > 0 && <span className="tabular-nums font-medium">{p.upvotes}</span>}
                   </button>
                   <button onClick={() => handlePostVote(p.id, "down")}
-                    className={`flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-lg border transition-all active:scale-90 ${
+                    className={`flex items-center gap-1 text-[10px] px-2 sm:px-2.5 py-1 rounded-lg border transition-all active:scale-90 ${
                       p.myVote === "down"
                         ? "text-rose-500 bg-rose-50 border-rose-200 shadow-sm dark:bg-rose-950/30 dark:text-rose-400 dark:border-rose-800/40"
                         : "text-muted-foreground/40 border-transparent hover:text-rose-500 hover:border-border/50"
@@ -931,19 +931,19 @@ function ThreadDetailView({
                     <>
                       <div className="w-px h-4 bg-border/30 mx-0.5" />
                       <button onClick={() => handleQuote(p)}
-                        className="flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-lg border border-transparent text-muted-foreground/40 hover:text-primary hover:border-border/50 transition-all active:scale-90">
+                        className="flex items-center gap-1 text-[10px] px-2 sm:px-2.5 py-1 rounded-lg border border-transparent text-muted-foreground/40 hover:text-primary hover:border-border/50 transition-all active:scale-90">
                         <Quote size={10} /> Citar
                       </button>
                       {/* Mark as solution button — only for thread author */}
                       {myId === thread.authorId && (
                         isSolution ? (
                           <button onClick={() => handleUnmarkSolution()}
-                            className="flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-lg border border-emerald-200/60 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition-all active:scale-90">
+                            className="flex items-center gap-1 text-[10px] px-2 sm:px-2.5 py-1 rounded-lg border border-emerald-200/60 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition-all active:scale-90">
                             <CheckCircle size={10} /> Solución
                           </button>
                         ) : (
                           <button onClick={() => handleMarkSolution(p.id)}
-                            className="flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-lg border border-transparent text-muted-foreground/40 hover:text-emerald-600 hover:border-emerald-200 transition-all active:scale-90">
+                            className="flex items-center gap-1 text-[10px] px-2 sm:px-2.5 py-1 rounded-lg border border-transparent text-muted-foreground/40 hover:text-emerald-600 hover:border-emerald-200 transition-all active:scale-90">
                             <CheckCircle size={10} /> Marcar solución
                           </button>
                         )
@@ -951,11 +951,11 @@ function ThreadDetailView({
                       {myId === p.authorId && (
                         <>
                           <button onClick={() => handleEdit(p.id)}
-                            className="flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-lg border border-transparent text-muted-foreground/40 hover:text-primary hover:border-border/50 transition-all active:scale-90">
+                            className="flex items-center gap-1 text-[10px] px-2 sm:px-2.5 py-1 rounded-lg border border-transparent text-muted-foreground/40 hover:text-primary hover:border-border/50 transition-all active:scale-90">
                             <Edit3 size={10} /> Editar
                           </button>
                           <button onClick={() => handleDelete(p.id)}
-                            className="flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-lg border border-transparent text-muted-foreground/40 hover:text-rose-500 hover:border-rose-200 transition-all active:scale-90">
+                            className="flex items-center gap-1 text-[10px] px-2 sm:px-2.5 py-1 rounded-lg border border-transparent text-muted-foreground/40 hover:text-rose-500 hover:border-rose-200 transition-all active:scale-90">
                             <Trash2 size={10} /> Borrar
                           </button>
                         </>
@@ -1003,7 +1003,7 @@ function ThreadDetailView({
             />
             {/* Bottom actions */}
             <div className="flex justify-between items-center px-1 py-1.5">
-              <span className="text-[8px] text-muted-foreground/30 uppercase tracking-wider flex items-center gap-1">
+              <span className="hidden sm:inline-flex text-[8px] text-muted-foreground/30 uppercase tracking-wider items-center gap-1">
                 <AtSign size={8} /> Cmd/Ctrl + Enter para enviar
               </span>
               <motion.button whileTap={{ scale: 0.95 }}
