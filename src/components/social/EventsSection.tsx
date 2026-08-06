@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { fetchEvents, deleteEvent, type EventItem } from "@/lib/social/api";
 import {
   Calendar, Trophy, Clock, Users, FileText,
-  ChevronRight, ExternalLink, Sparkles, Trash2,
+  ChevronRight, ExternalLink, Sparkles, Trash2, AlertCircle,
 } from "lucide-react";
 
 function timeUntil(dateStr: string): string {
@@ -32,6 +32,8 @@ export function EventsSection({ isAdmin }: { isAdmin: boolean }) {
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -49,12 +51,17 @@ export function EventsSection({ isAdmin }: { isAdmin: boolean }) {
   });
 
   const removeEvent = async (ev: EventItem) => {
-    if (!confirm(`¿Eliminar el evento "${ev.title}"? Esta acción no se puede deshacer.`)) return;
+    setDeleteError(null);
     try {
       await deleteEvent(ev.id);
       setEvents(prev => prev.filter(e => e.id !== ev.id));
       if (selected === ev.id) setSelected(null);
-    } catch { /* noop */ }
+      setConfirmDeleteId(null);
+    } catch (e) {
+      console.error("[events] error al eliminar:", e);
+      setDeleteError((e as Error)?.message || "No se pudo eliminar el evento");
+      setConfirmDeleteId(null);
+    }
   };
 
   const activeCount = events.filter(e => e.status === "active").length;
@@ -236,14 +243,38 @@ export function EventsSection({ isAdmin }: { isAdmin: boolean }) {
                                   ✓ Participando
                                 </span>
                               )}
-                              {isAdmin && (
+                              {deleteError && (
+                                <div className="w-full flex items-start gap-1.5 text-[11px] text-rose-600 dark:text-rose-400 bg-rose-50/70 dark:bg-rose-950/20 border border-rose-200/60 dark:border-rose-800/40 rounded-lg px-3 py-2">
+                                  <AlertCircle size={12} className="shrink-0 mt-0.5" />
+                                  <span className="break-words">{deleteError}</span>
+                                </div>
+                              )}
+                              {isAdmin && confirmDeleteId === ev.id ? (
+                                <div className="ml-auto flex items-center gap-2">
+                                  <span className="text-[11px] text-rose-600 dark:text-rose-400 font-medium">
+                                    ¿Seguro?
+                                  </span>
+                                  <button
+                                    onClick={() => removeEvent(ev)}
+                                    className="h-8 px-3 rounded-lg bg-rose-500 text-white text-[11px] font-semibold hover:bg-rose-600 active:scale-[0.98] transition shadow-sm shadow-rose-500/25 flex items-center gap-1.5"
+                                  >
+                                    <Trash2 size={12} /> Sí, eliminar
+                                  </button>
+                                  <button
+                                    onClick={() => { setConfirmDeleteId(null); setDeleteError(null); }}
+                                    className="h-8 px-3 rounded-lg border border-border/70 text-muted-foreground text-[11px] font-medium hover:bg-muted/40 transition active:scale-[0.98]"
+                                  >
+                                    Cancelar
+                                  </button>
+                                </div>
+                              ) : isAdmin ? (
                                 <button
-                                  onClick={() => removeEvent(ev)}
+                                  onClick={() => { setConfirmDeleteId(ev.id); setDeleteError(null); }}
                                   className="h-8 px-3 ml-auto rounded-lg border border-rose-200/70 text-rose-500 text-[11px] font-medium hover:bg-rose-50 dark:border-rose-800/40 dark:hover:bg-rose-950/20 transition active:scale-[0.98] flex items-center gap-1.5"
                                 >
                                   <Trash2 size={12} /> Eliminar evento
                                 </button>
-                              )}
+                              ) : null}
                             </div>
                           </div>
                         </motion.div>
