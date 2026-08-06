@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase, clearSupabaseCredentials } from "@/integrations/supabase/client";
 import {
   Gamepad2, Mail, Lock, User, Eye, EyeOff, ArrowRight, Loader2,
@@ -403,38 +403,6 @@ function PasswordStrength({ password }: { password: string }) {
   );
 }
 
-/* ─── TiltCard ─── */
-function TiltCard({ children }: { children: React.ReactNode }) {
-  const cardRef = useRef<HTMLDivElement>(null);
-  const [rot, setRot] = useState({ x: 0, y: 0 });
-  const [hover, setHover] = useState(false);
-  const onMove = useCallback((e: React.MouseEvent) => {
-    if (!cardRef.current) return;
-    const rect = cardRef.current.getBoundingClientRect();
-    setRot({ x: ((e.clientY - rect.top) / rect.height - 0.5) * -6, y: ((e.clientX - rect.left) / rect.width - 0.5) * 6 });
-  }, []);
-  return (
-    <div ref={cardRef} onMouseMove={onMove}
-      onMouseLeave={() => { setRot({ x: 0, y: 0 }); setHover(false); }}
-      onMouseEnter={() => setHover(true)}
-      style={{ perspective: "1000px" }}>
-      <div className="relative" style={{
-        transform: `rotateX(${rot.x}deg) rotateY(${rot.y}deg)`,
-        transition: hover ? "transform 0.08s cubic-bezier(0.22, 1, 0.36, 1)" : "transform 0.6s cubic-bezier(0.22, 1, 0.36, 1)",
-        transformStyle: "preserve-3d",
-      }}>
-        <div className="absolute inset-0 pointer-events-none rounded-3xl opacity-0 transition-opacity duration-700"
-          style={{
-            opacity: hover ? 0.5 : 0,
-            background: `radial-gradient(circle at ${50 + rot.y * 3}% ${50 - rot.x * 3}%, oklch(1 1 300 / 0.08), transparent 60%)`,
-          }}
-        />
-        {children}
-      </div>
-    </div>
-  );
-}
-
 /* ─── Logo (rediseñado) ─── */
 function Logo({ loaded }: { loaded: boolean }) {
   return (
@@ -645,7 +613,6 @@ function AuthPage() {
             <div className="w-full max-w-[400px]" style={{
               animation: loaded ? 'fade-in-up 800ms 700ms cubic-bezier(0.22,1,0.36,1) both' : 'none',
             }}>
-              <TiltCard>
                 {/* Tarjeta premium: borde degradado + sombras en capas + radius 24px */}
                 <div className="relative rounded-3xl p-px bg-gradient-to-b from-white/70 via-white/25 to-primary/15 shadow-[0_30px_80px_-20px_oklch(0.488_0.185_264/0.3),0_10px_30px_-10px_oklch(0.488_0.185_264/0.18)]">
                   <div className="relative bg-white/75 backdrop-blur-md rounded-[calc(1.5rem-1px)] p-7 overflow-hidden group/form-card">
@@ -793,7 +760,6 @@ function AuthPage() {
                     </div>
                   </div>
                 </div>
-              </TiltCard>
             </div>
           </div>
         </div>
