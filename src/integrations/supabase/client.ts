@@ -681,6 +681,7 @@ function createLocalClient(): LocalClient {
 
 const DEFAULT_SUPABASE_URL: string = "https://gxpgczwkovertezeydkt.supabase.co";
 const DEFAULT_SUPABASE_ANON_KEY: string = ""; // ← anon key del proyecto (empieza por eyJ… o sb_publishable_)
+let _warnedMissingAnon = false;
 
 const LOCAL_SB_URL_KEY = '_ast_supabase_url';
 const LOCAL_SB_ANON_KEY = '_ast_supabase_anon';
@@ -723,7 +724,7 @@ export function getSupabaseUrl(): string | undefined {
     // app no quede bloqueada y se usa la URL del entorno (Keys) o la por defecto.
     writeLocal(LOCAL_SB_URL_KEY, null);
   }
-  const env = (import.meta.env.V1 ?? import.meta.env.VITE_SUPABASE_URL) as string | undefined;
+  const env = import.meta.env.VITE_SUPABASE_URL as string | undefined;
   if (env && env.trim()) return env.trim();
   return DEFAULT_SUPABASE_URL.trim() || undefined;
 }
@@ -737,8 +738,16 @@ export function getSupabaseAnonKey(): string | undefined {
     // ni siquiera deja entrar. Lo limpiamos y usamos la clave del entorno.
     writeLocal(LOCAL_SB_ANON_KEY, null);
   }
-  const env = (import.meta.env.V2 ?? import.meta.env.VITE_SUPABASE_ANON_KEY) as string | undefined;
+  const env = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
   if (env && env.trim()) return env.trim();
+  if (!env && !_warnedMissingAnon) {
+    _warnedMissingAnon = true;
+    console.warn(
+      "[supabase] VITE_SUPABASE_ANON_KEY no está en este build. " +
+      "Si ya la guardaste en el tab Keys, guarda un cambio en el código " +
+      "para forzar la recompilación (las variables se hornean al compilar)."
+    );
+  }
   return (DEFAULT_SUPABASE_ANON_KEY && DEFAULT_SUPABASE_ANON_KEY.trim()) || undefined;
 }
 

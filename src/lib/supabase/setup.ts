@@ -18,7 +18,7 @@ import { CHAT_SCHEMA_SQL } from "./chat-schema";
  * Se lee de las variables del proyecto en orden:
  *   V3 (variable personalizada del tab Keys) → VITE_SUPABASE_ACCESS_TOKEN
  */
-export const SUPABASE_ACCESS_TOKEN = (import.meta.env.V3 ?? import.meta.env.VITE_SUPABASE_ACCESS_TOKEN) as string | undefined;
+export const SUPABASE_ACCESS_TOKEN = import.meta.env.VITE_SUPABASE_ACCESS_TOKEN as string | undefined;
 
 export { getSupabaseUrl, getSupabaseAnonKey };
 

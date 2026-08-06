@@ -187,6 +187,24 @@ export function SupabaseSetupDialog({ open, onOpenChange }: { open: boolean; onO
                 </div>
               </div>
 
+              <div className="rounded-xl border border-blue-200/60 bg-blue-50/60 dark:bg-blue-950/20 dark:border-blue-800/40 p-3 text-[10px] text-blue-800 dark:text-blue-300 leading-relaxed space-y-1">
+                <div className="flex items-start gap-1.5">
+                  <KeyRound size={11} className="shrink-0 mt-0.5" />
+                  <span>
+                    En el tab <b>Keys</b> usa el nombre <b>exacto</b> con prefijo{" "}
+                    <span className="font-mono">VITE_</span>: p. ej.{" "}
+                    <span className="font-mono">VITE_SUPABASE_ANON_KEY</span>. Sin el prefijo la app no puede leerla.
+                  </span>
+                </div>
+                <div className="flex items-start gap-1.5">
+                  <RefreshCw size={11} className="shrink-0 mt-0.5" />
+                  <span>
+                    Las variables se «hornean» al compilar: si ya la guardaste y aquí sigue diciendo «falta»,
+                    guarda cualquier cambio en el código (o recarga con el botón de abajo) para forzar la recompilación.
+                  </span>
+                </div>
+              </div>
+
               {/* Pegar credenciales directamente */}
               <div className="rounded-xl border border-primary/20 bg-primary/[0.04] p-3.5 space-y-2.5">
                 <div className="flex items-start gap-2 text-xs text-muted-foreground">
