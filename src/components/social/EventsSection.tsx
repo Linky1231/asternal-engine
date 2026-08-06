@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { fetchEvents, type EventItem } from "@/lib/social/api";
+import { fetchEvents, deleteEvent, type EventItem } from "@/lib/social/api";
 import {
   Calendar, Trophy, Clock, Users, FileText,
-  ChevronRight, ExternalLink, Sparkles,
+  ChevronRight, ExternalLink, Sparkles, Trash2,
 } from "lucide-react";
 
 function timeUntil(dateStr: string): string {
@@ -47,6 +47,15 @@ export function EventsSection({ isAdmin }: { isAdmin: boolean }) {
     const order = { upcoming: 0, active: 1, completed: 2 };
     return (order[a.status] ?? 3) - (order[b.status] ?? 3);
   });
+
+  const removeEvent = async (ev: EventItem) => {
+    if (!confirm(`¿Eliminar el evento "${ev.title}"? Esta acción no se puede deshacer.`)) return;
+    try {
+      await deleteEvent(ev.id);
+      setEvents(prev => prev.filter(e => e.id !== ev.id));
+      if (selected === ev.id) setSelected(null);
+    } catch { /* noop */ }
+  };
 
   const activeCount = events.filter(e => e.status === "active").length;
   const upcomingCount = events.filter(e => e.status === "upcoming").length;
@@ -213,7 +222,7 @@ export function EventsSection({ isAdmin }: { isAdmin: boolean }) {
                                 <p className="text-xs text-foreground/80 whitespace-pre-wrap">{ev.rules}</p>
                               </div>
                             )}
-                            <div className="flex items-center gap-2 pt-1">
+                            <div className="flex flex-wrap items-center gap-2 pt-1">
                               {!isPast && (
                                 <button
                                   className="h-8 px-4 rounded-lg bg-gradient-to-r from-primary to-accent text-primary-foreground text-[11px] font-medium hover:brightness-110 active:scale-[0.98] transition shadow-sm shadow-primary/20"
@@ -226,6 +235,14 @@ export function EventsSection({ isAdmin }: { isAdmin: boolean }) {
                                 <span className="text-[11px] text-emerald-600 font-medium">
                                   ✓ Participando
                                 </span>
+                              )}
+                              {isAdmin && (
+                                <button
+                                  onClick={() => removeEvent(ev)}
+                                  className="h-8 px-3 ml-auto rounded-lg border border-rose-200/70 text-rose-500 text-[11px] font-medium hover:bg-rose-50 dark:border-rose-800/40 dark:hover:bg-rose-950/20 transition active:scale-[0.98] flex items-center gap-1.5"
+                                >
+                                  <Trash2 size={12} /> Eliminar evento
+                                </button>
                               )}
                             </div>
                           </div>

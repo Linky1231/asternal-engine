@@ -1141,6 +1141,15 @@ export async function updateEventStatus(eventId: string, status: "upcoming" | "a
   if (error) throw error;
 }
 
+export async function deleteEvent(eventId: string): Promise<void> {
+  // RLS: solo el staff (admin) puede borrar eventos (política events_delete).
+  const { error } = await supabase
+    .from("events" as never)
+    .delete()
+    .eq("id", eventId);
+  if (error) throw error;
+}
+
 // ============ FOLLOWS ============
 export type FollowStats = { followers: number; following: number; i_follow: boolean };
 
