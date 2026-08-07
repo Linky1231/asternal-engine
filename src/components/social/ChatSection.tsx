@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, Copy, Check, Reply, SmilePlus, ImagePlus, Loader2, Users, WifiOff, Database, Plug, RefreshCw, KeyRound, CheckCircle2, AlertTriangle, Mic, Play, Pause, Trash2, ArrowDown, ExternalLink, Megaphone, Gift, PartyPopper, Lock, Sparkles } from "lucide-react";
+import { X, Send, Copy, Check, Reply, SmilePlus, ImagePlus, Loader2, Users, WifiOff, Database, Plug, RefreshCw, KeyRound, CheckCircle2, AlertTriangle, Mic, Play, Pause, Trash2, ArrowDown, ExternalLink, Megaphone, Gift, PartyPopper, Lock, Sparkles, Timer, Undo2 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
@@ -23,6 +23,7 @@ import {
   createOrbGift,
   claimOrbGift,
   fetchOrbGift,
+  expireOrbGifts,
   subscribeToOrbGifts,
   isAnnouncement,
   isGiftMessage,
@@ -340,18 +341,31 @@ function GiftCard({
   m,
   gift,
   claiming,
+  expiring,
   claimedAmount,
   onClaim,
+  onExpire,
 }: {
   m: ChatMessage;
   gift?: OrbGift | null;
   claiming: boolean;
+  expiring: boolean;
   claimedAmount?: number;
   onClaim: () => void;
+  onExpire: () => void;
 }) {
-  const [burst, setBurst] = useState<"claim" | "close" | null>(null);
+  const [burst, setBurst] = useState<"claim" | "close" | "expired" | null>(null);
+  const [now, setNow] = useState(() => Date.now());
   const prevStatus = useRef<string | undefined>(gift?.status);
   const celebratedClose = useRef(false);
+  const expiredFired = useRef(false);
+
+  // Tick cada segundo para el countdown de caducidad.
+  useEffect(() => {
+    if (!gift || gift.status !== "open") return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [gift]);
 
   // Animación de cierre cuando el paquete pasa de abierto a cerrado en vivo.
   useEffect(() => {
@@ -361,6 +375,12 @@ function GiftCard({
     if (gift.status === "closed" && prev === "open" && !celebratedClose.current && claimedAmount == null) {
       celebratedClose.current = true;
       setBurst("close");
+      const t = setTimeout(() => setBurst(null), 2600);
+      return () => clearTimeout(t);
+    }
+    if (gift.status === "expired" && prev === "open" && claimedAmount == null) {
+      celebratedClose.current = true;
+      setBurst("expired");
       const t = setTimeout(() => setBurst(null), 2600);
       return () => clearTimeout(t);
     }
@@ -386,8 +406,28 @@ function GiftCard({
   }
 
   const open = gift.status === "open";
+  const expired = gift.status === "expired";
   const progress = Math.min(100, Math.round((gift.claims / Math.max(1, gift.max_claims)) * 100));
   const remaining = Math.max(0, gift.max_claims - gift.claims);
+  const unclaimed = Math.max(0, gift.total_orbes - gift.claims * gift.amount_per_person);
+
+  // Tiempo restante para que caduque el paquete (24 h desde su creación).
+  const expiresAt = gift.expires_at ? new Date(gift.expires_at).getTime() : 0;
+  const msLeft = expiresAt ? Math.max(0, expiresAt - now) : 0;
+  const expiredLocal = open && expiresAt > 0 && msLeft <= 0;
+  const h = Math.floor(msLeft / 3_600_000);
+  const min = Math.floor((msLeft % 3_600_000) / 60_000);
+  const s = Math.floor((msLeft % 60_000) / 1000);
+  const countdown = `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+
+  // Si el paquete superó las 24 h estando abierto, pedimos al servidor que lo
+  // caduque y devuelva los orbes no reclamados (una sola vez).
+  useEffect(() => {
+    if (expiredLocal && !expiredFired.current) {
+      expiredFired.current = true;
+      onExpire();
+    }
+  }, [expiredLocal, onExpire]);
 
   return (
     <div className="flex justify-center px-1">
@@ -433,6 +473,16 @@ function GiftCard({
               transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
             />
           </div>
+          {open && !expiredLocal && (
+            <div className="flex items-center justify-center gap-1 mt-1.5 text-[10px] text-muted-foreground">
+              <Timer size={10} /> Caduca en {countdown}
+            </div>
+          )}
+          {expired && (
+            <div className="flex items-center justify-center gap-1 mt-1.5 text-[10px] text-muted-foreground">
+              <Undo2 size={10} /> Caducado · {unclaimed.toLocaleString("es")} orbes devueltos
+            </div>
+          )}
         </div>
 
         {/* Acción */}
@@ -441,15 +491,19 @@ function GiftCard({
             <div className="flex items-center justify-center gap-1.5 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-[11px] font-display tracking-wider">
               <CheckCircle2 size={13} /> ¡REGALO ABIERTO! +{claimedAmount} ORBES
             </div>
-          ) : open ? (
+          ) : open && !expiredLocal ? (
             <button
               onClick={onClaim}
-              disabled={claiming}
+              disabled={claiming || expiring}
               className="w-full py-2.5 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-[11px] font-display tracking-widest shadow-[0_6px_16px_-6px_oklch(0.488_0.185_264/0.5)] active:scale-[0.98] transition disabled:opacity-50 flex items-center justify-center gap-1.5"
             >
               {claiming ? <Loader2 size={13} className="animate-spin" /> : <Gift size={13} />}
               {claiming ? "ABRIENDO…" : "ABRIR REGALO"}
             </button>
+          ) : expired || expiredLocal ? (
+            <div className="flex items-center justify-center gap-1.5 py-2 rounded-xl border border-border bg-black/[0.04] dark:bg-white/[0.05] text-muted-foreground text-[11px] font-display tracking-wider">
+              <Undo2 size={11} /> PAQUETE CADUCADO
+            </div>
           ) : (
             <div className="flex items-center justify-center gap-1.5 py-2 rounded-xl border border-border bg-black/[0.04] dark:bg-white/[0.05] text-muted-foreground text-[11px] font-display tracking-wider">
               <Lock size={11} /> PAQUETE CERRADO
@@ -481,6 +535,21 @@ function GiftCard({
                   </div>
                   <div className="text-sm font-bold text-white drop-shadow">¡+{claimedAmount ?? gift.amount_per_person} ORBES!</div>
                   <div className="text-[10px] text-white/80 mt-0.5">Ya están en tu cuenta</div>
+                </motion.div>
+              ) : burst === "expired" ? (
+                <motion.div
+                  initial={{ scale: 0.7, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.85, opacity: 0 }}
+                  transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+                  style={{ willChange: "transform, opacity" }}
+                  className="text-center px-4"
+                >
+                  <div className="w-14 h-14 mx-auto mb-2.5 rounded-2xl bg-card border border-border text-muted-foreground grid place-items-center">
+                    <Undo2 size={24} />
+                  </div>
+                  <div className="text-sm font-bold text-white drop-shadow">¡El paquete caducó!</div>
+                  <div className="text-[10px] text-white/80 mt-0.5">Los orbes no reclamados se devolvieron al creador</div>
                 </motion.div>
               ) : (
                 <motion.div
@@ -562,6 +631,7 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
   const [gifts, setGifts] = useState<Map<string, OrbGift>>(new Map());
   const giftsRef = useRef<Map<string, OrbGift>>(new Map());
   const [claimingId, setClaimingId] = useState<string | null>(null);
+  const [expiringId, setExpiringId] = useState<string | null>(null);
   const [myClaims, setMyClaims] = useState<Map<string, number>>(new Map());
 
   const endRef = useRef<HTMLDivElement>(null);
@@ -1076,6 +1146,24 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
     toast.success(`¡+${amount} orbes a tu cuenta!`);
   }, [claimingId]);
 
+  // Caduca un paquete que superó las 24 h: el servidor devuelve al creador
+  // los orbes que nadie reclamó y el realtime avisa a todos los clientes.
+  const handleExpireGift = useCallback(async (giftId: string) => {
+    if (expiringId) return;
+    setExpiringId(giftId);
+    const closed = await expireOrbGifts();
+    setExpiringId(null);
+    const g = await fetchOrbGift(giftId).catch(() => null);
+    if (g) {
+      giftsRef.current.set(giftId, g);
+      setGifts(new Map(giftsRef.current));
+    }
+    if (closed > 0) {
+      const unclaimed = g ? Math.max(0, g.total_orbes - g.claims * g.amount_per_person) : 0;
+      toast.info("Paquete caducado", { description: `${unclaimed.toLocaleString("es")} orbes no reclamados se devolvieron al creador` });
+    }
+  }, [expiringId]);
+
   const onPickStickerFile = useCallback(
     async (file: File | null) => {
       if (!file || !chatInfo) return;      setStickerUploading(true);
@@ -1476,8 +1564,10 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
                 m={m}
                 gift={m.gift_id ? gifts.get(m.gift_id) ?? null : null}
                 claiming={claimingId === m.gift_id}
+                expiring={expiringId === m.gift_id}
                 claimedAmount={m.gift_id ? myClaims.get(m.gift_id) : undefined}
                 onClaim={() => m.gift_id && void handleClaimGift(m.gift_id)}
+                onExpire={() => m.gift_id && void handleExpireGift(m.gift_id)}
               />
             ) : (
               <MessageBubble

@@ -67,7 +67,8 @@ create table if not exists public.orb_gifts (
   total_orbes bigint not null,
   status text not null default 'open',
   created_at timestamptz not null default now(),
-  closed_at timestamptz
+  closed_at timestamptz,
+  expires_at timestamptz not null default now() + interval '24 hours'
 );
 
 create table if not exists public.orb_gift_claims (
@@ -80,6 +81,9 @@ create table if not exists public.orb_gift_claims (
 
 create index if not exists orb_gifts_chat_status_idx on public.orb_gifts (chat_id, status);
 create index if not exists orb_gift_claims_gift_idx on public.orb_gift_claims (gift_id);
+
+-- Caducidad de paquetes de regalo (para tablas creadas antes de esta función).
+alter table public.orb_gifts add column if not exists expires_at timestamptz not null default now() + interval '24 hours';
 
 -- ─────── BIBLIOTECA DE STICKERS POR CUENTA ───────
 -- Cada usuario guarda sus propios stickers; persisten entre sesiones y
@@ -204,8 +208,8 @@ begin
   update public.profiles set orbes = orbes - v_total, updated_at = now() where id = v_admin;
   insert into public.orbe_transactions (user_id, amount, kind, description)
     values (v_admin, -v_total, 'adjustment', 'Paquete de regalos: ' || coalesce(nullif(trim(_title), ''), 'Regalo comunitario'));
-  insert into public.orb_gifts (chat_id, created_by, amount_per_person, max_claims, total_orbes)
-    values (_chat_id, v_admin, _amount_per_person, _max_claims, v_total)
+  insert into public.orb_gifts (chat_id, created_by, amount_per_person, max_claims, total_orbes, expires_at)
+    values (_chat_id, v_admin, _amount_per_person, _max_claims, v_total, now() + interval '24 hours')
     returning id into v_gift_id;
   insert into public.chat_messages (chat_id, sender_id, content, kind, gift_id)
     values (_chat_id, v_admin, coalesce(nullif(trim(_title), ''), '¡Hay regalos para la comunidad! 🎁'), 'gift', v_gift_id)
@@ -269,11 +273,47 @@ returns jsonb language sql stable security definer set search_path = public as $
     'status', g.status,
     'created_at', g.created_at,
     'closed_at', g.closed_at,
+    'expires_at', g.expires_at,
     'claimed_by_me', exists (select 1 from public.orb_gift_claims c where c.gift_id = g.id and c.user_id = auth.uid())
   )
   from public.orb_gifts g
   where g.id = _gift_id
 $$;
+
+-- Caducidad: si en 24 horas el paquete no se llenó, se cierra y se devuelven
+-- al creador los orbes que nadie reclamó (con su registro de transacción).
+create or replace function public.expire_orb_gifts()
+returns int language plpgsql security definer set search_path = public as $$
+declare
+  v_gift record;
+  v_claimed bigint;
+  v_unclaimed bigint;
+  v_count int := 0;
+begin
+  for v_gift in
+    select id, created_by, total_orbes from public.orb_gifts
+    where status = 'open' and expires_at < now()
+  loop
+    select count(*) into v_claimed
+    from public.orb_gift_claims where gift_id = v_gift.id;
+    v_unclaimed := greatest(v_gift.total_orbes - v_claimed * (select amount_per_person from public.orb_gifts where id = v_gift.id), 0);
+
+    update public.orb_gifts
+    set status = 'expired', closed_at = now()
+    where id = v_gift.id and status = 'open';
+
+    if v_unclaimed > 0 then
+      update public.profiles
+      set orbes = orbes + v_unclaimed, updated_at = now()
+      where id = v_gift.created_by;
+      insert into public.orbe_transactions (user_id, amount, kind, description)
+        values (v_gift.created_by, v_unclaimed, 'refund',
+          'Reembolso de paquete de regalos caducado (' || v_unclaimed || ' orbes sin reclamar)');
+    end if;
+    v_count := v_count + 1;
+  end loop;
+  return v_count;
+end $$;
 
 -- Realtime: los mensajes nuevos llegan al instante a todos los clientes conectados.
 -- Se protege por si la publicación ya existe o el proyecto no la tiene.

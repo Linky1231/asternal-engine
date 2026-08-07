@@ -640,11 +640,23 @@ export type OrbGift = {
   max_claims: number;
   claims: number;
   total_orbes: number;
-  status: "open" | "closed";
+  status: "open" | "closed" | "expired";
   created_at: string;
   closed_at: string | null;
+  expires_at?: string | null;
   claimed_by_me?: boolean;
 };
+
+/**
+ * Caduca los paquetes de regalo abiertos que superaron las 24 horas y
+ * devuelve al creador los orbes que nadie reclamó. Devuelve cuántos se
+ * cerraron (0 si no había ninguno vencido).
+ */
+export async function expireOrbGifts(): Promise<number> {
+  const { data, error } = await supabase.rpc("expire_orb_gifts" as never);
+  if (error || typeof data !== "number") return 0;
+  return data;
+}
 
 /** Publica un aviso del grupo en el chat (solo el administrador). */
 export async function createAnnouncement(
