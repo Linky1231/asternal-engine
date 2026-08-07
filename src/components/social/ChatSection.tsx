@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, Copy, Check, Reply, SmilePlus, ImagePlus, Loader2, Users, WifiOff, Database, Plug, RefreshCw, KeyRound, CheckCircle2, AlertTriangle, Mic, Play, Pause, Trash2, ArrowDown, ExternalLink } from "lucide-react";
+import { X, Send, Copy, Check, Reply, SmilePlus, ImagePlus, Loader2, Users, WifiOff, Database, Plug, RefreshCw, KeyRound, CheckCircle2, AlertTriangle, Mic, Play, Pause, Trash2, ArrowDown, ExternalLink, Megaphone, Gift, PartyPopper, Lock, Sparkles } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
@@ -19,14 +19,22 @@ import {
   queuePendingMessage,
   flushPendingMessages,
   isChatSchemaOutdated,
+  createAnnouncement,
+  createOrbGift,
+  claimOrbGift,
+  fetchOrbGift,
+  subscribeToOrbGifts,
+  isAnnouncement,
+  isGiftMessage,
   COMMUNITY_CHAT_NAME,
   CHAT_ERR,
   type ChatMessage,
   type ChatSticker,
+  type OrbGift,
 } from "@/lib/social/chat";
-import { hasSupabaseConfig, saveSupabaseCredentials, isSchemaMissing, getSupabaseUrl } from "@/integrations/supabase/client";
+import { supabase, hasSupabaseConfig, saveSupabaseCredentials, isSchemaMissing, getSupabaseUrl } from "@/integrations/supabase/client";
 import { UserName } from "./UserName";
-import { getMyProfile } from "@/lib/social/api";
+import { getMyProfile, getMyOrbes, isAdmin } from "@/lib/social/api";
 import type { Profile } from "@/lib/social/api";
 import { runChatSchemaSetup, SUPABASE_ACCESS_TOKEN, sqlEditorUrl } from "@/lib/supabase/setup";
 import { CHAT_SCHEMA_SQL } from "@/lib/supabase/chat-schema";
@@ -303,6 +311,201 @@ function MessageBubble({
   );
 }
 
+/** Aviso del grupo: solo lo publica el administrador y lo ve toda la comunidad. */
+function AnnouncementCard({ m, sender }: { m: ChatMessage; sender?: Profile | null }) {
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/[0.12] via-accent/[0.08] to-transparent px-3.5 py-3 shadow-sm">
+      <div className="absolute -right-8 -top-8 w-28 h-28 rounded-full bg-primary/15 blur-2xl pointer-events-none" />
+      <div className="relative flex items-start gap-2.5">
+        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center shrink-0 shadow-[0_4px_12px_-6px_oklch(0.488_0.185_264/0.6)]">
+          <Megaphone size={14} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[9px] font-display tracking-[0.18em] text-primary font-bold">AVISO DE LA COMUNIDAD</span>
+            <span className="text-[9px] text-muted-foreground/70">
+              {sender?.display_name || sender?.username ? `${sender?.display_name || sender?.username} · ` : ""}
+              {fmtDay(m.created_at)}
+            </span>
+          </div>
+          <p className="text-[13px] leading-snug font-medium mt-1 whitespace-pre-wrap break-words">{m.content}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Paquete de regalos de orbes: abre, cuenta atrás y animaciones al abrir/cerrar. */
+function GiftCard({
+  m,
+  gift,
+  myId,
+  claiming,
+  claimedAmount,
+  onClaim,
+}: {
+  m: ChatMessage;
+  gift?: OrbGift | null;
+  myId: string | null;
+  claiming: boolean;
+  claimedAmount?: number;
+  onClaim: () => void;
+}) {
+  const [burst, setBurst] = useState<"claim" | "close" | null>(null);
+  const prevStatus = useRef<string | undefined>(gift?.status);
+  const celebratedClose = useRef(false);
+
+  // Animación de cierre cuando el paquete pasa de abierto a cerrado en vivo.
+  useEffect(() => {
+    if (!gift) return;
+    const prev = prevStatus.current;
+    prevStatus.current = gift.status;
+    if (gift.status === "closed" && prev === "open" && !celebratedClose.current && claimedAmount == null) {
+      celebratedClose.current = true;
+      setBurst("close");
+      const t = setTimeout(() => setBurst(null), 2600);
+      return () => clearTimeout(t);
+    }
+  }, [gift, claimedAmount]);
+
+  // Animación de apertura justo después de reclamar el regalo.
+  useEffect(() => {
+    if (claimedAmount != null) {
+      setBurst("claim");
+      const t = setTimeout(() => setBurst(null), 2600);
+      return () => clearTimeout(t);
+    }
+  }, [claimedAmount]);
+
+  if (!gift) {
+    return (
+      <div className="flex justify-center">
+        <div className="flex items-center gap-2 px-4 py-3 rounded-2xl border border-border bg-card text-[11px] text-muted-foreground">
+          <Loader2 size={13} className="animate-spin" /> Cargando regalo…
+        </div>
+      </div>
+    );
+  }
+
+  const open = gift.status === "open";
+  const mine = m.sender_id === myId;
+  const progress = Math.min(100, Math.round((gift.claims / Math.max(1, gift.max_claims)) * 100));
+  const remaining = Math.max(0, gift.max_claims - gift.claims);
+
+  return (
+    <div className="flex justify-center px-1">
+      <div className="relative w-full max-w-sm overflow-hidden rounded-2xl border border-amber-400/25 bg-gradient-to-br from-amber-500/[0.10] via-rose-500/[0.06] to-transparent px-3.5 py-3 shadow-sm">
+        <div className="absolute -left-6 -top-8 w-24 h-24 rounded-full bg-amber-400/15 blur-2xl pointer-events-none" />
+        <div className="absolute -right-6 -bottom-8 w-24 h-24 rounded-full bg-rose-500/10 blur-2xl pointer-events-none" />
+
+        <div className="relative flex items-center gap-3">
+          <motion.div
+            animate={open ? { y: [0, -4, 0] } : {}}
+            transition={{ repeat: Infinity, duration: 1.6, ease: "easeInOut" }}
+            className="text-4xl leading-none drop-shadow-[0_6px_12px_rgba(251,191,36,0.35)]"
+          >
+            {open ? "🎁" : "📦"}
+          </motion.div>
+          <div className="flex-1 min-w-0">
+            <div className="text-[9px] font-display tracking-[0.18em] text-amber-600 dark:text-amber-400 font-bold">
+              PAQUETE DE REGALOS · {mine ? "ADMIN" : "COMUNIDAD"}
+            </div>
+            <div className="text-[13px] font-semibold leading-tight mt-0.5">{m.content}</div>
+            <div className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1">
+              <Sparkles size={11} className="text-amber-500" />
+              <b>{gift.amount_per_person} orbes</b> por persona · {gift.max_claims} {gift.max_claims === 1 ? "regalo" : "regalos"}
+            </div>
+          </div>
+        </div>
+
+        {/* Progreso de aperturas */}
+        <div className="relative mt-3">
+          <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-1">
+            <span>{gift.claims} / {gift.max_claims} abiertos</span>
+            <span className={open ? "text-amber-600 dark:text-amber-400 font-semibold" : "text-muted-foreground"}>
+              {open ? `${remaining} restan${remaining === 1 ? "" : "n"}` : "Cerrado"}
+            </span>
+          </div>
+          <div className="h-2 rounded-full bg-black/10 dark:bg-white/10 overflow-hidden">
+            <motion.div
+              className="h-full rounded-full bg-gradient-to-r from-amber-400 to-rose-500"
+              initial={false}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.4, ease: "easeOut" }}
+            />
+          </div>
+        </div>
+
+        {/* Acción */}
+        <div className="relative mt-3">
+          {claimedAmount != null ? (
+            <div className="flex items-center justify-center gap-1.5 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-[11px] font-display tracking-wider">
+              <CheckCircle2 size={13} /> ¡REGALO ABIERTO! +{claimedAmount} ORBES
+            </div>
+          ) : open ? (
+            <button
+              onClick={onClaim}
+              disabled={claiming}
+              className="w-full py-2.5 rounded-xl bg-gradient-to-br from-amber-400 to-rose-500 text-white text-[11px] font-display tracking-widest shadow-[0_6px_16px_-6px_rgba(251,146,60,0.7)] active:scale-[0.98] transition disabled:opacity-50 flex items-center justify-center gap-1.5"
+            >
+              {claiming ? <Loader2 size={13} className="animate-spin" /> : <Gift size={13} />}
+              {claiming ? "ABRIENDO…" : "ABRIR REGALO"}
+            </button>
+          ) : (
+            <div className="flex items-center justify-center gap-1.5 py-2 rounded-xl border border-border bg-black/[0.04] dark:bg-white/[0.05] text-muted-foreground text-[11px] font-display tracking-wider">
+              <Lock size={11} /> PAQUETE CERRADO
+            </div>
+          )}
+        </div>
+
+        {/* Animaciones: apertura (reclamé) y cierre (se llenó) */}
+        <AnimatePresence>
+          {burst && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 z-10 grid place-items-center rounded-2xl bg-black/55 backdrop-blur-[2px]"
+            >
+              {burst === "claim" ? (
+                <motion.div
+                  initial={{ scale: 0.4, y: 12 }}
+                  animate={{ scale: 1, y: 0 }}
+                  exit={{ scale: 0.7, opacity: 0 }}
+                  transition={{ type: "spring", stiffness: 320, damping: 18 }}
+                  className="text-center px-4"
+                >
+                  <motion.div
+                    animate={{ rotate: [0, -8, 8, 0] }}
+                    transition={{ repeat: Infinity, duration: 0.9 }}
+                    className="text-5xl mb-2"
+                  >
+                    🎉
+                  </motion.div>
+                  <div className="text-sm font-bold text-white drop-shadow">¡+{claimedAmount ?? gift.amount_per_person} ORBES!</div>
+                  <div className="text-[10px] text-white/80 mt-0.5">Ya están en tu cuenta ✨</div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  initial={{ scale: 0.6 }}
+                  animate={{ scale: 1 }}
+                  exit={{ scale: 0.8, opacity: 0 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                  className="text-center px-4"
+                >
+                  <div className="text-5xl mb-2">🎊</div>
+                  <div className="text-sm font-bold text-white drop-shadow">¡Se acabó el paquete!</div>
+                  <div className="text-[10px] text-white/80 mt-0.5">Todos los regalos fueron abiertos</div>
+                </motion.div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
+
 export default function ChatSection({ myId, onClose }: { myId: string | null; onClose: () => void }) {
   const [chatInfo, setChatInfo] = useState<{ id: string; name: string; memberCount: number; memberOk?: boolean; local?: boolean } | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -343,6 +546,23 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
   const [signedMedia, setSignedMedia] = useState<Map<string, string>>(new Map());
   // ¿La tabla del chat está desactualizada (sin la columna media_type)?
   const [schemaOutdated, setSchemaOutdated] = useState(false);
+  // Avisos del grupo y paquetes de regalo (solo el administrador puede crearlos)
+  const [isOwner, setIsOwner] = useState(false);
+  const [announceOpen, setAnnounceOpen] = useState(false);
+  const [announceText, setAnnounceText] = useState("");
+  const [announceBusy, setAnnounceBusy] = useState(false);
+  const [announceErr, setAnnounceErr] = useState<string | null>(null);
+  const [giftOpen, setGiftOpen] = useState(false);
+  const [giftTitle, setGiftTitle] = useState("");
+  const [giftAmount, setGiftAmount] = useState("200");
+  const [giftPeople, setGiftPeople] = useState("5");
+  const [giftBusy, setGiftBusy] = useState(false);
+  const [giftErr, setGiftErr] = useState<string | null>(null);
+  const [myOrbes, setMyOrbes] = useState<number | null>(null);
+  const [gifts, setGifts] = useState<Map<string, OrbGift>>(new Map());
+  const giftsRef = useRef<Map<string, OrbGift>>(new Map());
+  const [claimingId, setClaimingId] = useState<string | null>(null);
+  const [myClaims, setMyClaims] = useState<Map<string, number>>(new Map());
 
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -498,6 +718,67 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
     });
     return unsub;
   }, [chatInfo, loadSenders]);
+
+  // ¿Es el administrador propietario? (solo linkyteam989@gmail.com puede
+  // publicar avisos y crear paquetes de regalo; el servidor lo refuerza).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (user?.email && user.email.toLowerCase() === "linkyteam989@gmail.com") {
+          if (!cancelled) setIsOwner(true);
+          return;
+        }
+        const ok = await isAdmin().catch(() => false);
+        if (!cancelled) setIsOwner(ok);
+      } catch {
+        if (!cancelled) setIsOwner(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Carga el estado de los paquetes de regalo referenciados en los mensajes.
+  useEffect(() => {
+    const ids = Array.from(new Set(messages.map((m) => m.gift_id).filter((x): x is string => !!x)));
+    const need = ids.filter((id) => !giftsRef.current.has(id));
+    if (!need.length) return;
+    let cancelled = false;
+    (async () => {
+      for (const id of need) {
+        try {
+          const g = await fetchOrbGift(id);
+          if (cancelled || !g) continue;
+          giftsRef.current.set(id, g);
+        } catch {
+          /* noop */
+        }
+      }
+      if (!cancelled) setGifts(new Map(giftsRef.current));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [messages]);
+
+  // Realtime de los paquetes: aperturas y cierres en vivo para todos.
+  useEffect(() => {
+    if (!chatInfo) return;
+    const unsub = subscribeToOrbGifts((type, g) => {
+      setGifts((prev) => {
+        const next = new Map(prev);
+        if (type === "DELETE") next.delete(g.id);
+        else next.set(g.id, { ...(next.get(g.id) ?? ({} as OrbGift)), ...g });
+        return next;
+      });
+    });
+    return unsub;
+  }, [chatInfo]);
 
   // Reenvía automáticamente los mensajes que quedaron pendientes por un fallo de
   // red (el servidor no respondió) cuando el chat está listo o vuelve la conexión.
@@ -701,6 +982,99 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
     }
   }, []);
 
+  const publishAnnouncement = useCallback(async () => {
+    const text = announceText.trim();
+    if (!chatInfo || !text) return;
+    setAnnounceBusy(true);
+    setAnnounceErr(null);
+    const r = await createAnnouncement(chatInfo.id, text);
+    setAnnounceBusy(false);
+    if (!r.ok) {
+      setAnnounceErr(r.error ?? "No se pudo publicar el aviso");
+      return;
+    }
+    if (r.message) {
+      const msg = r.message;
+      setMessages((prev) => (prev.some((x) => x.id === msg.id) ? prev : [...prev, msg]));
+      void loadSenders([msg]);
+    }
+    setAnnounceOpen(false);
+    setAnnounceText("");
+    toast.success("Aviso publicado para toda la comunidad");
+  }, [chatInfo, announceText, loadSenders]);
+
+  const createGiftPackage = useCallback(async () => {
+    if (!chatInfo) return;
+    const amount = Math.floor(Number(giftAmount) || 0);
+    const people = Math.floor(Number(giftPeople) || 0);
+    if (amount < 100 || amount % 2 !== 0) {
+      setGiftErr("La cantidad por persona debe ser par y de mínimo 100 orbes.");
+      return;
+    }
+    if (people < 1 || people > 1000) {
+      setGiftErr("La cantidad de personas debe estar entre 1 y 1000.");
+      return;
+    }
+    if (myOrbes != null && amount * people > myOrbes) {
+      setGiftErr(`Necesitas ${amount * people} orbes y tienes ${myOrbes}.`);
+      return;
+    }
+    setGiftBusy(true);
+    setGiftErr(null);
+    const r = await createOrbGift(chatInfo.id, {
+      title: giftTitle.trim(),
+      amountPerPerson: amount,
+      maxClaims: people,
+    });
+    setGiftBusy(false);
+    if (!r.ok) {
+      setGiftErr(r.error ?? "No se pudo crear el paquete de regalos");
+      return;
+    }
+    if (r.message) {
+      const msg = r.message;
+      setMessages((prev) => (prev.some((x) => x.id === msg.id) ? prev : [...prev, msg]));
+      void loadSenders([msg]);
+    }
+    if (r.giftId) {
+      const g = await fetchOrbGift(r.giftId).catch(() => null);
+      if (g) {
+        giftsRef.current.set(g.id, g);
+        setGifts(new Map(giftsRef.current));
+      }
+    }
+    setGiftOpen(false);
+    setGiftTitle("");
+    setGiftAmount("200");
+    setGiftPeople("5");
+    setMyOrbes((o) => (o == null ? o : Math.max(0, o - amount * people)));
+    toast.success("¡Paquete de regalos creado!");
+  }, [chatInfo, giftTitle, giftAmount, giftPeople, myOrbes, loadSenders]);
+
+  const handleClaimGift = useCallback(async (giftId: string) => {
+    if (claimingId) return;
+    setClaimingId(giftId);
+    const r = await claimOrbGift(giftId);
+    setClaimingId(null);
+    if (!r.ok) {
+      toast.error(r.error ?? "No se pudo abrir el regalo");
+      const g = await fetchOrbGift(giftId).catch(() => null);
+      if (g) {
+        giftsRef.current.set(giftId, g);
+        setGifts(new Map(giftsRef.current));
+      }
+      return;
+    }
+    const amount = r.amount ?? 0;
+    setMyClaims((prev) => new Map(prev).set(giftId, amount));
+    const g = await fetchOrbGift(giftId).catch(() => null);
+    if (g) {
+      giftsRef.current.set(giftId, g);
+      setGifts(new Map(giftsRef.current));
+    }
+    toast.success(`¡+${amount} orbes a tu cuenta!`);
+  }, [claimingId]);
+
   const onPickStickerFile = useCallback(
     async (file: File | null) => {
       if (!file || !chatInfo) return;      setStickerUploading(true);
@@ -886,6 +1260,36 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
               </div>
             </div>
           </div>
+          {isOwner && (
+            <>
+              <button
+                onClick={() => {
+                  setAnnounceErr(null);
+                  setAnnounceText("");
+                  setAnnounceOpen(true);
+                }}
+                title="Publicar aviso del grupo"
+                className="w-9 h-9 rounded-xl border border-primary/40 bg-primary/10 text-primary grid place-items-center active:scale-95 transition shrink-0 hover:bg-primary/20"
+              >
+                <Megaphone size={15} />
+              </button>
+              <button
+                onClick={() => {
+                  setGiftErr(null);
+                  setGiftAmount("200");
+                  setGiftPeople("5");
+                  setGiftOpen(true);
+                  void getMyOrbes()
+                    .then(setMyOrbes)
+                    .catch(() => setMyOrbes(null));
+                }}
+                title="Crear paquete de regalos"
+                className="w-9 h-9 rounded-xl border border-amber-400/40 bg-amber-400/10 text-amber-500 grid place-items-center active:scale-95 transition shrink-0 hover:bg-amber-400/20"
+              >
+                <Gift size={15} />
+              </button>
+            </>
+          )}
           <button
             onClick={() => {
               setInstallToken(SUPABASE_ACCESS_TOKEN ?? "");
@@ -1062,23 +1466,37 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
             Sé el primero en saludar a la comunidad 👋
           </div>
         ) : (
-          messages.map((m) => (
-            <MessageBubble
-              key={m.id}
-              m={m}
-              mine={m.sender_id === myId}
-              sender={senders.get(m.sender_id)}
-              reply={m.reply_to_id ? messages.find((x) => x.id === m.reply_to_id) ?? null : null}
-              mediaUrl={resolveMediaUrl(m.media_url, signedMedia)}
-              copied={copiedId === m.id}
-              onCopy={() => void copyMessage(m)}
-              onReply={() => {
-                setReplyTo(m);
-                setStickersOpen(false);
-                inputRef.current?.focus();
-              }}
-            />
-          ))
+          messages.map((m) =>
+            isAnnouncement(m) ? (
+              <AnnouncementCard key={m.id} m={m} sender={senders.get(m.sender_id)} />
+            ) : isGiftMessage(m) ? (
+              <GiftCard
+                key={m.id}
+                m={m}
+                gift={m.gift_id ? gifts.get(m.gift_id) ?? null : null}
+                myId={myId}
+                claiming={claimingId === m.gift_id}
+                claimedAmount={m.gift_id ? myClaims.get(m.gift_id) : undefined}
+                onClaim={() => m.gift_id && void handleClaimGift(m.gift_id)}
+              />
+            ) : (
+              <MessageBubble
+                key={m.id}
+                m={m}
+                mine={m.sender_id === myId}
+                sender={senders.get(m.sender_id)}
+                reply={m.reply_to_id ? messages.find((x) => x.id === m.reply_to_id) ?? null : null}
+                mediaUrl={resolveMediaUrl(m.media_url, signedMedia)}
+                copied={copiedId === m.id}
+                onCopy={() => void copyMessage(m)}
+                onReply={() => {
+                  setReplyTo(m);
+                  setStickersOpen(false);
+                  inputRef.current?.focus();
+                }}
+              />
+            )
+          )
         )}
         <div ref={endRef} />
         {unseen > 0 && (
@@ -1445,6 +1863,178 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
                     </a>
                   )}
                 </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Diálogo: publicar aviso del grupo (solo admin) */}
+      <AnimatePresence>
+        {announceOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-[95] bg-black/55 backdrop-blur-md grid place-items-center p-4"
+            onClick={() => setAnnounceOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.96, y: 8 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.96, y: 8 }}
+              transition={{ duration: 0.16, ease: "easeOut" }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm bg-card border border-border rounded-2xl p-4 shadow-xl"
+            >
+              <div className="text-sm font-semibold mb-0.5 flex items-center gap-2">
+                <Megaphone size={15} className="text-primary" /> Publicar aviso del grupo
+              </div>
+              <p className="text-[11px] text-muted-foreground mb-3">
+                El aviso aparece destacado para toda la comunidad en el chat. Solo tu cuenta de
+                administrador puede publicar avisos.
+              </p>
+              <textarea
+                value={announceText}
+                onChange={(e) => {
+                  setAnnounceText(e.target.value);
+                  setAnnounceErr(null);
+                }}
+                rows={4}
+                maxLength={500}
+                placeholder="Escribe el aviso…"
+                className="w-full bg-input/50 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40 border border-border/60 mb-2 resize-none"
+              />
+              {announceErr && (
+                <div className="mb-3 rounded-lg border border-rose-500/30 bg-rose-500/[0.06] px-3 py-2 text-[11px] text-rose-700 dark:text-rose-300 flex items-start gap-1.5">
+                  <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+                  <span>{announceErr}</span>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setAnnounceOpen(false)}
+                  className="flex-1 py-2 rounded-xl border border-border bg-background text-xs font-display tracking-widest active:scale-[0.98] transition"
+                >
+                  CANCELAR
+                </button>
+                <button
+                  onClick={() => void publishAnnouncement()}
+                  disabled={announceBusy || !announceText.trim()}
+                  className="flex-1 py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-xs font-display tracking-widest active:scale-[0.98] transition disabled:opacity-40 flex items-center justify-center gap-1.5"
+                >
+                  {announceBusy ? <Loader2 size={13} className="animate-spin" /> : <Megaphone size={13} />}
+                  {announceBusy ? "PUBLICANDO…" : "PUBLICAR AVISO"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Diálogo: crear paquete de regalos (solo admin) */}
+      <AnimatePresence>
+        {giftOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-[95] bg-black/55 backdrop-blur-md grid place-items-center p-4"
+            onClick={() => setGiftOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.96, y: 8 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.96, y: 8 }}
+              transition={{ duration: 0.16, ease: "easeOut" }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm bg-card border border-border rounded-2xl p-4 shadow-xl"
+            >
+              <div className="text-sm font-semibold mb-0.5 flex items-center gap-2">
+                <PartyPopper size={15} className="text-amber-500" /> Crear paquete de regalos
+              </div>
+              <p className="text-[11px] text-muted-foreground mb-3">
+                Regala orbes a la comunidad: elige cuántos orbes por persona (par, mínimo 100) y
+                cuántas personas pueden abrirlo. Al llenarse, el paquete se cierra con animación.
+              </p>
+              <div className="mb-3 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-[11px] flex items-center gap-2">
+                <Sparkles size={12} className="text-primary" />
+                <span className="flex-1 text-muted-foreground">Tu saldo actual</span>
+                <b>${myOrbes == null ? "…" : myOrbes.toLocaleString()}</b> orbes
+              </div>
+              <input
+                value={giftTitle}
+                onChange={(e) => {
+                  setGiftTitle(e.target.value);
+                  setGiftErr(null);
+                }}
+                maxLength={80}
+                placeholder="Título (opcional) — p. ej. ¡Regalo por el evento!"
+                className="w-full bg-input/50 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40 border border-border/60 mb-2"
+              />
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                <div>
+                  <label className="text-[10px] text-muted-foreground mb-1 block">
+                    Orbes por persona (par, mín. 100)
+                  </label>
+                  <input
+                    type="number"
+                    min={100}
+                    step={2}
+                    value={giftAmount}
+                    onChange={(e) => {
+                      setGiftAmount(e.target.value);
+                      setGiftErr(null);
+                    }}
+                    className="w-full bg-input/50 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40 border border-border/60"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-muted-foreground mb-1 block">Personas que pueden abrir</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={1000}
+                    value={giftPeople}
+                    onChange={(e) => {
+                      setGiftPeople(e.target.value);
+                      setGiftErr(null);
+                    }}
+                    className="w-full bg-input/50 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40 border border-border/60"
+                  />
+                </div>
+              </div>
+              <div className="mb-3 rounded-xl border border-amber-400/25 bg-amber-400/10 px-3 py-2 text-[11px] flex items-center gap-1.5">
+                <Gift size={12} className="text-amber-500" />
+                <span className="flex-1 text-muted-foreground">Total a descontar de tu saldo</span>
+                <b className="text-amber-600 dark:text-amber-400">
+                  ${(Math.floor(Number(giftAmount) || 0) * Math.floor(Number(giftPeople) || 0)).toLocaleString()}
+                </b>{" "}
+                orbes
+              </div>
+              {giftErr && (
+                <div className="mb-3 rounded-lg border border-rose-500/30 bg-rose-500/[0.06] px-3 py-2 text-[11px] text-rose-700 dark:text-rose-300 flex items-start gap-1.5">
+                  <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+                  <span>{giftErr}</span>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setGiftOpen(false)}
+                  className="flex-1 py-2 rounded-xl border border-border bg-background text-xs font-display tracking-widest active:scale-[0.98] transition"
+                >
+                  CANCELAR
+                </button>
+                <button
+                  onClick={() => void createGiftPackage()}
+                  disabled={giftBusy}
+                  className="flex-1 py-2 rounded-xl bg-gradient-to-br from-amber-400 to-rose-500 text-white text-xs font-display tracking-widest active:scale-[0.98] transition disabled:opacity-40 flex items-center justify-center gap-1.5"
+                >
+                  {giftBusy ? <Loader2 size={13} className="animate-spin" /> : <Gift size={13} />}
+                  {giftBusy ? "CREANDO…" : "CREAR REGALOS"}
+                </button>
               </div>
             </motion.div>
           </motion.div>

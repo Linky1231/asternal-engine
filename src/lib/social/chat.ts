@@ -11,6 +11,8 @@ export type ChatMessage = {
   media_url: string | null;
   media_type: string | null;
   reply_to_id: string | null;
+  kind?: string | null;
+  gift_id?: string | null;
   created_at: string;
 };
 
@@ -613,5 +615,123 @@ export async function isChatSchemaOutdated(): Promise<boolean> {
     return error.code === "PGRST204" || /schema cache/i.test(msg) || /could not find the .* column/i.test(msg);
   } catch {
     return false;
+  }
+}
+
+// ───── Avisos del grupo y paquetes de regalo ─────
+// Los avisos solo los publica el administrador (linkyteam989@gmail.com) y son
+// visibles para todos. Los paquetes de regalo reparten orbes: el admin elige
+// la cantidad por persona (par, mínimo 100) y cuántas personas pueden abrirlo;
+// al llenarse, el paquete se cierra automáticamente.
+
+export function isAnnouncement(m: Pick<ChatMessage, "kind">): boolean {
+  return m.kind === "announcement";
+}
+
+export function isGiftMessage(m: Pick<ChatMessage, "kind">): boolean {
+  return m.kind === "gift";
+}
+
+export type OrbGift = {
+  id: string;
+  chat_id: string;
+  created_by: string;
+  amount_per_person: number;
+  max_claims: number;
+  claims: number;
+  total_orbes: number;
+  status: "open" | "closed";
+  created_at: string;
+  closed_at: string | null;
+  claimed_by_me?: boolean;
+};
+
+/** Publica un aviso del grupo en el chat (solo el administrador). */
+export async function createAnnouncement(
+  chatId: string,
+  content: string
+): Promise<{ ok: boolean; message?: ChatMessage; error?: string }> {
+  const { data, error } = await supabase.rpc("create_announcement", {
+    _chat_id: chatId,
+    _content: content,
+  } as never);
+  if (error) return { ok: false, error: error.message };
+  return (data as { ok: boolean; message?: ChatMessage; error?: string }) ?? { ok: false, error: "Error desconocido" };
+}
+
+/** Crea un paquete de regalos de orbes en el chat (solo el administrador). */
+export async function createOrbGift(
+  chatId: string,
+  opts: { title?: string; amountPerPerson: number; maxClaims: number }
+): Promise<{ ok: boolean; giftId?: string; message?: ChatMessage; error?: string }> {
+  const { data, error } = await supabase.rpc("create_orb_gift", {
+    _chat_id: chatId,
+    _title: opts.title ?? "",
+    _amount_per_person: Math.floor(opts.amountPerPerson),
+    _max_claims: Math.floor(opts.maxClaims),
+  } as never);
+  if (error) return { ok: false, error: error.message };
+  const r = (data as { ok: boolean; gift_id?: string; message?: ChatMessage; error?: string }) ?? {};
+  return { ok: !!r.ok, giftId: r.gift_id, message: r.message, error: r.error };
+}
+
+/** Abre un regalo del paquete y acredita los orbes al usuario. */
+export async function claimOrbGift(
+  giftId: string
+): Promise<{ ok: boolean; amount?: number; claims?: number; closed?: boolean; error?: string }> {
+  const { data, error } = await supabase.rpc("claim_orb_gift", { _gift_id: giftId } as never);
+  if (error) return { ok: false, error: error.message };
+  return (
+    (data as { ok: boolean; amount?: number; claims?: number; closed?: boolean; error?: string }) ??
+    { ok: false, error: "Error desconocido" }
+  );
+}
+
+/** Estado actual de un paquete de regalo (para renderizar la tarjeta). */
+export async function fetchOrbGift(giftId: string): Promise<OrbGift | null> {
+  const { data, error } = await supabase.rpc("get_orb_gift", { _gift_id: giftId } as never);
+  if (error || !data) return null;
+  return data as OrbGift;
+}
+
+/**
+ * Realtime de los paquetes de regalo: cuando alguien abre un regalo o el
+ * paquete se cierra, todos los clientes conectados lo ven al instante.
+ */
+export function subscribeToOrbGifts(
+  onChange: (type: "INSERT" | "UPDATE" | "DELETE", gift: OrbGift) => void
+): () => void {
+  if (typeof supabase.channel !== "function") return () => {};
+  try {
+    const base: any = supabase.channel("orb-gifts");
+    if (!base || typeof base.on !== "function") {
+      if (typeof base?.subscribe === "function") base.subscribe();
+      return () => {};
+    }
+    base.on(
+      "postgres_changes",
+      { schema: "public", table: "orb_gifts", event: "INSERT" },
+      (p: any) => onChange("INSERT", p.new as OrbGift)
+    );
+    base.on(
+      "postgres_changes",
+      { schema: "public", table: "orb_gifts", event: "UPDATE" },
+      (p: any) => onChange("UPDATE", p.new as OrbGift)
+    );
+    base.on(
+      "postgres_changes",
+      { schema: "public", table: "orb_gifts", event: "DELETE" },
+      (p: any) => onChange("DELETE", p.old as OrbGift)
+    );
+    base.subscribe();
+    return () => {
+      try {
+        (supabase as any).removeChannel?.(base);
+      } catch {
+        /* noop */
+      }
+    };
+  } catch {
+    return () => {};
   }
 }
