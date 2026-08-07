@@ -274,7 +274,11 @@ function MessageBubble({
 }) {
   return (
     <div className={`group relative flex gap-2 ${mine ? "justify-end pl-10" : "justify-start pr-10"}`}>
-      {!mine && <Avatar p={sender} size={28} />}
+      {!mine && (
+        <Link to="/profile/$userId" params={{ userId: m.sender_id }} className="shrink-0" onClick={e => e.stopPropagation()}>
+          <Avatar p={sender} size={28} />
+        </Link>
+      )}
       <div className={`flex flex-col min-w-0 max-w-[78%] ${mine ? "items-end" : "items-start"}`}>
         <div className={`mb-0.5 ${mine ? "pr-1" : "pl-1"}`}>
           <Link to="/profile/$userId" params={{ userId: m.sender_id }} className="hover:opacity-80 transition-opacity">
@@ -306,7 +310,11 @@ function MessageBubble({
           <div className={`text-[9px] mt-1 ${mine ? "text-primary-foreground/70" : "text-muted-foreground/70"} text-right`}>{fmtTime(m.created_at)}</div>
         </div>
       </div>
-      {mine && <Avatar p={sender} size={28} />}
+      {mine && (
+        <Link to="/profile/$userId" params={{ userId: m.sender_id }} className="shrink-0" onClick={e => e.stopPropagation()}>
+          <Avatar p={sender} size={28} />
+        </Link>
+      )}
       <BubbleActions mine={mine} copied={copied} onCopy={onCopy} onReply={onReply} />
     </div>
   );

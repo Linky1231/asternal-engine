@@ -392,6 +392,26 @@ function HomePage() {
               <div className="font-display text-xs tracking-widest text-primary-glow">MENÚ</div>
               <button onClick={closeMenu} className="w-8 h-8 rounded-lg border border-border grid place-items-center active:scale-95 bg-background"><X size={14}/></button>
             </div>
+            {/* Acceso directo al perfil: al tocar la foto sales del menú y vas a tu perfil */}
+            <button
+              onClick={() => { closeMenu(); navigate({ to: "/profile" }); }}
+              className="flex items-center gap-3 p-2.5 rounded-xl border border-border/70 bg-background hover:bg-muted/60 active:scale-[0.98] transition mb-2 text-left"
+            >
+              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-primary to-accent grid place-items-center overflow-hidden shrink-0 ring-2 ring-primary/20">
+                {me?.avatar_url ? (
+                  <img src={me.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="font-display text-sm text-primary-foreground">
+                    {(me?.display_name ?? me?.username ?? "A")[0]?.toUpperCase()}
+                  </span>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="font-display text-sm truncate">{me?.display_name ?? me?.username ?? "Mi perfil"}</div>
+                <div className="text-[11px] font-mono text-muted-foreground truncate">@{me?.username ?? "…"} · Ver perfil</div>
+              </div>
+              <ChevronRight size={16} className="text-muted-foreground/60 shrink-0" />
+            </button>
             {/* Categoría: SOCIAL */}
             <CategoryHeader label="SOCIAL" />
             <MenuItem icon={<MessageCircle size={16} className="text-primary-glow"/>} label="Chats" onClick={() => { setChatOpen(true); closeMenu(); }} />

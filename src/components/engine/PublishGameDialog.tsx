@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { publishGame, updateGame } from "@/lib/social/api";
-import { Upload, Loader2, CheckCircle2, ImagePlus, X, GitFork, Sparkles } from "lucide-react";
+import { Upload, Loader2, CheckCircle2, ImagePlus, Images, X, GitFork, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "@tanstack/react-router";
 import type { Project } from "@/lib/engine/core";
@@ -14,6 +14,7 @@ export function PublishGameDialog({
   initialDescription,
   initialTags,
   initialCoverUrl,
+  initialScreenshots,
   initialAllowRemix,
   initialPriceOrbes,
   onSaved,
@@ -28,6 +29,8 @@ export function PublishGameDialog({
   initialDescription?: string;
   initialTags?: string[];
   initialCoverUrl?: string | null;
+  /** Capturas existentes (modo edición): ruta de almacenamiento + URL firmada para mostrar. */
+  initialScreenshots?: { path: string; url: string }[];
   initialAllowRemix?: boolean;
   initialPriceOrbes?: number;
   onSaved?: () => void;
@@ -39,9 +42,11 @@ export function PublishGameDialog({
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(initialCoverUrl ?? null);
   const [removeCover, setRemoveCover] = useState(false);
+  const [screens, setScreens] = useState<{ id: string; file?: File; url: string; path?: string; existing?: boolean }[]>([]);
   const [allowRemix, setAllowRemix] = useState<boolean>(initialAllowRemix ?? true);
   const [priceOrbes, setPriceOrbes] = useState<number>(initialPriceOrbes ?? 0);
   const fileRef = useRef<HTMLInputElement>(null);
+  const shotsRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [done, setDone] = useState(false);
@@ -54,11 +59,12 @@ export function PublishGameDialog({
       setCoverPreview(initialCoverUrl ?? null);
       setCoverFile(null);
       setRemoveCover(false);
+      setScreens((initialScreenshots ?? []).map((s, i) => ({ id: `existing-${i}`, url: s.url, path: s.path, existing: true })));
       setAllowRemix(initialAllowRemix ?? true);
       setPriceOrbes(initialPriceOrbes ?? 0);
       setErr(null); setDone(false);
     }
-  }, [open, initialTitle, defaultTitle, initialDescription, initialTags, initialCoverUrl, initialAllowRemix, initialPriceOrbes]);
+  }, [open, initialTitle, defaultTitle, initialDescription, initialTags, initialCoverUrl, initialScreenshots, initialAllowRemix, initialPriceOrbes]);
 
   const pickCover = (f: File | null) => {
     if (!f) return;
@@ -75,6 +81,26 @@ export function PublishGameDialog({
     setRemoveCover(true);
   };
 
+  const pickScreens = (files: FileList | null) => {
+    if (!files?.length) return;
+    const valid = Array.from(files).filter(f => f.size <= 5 * 1024 * 1024);
+    if (valid.length < files.length) { setErr("Cada captura debe pesar máximo 5MB"); return; }
+    const room = Math.max(0, 6 - screens.length);
+    const next = valid.slice(0, room);
+    if (next.length < valid.length) { setErr("Máximo 6 capturas por juego"); return; }
+    const items = next.map(f => ({ id: crypto.randomUUID(), file: f, url: URL.createObjectURL(f) }));
+    setScreens(s => [...s, ...items]);
+    setErr(null);
+  };
+
+  const removeScreen = (id: string, url: string, existing?: boolean) => {
+    if (!existing) URL.revokeObjectURL(url);
+    setScreens(s => s.filter(x => x.id !== id));
+  };
+
+  const newShotFiles = () => screens.filter(s => s.file).map(s => s.file!);
+  const keptShotPaths = () => screens.filter(s => s.existing && s.path).map(s => s.path!);
+
   const submit = async () => {
     if (!title.trim()) { setErr("Título requerido"); return; }
     setBusy(true); setErr(null);
@@ -82,6 +108,7 @@ export function PublishGameDialog({
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { navigate({ to: "/auth" }); return; }
       const tags = tagInput.split(/[,\s#]+/).map(t => t.trim()).filter(Boolean);
+      const newShots = newShotFiles();
       if (mode === "edit" && editPostId) {
         await updateGame(editPostId, {
           title: title.trim(),
@@ -89,11 +116,13 @@ export function PublishGameDialog({
           tags,
           coverFile,
           removeCover,
+          screenshotFiles: newShots,
+          keepScreenshots: keptShotPaths(),
           allowRemix,
           priceOrbes,
         });
       } else if (project) {
-        await publishGame({ project, title: title.trim(), description: description.trim(), tags, coverFile, allowRemix, priceOrbes });
+        await publishGame({ project, title: title.trim(), description: description.trim(), tags, coverFile, screenshotFiles: newShots, allowRemix, priceOrbes });
       }
       setDone(true);
       setTimeout(() => {
@@ -150,6 +179,47 @@ export function PublishGameDialog({
                 onChange={e => pickCover(e.target.files?.[0] ?? null)}
               />
             </div>
+          </div>
+          <div>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-display tracking-widest text-muted-foreground">CAPTURAS DE JUEGO</span>
+              <span className="text-[10px] text-muted-foreground/60 font-mono">{screens.length}/6</span>
+            </div>
+            <div className="mt-1.5 flex gap-2 overflow-x-auto no-scrollbar pb-1">
+              {screens.map(s => (
+                <div key={s.id} className="relative w-20 h-20 shrink-0 rounded-xl border border-border overflow-hidden group">
+                  <img src={s.url} alt="captura" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => removeScreen(s.id, s.url, s.existing)}
+                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white grid place-items-center active:scale-90 transition opacity-0 group-hover:opacity-100"
+                    aria-label="Quitar captura"
+                  >
+                    <X size={11} />
+                  </button>
+                </div>
+              ))}
+              {screens.length < 6 && (
+                <button
+                  type="button"
+                  onClick={() => shotsRef.current?.click()}
+                  className="w-20 h-20 shrink-0 rounded-xl border border-dashed border-border bg-input/40 grid place-items-center text-muted-foreground hover:text-primary-glow hover:border-primary/40 active:scale-95 transition"
+                >
+                  <Images size={20} />
+                </button>
+              )}
+            </div>
+            <div className="text-[10px] text-muted-foreground mt-0.5">
+              Hasta 6 imágenes (JPG/PNG, máx 5MB c/u). Se mostrarán como galería en tu juego.
+            </div>
+            <input
+              ref={shotsRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={e => { pickScreens(e.target.files); e.target.value = ""; }}
+            />
           </div>
           <label className="block">
             <span className="text-[10px] font-display tracking-widest text-muted-foreground">TÍTULO</span>

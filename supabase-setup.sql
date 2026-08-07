@@ -102,6 +102,7 @@ create table if not exists public.posts (
   link_url text,
   category text,
   cover_url text,
+  screenshots text[] not null default '{}',
   allow_remix boolean not null default true,
   price_orbes bigint not null default 0,
   text_color text,
@@ -118,6 +119,8 @@ create table if not exists public.posts (
   deleted_at timestamptz
 );
 alter table public.posts enable row level security;
+-- Columna de capturas de juego (añadida después del primer despliegue: idempotente)
+alter table public.posts add column if not exists screenshots text[] not null default '{}';
 
 -- ─────────────────────────── COMMENTS ───────────────────────────
 create table if not exists public.comments (

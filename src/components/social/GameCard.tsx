@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Play, Heart, MessageCircle, Share2, Trash2, MoreHorizontal, Pencil, GitFork, Loader2, Sparkles, Lock, X, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Play, Heart, MessageCircle, Share2, Trash2, MoreHorizontal, Pencil, GitFork, Loader2, Sparkles, Lock, X, CheckCircle2, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 import { useNavigate, Link } from "@tanstack/react-router";
 import { type PostWithMeta, toggleReaction, deletePost, loadGameProject, reportContent, remixGame, purchaseGame, getMyOrbes } from "@/lib/social/api";
 import type { Project, Scene } from "@/lib/engine/core";
@@ -35,6 +35,7 @@ export function GameCard({
   const [openComments, setOpenComments] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [viewer, setViewer] = useState<number | null>(null);
   const [remixing, setRemixing] = useState(false);
   const { title, body } = extractTitle(post.content);
   const mine = myId === post.author_id;
@@ -234,6 +235,23 @@ export function GameCard({
         </div>
       </div>
 
+      {/* Galería de capturas */}
+      {post.signed_screenshots.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto no-scrollbar px-3 pt-2.5">
+          {post.signed_screenshots.map((src, i) => (
+            <button
+              key={i}
+              onClick={() => setViewer(i)}
+              className="relative w-28 h-[72px] shrink-0 rounded-xl overflow-hidden border border-border/60 group active:scale-95 transition"
+              aria-label={`Ver captura ${i + 1}`}
+            >
+              <img src={src} alt={`Captura ${i + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/25 to-transparent opacity-0 group-hover:opacity-100 transition" />
+            </button>
+          ))}
+        </div>
+      )}
+
 
       {(body || err) && (
         <div className="px-3 pt-2 text-sm whitespace-pre-wrap break-words">
@@ -300,10 +318,58 @@ export function GameCard({
           initialDescription={body}
           initialTags={post.tags}
           initialCoverUrl={post.signed_cover}
+          initialScreenshots={(post.screenshots ?? []).map((path, i) => ({ path, url: post.signed_screenshots[i] ?? "" }))}
           initialAllowRemix={post.allow_remix !== false}
           initialPriceOrbes={post.price_orbes ?? 0}
           onSaved={onChange}
         />
+      )}
+
+      {/* Visor de capturas a pantalla completa */}
+      {viewer !== null && post.signed_screenshots.length > 0 && (
+        <div
+          className="fixed inset-0 z-[130] bg-black/90 backdrop-blur-sm grid place-items-center p-4 animate-in fade-in duration-200"
+          onClick={() => setViewer(null)}
+        >
+          <button
+            onClick={() => setViewer(null)}
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 text-white grid place-items-center hover:bg-white/20 active:scale-90 transition z-10"
+            aria-label="Cerrar"
+          >
+            <X size={18} />
+          </button>
+          {post.signed_screenshots.length > 1 && (
+            <>
+              <button
+                onClick={e => { e.stopPropagation(); setViewer(v => (v! - 1 + post.signed_screenshots.length) % post.signed_screenshots.length); }}
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 text-white grid place-items-center hover:bg-white/20 active:scale-90 transition z-10"
+                aria-label="Anterior"
+              >
+                <ChevronLeft size={20} />
+              </button>
+              <button
+                onClick={e => { e.stopPropagation(); setViewer(v => (v! + 1) % post.signed_screenshots.length); }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 text-white grid place-items-center hover:bg-white/20 active:scale-90 transition z-10"
+                aria-label="Siguiente"
+              >
+                <ChevronRight size={20} />
+              </button>
+            </>
+          )}
+          <div
+            onClick={e => e.stopPropagation()}
+            className="w-full max-w-2xl max-h-[80vh] rounded-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200"
+          >
+            <img
+              src={post.signed_screenshots[viewer]}
+              alt={`Captura ${viewer + 1}`}
+              className="w-full h-full max-h-[80vh] object-contain bg-black"
+            />
+          </div>
+          <div className="absolute bottom-4 inset-x-0 text-center text-[11px] font-mono text-white/70">
+            {viewer + 1} / {post.signed_screenshots.length}
+          </div>
+        </div>
       )}
 
       {buyOpen && (

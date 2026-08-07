@@ -187,12 +187,6 @@ function FeaturedBanner({ post, onPlay }: { post: PostWithMeta; onPlay: () => vo
           >
             <Play size={16} fill="currentColor" /> JUGAR
           </button>
-          <Link
-            to="/profile/$userId" params={{ userId: post.author_id }}
-            className="h-11 px-4 rounded-xl bg-white/15 backdrop-blur border border-white/30 text-white text-xs font-display tracking-widest flex items-center gap-1.5 active:scale-95 transition"
-          >
-            SEGUIR
-          </Link>
         </div>
         <div className="flex items-center gap-3 text-white/90 text-[11px]">
           <span className="flex items-center gap-1"><Users size={11} /> {active} activos</span>

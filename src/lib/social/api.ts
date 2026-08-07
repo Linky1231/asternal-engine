@@ -79,6 +79,7 @@ export type PostRow = {
   link_url: string | null;
   category: string | null;
   cover_url: string | null;
+  screenshots?: string[] | null;
   allow_remix?: boolean;
   price_orbes?: number;
   text_color?: string | null;
@@ -107,6 +108,7 @@ export type PostWithMeta = PostRow & {
   my_repost: boolean;
   signed_media: string[];
   signed_cover: string | null;
+  signed_screenshots: string[];
   signed_documents?: { name: string; url: string }[];
   poll?: PollData | null;
   pinned_game?: { id: string; title: string; cover_url: string | null } | null;
@@ -210,6 +212,7 @@ export async function fetchFeed(opts: { search?: string; tag?: string; category?
     const my_repost = !!me && reps.some(x => x.user_id === me);
     const signed = await signMediaUrls(p.media_urls ?? []);
     const signedCover = p.cover_url ? (await signMediaUrls([p.cover_url]))[0] ?? null : null;
+    const signedScreens = (p as PostRow).screenshots?.length ? await signMediaUrls((p as PostRow).screenshots) : [];
     const priceOrbes = (p as PostRow).price_orbes ?? 0;
     const owned = priceOrbes <= 0 || p.author_id === me || ownedIds.has(p.id);
     const post = p as PostRow;
@@ -233,6 +236,7 @@ export async function fetchFeed(opts: { search?: string; tag?: string; category?
       my_like, my_favorite, my_repost,
       signed_media: signed,
       signed_cover: signedCover,
+      signed_screenshots: signedScreens,
       signed_documents: signedDocs,
       is_unlocked: isUnlocked,
       owned,
@@ -539,6 +543,7 @@ export async function publishGame(input: {
   description?: string;
   tags?: string[];
   coverFile?: File | null;
+  screenshotFiles?: File[];
   allowRemix?: boolean;
   priceOrbes?: number;
 }): Promise<PostRow> {
@@ -550,6 +555,9 @@ export async function publishGame(input: {
   });
   const path = await uploadMedia(file, user.id);
   const coverPath = input.coverFile ? await uploadMedia(input.coverFile, user.id) : null;
+  const screenshots = input.screenshotFiles?.length
+    ? await Promise.all(input.screenshotFiles.map(f => uploadMedia(f, user.id)))
+    : [];
   const content = `🎮 ${input.title}${input.description ? "\n\n" + input.description : ""}`;
   const { data: post, error } = await supabase.from("posts").insert({
     author_id: user.id,
@@ -559,6 +567,7 @@ export async function publishGame(input: {
     link_url: null,
     category: "game",
     cover_url: coverPath,
+    screenshots,
     allow_remix: input.allowRemix ?? true,
     price_orbes: Math.max(0, Math.floor(input.priceOrbes ?? 0)),
   } as never).select().single();
@@ -574,6 +583,8 @@ export async function updateGame(postId: string, input: {
   tags?: string[];
   coverFile?: File | null;
   removeCover?: boolean;
+  screenshotFiles?: File[];
+  keepScreenshots?: string[];
   allowRemix?: boolean;
   priceOrbes?: number;
 }): Promise<void> {
@@ -592,6 +603,14 @@ export async function updateGame(postId: string, input: {
     patch.cover_url = await uploadMedia(input.coverFile, user.id);
   } else if (input.removeCover) {
     patch.cover_url = null;
+  }
+  if (input.screenshotFiles || input.keepScreenshots) {
+    // Se reemplaza la lista: conserva las marcadas + sube las nuevas.
+    const keep = input.keepScreenshots ?? [];
+    const uploads = input.screenshotFiles?.length
+      ? await Promise.all(input.screenshotFiles.map(f => uploadMedia(f, user.id)))
+      : [];
+    patch.screenshots = [...keep, ...uploads];
   }
   if (typeof input.allowRemix === "boolean") patch.allow_remix = input.allowRemix;
   if (typeof input.priceOrbes === "number") patch.price_orbes = Math.max(0, Math.floor(input.priceOrbes));
@@ -858,6 +877,7 @@ export async function fetchUserPosts(userId: string, opts: { games?: boolean; ar
     const r = (reactions.data ?? []).filter(x => x.post_id === p.id);
     const signed = await signMediaUrls(p.media_urls ?? []);
     const signedCover = p.cover_url ? (await signMediaUrls([p.cover_url]))[0] ?? null : null;
+    const signedScreens = (p as PostRow).screenshots?.length ? await signMediaUrls((p as PostRow).screenshots) : [];
     out.push({
       ...(p as PostRow),
       author,
@@ -871,6 +891,7 @@ export async function fetchUserPosts(userId: string, opts: { games?: boolean; ar
       my_repost: false,
       signed_media: signed,
       signed_cover: signedCover,
+      signed_screenshots: signedScreens,
     });
   }
   return out;
