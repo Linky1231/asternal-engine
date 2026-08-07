@@ -339,14 +339,12 @@ function AnnouncementCard({ m, sender }: { m: ChatMessage; sender?: Profile | nu
 function GiftCard({
   m,
   gift,
-  myId,
   claiming,
   claimedAmount,
   onClaim,
 }: {
   m: ChatMessage;
   gift?: OrbGift | null;
-  myId: string | null;
   claiming: boolean;
   claimedAmount?: number;
   onClaim: () => void;
@@ -388,7 +386,6 @@ function GiftCard({
   }
 
   const open = gift.status === "open";
-  const mine = m.sender_id === myId;
   const progress = Math.min(100, Math.round((gift.claims / Math.max(1, gift.max_claims)) * 100));
   const remaining = Math.max(0, gift.max_claims - gift.claims);
 
@@ -400,15 +397,17 @@ function GiftCard({
 
         <div className="relative flex items-center gap-3">
           <motion.div
-            animate={open ? { y: [0, -4, 0] } : {}}
-            transition={{ repeat: Infinity, duration: 1.6, ease: "easeInOut" }}
-            className="text-4xl leading-none drop-shadow-[0_6px_12px_rgba(59,130,246,0.35)]"
+            animate={open ? { scale: [1, 1.06, 1] } : { scale: 1 }}
+            transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+            style={{ willChange: "transform" }}
+            className="w-12 h-12 shrink-0 rounded-2xl bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center shadow-[0_8px_20px_-8px_oklch(0.488_0.185_264/0.6)]"
           >
-            {open ? "🎁" : "📦"}
+            <Gift size={22} strokeWidth={2} />
+            <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/20 pointer-events-none" />
           </motion.div>
           <div className="flex-1 min-w-0">
             <div className="text-[9px] font-display tracking-[0.18em] text-primary font-bold">
-              PAQUETE DE REGALOS · {mine ? "TÚ" : "COMUNIDAD"}
+              PAQUETE DE REGALOS
             </div>
             <div className="text-[13px] font-semibold leading-tight mt-0.5">{m.content}</div>
             <div className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1">
@@ -431,7 +430,7 @@ function GiftCard({
               className="h-full rounded-full bg-gradient-to-r from-primary to-accent"
               initial={false}
               animate={{ width: `${progress}%` }}
-              transition={{ duration: 0.4, ease: "easeOut" }}
+              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
             />
           </div>
         </div>
@@ -465,35 +464,36 @@ function GiftCard({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 z-10 grid place-items-center rounded-2xl bg-black/55 backdrop-blur-[2px]"
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              className="absolute inset-0 z-10 grid place-items-center rounded-2xl bg-black/60 backdrop-blur-[2px]"
             >
               {burst === "claim" ? (
                 <motion.div
-                  initial={{ scale: 0.4, y: 12 }}
-                  animate={{ scale: 1, y: 0 }}
-                  exit={{ scale: 0.7, opacity: 0 }}
-                  transition={{ type: "spring", stiffness: 320, damping: 18 }}
+                  initial={{ scale: 0.6, opacity: 0, y: 14 }}
+                  animate={{ scale: 1, opacity: 1, y: 0 }}
+                  exit={{ scale: 0.85, opacity: 0 }}
+                  transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+                  style={{ willChange: "transform, opacity" }}
                   className="text-center px-4"
                 >
-                  <motion.div
-                    animate={{ rotate: [0, -8, 8, 0] }}
-                    transition={{ repeat: Infinity, duration: 0.9 }}
-                    className="text-5xl mb-2"
-                  >
-                    🎉
-                  </motion.div>
+                  <div className="w-14 h-14 mx-auto mb-2.5 rounded-2xl bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center shadow-[0_8px_20px_-8px_oklch(0.488_0.185_264/0.6)]">
+                    <Sparkles size={26} />
+                  </div>
                   <div className="text-sm font-bold text-white drop-shadow">¡+{claimedAmount ?? gift.amount_per_person} ORBES!</div>
-                  <div className="text-[10px] text-white/80 mt-0.5">Ya están en tu cuenta ✨</div>
+                  <div className="text-[10px] text-white/80 mt-0.5">Ya están en tu cuenta</div>
                 </motion.div>
               ) : (
                 <motion.div
-                  initial={{ scale: 0.6 }}
-                  animate={{ scale: 1 }}
-                  exit={{ scale: 0.8, opacity: 0 }}
-                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                  initial={{ scale: 0.7, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.85, opacity: 0 }}
+                  transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+                  style={{ willChange: "transform, opacity" }}
                   className="text-center px-4"
                 >
-                  <div className="text-5xl mb-2">🎊</div>
+                  <div className="w-14 h-14 mx-auto mb-2.5 rounded-2xl bg-card border border-border text-muted-foreground grid place-items-center">
+                    <Lock size={24} />
+                  </div>
                   <div className="text-sm font-bold text-white drop-shadow">¡Se acabó el paquete!</div>
                   <div className="text-[10px] text-white/80 mt-0.5">Todos los regalos fueron abiertos</div>
                 </motion.div>
@@ -1048,7 +1048,8 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
     setGiftAmount("200");
     setGiftPeople("5");
     setMyOrbes((o) => (o == null ? o : Math.max(0, o - amount * people)));
-    toast.success("¡Paquete de regalos creado!");
+    toast.success("¡Paquete de regalos creado!", { description: `Se descontaron ${amount * people} orbes de tu cuenta` });
+
   }, [chatInfo, giftTitle, giftAmount, giftPeople, myOrbes, loadSenders]);
 
   const handleClaimGift = useCallback(async (giftId: string) => {
@@ -1474,7 +1475,6 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
                 key={m.id}
                 m={m}
                 gift={m.gift_id ? gifts.get(m.gift_id) ?? null : null}
-                myId={myId}
                 claiming={claimingId === m.gift_id}
                 claimedAmount={m.gift_id ? myClaims.get(m.gift_id) : undefined}
                 onClaim={() => m.gift_id && void handleClaimGift(m.gift_id)}
