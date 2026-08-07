@@ -394,25 +394,25 @@ function GiftCard({
 
   return (
     <div className="flex justify-center px-1">
-      <div className="relative w-full max-w-sm overflow-hidden rounded-2xl border border-amber-400/25 bg-gradient-to-br from-amber-500/[0.10] via-rose-500/[0.06] to-transparent px-3.5 py-3 shadow-sm">
-        <div className="absolute -left-6 -top-8 w-24 h-24 rounded-full bg-amber-400/15 blur-2xl pointer-events-none" />
-        <div className="absolute -right-6 -bottom-8 w-24 h-24 rounded-full bg-rose-500/10 blur-2xl pointer-events-none" />
+      <div className="relative w-full max-w-sm overflow-hidden rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/[0.10] via-accent/[0.06] to-transparent px-3.5 py-3 shadow-sm">
+        <div className="absolute -left-6 -top-8 w-24 h-24 rounded-full bg-primary/15 blur-2xl pointer-events-none" />
+        <div className="absolute -right-6 -bottom-8 w-24 h-24 rounded-full bg-accent/10 blur-2xl pointer-events-none" />
 
         <div className="relative flex items-center gap-3">
           <motion.div
             animate={open ? { y: [0, -4, 0] } : {}}
             transition={{ repeat: Infinity, duration: 1.6, ease: "easeInOut" }}
-            className="text-4xl leading-none drop-shadow-[0_6px_12px_rgba(251,191,36,0.35)]"
+            className="text-4xl leading-none drop-shadow-[0_6px_12px_rgba(59,130,246,0.35)]"
           >
             {open ? "🎁" : "📦"}
           </motion.div>
           <div className="flex-1 min-w-0">
-            <div className="text-[9px] font-display tracking-[0.18em] text-amber-600 dark:text-amber-400 font-bold">
+            <div className="text-[9px] font-display tracking-[0.18em] text-primary font-bold">
               PAQUETE DE REGALOS · {mine ? "TÚ" : "COMUNIDAD"}
             </div>
             <div className="text-[13px] font-semibold leading-tight mt-0.5">{m.content}</div>
             <div className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1">
-              <Sparkles size={11} className="text-amber-500" />
+              <Sparkles size={11} className="text-primary" />
               <b>{gift.amount_per_person} orbes</b> por persona · {gift.max_claims} {gift.max_claims === 1 ? "regalo" : "regalos"}
             </div>
           </div>
@@ -422,13 +422,13 @@ function GiftCard({
         <div className="relative mt-3">
           <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-1">
             <span>{gift.claims} / {gift.max_claims} abiertos</span>
-            <span className={open ? "text-amber-600 dark:text-amber-400 font-semibold" : "text-muted-foreground"}>
+            <span className={open ? "text-primary font-semibold" : "text-muted-foreground"}>
               {open ? `${remaining} restan${remaining === 1 ? "" : "n"}` : "Cerrado"}
             </span>
           </div>
           <div className="h-2 rounded-full bg-black/10 dark:bg-white/10 overflow-hidden">
             <motion.div
-              className="h-full rounded-full bg-gradient-to-r from-amber-400 to-rose-500"
+              className="h-full rounded-full bg-gradient-to-r from-primary to-accent"
               initial={false}
               animate={{ width: `${progress}%` }}
               transition={{ duration: 0.4, ease: "easeOut" }}
@@ -446,7 +446,7 @@ function GiftCard({
             <button
               onClick={onClaim}
               disabled={claiming}
-              className="w-full py-2.5 rounded-xl bg-gradient-to-br from-amber-400 to-rose-500 text-white text-[11px] font-display tracking-widest shadow-[0_6px_16px_-6px_rgba(251,146,60,0.7)] active:scale-[0.98] transition disabled:opacity-50 flex items-center justify-center gap-1.5"
+              className="w-full py-2.5 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-[11px] font-display tracking-widest shadow-[0_6px_16px_-6px_oklch(0.488_0.185_264/0.5)] active:scale-[0.98] transition disabled:opacity-50 flex items-center justify-center gap-1.5"
             >
               {claiming ? <Loader2 size={13} className="animate-spin" /> : <Gift size={13} />}
               {claiming ? "ABRIENDO…" : "ABRIR REGALO"}
@@ -1285,7 +1285,7 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
                   .catch(() => setMyOrbes(null));
               }}
               title="Crear paquete de regalos"
-              className="w-9 h-9 rounded-xl border border-amber-400/40 bg-amber-400/10 text-amber-500 grid place-items-center active:scale-95 transition shrink-0 hover:bg-amber-400/20"
+              className="w-9 h-9 rounded-xl border border-primary/40 bg-primary/10 text-primary grid place-items-center active:scale-95 transition shrink-0 hover:bg-primary/20"
             >
               <Gift size={15} />
             </button>
@@ -1953,7 +1953,7 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
               className="w-full max-w-sm bg-card border border-border rounded-2xl p-4 shadow-xl"
             >
               <div className="text-sm font-semibold mb-0.5 flex items-center gap-2">
-                <PartyPopper size={15} className="text-amber-500" /> Crear paquete de regalos
+                <PartyPopper size={15} className="text-primary" /> Crear paquete de regalos
               </div>
               <p className="text-[11px] text-muted-foreground mb-3">
                 Regala orbes a la comunidad: elige cuántos orbes por persona (par, mínimo 100) y
@@ -2006,10 +2006,10 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
                   />
                 </div>
               </div>
-              <div className="mb-3 rounded-xl border border-amber-400/25 bg-amber-400/10 px-3 py-2 text-[11px] flex items-center gap-1.5">
-                <Gift size={12} className="text-amber-500" />
+              <div className="mb-3 rounded-xl border border-primary/25 bg-primary/10 px-3 py-2 text-[11px] flex items-center gap-1.5">
+                <Gift size={12} className="text-primary" />
                 <span className="flex-1 text-muted-foreground">Total a descontar de tu saldo</span>
-                <b className="text-amber-600 dark:text-amber-400">
+                <b className="text-primary">
                   ${(Math.floor(Number(giftAmount) || 0) * Math.floor(Number(giftPeople) || 0)).toLocaleString()}
                 </b>{" "}
                 orbes
@@ -2030,7 +2030,7 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
                 <button
                   onClick={() => void createGiftPackage()}
                   disabled={giftBusy}
-                  className="flex-1 py-2 rounded-xl bg-gradient-to-br from-amber-400 to-rose-500 text-white text-xs font-display tracking-widest active:scale-[0.98] transition disabled:opacity-40 flex items-center justify-center gap-1.5"
+                  className="flex-1 py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-xs font-display tracking-widest active:scale-[0.98] transition disabled:opacity-40 flex items-center justify-center gap-1.5"
                 >
                   {giftBusy ? <Loader2 size={13} className="animate-spin" /> : <Gift size={13} />}
                   {giftBusy ? "CREANDO…" : "CREAR REGALOS"}
