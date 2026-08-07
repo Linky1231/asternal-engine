@@ -1179,3 +1179,33 @@ export async function unfollowUser(userId: string): Promise<void> {
   await supabase.from("follows" as never).delete().eq("follower_id", user.id).eq("following_id", userId);
 }
 
+// Lista de perfiles que SIGUEN a userId (sus seguidores).
+export async function fetchFollowers(userId: string): Promise<Profile[]> {
+  const { data, error } = await supabase
+    .from("follows" as never)
+    .select("follower_id")
+    .eq("following_id", userId)
+    .order("created_at", { ascending: false }) as { data: { follower_id: string }[] | null; error: unknown };
+  if (error) return [];
+  const ids = Array.from(new Set((data ?? []).map(r => r.follower_id)));
+  if (!ids.length) return [];
+  const { data: profiles } = await supabase.from("profiles").select("*").in("id", ids);
+  const byId = new Map((profiles ?? []).map(p => [p.id, p as Profile]));
+  return ids.map(id => byId.get(id)).filter((p): p is Profile => !!p);
+}
+
+// Lista de perfiles a los que SIGUE userId (su "siguiendo").
+export async function fetchFollowing(userId: string): Promise<Profile[]> {
+  const { data, error } = await supabase
+    .from("follows" as never)
+    .select("following_id")
+    .eq("follower_id", userId)
+    .order("created_at", { ascending: false }) as { data: { following_id: string }[] | null; error: unknown };
+  if (error) return [];
+  const ids = Array.from(new Set((data ?? []).map(r => r.following_id)));
+  if (!ids.length) return [];
+  const { data: profiles } = await supabase.from("profiles").select("*").in("id", ids);
+  const byId = new Map((profiles ?? []).map(p => [p.id, p as Profile]));
+  return ids.map(id => byId.get(id)).filter((p): p is Profile => !!p);
+}
+

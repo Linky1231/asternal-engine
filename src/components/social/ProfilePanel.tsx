@@ -4,7 +4,7 @@ import {
   Loader2, Camera, Save, Gamepad2, Newspaper, CheckCircle2, Star, ChevronRight,
   ImagePlus, MapPin, Cake, Palette, Tag, Sparkles as SparklesIcon, Eye, EyeOff,
   Heart, MessageCircle, ChevronDown, ChevronUp,
-  Youtube, Instagram, Globe, UserPlus, UserCheck,
+  Youtube, Instagram, Globe, UserPlus, UserCheck, X,
 } from "lucide-react";
 import {
   type Profile,
@@ -20,6 +20,8 @@ import {
   getFollowStats,
   followUser,
   unfollowUser,
+  fetchFollowers,
+  fetchFollowing,
 } from "@/lib/social/api";
 import { GameCard } from "./GameCard";
 import { PostCard } from "./PostCard";
@@ -69,6 +71,7 @@ export function ProfilePanel({
   const [contentLoading, setContentLoading] = useState(false);
   const [follow, setFollow] = useState<FollowStats>({ followers: 0, following: 0, i_follow: false });
   const [followBusy, setFollowBusy] = useState(false);
+  const [followList, setFollowList] = useState<null | { kind: "followers" | "following"; items: Profile[]; loading: boolean }>(null);
 
   const load = async () => {
     setLoading(true);
@@ -119,6 +122,17 @@ export function ProfilePanel({
       else await followUser(userId);
       await loadFollow();
     } finally { setFollowBusy(false); }
+  };
+
+  // Abre la lista de seguidores o de "siguiendo" cargando los perfiles.
+  const openFollowList = async (kind: "followers" | "following") => {
+    setFollowList({ kind, items: [], loading: true });
+    try {
+      const items = kind === "followers" ? await fetchFollowers(userId) : await fetchFollowing(userId);
+      setFollowList({ kind, items, loading: false });
+    } catch {
+      setFollowList({ kind, items: [], loading: false });
+    }
   };
 
   const pickAvatar = (f: File | null) => {
@@ -253,13 +267,24 @@ export function ProfilePanel({
             )}
           </div>
 
-          {/* Follow counts */}
+          {/* Follow counts (tocables: muestran la lista de personas) */}
           {!editing && (
-            <div className="flex items-center gap-4 text-[11px]">
-              <span><b className="text-foreground tabular-nums">{follow.followers}</b> <span className="text-muted-foreground">seguidores</span></span>
-              <span><b className="text-foreground tabular-nums">{follow.following}</b> <span className="text-muted-foreground">siguiendo</span></span>
+            <div className="flex items-center gap-1 text-[11px]">
+              <button onClick={() => openFollowList("followers")}
+                className="flex items-center gap-1 px-2 py-1 -mx-1 rounded-lg hover:bg-muted/40 active:scale-95 transition text-left">
+                <b className="text-foreground tabular-nums">{follow.followers}</b>
+                <span className="text-muted-foreground">seguidores</span>
+              </button>
+              <span className="text-muted-foreground/40">·</span>
+              <button onClick={() => openFollowList("following")}
+                className="flex items-center gap-1 px-2 py-1 -mx-1 rounded-lg hover:bg-muted/40 active:scale-95 transition text-left">
+                <b className="text-foreground tabular-nums">{follow.following}</b>
+                <span className="text-muted-foreground">siguiendo</span>
+              </button>
             </div>
           )}
+
+          {followList && <FollowListModal list={followList} myId={myId} onClose={() => setFollowList(null)} onChanged={loadFollow} />}
 
           {/* Social links (Plus feature, always shown if present and Plus active) */}
           {!editing && isPlusActive(profile) && profile.social_links && (
@@ -472,6 +497,101 @@ export function ProfilePanel({
             <div className="p-6 text-center text-xs text-muted-foreground panel rounded-2xl border border-dashed border-border">Sin publicaciones</div>
           ) : posts.map(p => <PostCard key={p.id} post={p} myId={myId} isMod={isMod} onChange={loadContent} />)
         )}
+      </div>
+    </div>
+  );
+}
+
+function FollowListModal({ list, myId, onClose, onChanged }: {
+  list: { kind: "followers" | "following"; items: Profile[]; loading: boolean };
+  myId: string | null;
+  onClose: () => void;
+  onChanged: () => void;
+}) {
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [items, setItems] = useState<Profile[]>(list.items);
+  const [iFollow, setIFollow] = useState<Set<string>>(new Set());
+
+  // Estado "¿yo sigo a esta persona?" para cada perfil de la lista.
+  useEffect(() => {
+    if (!myId || items.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      const set = new Set<string>();
+      for (const p of items) {
+        if (cancelled) return;
+        try {
+          const s = await getFollowStats(p.id);
+          if (s.i_follow) set.add(p.id);
+        } catch { /* ignore */ }
+      }
+      if (!cancelled) setIFollow(set);
+    })();
+    return () => { cancelled = true; };
+  }, [items, myId]);
+
+  const toggle = async (p: Profile) => {
+    if (busyId || !myId) return;
+    setBusyId(p.id);
+    try {
+      if (iFollow.has(p.id)) await unfollowUser(p.id);
+      else await followUser(p.id);
+      setIFollow(prev => { const n = new Set(prev); if (n.has(p.id)) n.delete(p.id); else n.add(p.id); return n; });
+      onChanged();
+    } catch { /* ignore */ } finally { setBusyId(null); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <button aria-label="Cerrar" onClick={onClose}
+        className="absolute inset-0 bg-black/60 backdrop-blur-[2px] animate-in fade-in duration-200" />
+      <div className="relative w-full sm:max-w-sm panel rounded-t-2xl sm:rounded-2xl border border-border shadow-2xl animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-2 duration-300 max-h-[80vh] flex flex-col">
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-border/40">
+          <div className="flex-1 font-display text-xs tracking-widest text-primary-glow">
+            {list.kind === "followers" ? "SEGUIDORES" : "SIGUIENDO"} · {items.length}
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-lg border border-border grid place-items-center active:scale-95 transition">
+            <X size={14} />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-2 space-y-1">
+          {list.loading ? (
+            <div className="p-8 text-center text-xs text-muted-foreground">
+              <Loader2 className="animate-spin inline mr-2" size={14} /> Cargando…
+            </div>
+          ) : items.length === 0 ? (
+            <div className="p-8 text-center text-xs text-muted-foreground">
+              {list.kind === "followers" ? "Aún no tiene seguidores" : "Aún no sigue a nadie"}
+            </div>
+          ) : (
+            items.map(p => (
+              <div key={p.id} className="flex items-center gap-2.5 px-2 py-2 rounded-xl hover:bg-muted/30 transition">
+                <Link to="/profile/$userId" params={{ userId: p.id }} onClick={onClose}
+                  className="flex items-center gap-2.5 min-w-0 flex-1">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary/40 to-accent/30 grid place-items-center overflow-hidden shrink-0 border border-border/50">
+                    {p.avatar_url ? (
+                      <img src={p.avatar_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="font-display text-sm text-primary-glow">
+                        {(p.display_name ?? p.username ?? "?")[0]?.toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <UserName p={p} size="sm" />
+                    <div className="text-[10px] font-mono text-muted-foreground truncate">@{p.username}</div>
+                  </div>
+                </Link>
+                {myId && myId !== p.id && (
+                  <button onClick={() => void toggle(p)} disabled={busyId === p.id}
+                    className={`shrink-0 px-2.5 py-1.5 rounded-lg text-[10px] font-display tracking-widest flex items-center gap-1 active:scale-95 transition disabled:opacity-60 ${iFollow.has(p.id) ? "border border-border text-muted-foreground" : "bg-gradient-to-r from-primary to-accent text-primary-foreground"}`}>
+                    {busyId === p.id ? <Loader2 size={11} className="animate-spin" /> : iFollow.has(p.id) ? <><UserCheck size={11} /> SIGUIENDO</> : <><UserPlus size={11} /> SEGUIR</>}
+                  </button>
+                )}
+              </div>
+            ))
+          )}
+        </div>
       </div>
     </div>
   );
