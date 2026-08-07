@@ -408,7 +408,7 @@ function GiftCard({
           </motion.div>
           <div className="flex-1 min-w-0">
             <div className="text-[9px] font-display tracking-[0.18em] text-amber-600 dark:text-amber-400 font-bold">
-              PAQUETE DE REGALOS · {mine ? "ADMIN" : "COMUNIDAD"}
+              PAQUETE DE REGALOS · {mine ? "TÚ" : "COMUNIDAD"}
             </div>
             <div className="text-[13px] font-semibold leading-tight mt-0.5">{m.content}</div>
             <div className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1">
@@ -1261,34 +1261,34 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
             </div>
           </div>
           {isOwner && (
-            <>
-              <button
-                onClick={() => {
-                  setAnnounceErr(null);
-                  setAnnounceText("");
-                  setAnnounceOpen(true);
-                }}
-                title="Publicar aviso del grupo"
-                className="w-9 h-9 rounded-xl border border-primary/40 bg-primary/10 text-primary grid place-items-center active:scale-95 transition shrink-0 hover:bg-primary/20"
-              >
-                <Megaphone size={15} />
-              </button>
-              <button
-                onClick={() => {
-                  setGiftErr(null);
-                  setGiftAmount("200");
-                  setGiftPeople("5");
-                  setGiftOpen(true);
-                  void getMyOrbes()
-                    .then(setMyOrbes)
-                    .catch(() => setMyOrbes(null));
-                }}
-                title="Crear paquete de regalos"
-                className="w-9 h-9 rounded-xl border border-amber-400/40 bg-amber-400/10 text-amber-500 grid place-items-center active:scale-95 transition shrink-0 hover:bg-amber-400/20"
-              >
-                <Gift size={15} />
-              </button>
-            </>
+            <button
+              onClick={() => {
+                setAnnounceErr(null);
+                setAnnounceText("");
+                setAnnounceOpen(true);
+              }}
+              title="Publicar aviso del grupo"
+              className="w-9 h-9 rounded-xl border border-primary/40 bg-primary/10 text-primary grid place-items-center active:scale-95 transition shrink-0 hover:bg-primary/20"
+            >
+              <Megaphone size={15} />
+            </button>
+          )}
+          {!isLocal && (
+            <button
+              onClick={() => {
+                setGiftErr(null);
+                setGiftAmount("200");
+                setGiftPeople("5");
+                setGiftOpen(true);
+                void getMyOrbes()
+                  .then(setMyOrbes)
+                  .catch(() => setMyOrbes(null));
+              }}
+              title="Crear paquete de regalos"
+              className="w-9 h-9 rounded-xl border border-amber-400/40 bg-amber-400/10 text-amber-500 grid place-items-center active:scale-95 transition shrink-0 hover:bg-amber-400/20"
+            >
+              <Gift size={15} />
+            </button>
           )}
           <button
             onClick={() => {

@@ -174,10 +174,9 @@ begin
     values (_chat_id, v_admin, trim(_content), 'announcement')
     returning to_jsonb(chat_messages) into v_msg;
   return jsonb_build_object('ok', true, 'message', v_msg);
-end $$;
-
--- Crea un paquete de regalos de orbes en el chat (solo admin). Descuenta el
--- total (cantidad x personas) de los orbes del administrador al instante.
+end $$;  -- Crea un paquete de regalos de orbes en el chat (cualquier usuario con
+  -- saldo suficiente). Descuenta el total (cantidad x personas) de los orbes
+  -- del creador al instante.
 create or replace function public.create_orb_gift(_chat_id uuid, _title text, _amount_per_person bigint, _max_claims int)
 returns jsonb language plpgsql security definer set search_path = public as $$
 declare
@@ -189,9 +188,6 @@ declare
 begin
   if v_admin is null then
     return jsonb_build_object('ok', false, 'error', 'Inicia sesión para crear regalos');
-  end if;
-  if not public.is_owner_admin() then
-    return jsonb_build_object('ok', false, 'error', 'Solo el administrador puede crear paquetes de regalo');
   end if;
   if _amount_per_person is null or _amount_per_person < 100 or mod(_amount_per_person, 2) <> 0 then
     return jsonb_build_object('ok', false, 'error', 'La cantidad por persona debe ser par y de mínimo 100 orbes');
