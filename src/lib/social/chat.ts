@@ -435,6 +435,59 @@ export async function sendDueScheduledMessages(): Promise<{ count: number; chats
   return { count, chats: Array.from(okChats) };
 }
 
+/** Mensaje fijado: lo fija un administrador/moderador y queda arriba del chat. */
+export type PinnedMessage = {
+  id: string;
+  chat_id: string;
+  message_id: string;
+  pinned_by: string;
+  pinned_at: string;
+};
+
+const PINNED_KEY = "_pinned_messages";
+
+function readAllPins(): PinnedMessage[] {
+  try {
+    const raw = localStorage.getItem(PINNED_KEY);
+    return raw ? (JSON.parse(raw) as PinnedMessage[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Mensajes fijados de un chat (los más recientes primero). */
+export function listPinnedMessages(chatId: string): PinnedMessage[] {
+  return readAllPins()
+    .filter((p) => p.chat_id === chatId)
+    .sort((a, b) => b.pinned_at.localeCompare(a.pinned_at));
+}
+
+/** ¿El mensaje ya está fijado en este chat? */
+export function isMessagePinned(chatId: string, messageId: string): boolean {
+  return listPinnedMessages(chatId).some((p) => p.message_id === messageId);
+}
+
+/** Fija un mensaje. Devuelve false si ya estaba fijado. */
+export function pinChatMessage(chatId: string, messageId: string, pinnedBy: string): boolean {
+  const rows = readAllPins();
+  if (rows.some((p) => p.chat_id === chatId && p.message_id === messageId)) return false;
+  rows.push({
+    id: crypto.randomUUID(),
+    chat_id: chatId,
+    message_id: messageId,
+    pinned_by: pinnedBy,
+    pinned_at: new Date().toISOString(),
+  });
+  localStorage.setItem(PINNED_KEY, JSON.stringify(rows));
+  return true;
+}
+
+/** Quita un mensaje de los fijados del chat. */
+export function unpinChatMessage(chatId: string, messageId: string): void {
+  const rows = readAllPins().filter((p) => !(p.chat_id === chatId && p.message_id === messageId));
+  localStorage.setItem(PINNED_KEY, JSON.stringify(rows));
+}
+
 export function isAudioMessage(m: Pick<ChatMessage, "media_type" | "media_url">): boolean {
   return !!m.media_url && (m.media_type === "audio" || /^audio\//.test(m.media_url ?? ""));
 }
