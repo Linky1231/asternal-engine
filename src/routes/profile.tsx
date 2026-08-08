@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link, Outlet, useMatch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ArrowLeft, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +12,8 @@ export const Route = createFileRoute("/profile")({
 
 function ProfilePage() {
   const navigate = useNavigate();
+  // Ruta hija (/profile/<id>): se renderiza el perfil de ESE usuario, no el nuestro.
+  const otherMatch = useMatch({ from: "/profile/$userId", shouldThrow: false });
   const [myId, setMyId] = useState<string | null>(null);
   const [me, setMe] = useState<Profile | null>(null);
   const [mod, setMod] = useState(false);
@@ -25,6 +27,10 @@ function ProfilePage() {
       setMod(await checkMod());
     })();
   }, [navigate]);
+
+  // Si la URL es /profile/<id>, el contenido real vive en la ruta hija
+  // (profile.$userId) que el router monta en este Outlet.
+  if (otherMatch) return <Outlet />;
 
   if (!myId) return null;
   return (
