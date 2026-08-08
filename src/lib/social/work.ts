@@ -13,6 +13,23 @@ export type WorkTask = {
   status: "todo" | "doing" | "done";
   assignee_id: string | null;
   assignee_name: string;
+  project_id: string | null;
+  project_name: string;
+  created_by: string;
+  created_by_name: string;
+  created_at: string;
+};
+
+export type WorkProject = {
+  id: string;
+  chat_id: string; // chat de trabajo donde se creó el proyecto
+  channel_id: string; // canal de chat de trabajo asociado
+  channel_name: string;
+  name: string;
+  description: string;
+  status: "planning" | "active" | "done";
+  representative_id: string | null;
+  representative_name: string;
   created_by: string;
   created_by_name: string;
   created_at: string;
@@ -98,6 +115,8 @@ export function createTask(input: {
   description: string;
   assignee_id: string | null;
   assignee_name: string;
+  project_id?: string | null;
+  project_name?: string;
   created_by: string;
   created_by_name: string;
 }): WorkTask {
@@ -109,6 +128,8 @@ export function createTask(input: {
     status: "todo",
     assignee_id: input.assignee_id,
     assignee_name: input.assignee_name,
+    project_id: input.project_id ?? null,
+    project_name: input.project_name ?? "",
     created_by: input.created_by,
     created_by_name: input.created_by_name,
     created_at: new Date().toISOString(),
@@ -126,6 +147,84 @@ export function setTaskStatus(id: string, status: WorkTask["status"]): void {
 
 export function deleteTask(id: string): void {
   save("work_tasks", rows<WorkTask>("work_tasks").filter((t) => t.id !== id));
+}
+
+// ─── Proyectos del chat de trabajo ───
+// Bandeja de proyectos del equipo: cada proyecto tiene un canal de chat de
+// trabajo asociado, un representante y sus propias tareas.
+
+export function listProjects(chatId: string): WorkProject[] {
+  return rows<WorkProject>("work_projects")
+    .filter((p) => p.chat_id === chatId)
+    .sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+}
+
+export function listAllProjects(): WorkProject[] {
+  return rows<WorkProject>("work_projects");
+}
+
+export function getProject(id: string): WorkProject | null {
+  return rows<WorkProject>("work_projects").find((p) => p.id === id) ?? null;
+}
+
+export function createProject(input: {
+  chat_id: string;
+  channel_id: string;
+  channel_name: string;
+  name: string;
+  description: string;
+  representative_id: string | null;
+  representative_name: string;
+  created_by: string;
+  created_by_name: string;
+}): WorkProject {
+  const project: WorkProject = {
+    id: uid(),
+    chat_id: input.chat_id,
+    channel_id: input.channel_id,
+    channel_name: input.channel_name,
+    name: input.name.trim(),
+    description: input.description.trim(),
+    status: "planning",
+    representative_id: input.representative_id,
+    representative_name: input.representative_name,
+    created_by: input.created_by,
+    created_by_name: input.created_by_name,
+    created_at: new Date().toISOString(),
+  };
+  save("work_projects", [...rows<WorkProject>("work_projects"), project]);
+  return project;
+}
+
+export function updateProjectStatus(id: string, status: WorkProject["status"]): void {
+  save(
+    "work_projects",
+    rows<WorkProject>("work_projects").map((p) => (p.id === id ? { ...p, status } : p))
+  );
+}
+
+export function setProjectRepresentative(
+  id: string,
+  representativeId: string | null,
+  representativeName: string
+): void {
+  save(
+    "work_projects",
+    rows<WorkProject>("work_projects").map((p) =>
+      p.id === id ? { ...p, representative_id: representativeId, representative_name: representativeName } : p
+    )
+  );
+}
+
+export function deleteProject(id: string): void {
+  save("work_projects", rows<WorkProject>("work_projects").filter((p) => p.id !== id));
+  // Desvincula las tareas del proyecto eliminado.
+  save(
+    "work_tasks",
+    rows<WorkTask>("work_tasks").map((t) =>
+      t.project_id === id ? { ...t, project_id: null, project_name: "" } : t
+    )
+  );
 }
 
 // ─── Archivos (cualquier extensión, guardados en este dispositivo) ───

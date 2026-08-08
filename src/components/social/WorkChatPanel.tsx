@@ -19,12 +19,19 @@ import {
   Check,
   RotateCcw,
   User,
+  Layers,
 } from "lucide-react";
 import {
   listTasks,
   createTask,
   setTaskStatus,
   deleteTask,
+  listProjects,
+  createProject,
+  updateProjectStatus,
+  setProjectRepresentative,
+  deleteProject,
+  listWorkChats,
   listFiles,
   addFile,
   deleteFile,
@@ -40,8 +47,9 @@ import {
   type WorkFile,
   type WorkThread,
   type ThreadMessage,
+  type WorkProject,
 } from "@/lib/social/work";
-import { fetchGroupMembers } from "@/lib/social/chat";
+import { fetchGroupMembers, fetchMyGroupChats } from "@/lib/social/chat";
 import type { GroupMember } from "@/lib/social/chat";
 import type { Profile } from "@/lib/social/api";
 
@@ -124,17 +132,21 @@ export function TaskManager({
   const [title, setTitle] = useState("");
   const [desc, setDesc] = useState("");
   const [assignee, setAssignee] = useState("");
+  const [projectId, setProjectId] = useState("");
+  const [projects, setProjects] = useState<WorkProject[]>(() => listProjects(chatId));
   const [creating, setCreating] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   useEffect(() => {
     setTasks(listTasks(chatId));
+    setProjects(listProjects(chatId));
     void fetchGroupMembers(chatId)
       .then((m) => setMembers(m))
       .catch(() => setMembers([]));
   }, [chatId]);
 
   const refresh = () => setTasks(listTasks(chatId));
+  const selProject = projects.find((p) => p.id === projectId);
 
   const submit = () => {
     if (!title.trim()) {
@@ -143,12 +155,15 @@ export function TaskManager({
     }
     setCreating(true);
     const member = members.find((m) => m.profile.id === assignee);
+    const project = projects.find((pr) => pr.id === projectId);
     createTask({
       chat_id: chatId,
       title,
       description: desc,
       assignee_id: assignee || null,
       assignee_name: member ? member.profile.display_name || member.profile.username || "Miembro" : "",
+      project_id: project?.id ?? null,
+      project_name: project?.name ?? "",
       created_by: myId,
       created_by_name: myName,
     });
@@ -156,6 +171,7 @@ export function TaskManager({
     setTitle("");
     setDesc("");
     setAssignee("");
+    setProjectId("");
     setFormOpen(false);
     refresh();
     toast.success("Tarea creada ✓");
@@ -207,6 +223,11 @@ export function TaskManager({
                       >
                         <User size={9} /> {t.assignee_name || "Sin asignar"}
                       </span>
+                      {t.project_id && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border border-primary/25 bg-primary/5 text-primary text-[9px] font-semibold">
+                          <Layers size={9} /> {t.project_name || "Proyecto"}
+                        </span>
+                      )}
                       <span className="text-[9px] text-muted-foreground/60">
                         por {t.created_by_name || "alguien"} · {fmtWhen(t.created_at)}
                       </span>
@@ -312,6 +333,29 @@ export function TaskManager({
                   </option>
                 ))}
             </select>
+          </div>
+          <div>
+            <label className="text-[10px] text-muted-foreground mb-1 block">Proyecto</label>
+            <select
+              value={projectId}
+              onChange={(e) => setProjectId(e.target.value)}
+              className="w-full bg-input/50 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40 border border-border/60"
+            >
+              <option value="">Sin proyecto</option>
+              {projects.map((pr) => (
+                <option key={pr.id} value={pr.id}>
+                  {pr.name}
+                </option>
+              ))}
+            </select>
+            {selProject?.representative_id ? (
+              <button
+                onClick={() => setAssignee(selProject.representative_id!)}
+                className="mt-1.5 w-full py-1.5 rounded-lg border border-primary/30 bg-primary/5 text-primary text-[10px] font-display tracking-widest active:scale-[0.98] transition hover:bg-primary/10"
+              >
+                ASIGNAR AL REPRESENTANTE: {selProject.representative_name}
+              </button>
+            ) : null}
           </div>
           <div className="flex gap-2">
             <button
@@ -746,3 +790,406 @@ export function ThreadView({
     </motion.div>
   );
 }
+
+
+// ───── Bandeja de proyectos del chat de trabajo ─────
+
+export function ProjectsManager({
+  chatId,
+  myId,
+  myName,
+  canManage,
+  onClose,
+}: {
+  chatId: string;
+  myId: string;
+  myName: string;
+  canManage: boolean;
+  onClose: () => void;
+}) {
+  const [projects, setProjects] = useState<WorkProject[]>(() => listProjects(chatId));
+  const [open, setOpen] = useState<WorkProject | null>(null);
+  const [projectTasks, setProjectTasks] = useState<WorkTask[]>([]);
+  const [formOpen, setFormOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [desc, setDesc] = useState("");
+  const [channelId, setChannelId] = useState(chatId);
+  const [repId, setRepId] = useState("");
+  const [members, setMembers] = useState<GroupMember[]>([]);
+  const [channels, setChannels] = useState<{ id: string; name: string }[]>([]);
+  const [creating, setCreating] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  // Nueva tarea dentro de un proyecto abierto
+  const [tTitle, setTTitle] = useState("");
+  const [tAssignee, setTAssignee] = useState("");
+  const [tBusy, setTBusy] = useState(false);
+
+  useEffect(() => {
+    setProjects(listProjects(chatId));
+    void fetchGroupMembers(chatId)
+      .then((m) => setMembers(m))
+      .catch(() => setMembers([]));
+    void (async () => {
+      const workIds = new Set(listWorkChats());
+      try {
+        const groups = await fetchMyGroupChats();
+        setChannels(groups.filter((g) => workIds.has(g.chat_id)).map((g) => ({ id: g.chat_id, name: g.name })));
+      } catch {
+        /* noop */
+      }
+    })();
+  }, [chatId]);
+
+  const refresh = () => setProjects(listProjects(chatId));
+
+  const channelOptions = [{ id: chatId, name: "Este chat" }, ...channels.filter((c) => c.id !== chatId)];
+
+  const submit = () => {
+    if (!name.trim()) {
+      toast.error("Ponle un nombre al proyecto");
+      return;
+    }
+    setCreating(true);
+    const member = members.find((m) => m.profile.id === repId);
+    const ch = channelOptions.find((c) => c.id === (channelId || chatId));
+    createProject({
+      chat_id: chatId,
+      channel_id: channelId || chatId,
+      channel_name: ch?.name || "Chat de trabajo",
+      name,
+      description: desc,
+      representative_id: repId || null,
+      representative_name: member ? member.profile.display_name || member.profile.username || "" : "",
+      created_by: myId,
+      created_by_name: myName,
+    });
+    setCreating(false);
+    setName("");
+    setDesc("");
+    setRepId("");
+    setFormOpen(false);
+    refresh();
+    toast.success("Proyecto creado ✓");
+  };
+
+  const setStatus = (id: string, status: WorkProject["status"]) => {
+    setBusyId(id);
+    updateProjectStatus(id, status);
+    refresh();
+    if (open?.id === id) setOpen({ ...open, status });
+    setBusyId(null);
+  };
+
+  const remove = (id: string) => {
+    deleteProject(id);
+    refresh();
+    if (open?.id === id) setOpen(null);
+    toast.success("Proyecto eliminado");
+  };
+
+  const openProject = (p: WorkProject) => {
+    setOpen(p);
+    setProjectTasks(listTasks(chatId).filter((t) => t.project_id === p.id));
+    setTTitle("");
+    setTAssignee("");
+  };
+
+  const addTaskToProject = () => {
+    if (!open || !tTitle.trim()) {
+      toast.error("Escribe el título de la tarea");
+      return;
+    }
+    setTBusy(true);
+    const member = members.find((m) => m.profile.id === tAssignee);
+    createTask({
+      chat_id: chatId,
+      title: tTitle,
+      description: "",
+      assignee_id: tAssignee || null,
+      assignee_name: member ? member.profile.display_name || member.profile.username || "" : "",
+      project_id: open.id,
+      project_name: open.name,
+      created_by: myId,
+      created_by_name: myName,
+    });
+    setTBusy(false);
+    setTTitle("");
+    setTAssignee("");
+    setProjectTasks(listTasks(chatId).filter((t) => t.project_id === open.id));
+    toast.success("Tarea añadida al proyecto ✓");
+  };
+
+  const statusLabel: Record<WorkProject["status"], string> = {
+    planning: "PLANIFICADO",
+    active: "EN CURSO",
+    done: "COMPLETADO",
+  };
+
+  const statusBtn = (p: WorkProject, st: WorkProject["status"], label: string, activeCls: string) => (
+    <button
+      key={st}
+      onClick={() => setStatus(p.id, st)}
+      disabled={busyId === p.id}
+      className={`px-2 py-1 rounded-lg text-[9px] font-display tracking-wider transition active:scale-95 disabled:opacity-40 ${
+        p.status === st ? activeCls : "border border-border text-muted-foreground hover:text-primary hover:border-primary/40"
+      }`}
+    >
+      {label}
+    </button>
+  );
+
+  // ── Vista detalle de un proyecto ──
+  if (open) {
+    return (
+      <Overlay title={open.name} icon={<Layers size={14} />} onClose={onClose}>
+        <div className="mb-3 rounded-xl border border-border/60 bg-background p-3 space-y-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => setOpen(null)}
+              className="w-7 h-7 rounded-lg border border-border grid place-items-center shrink-0 text-muted-foreground active:scale-95"
+            >
+              <ArrowLeft size={13} />
+            </button>
+            <span className="text-[10px] text-muted-foreground">Canal: {open.channel_name}</span>
+            <span
+              className={`ml-auto px-1.5 py-0.5 rounded-full text-[9px] font-bold ${
+                open.status === "done"
+                  ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                  : open.status === "active"
+                    ? "bg-primary/10 text-primary"
+                    : "bg-muted text-muted-foreground"
+              }`}
+            >
+              {statusLabel[open.status]}
+            </span>
+          </div>
+          {open.description && (
+            <p className="text-[11px] text-muted-foreground whitespace-pre-wrap break-words">{open.description}</p>
+          )}
+          <div className="text-[11px] flex items-center gap-1.5 flex-wrap">
+            <User size={11} className="text-primary" />
+            <b>Representante:</b> {open.representative_name || "Sin asignar"}
+            <span className="text-muted-foreground/60">· por {open.created_by_name || "alguien"}</span>
+          </div>
+          {canManage && (
+            <div className="flex items-center gap-1.5 flex-wrap pt-1">
+              {statusBtn(open, "planning", "PLANIFICADO", "bg-primary/15 text-primary border border-primary/40")}
+              {statusBtn(open, "active", "EN CURSO", "bg-primary/15 text-primary border border-primary/40")}
+              {statusBtn(open, "done", "COMPLETADO", "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40")}
+              <button
+                onClick={() => remove(open.id)}
+                className="ml-auto w-7 h-7 rounded-lg border border-border text-muted-foreground hover:text-destructive hover:border-rose-300 grid place-items-center active:scale-95"
+              >
+                <Trash2 size={12} />
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="text-[9px] font-display tracking-[0.18em] text-muted-foreground/70 mb-1.5">TAREAS DEL PROYECTO</div>
+        <div className="space-y-1.5 mb-3">
+          {projectTasks.length === 0 ? (
+            <div className="text-[11px] text-muted-foreground/50 px-2 py-2 rounded-xl border border-dashed border-border/60">
+              Este proyecto aún no tiene tareas.
+            </div>
+          ) : (
+            projectTasks.map((t) => (
+              <div key={t.id} className="px-3 py-2 rounded-xl bg-background border border-border/60">
+                <div className="text-[12px] font-semibold leading-snug break-words">{t.title}</div>
+                <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                  <span
+                    className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-semibold ${
+                      t.assignee_id ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    <User size={9} /> {t.assignee_name || "Sin asignar"}
+                  </span>
+                  <span
+                    className={`text-[9px] font-bold ${
+                      t.status === "done"
+                        ? "text-emerald-600 dark:text-emerald-400"
+                        : t.status === "doing"
+                          ? "text-primary"
+                          : "text-muted-foreground"
+                    }`}
+                  >
+                    {t.status === "todo" ? "PENDIENTE" : t.status === "doing" ? "EN CURSO" : "COMPLETADA"}
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {canManage && (
+          <div className="rounded-xl border border-primary/25 bg-primary/5 p-3 space-y-2">
+            <input
+              value={tTitle}
+              onChange={(e) => setTTitle(e.target.value)}
+              maxLength={120}
+              placeholder="Nueva tarea de este proyecto"
+              className="w-full bg-input/50 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40 border border-border/60"
+            />
+            <div className="flex gap-2 items-center">
+              <select
+                value={tAssignee}
+                onChange={(e) => setTAssignee(e.target.value)}
+                className="flex-1 bg-input/50 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40 border border-border/60"
+              >
+                <option value="">Sin asignar</option>
+                {members
+                  .filter((m) => m.profile.id !== myId)
+                  .map((m) => (
+                    <option key={m.profile.id} value={m.profile.id}>
+                      {m.profile.display_name || m.profile.username || "Miembro"}
+                    </option>
+                  ))}
+              </select>
+              <button
+                onClick={addTaskToProject}
+                disabled={tBusy}
+                className="px-3 py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-[10px] font-display tracking-widest active:scale-[0.98] transition disabled:opacity-40 flex items-center gap-1.5"
+              >
+                {tBusy ? <Loader2 size={11} className="animate-spin" /> : <Plus size={11} />}
+                AÑADIR
+              </button>
+            </div>
+          </div>
+        )}
+      </Overlay>
+    );
+  }
+
+  // ── Vista lista (bandeja) ──
+  return (
+    <Overlay title="Bandeja de proyectos" icon={<Layers size={14} />} onClose={onClose}>
+      <p className="text-[11px] text-muted-foreground mb-3">
+        Crea proyectos del equipo, asócialos a un canal de chat de trabajo, elige un representante y
+        organízalos con tareas. Todos los ven; los crean los administradores y moderadores.
+      </p>
+      {canManage && !formOpen && (
+        <button
+          onClick={() => setFormOpen(true)}
+          className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-[11px] font-display tracking-widest active:scale-[0.98] transition mb-3"
+        >
+          <Plus size={13} /> NUEVO PROYECTO
+        </button>
+      )}
+      {canManage && formOpen && (
+        <div className="mb-3 rounded-xl border border-primary/25 bg-primary/5 p-3 space-y-2">
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            maxLength={80}
+            placeholder="Nombre del proyecto — p. ej. «Remake del motor»"
+            className="w-full bg-input/50 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40 border border-border/60"
+          />
+          <textarea
+            value={desc}
+            onChange={(e) => setDesc(e.target.value)}
+            maxLength={300}
+            rows={2}
+            placeholder="Descripción (opcional)"
+            className="w-full bg-input/50 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40 border border-border/60 resize-none"
+          />
+          <div>
+            <label className="text-[10px] text-muted-foreground mb-1 block">
+              Canal de chat de trabajo asociado
+            </label>
+            <select
+              value={channelId}
+              onChange={(e) => setChannelId(e.target.value)}
+              className="w-full bg-input/50 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40 border border-border/60"
+            >
+              {channelOptions.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-[10px] text-muted-foreground mb-1 block">Representante</label>
+            <select
+              value={repId}
+              onChange={(e) => setRepId(e.target.value)}
+              className="w-full bg-input/50 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40 border border-border/60"
+            >
+              <option value="">Sin representante</option>
+              {members
+                .filter((m) => m.profile.id !== myId)
+                .map((m) => (
+                  <option key={m.profile.id} value={m.profile.id}>
+                    {m.profile.display_name || m.profile.username || "Miembro"}
+                  </option>
+                ))}
+            </select>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setFormOpen(false)}
+              disabled={creating}
+              className="flex-1 py-2 rounded-xl border border-border bg-background text-[10px] font-display tracking-widest active:scale-[0.98] transition disabled:opacity-40"
+            >
+              CANCELAR
+            </button>
+            <button
+              onClick={submit}
+              disabled={creating}
+              className="flex-1 py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-[10px] font-display tracking-widest active:scale-[0.98] transition disabled:opacity-40 flex items-center justify-center gap-1.5"
+            >
+              {creating ? <Loader2 size={11} className="animate-spin" /> : <Plus size={11} />}
+              {creating ? "CREANDO…" : "CREAR PROYECTO"}
+            </button>
+          </div>
+        </div>
+      )}
+      {projects.length === 0 ? (
+        <div className="text-center text-[11px] text-muted-foreground/60 py-8 px-4 leading-relaxed rounded-xl border border-dashed border-border/60">
+          Todavía no hay proyectos en este chat.
+          <br />
+          Crea el primero con el botón de arriba.
+        </div>
+      ) : (
+        <div className="space-y-1.5">
+          {projects.map((p) => {
+            const count = listTasks(chatId).filter((t) => t.project_id === p.id).length;
+            return (
+              <button
+                key={p.id}
+                onClick={() => openProject(p)}
+                className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl bg-background border border-border/60 hover:border-primary/40 hover:bg-primary/5 transition text-left active:scale-[0.99]"
+              >
+                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center shrink-0">
+                  <Layers size={14} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[12px] font-semibold truncate">{p.name}</span>
+                    <span
+                      className={`shrink-0 px-1 py-0.5 rounded-full text-[8px] font-bold ${
+                        p.status === "done"
+                          ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                          : p.status === "active"
+                            ? "bg-primary/10 text-primary"
+                            : "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {statusLabel[p.status]}
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-muted-foreground truncate">
+                    {count} {count === 1 ? "tarea" : "tareas"} · {p.channel_name}
+                    {p.representative_name ? ` · rep: ${p.representative_name}` : ""}
+                  </div>
+                </div>
+                <ChevronRight size={14} className="text-muted-foreground/50 shrink-0" />
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </Overlay>
+  );
+}
+

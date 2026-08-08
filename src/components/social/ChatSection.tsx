@@ -1,7 +1,7 @@
 import { Component, useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, Copy, Check, Reply, SmilePlus, ImagePlus, Film, Loader2, Users, Users2, Settings2, UserPlus, UserMinus, Camera, Pencil, LogOut, MessageCircle, AtSign, BarChart3, Shield, ShieldCheck, ArrowLeft, WifiOff, RefreshCw, KeyRound, CheckCircle2, AlertTriangle, Mic, Play, Pause, Trash2, ArrowDown, ExternalLink, Megaphone, Gift, PartyPopper, Lock, Sparkles, Timer, Undo2, ChevronRight, Briefcase, ClipboardList, FolderOpen, MessagesSquare, Download, Paperclip, MessageSquarePlus, Search } from "lucide-react";
+import { X, Send, Copy, Check, Reply, SmilePlus, ImagePlus, Film, Loader2, Users, Users2, Settings2, UserPlus, UserMinus, Camera, Pencil, LogOut, MessageCircle, AtSign, BarChart3, Shield, ShieldCheck, ArrowLeft, WifiOff, RefreshCw, KeyRound, CheckCircle2, AlertTriangle, Mic, Play, Pause, Trash2, ArrowDown, ExternalLink, Megaphone, Gift, PartyPopper, Lock, Sparkles, Timer, Undo2, ChevronRight, Briefcase, ClipboardList, FolderOpen, MessagesSquare, Download, Paperclip, MessageSquarePlus, Search, Layers } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
@@ -66,7 +66,7 @@ import {
   listThreadMessages,
 } from "@/lib/social/work";
 import type { WorkThread } from "@/lib/social/work";
-import { TaskManager, FileManager, ThreadsManager, ThreadView } from "./WorkChatPanel";
+import { TaskManager, FileManager, ThreadsManager, ThreadView, ProjectsManager } from "./WorkChatPanel";
 import { GlobalSearchPanel } from "./GlobalSearchPanel";
 import { supabase, hasSupabaseConfig, saveSupabaseCredentials } from "@/integrations/supabase/client";
 import { UserName } from "./UserName";
@@ -950,7 +950,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
   // Chats de trabajo: tareas, archivos e hilos (marcador local por chat)
   const [workChatIds, setWorkChatIds] = useState<Set<string>>(() => new Set(listWorkChats()));
   const [cgIsWork, setCgIsWork] = useState(false);
-  const [manager, setManager] = useState<"tasks" | "files" | "threads" | null>(null);
+  const [manager, setManager] = useState<"tasks" | "files" | "projects" | "threads" | null>(null);
   const [openThread, setOpenThread] = useState<WorkThread | null>(null);
   const [threads, setThreads] = useState<WorkThread[]>([]);
   // Búsqueda global (mensajes, usuarios, proyectos y archivos)
@@ -2508,6 +2508,12 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
               className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border border-border bg-card text-[10px] font-display tracking-[0.14em] text-muted-foreground hover:text-primary hover:border-primary/40 transition active:scale-[0.98]"
             >
               <MessagesSquare size={12} /> HILOS
+            </button>
+            <button
+              onClick={() => setManager("projects")}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border border-border bg-card text-[10px] font-display tracking-[0.14em] text-muted-foreground hover:text-primary hover:border-primary/40 transition active:scale-[0.98]"
+            >
+              <Layers size={12} /> PROYECTOS
             </button>
           </div>
         )}
@@ -4106,6 +4112,15 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
               setManager(null);
               setOpenThread(t);
             }}
+          />
+        )}
+        {manager === "projects" && activeGroup && isWork && (
+          <ProjectsManager
+            chatId={activeGroup.chat_id}
+            myId={myId ?? ""}
+            myName={myName}
+            canManage={canAssignTasks}
+            onClose={() => setManager(null)}
           />
         )}
         {openThread && activeGroup && isWork && (
