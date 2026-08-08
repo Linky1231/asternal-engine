@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Component, useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Send, Copy, Check, Reply, SmilePlus, ImagePlus, Loader2, Users, MessageCircle, AtSign, ArrowLeft, WifiOff, Database, Plug, RefreshCw, KeyRound, CheckCircle2, AlertTriangle, Mic, Play, Pause, Trash2, ArrowDown, ExternalLink, Megaphone, Gift, PartyPopper, Lock, Sparkles, Timer, Undo2, ChevronRight } from "lucide-react";
@@ -460,6 +460,26 @@ function MessageBubble({
   );
 }
 
+/** Aísla cada mensaje: si uno falla al renderizar, muestra un hueco en vez de tumbar el chat entero. */
+class SafeRow extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  render() {
+    if (this.state.failed) {
+      return (
+        <div className="flex justify-center py-2">
+          <span className="text-[10px] text-muted-foreground/60 px-3 py-1.5 rounded-xl border border-border bg-card">
+            No se pudo mostrar este mensaje
+          </span>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 /** Aviso del grupo: solo lo publica el administrador y lo ve toda la comunidad. */
 function AnnouncementCard({ m, sender }: { m: ChatMessage; sender?: Profile | null }) {
   return (
@@ -774,6 +794,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
   const [giftAmount, setGiftAmount] = useState("200");
   const [giftPeople, setGiftPeople] = useState("5");
   const [giftBusy, setGiftBusy] = useState(false);
+  const giftBusyRef = useRef(false); // guard síncrono contra dobles toques
   const [giftErr, setGiftErr] = useState<string | null>(null);
   const [myOrbes, setMyOrbes] = useState<number | null>(null);
   const [gifts, setGifts] = useState<Map<string, OrbGift>>(new Map());
@@ -1296,6 +1317,9 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
 
   const createGiftPackage = useCallback(async () => {
     if (!chatInfo) return;
+    // Guard síncrono: dos toques seguidos pasan el disabled={giftBusy} por el
+    // cierre obsoleto de React y creaban paquetes duplicados (se triplicaba).
+    if (giftBusyRef.current) return;
     const amount = Math.floor(Number(giftAmount) || 0);
     const people = Math.floor(Number(giftPeople) || 0);
     if (amount < 100 || amount % 2 !== 0) {
@@ -1310,61 +1334,74 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
       setGiftErr(`Necesitas ${amount * people} orbes y tienes ${myOrbes}.`);
       return;
     }
+    giftBusyRef.current = true;
     setGiftBusy(true);
     setGiftErr(null);
-    const r = await createOrbGift(chatInfo.id, {
-      title: giftTitle.trim(),
-      amountPerPerson: amount,
-      maxClaims: people,
-    });
-    setGiftBusy(false);
-    if (!r.ok) {
-      setGiftErr(r.error ?? "No se pudo crear el paquete de regalos");
-      return;
-    }
-    if (r.message) {
-      const msg = r.message;
-      setMessages((prev) => (prev.some((x) => x.id === msg.id) ? prev : [...prev, msg]));
-      void loadSenders([msg]);
-    }
-    if (r.giftId) {
-      const g = await fetchOrbGift(r.giftId).catch(() => null);
-      if (g) {
-        giftsRef.current.set(g.id, g);
-        setGifts(new Map(giftsRef.current));
+    try {
+      const r = await createOrbGift(chatInfo.id, {
+        title: giftTitle.trim(),
+        amountPerPerson: amount,
+        maxClaims: people,
+      });
+      if (!r.ok) {
+        setGiftErr(r.error ?? "No se pudo crear el paquete de regalos");
+        return;
       }
+      if (r.message) {
+        const msg = r.message;
+        setMessages((prev) => (prev.some((x) => x.id === msg.id) ? prev : [...prev, msg]));
+        void loadSenders([msg]);
+      }
+      if (r.giftId) {
+        const g = await fetchOrbGift(r.giftId).catch(() => null);
+        if (g) {
+          giftsRef.current.set(g.id, g);
+          setGifts(new Map(giftsRef.current));
+        }
+      }
+      setGiftOpen(false);
+      setGiftTitle("");
+      setGiftAmount("200");
+      setGiftPeople("5");
+      setMyOrbes((o) => (o == null ? o : Math.max(0, o - amount * people)));
+      toast.success("¡Paquete de regalos creado!", { description: `Se descontaron ${amount * people} orbes de tu cuenta` });
+    } catch {
+      // Nunca dejar el botón atascado: si la red falla tras confirmar en el
+      // servidor, avisamos para que el usuario recargue el chat y lo vea.
+      setGiftErr("Error de conexión al crear el paquete. Revisa tu red; si ya se creó, aparecerá al volver a abrir el chat.");
+    } finally {
+      giftBusyRef.current = false;
+      setGiftBusy(false);
     }
-    setGiftOpen(false);
-    setGiftTitle("");
-    setGiftAmount("200");
-    setGiftPeople("5");
-    setMyOrbes((o) => (o == null ? o : Math.max(0, o - amount * people)));
-    toast.success("¡Paquete de regalos creado!", { description: `Se descontaron ${amount * people} orbes de tu cuenta` });
-
   }, [chatInfo, giftTitle, giftAmount, giftPeople, myOrbes, loadSenders]);
 
   const handleClaimGift = useCallback(async (giftId: string) => {
     if (claimingId) return;
     setClaimingId(giftId);
-    const r = await claimOrbGift(giftId);
-    setClaimingId(null);
-    if (!r.ok) {
-      toast.error(r.error ?? "No se pudo abrir el regalo");
+    try {
+      const r = await claimOrbGift(giftId);
+      if (!r.ok) {
+        toast.error(r.error ?? "No se pudo abrir el regalo");
+        const g = await fetchOrbGift(giftId).catch(() => null);
+        if (g) {
+          giftsRef.current.set(giftId, g);
+          setGifts(new Map(giftsRef.current));
+        }
+        return;
+      }
+      const amount = r.amount ?? 0;
+      setMyClaims((prev) => new Map(prev).set(giftId, amount));
       const g = await fetchOrbGift(giftId).catch(() => null);
       if (g) {
         giftsRef.current.set(giftId, g);
         setGifts(new Map(giftsRef.current));
       }
-      return;
+      toast.success(`¡+${amount} orbes a tu cuenta!`);
+    } catch {
+      toast.error("Error de conexión al abrir el regalo. Inténtalo de nuevo.");
+    } finally {
+      setClaimingId(null);
     }
-    const amount = r.amount ?? 0;
-    setMyClaims((prev) => new Map(prev).set(giftId, amount));
-    const g = await fetchOrbGift(giftId).catch(() => null);
-    if (g) {
-      giftsRef.current.set(giftId, g);
-      setGifts(new Map(giftsRef.current));
-    }
-    toast.success(`¡+${amount} orbes a tu cuenta!`);
   }, [claimingId]);
 
   // Caduca un paquete que superó las 24 h: el servidor devuelve al creador
@@ -1372,14 +1409,20 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
   const handleExpireGift = useCallback(async (giftId: string) => {
     if (expiringId) return;
     setExpiringId(giftId);
-    const closed = await expireOrbGifts();
-    setExpiringId(null);
+    let closed: number | null = null;
+    try {
+      closed = await expireOrbGifts();
+    } catch {
+      /* noop */
+    } finally {
+      setExpiringId(null);
+    }
     const g = await fetchOrbGift(giftId).catch(() => null);
     if (g) {
       giftsRef.current.set(giftId, g);
       setGifts(new Map(giftsRef.current));
     }
-    if (closed > 0) {
+    if (closed != null && closed > 0) {
       const unclaimed = g ? Math.max(0, g.total_orbes - g.claims * g.amount_per_person) : 0;
       toast.info("Paquete caducado", { description: `${unclaimed.toLocaleString("es")} orbes no reclamados se devolvieron al creador` });
     }
@@ -2009,39 +2052,39 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
               : "Sé el primero en saludar a la comunidad 👋"}
           </div>
         ) : (
-          messages.map((m) =>
-            isAnnouncement(m) ? (
-              <AnnouncementCard key={m.id} m={m} sender={senders.get(m.sender_id)} />
-            ) : isGiftMessage(m) ? (
-              <GiftCard
-                key={m.id}
-                m={m}
-                gift={m.gift_id ? gifts.get(m.gift_id) ?? null : null}
-                claiming={claimingId === m.gift_id}
-                expiring={expiringId === m.gift_id}
-                claimedAmount={m.gift_id ? myClaims.get(m.gift_id) : undefined}
-                onClaim={() => m.gift_id && void handleClaimGift(m.gift_id)}
-                onExpire={() => m.gift_id && void handleExpireGift(m.gift_id)}
-              />
-            ) : (
-              <MessageBubble
-                key={m.id}
-                m={m}
-                mine={m.sender_id === myId}
-                sender={senders.get(m.sender_id)}
-                senders={senders}
-                reply={m.reply_to_id ? messages.find((x) => x.id === m.reply_to_id) ?? null : null}
-                mediaUrl={resolveMediaUrl(m.media_url, signedMedia)}
-                copied={copiedId === m.id}
-                onCopy={() => void copyMessage(m)}
-                onReply={() => {
-                  setReplyTo(m);
-                  setStickersOpen(false);
-                  inputRef.current?.focus();
-                }}
-              />
-            )
-          )
+          messages.map((m) => (
+            <SafeRow key={m.id}>
+              {isAnnouncement(m) ? (
+                <AnnouncementCard m={m} sender={senders.get(m.sender_id)} />
+              ) : isGiftMessage(m) ? (
+                <GiftCard
+                  m={m}
+                  gift={m.gift_id ? gifts.get(m.gift_id) ?? null : null}
+                  claiming={claimingId === m.gift_id}
+                  expiring={expiringId === m.gift_id}
+                  claimedAmount={m.gift_id ? myClaims.get(m.gift_id) : undefined}
+                  onClaim={() => m.gift_id && void handleClaimGift(m.gift_id)}
+                  onExpire={() => m.gift_id && void handleExpireGift(m.gift_id)}
+                />
+              ) : (
+                <MessageBubble
+                  m={m}
+                  mine={m.sender_id === myId}
+                  sender={senders.get(m.sender_id)}
+                  senders={senders}
+                  reply={m.reply_to_id ? messages.find((x) => x.id === m.reply_to_id) ?? null : null}
+                  mediaUrl={resolveMediaUrl(m.media_url, signedMedia)}
+                  copied={copiedId === m.id}
+                  onCopy={() => void copyMessage(m)}
+                  onReply={() => {
+                    setReplyTo(m);
+                    setStickersOpen(false);
+                    inputRef.current?.focus();
+                  }}
+                />
+              )}
+            </SafeRow>
+          ))
         )}
         <div ref={endRef} />
         {unseen > 0 && (

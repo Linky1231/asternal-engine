@@ -40,7 +40,10 @@ type FeedSub = "forYou" | "following" | "trending" | "forums";
  * efecto), solo se cierra el chat con un aviso en vez de tumbar toda la app
  * con la página de error de la ruta.
  */
-class ChatBoundary extends Component<{ onClose: () => void; children: React.ReactNode }, { failed: boolean }> {
+class ChatBoundary extends Component<
+  { onClose: () => void; onRetry: () => void; children: React.ReactNode },
+  { failed: boolean }
+> {
   state = { failed: false };
   static getDerivedStateFromError() {
     return { failed: true };
@@ -57,12 +60,20 @@ class ChatBoundary extends Component<{ onClose: () => void; children: React.Reac
             <p className="text-xs text-muted-foreground mb-4 leading-relaxed">
               Cierra y vuelve a abrirlo. Si persiste, revisa la conexión de Supabase.
             </p>
-            <button
-              onClick={this.props.onClose}
-              className="px-4 py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-xs font-display tracking-widest active:scale-95 transition"
-            >
-              VOLVER
-            </button>
+            <div className="flex items-center justify-center gap-2">
+              <button
+                onClick={this.props.onRetry}
+                className="px-4 py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-xs font-display tracking-widest active:scale-95 transition"
+              >
+                REINTENTAR
+              </button>
+              <button
+                onClick={this.props.onClose}
+                className="px-4 py-2 rounded-xl border border-border bg-background text-foreground text-xs font-display tracking-widest active:scale-95 transition"
+              >
+                VOLVER
+              </button>
+            </div>
           </div>
         </div>
       );
@@ -86,6 +97,7 @@ function HomePage() {
   const [showSearch, setShowSearch] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [chatRetryNonce, setChatRetryNonce] = useState(0);
   const [notifOpen, setNotifOpen] = useState(false);
   const [chatShareText, setChatShareText] = useState<string | null>(null);
   const [inPreview, setInPreview] = useState(false);
@@ -456,8 +468,16 @@ function HomePage() {
 
       {/* Full-screen chat */}
       {chatOpen && (
-        <ChatBoundary onClose={() => setChatOpen(false)}>
-          <ChatSection myId={myId} onClose={() => { setChatOpen(false); setChatShareText(null); }} initialText={chatShareText ?? undefined} />
+        <ChatBoundary
+          onClose={() => setChatOpen(false)}
+          onRetry={() => setChatRetryNonce((n) => n + 1)}
+        >
+          <ChatSection
+            key={chatRetryNonce}
+            myId={myId}
+            onClose={() => { setChatOpen(false); setChatShareText(null); }}
+            initialText={chatShareText ?? undefined}
+          />
         </ChatBoundary>
       )}
 
