@@ -411,6 +411,64 @@ function realSubscribe(chatId: string, onEvent: (ev: ChatEvent) => void): () => 
   }
 }
 
+// ───── Chats individuales (DMs) ─────
+// Entre dos personas que se siguen mutuamente. Reutilizan las tablas del chat
+// (chats con type='dm', chat_members y chat_messages). Sin paquetes de regalo.
+
+export type DmChat = {
+  chat_id: string;
+  other: Profile | null;
+  last_message: ChatMessage | null;
+  last_at: string | null;
+  unread: number;
+};
+
+/** Crea (o devuelve) el chat individual con otro usuario. Exige seguimiento mutuo. */
+export async function getOrCreateDm(otherId: string): Promise<{ ok: boolean; chatId?: string; error?: string }> {
+  const { data, error } = await supabase.rpc("get_or_create_dm", { _other_id: otherId } as never);
+  if (error) return { ok: false, error: error.message };
+  const r = (data as { ok?: boolean; chat_id?: string; error?: string }) ?? {};
+  return { ok: !!r.ok, chatId: r.chat_id, error: r.error };
+}
+
+/** Lista mis chats individuales con el perfil del otro usuario y no leídos. */
+export async function fetchMyDmChats(): Promise<DmChat[]> {
+  const { data, error } = await supabase.rpc("my_dm_chats" as never);
+  if (error) throw error;
+  return (data as DmChat[]) ?? [];
+}
+
+/** Perfiles con los que me sigo mutuamente (posibles chats individuales). */
+export async function fetchMutualFollows(): Promise<Profile[]> {
+  const { data, error } = await supabase.rpc("my_mutual_follows" as never);
+  if (error) throw error;
+  return (data as Profile[]) ?? [];
+}
+
+/** Marca como leído un chat individual (actualiza last_read_at del participante). */
+export async function markDmRead(chatId: string): Promise<void> {
+  try {
+    await supabase.rpc("mark_dm_read", { _chat_id: chatId } as never);
+  } catch {
+    /* best effort */
+  }
+}
+
+/**
+ * Busca perfiles para las menciones @usuario (por nombre de usuario o
+ * nombre visible). Devuelve los que coinciden, limitados.
+ */
+export async function searchProfilesForMention(query: string, limit = 8): Promise<Profile[]> {
+  const q = query.trim().toLowerCase();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .or(`username.ilike.%${q}%,display_name.ilike.%${q}%`)
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []) as Profile[];
+}
+
 export type ChatSticker = { id: string; path: string; title: string };
 
 /**

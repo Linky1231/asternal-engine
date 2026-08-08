@@ -131,8 +131,13 @@ create policy chat_members_read on public.chat_members for select using (true);
 create policy chat_members_self_insert on public.chat_members for insert with check (auth.uid() = user_id);
 create policy chat_members_self_delete on public.chat_members for delete using (auth.uid() = user_id);
 
--- chat_messages: lectura pública, cada usuario escribe/edita/elimina solo lo suyo
-create policy chat_messages_read on public.chat_messages for select using (true);
+-- chat_messages: el chat del grupo es de lectura pública; los chats
+-- individuales (dm) solo los leen sus participantes.
+create policy chat_messages_read on public.chat_messages for select using (
+  exists (select 1 from public.chats c where c.id = chat_messages.chat_id and c.type = 'group')
+  or exists (select 1 from public.chat_members m
+             where m.chat_id = chat_messages.chat_id and m.user_id = auth.uid())
+);
 create policy chat_messages_insert on public.chat_messages for insert with check (auth.uid() = sender_id);
 create policy chat_messages_update on public.chat_messages for update using (auth.uid() = sender_id);
 create policy chat_messages_delete on public.chat_messages for delete using (auth.uid() = sender_id);
@@ -149,6 +154,96 @@ create policy orb_gifts_read on public.orb_gifts for select using (true);
 
 -- orb_gift_claims: cada usuario solo ve sus propios registros.
 create policy orb_gift_claims_read on public.orb_gift_claims for select using (auth.uid() = user_id);
+
+-- ─────── CHATS INDIVIDUALES (DMs) ───────
+-- Reutilizan chats (type='dm'), chat_members (los 2 participantes) y
+-- chat_messages. last_read_at guarda hasta dónde ha leído cada participante
+-- para calcular los no leídos de cada conversación.
+alter table public.chat_members add column if not exists last_read_at timestamptz;
+
+-- ¿a y b se siguen mutuamente?
+create or replace function public.are_mutual(a uuid, b uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.follows where follower_id = a and following_id = b)
+     and exists (select 1 from public.follows where follower_id = b and following_id = a)
+$$;
+
+-- Devuelve (o crea) el chat individual con _other_id. Solo se permite si se
+-- siguen mutuamente. Crea el chat tipo 'dm' y añade a ambos como miembros.
+create or replace function public.get_or_create_dm(_other_id uuid)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  v_me uuid := auth.uid();
+  v_chat_id uuid;
+begin
+  if v_me is null then
+    return jsonb_build_object('ok', false, 'error', 'Inicia sesión para chatear');
+  end if;
+  if v_me = _other_id then
+    return jsonb_build_object('ok', false, 'error', 'No puedes chatear contigo mismo');
+  end if;
+  if not public.are_mutual(v_me, _other_id) then
+    return jsonb_build_object('ok', false, 'error', 'Solo puedes chatear con personas que te siguen mutuamente');
+  end if;
+  -- Buscar un chat dm existente con ambos miembros (el tipo válido en la
+  -- tabla chats es 'direct', definido por su CHECK constraint)
+  select c.id into v_chat_id
+  from public.chats c
+  join public.chat_members a on a.chat_id = c.id and a.user_id = v_me
+  join public.chat_members b on b.chat_id = c.id and b.user_id = _other_id
+  where c.type = 'direct'
+  limit 1;
+  if v_chat_id is null then
+    insert into public.chats (type, name, created_by, is_community)
+    values ('direct', 'Chat individual', v_me, false)
+    returning id into v_chat_id;
+    insert into public.chat_members (chat_id, user_id, role) values
+      (v_chat_id, v_me, 'member'),
+      (v_chat_id, _other_id, 'member');
+  end if;
+  return jsonb_build_object('ok', true, 'chat_id', v_chat_id);
+end $$;
+
+-- Lista mis chats individuales: perfil del otro, último mensaje y no leídos.
+create or replace function public.my_dm_chats()
+returns jsonb language sql stable security definer set search_path = public as $$
+  select coalesce(jsonb_agg(x order by x->>'last_at' desc nulls last), '[]'::jsonb)
+  from (
+    select jsonb_build_object(
+      'chat_id', c.id,
+      'other', (select to_jsonb(p) from public.profiles p where p.id = (
+        select m.user_id from public.chat_members m
+        where m.chat_id = c.id and m.user_id <> auth.uid() limit 1
+      )),
+      'last_message', (select to_jsonb(msg) from public.chat_messages msg
+        where msg.chat_id = c.id order by msg.created_at desc limit 1),
+      'last_at', (select max(msg.created_at) from public.chat_messages msg where msg.chat_id = c.id),
+      'unread', (select count(*) from public.chat_messages msg
+        where msg.chat_id = c.id and msg.sender_id <> auth.uid()
+          and (msg.created_at > coalesce(
+            (select m.last_read_at from public.chat_members m
+             where m.chat_id = c.id and m.user_id = auth.uid()),
+            'epoch'::timestamptz)))
+    ) x
+    from public.chats c
+    join public.chat_members cm on cm.chat_id = c.id and cm.user_id = auth.uid()
+    where c.type = 'direct'
+  ) t
+$$;
+
+-- Perfiles con los que me sigo mutuamente (para el apartado de DMs).
+create or replace function public.my_mutual_follows()
+returns setof public.profiles language sql stable security definer set search_path = public as $$
+  select p.* from public.profiles p
+  where public.are_mutual(auth.uid(), p.id)
+$$;
+
+-- Marca como leído un chat individual (actualiza last_read_at del participante).
+create or replace function public.mark_dm_read(_chat_id uuid)
+returns void language sql security definer set search_path = public as $$
+  update public.chat_members set last_read_at = now()
+  where chat_id = _chat_id and user_id = auth.uid();
+$$;
 
 -- ─────── RPC: AVISOS Y REGALOS ───────
 -- ¿El usuario conectado es el administrador propietario? Solo

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, Copy, Check, Reply, SmilePlus, ImagePlus, Loader2, Users, WifiOff, Database, Plug, RefreshCw, KeyRound, CheckCircle2, AlertTriangle, Mic, Play, Pause, Trash2, ArrowDown, ExternalLink, Megaphone, Gift, PartyPopper, Lock, Sparkles, Timer, Undo2, ChevronRight } from "lucide-react";
+import { X, Send, Copy, Check, Reply, SmilePlus, ImagePlus, Loader2, Users, MessageCircle, AtSign, ArrowLeft, WifiOff, Database, Plug, RefreshCw, KeyRound, CheckCircle2, AlertTriangle, Mic, Play, Pause, Trash2, ArrowDown, ExternalLink, Megaphone, Gift, PartyPopper, Lock, Sparkles, Timer, Undo2, ChevronRight } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
@@ -27,15 +28,21 @@ import {
   subscribeToOrbGifts,
   isAnnouncement,
   isGiftMessage,
+  getOrCreateDm,
+  fetchMyDmChats,
+  fetchMutualFollows,
+  markDmRead,
+  searchProfilesForMention,
   COMMUNITY_CHAT_NAME,
   CHAT_ERR,
   type ChatMessage,
   type ChatSticker,
   type OrbGift,
+  type DmChat,
 } from "@/lib/social/chat";
 import { supabase, hasSupabaseConfig, saveSupabaseCredentials, isSchemaMissing, getSupabaseUrl } from "@/integrations/supabase/client";
 import { UserName } from "./UserName";
-import { getMyProfile, getMyOrbes, isAdmin } from "@/lib/social/api";
+import { getMyProfile, getMyOrbes, isAdmin, pushNotification } from "@/lib/social/api";
 import type { Profile } from "@/lib/social/api";
 import { runChatSchemaSetup, SUPABASE_ACCESS_TOKEN, sqlEditorUrl } from "@/lib/supabase/setup";
 import { CHAT_SCHEMA_SQL } from "@/lib/supabase/chat-schema";
@@ -334,10 +341,38 @@ function ProfileLinkCard({ userId }: { userId: string }) {
   );
 }
 
+/** Resalta las menciones @usuario dentro del texto (enlazando al perfil si se conoce). */
+function renderContentWithMentions(content: string, mine: boolean, senders: Map<string, Profile>): ReactNode[] {
+  const parts = content.split(/(@[\w.]+)/g);
+  return parts.map((part, i) => {
+    if (i % 2 === 1 && part.startsWith("@") && part.length > 1) {
+      const uname = part.slice(1).toLowerCase();
+      const prof = Array.from(senders.values()).find((p) => (p.username ?? "").toLowerCase() === uname);
+      const cls = mine
+        ? "font-semibold text-primary-foreground underline decoration-white/50 underline-offset-2"
+        : "font-semibold text-primary underline decoration-primary/40 underline-offset-2";
+      if (prof) {
+        return (
+          <Link key={i} to="/profile/$userId" params={{ userId: prof.id }} className={cls} onClick={(e) => e.stopPropagation()}>
+            {part}
+          </Link>
+        );
+      }
+      return (
+        <span key={i} className={cls}>
+          {part}
+        </span>
+      );
+    }
+    return <span key={i}>{part}</span>;
+  });
+}
+
 function MessageBubble({
   m,
   mine,
   sender,
+  senders,
   reply,
   mediaUrl,
   copied,
@@ -347,6 +382,7 @@ function MessageBubble({
   m: ChatMessage;
   mine: boolean;
   sender?: Profile | null;
+  senders: Map<string, Profile>;
   reply?: ChatMessage | null;
   mediaUrl: string | null;
   copied: boolean;
@@ -392,7 +428,11 @@ function MessageBubble({
               {isAudioMessage(reply) ? "🎤 Audio de voz" : reply.media_url ? "🖼️ Sticker" : reply.content || "Mensaje"}
             </div>
           )}
-          {displayContent && <div className="text-[13px] leading-snug whitespace-pre-wrap break-words">{displayContent}</div>}
+          {displayContent && (
+            <div className="text-[13px] leading-snug whitespace-pre-wrap break-words">
+              {renderContentWithMentions(displayContent, mine, senders)}
+            </div>
+          )}
           {contentProfileId && <ProfileLinkCard userId={contentProfileId} />}
           {mediaUrl && isAudioMessage(m) ? (
             <AudioBubble url={mediaUrl} mine={mine} duration={0} />
@@ -741,6 +781,18 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
   const [claimingId, setClaimingId] = useState<string | null>(null);
   const [expiringId, setExpiringId] = useState<string | null>(null);
   const [myClaims, setMyClaims] = useState<Map<string, number>>(new Map());
+  // Chats individuales (DMs) y menciones @usuario
+  const [view, setView] = useState<"group" | "dms">("group");
+  const [dmList, setDmList] = useState<DmChat[]>([]);
+  const [dmLoading, setDmLoading] = useState(false);
+  const [activeDm, setActiveDm] = useState<DmChat | null>(null);
+  const activeDmRef = useRef<DmChat | null>(null);
+  activeDmRef.current = activeDm;
+  const [mentionOpen, setMentionOpen] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [mentionCandidates, setMentionCandidates] = useState<Profile[]>([]);
+  const [mentionIndex, setMentionIndex] = useState(0);
+  const mentionRef = useRef<{ start: number; end: number } | null>(null);
 
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -751,6 +803,10 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
   const cursorRef = useRef<{ created_at: string; id: string } | null>(null);
   const prevScrollHeightRef = useRef(0);
   const signedMediaRef = useRef<Map<string, string>>(new Map());
+
+  // Hilo activo: chat de la comunidad (grupo) o chat individual (DM).
+  const currentChatId = activeDm ? activeDm.chat_id : (chatInfo?.id ?? null);
+  const totalDmUnread = dmList.reduce((s, d) => s + (d.unread || 0), 0);
 
   // Load senders for a batch of messages
   const loadSenders = useCallback(async (msgs: ChatMessage[]) => {
@@ -826,7 +882,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
     window.location.reload();
   }, [connectUrl, connectKey]);
 
-  // Preparar el chat comunitario + cargar mensajes
+  // Preparar el chat comunitario (solo grupo) + cargar mensajes del hilo activo
   useEffect(() => {
     let cancelled = false;
     setInitError(null);
@@ -834,39 +890,57 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
     setLoading(true);
     (async () => {
       try {
-        const info = await getCommunityChat();
+        if (!chatInfo && !activeDmRef.current) {
+          const info = await getCommunityChat();
+          if (cancelled) return;
+          setChatInfo(info);
+          // El aviso de «modo local» depende del modo activo real del chat
+          // (cuenta local + Supabase conectado también opera en local).
+          setIsLocal(!hasSupabaseConfig() || !!info.local);
+          // Comprueba si la tabla del chat está desactualizada (sin media_type)
+          // para avisar de reinstalar el esquema antes de que falle un audio.
+          isChatSchemaOutdated()
+            .then((outdated) => {
+              if (!cancelled) setSchemaOutdated(outdated);
+            })
+            .catch(() => {});
+        }
         if (cancelled) return;
-        setChatInfo(info);
-        // El aviso de «modo local» depende del modo activo real del chat
-        // (cuenta local + Supabase conectado también opera en local).
-        setIsLocal(!hasSupabaseConfig() || !!info.local);
-        const { messages: msgs, hasMore: more } = await fetchChatMessages(info.id);
+        const threadId = activeDmRef.current ? activeDmRef.current.chat_id : (chatInfo?.id ?? null);
+        if (!threadId) {
+          if (!cancelled) setLoading(false);
+          return;
+        }
+        const { messages: msgs, hasMore: more } = await fetchChatMessages(threadId);
         if (cancelled) return;
         setMessages(msgs);
         setHasMore(more);
-        // No leídos: mensajes más nuevos que la última vez que se abrió el chat.
-        try {
-          const lastSeen = Number(localStorage.getItem("_chat_last_seen") ?? 0);
-          const missed = msgs.filter((m) => m.sender_id !== myId && new Date(m.created_at).getTime() > lastSeen).length;
-          if (missed > 0) setUnseen(missed);
-          localStorage.setItem("_chat_last_seen", String(Date.now()));
-        } catch {
-          /* noop */
-        }
         if (msgs.length) cursorRef.current = { created_at: msgs[0].created_at, id: msgs[0].id };
         stickToBottomRef.current = true;
         await loadSenders(msgs);
-        // Comprueba si la tabla del chat está desactualizada (sin media_type)
-        // para avisar de reinstalar el esquema antes de que falle un audio.
-        isChatSchemaOutdated()
-          .then((outdated) => {
-            if (!cancelled) setSchemaOutdated(outdated);
-          })
-          .catch(() => {});
+        if (activeDmRef.current) {
+          // Chat individual: no leídos del badge y marcar como leído.
+          const unread = activeDmRef.current.unread || 0;
+          if (unread > 0) setUnseen(unread >= 100 ? 99 : unread);
+          void markDmRead(threadId).catch(() => {});
+          setDmList((prev) => prev.map((d) => (d.chat_id === threadId ? { ...d, unread: 0 } : d)));
+        } else {
+          // Grupo: no leídos = mensajes más nuevos que la última visita.
+          try {
+            const lastSeen = Number(localStorage.getItem("_chat_last_seen") ?? 0);
+            const missed = msgs.filter((m) => m.sender_id !== myId && new Date(m.created_at).getTime() > lastSeen).length;
+            if (missed > 0) setUnseen(missed);
+            localStorage.setItem("_chat_last_seen", String(Date.now()));
+          } catch {
+            /* noop */
+          }
+        }
       } catch (err) {
         if (cancelled) return;
         const code = (err as { code?: string })?.code;
-        if (code === CHAT_ERR.AUTH_REQUIRED || code === CHAT_ERR.REAL_AUTH_REQUIRED) {
+        if (activeDmRef.current) {
+          toast.error("No se pudo cargar el chat individual");
+        } else if (code === CHAT_ERR.AUTH_REQUIRED || code === CHAT_ERR.REAL_AUTH_REQUIRED) {
           setInitError("auth");
         } else {
           const msg = (err as Error)?.message ?? "";
@@ -887,7 +961,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
     return () => {
       cancelled = true;
     };
-  }, [loadSenders, retryKey]);
+  }, [loadSenders, retryKey, chatInfo, activeDm]);
 
   // Texto inicial: mensaje compartido (botón «Compartir en el chat» del perfil).
   useEffect(() => {
@@ -899,12 +973,13 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
 
   // Suscripción en tiempo real: INSERT (nuevos), UPDATE (ediciones), DELETE (eliminaciones)
   useEffect(() => {
-    if (!chatInfo) return;
-    const unsub = subscribeToChat(chatInfo.id, (ev) => {
+    if (!currentChatId) return;
+    const unsub = subscribeToChat(currentChatId, (ev) => {
       if (ev.type === "INSERT") {
         setMessages((prev) => (prev.some((m) => m.id === ev.message.id) ? prev : [...prev, ev.message]));
         loadSenders([ev.message]);
         if (!stickToBottomRef.current) setUnseen((n) => n + 1);
+        else if (activeDmRef.current) void markDmRead(currentChatId).catch(() => {});
         else {
           try { localStorage.setItem("_chat_last_seen", String(Date.now())); } catch { /* noop */ }
         }
@@ -915,7 +990,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
       }
     });
     return unsub;
-  }, [chatInfo, loadSenders]);
+  }, [currentChatId, loadSenders]);
 
   // ¿Es el administrador propietario? (solo linkyteam989@gmail.com puede
   // publicar avisos y crear paquetes de regalo; el servidor lo refuerza).
@@ -1041,12 +1116,12 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
 
   // Carga la página anterior (scroll infinito hacia arriba)
   const loadOlder = useCallback(async () => {
-    if (!chatInfo || loadingMore || !hasMore || !cursorRef.current) return;
+    if (!currentChatId || loadingMore || !hasMore || !cursorRef.current) return;
     setLoadingMore(true);
     const el = listRef.current;
     prevScrollHeightRef.current = el?.scrollHeight ?? 0;
     try {
-      const { messages: older, hasMore: more } = await fetchChatMessages(chatInfo.id, {
+      const { messages: older, hasMore: more } = await fetchChatMessages(currentChatId, {
         before: cursorRef.current,
       });
       if (!older.length) {
@@ -1078,7 +1153,10 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
     stickToBottomRef.current = nearBottom;
     if (nearBottom && unseen > 0) {
       setUnseen(0);
-      try { localStorage.setItem("_chat_last_seen", String(Date.now())); } catch { /* noop */ }
+      if (activeDmRef.current && currentChatId) void markDmRead(currentChatId).catch(() => {});
+      else {
+        try { localStorage.setItem("_chat_last_seen", String(Date.now())); } catch { /* noop */ }
+      }
     }
     if (el.scrollTop < 60 && hasMore && !loadingMore) void loadOlder();
   }, [hasMore, loadingMore, loadOlder, unseen]);
@@ -1086,9 +1164,12 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
   const jumpToBottom = useCallback(() => {
     stickToBottomRef.current = true;
     setUnseen(0);
-    try { localStorage.setItem("_chat_last_seen", String(Date.now())); } catch { /* noop */ }
+    if (activeDmRef.current && currentChatId) void markDmRead(currentChatId).catch(() => {});
+    else {
+      try { localStorage.setItem("_chat_last_seen", String(Date.now())); } catch { /* noop */ }
+    }
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, []);
+  }, [currentChatId]);
 
   // Cargar stickers al abrir el panel
   useEffect(() => {
@@ -1130,7 +1211,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
   const handleSend = useCallback(
     async (mediaUrl?: string) => {
       const content = draft.trim();
-      if (!chatInfo) {
+      if (!currentChatId) {
         toast.error("El chat aún no está conectado", {
           description: initError === "schema" ? "Instala las tablas del chat con el botón de abajo." : "Reintenta en unos segundos.",
         });
@@ -1138,7 +1219,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
       }
       if (!content && !mediaUrl) return;
       try {
-        const sent = await sendChatMessage(chatInfo.id, {
+        const sent = await sendChatMessage(currentChatId, {
           content: content || undefined,
           mediaUrl: mediaUrl ?? undefined,
           replyToId: replyTo?.id ?? null,
@@ -1148,6 +1229,14 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
         setDraft("");
         setReplyTo(null);
         setStickersOpen(false);
+        // En un chat individual: refrescar la lista (preview + último mensaje).
+        if (activeDmRef.current) {
+          setDmList((prev) => prev.map((d) => (d.chat_id === sent.chat_id ? { ...d, last_message: sent, last_at: sent.created_at, unread: 0 } : d)));
+          void markDmRead(sent.chat_id).catch(() => {});
+        } else if (content) {
+          // Grupo: avisar a los usuarios mencionados (@usuario).
+          void notifyMentions(content);
+        }
         if (inputRef.current) inputRef.current.style.height = "auto";
         // Si hay mensajes pendientes por un fallo de red anterior, la conexión
         // acaba de funcionar: los reenviamos ahora mismo.
@@ -1159,8 +1248,8 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
           .catch(() => {});
       } catch (err) {
         // Fallo de red: guardamos el mensaje en la cola local y se reenviará solo.
-        if (isNetworkError(err) && chatInfo) {
-          queuePendingMessage(chatInfo.id, {
+        if (isNetworkError(err) && currentChatId) {
+          queuePendingMessage(currentChatId, {
             content: content || undefined,
             mediaUrl,
             mediaType: mediaUrl ? "image" : undefined,
@@ -1170,7 +1259,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
         reportSendError(err);
       }
     },
-    [chatInfo, draft, replyTo, initError]
+    [currentChatId, draft, replyTo, initError]
   );
 
   const copyMessage = useCallback(async (m: ChatMessage) => {
@@ -1295,6 +1384,103 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
       toast.info("Paquete caducado", { description: `${unclaimed.toLocaleString("es")} orbes no reclamados se devolvieron al creador` });
     }
   }, [expiringId]);
+
+  // ───── Chats individuales (DMs) y menciones ─────
+
+  /** Carga la lista de chats individuales (conversaciones + seguidos mutuos). */
+  const loadDmList = useCallback(async () => {
+    setDmLoading(true);
+    try {
+      const [chats, mutuals] = await Promise.all([fetchMyDmChats(), fetchMutualFollows()]);
+      const map = new Map<string, DmChat>();
+      for (const c of chats) if (c.other) map.set(c.other.id, c);
+      for (const m of mutuals) {
+        if (!map.has(m.id)) map.set(m.id, { chat_id: "", other: m, last_message: null, last_at: null, unread: 0 });
+      }
+      const list = Array.from(map.values()).sort((a, b) => (b.last_at ?? "").localeCompare(a.last_at ?? ""));
+      setDmList(list);
+    } catch {
+      /* noop */
+    } finally {
+      setDmLoading(false);
+    }
+  }, []);
+
+  /** Abre un chat individual (crea la conversación si aún no existe). */
+  const openDm = useCallback(async (dm: DmChat) => {
+    let chatId = dm.chat_id;
+    if (!chatId) {
+      setDmLoading(true);
+      const r = await getOrCreateDm(dm.other?.id ?? "");
+      setDmLoading(false);
+      if (!r.ok || !r.chatId) {
+        toast.error(r.error ?? "No se pudo abrir el chat individual");
+        return;
+      }
+      chatId = r.chatId;
+      setDmList((prev) => prev.map((d) => (d.other?.id === dm.other?.id ? { ...d, chat_id: r.chatId! } : d)));
+    }
+    setActiveDm({ ...dm, chat_id: chatId });
+    setReplyTo(null);
+    setStickersOpen(false);
+    setMentionOpen(false);
+  }, []);
+
+  /** Inserta la mención @usuario en el cuadro de texto (en el cursor). */
+  const insertMention = useCallback((p: Profile) => {
+    const r = mentionRef.current;
+    if (!r) return;
+    const name = p.username || p.display_name || "usuario";
+    const next = draft.slice(0, r.start) + "@" + name + " " + draft.slice(r.end);
+    setDraft(next);
+    setMentionOpen(false);
+    mentionRef.current = null;
+    requestAnimationFrame(() => {
+      const el = inputRef.current;
+      if (el) {
+        el.focus();
+        const pos = r.start + name.length + 2;
+        el.setSelectionRange(pos, pos);
+      }
+    });
+  }, [draft]);
+
+  /** Notifica a los usuarios mencionados (@usuario) en el chat grupal. */
+  const notifyMentions = useCallback(async (content: string) => {
+    const names = Array.from(content.matchAll(/@([\w.]+)/g)).map((m) => m[1].toLowerCase());
+    if (!names.length) return;
+    for (const name of names) {
+      try {
+        const found = await searchProfilesForMention(name, 1);
+        const p = found.find((x) => (x.username ?? "").toLowerCase() === name);
+        if (p && p.id !== myId) void pushNotification({ userId: p.id, type: "mention" }).catch(() => {});
+      } catch {
+        /* noop */
+      }
+    }
+  }, [myId]);
+
+  // Carga la lista de DMs al entrar en la pestaña DIRECTOS.
+  useEffect(() => {
+    if (view === "dms" && !activeDm) void loadDmList();
+  }, [view, activeDm, loadDmList]);
+
+  // Busca candidatos para las menciones @ mientras se escribe.
+  useEffect(() => {
+    if (!mentionOpen) return;
+    let alive = true;
+    searchProfilesForMention(mentionQuery, 8)
+      .then((c) => {
+        if (alive) {
+          setMentionCandidates(c);
+          setMentionIndex(0);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [mentionOpen, mentionQuery]);
 
   const onPickStickerFile = useCallback(
     async (file: File | null) => {
@@ -1459,29 +1645,61 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
       {/* ───── Header ───── */}
       <header className="shrink-0 border-b border-border/60 bg-background/80 backdrop-blur-md">
         <div className="max-w-2xl md:max-w-full mx-auto flex items-center gap-2 px-4 py-3">
-          <div className="flex items-center gap-2.5 flex-1 min-w-0">
-            <div
-              className="rounded-full grid place-items-center shrink-0 font-display font-semibold text-primary-foreground"
-              style={{ width: 36, height: 36, fontSize: 15, background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))" }}
-            >
-              <Users size={16} />
-            </div>
-            <div className="min-w-0">
-              <div className="text-sm font-semibold truncate">{chatInfo?.name ?? COMMUNITY_CHAT_NAME}</div>
-              <div className="text-[10px] text-muted-foreground">
-                {chatInfo
-                  ? chatInfo.memberOk === false
-                    ? "chat compartido · permisos por reparar"
-                    : `${chatInfo.memberCount} ${chatInfo.memberCount === 1 ? "miembro" : "miembros"} · chat compartido`
-                  : loading
-                    ? "Conectando…"
-                    : initError
-                      ? "Sin conexión"
-                      : "Conectando…"}
+          {view === "dms" && activeDm ? (
+            <>
+              <button
+                onClick={() => setActiveDm(null)}
+                title="Volver a la lista de chats"
+                className="w-9 h-9 rounded-xl border border-border/70 bg-background grid place-items-center active:scale-95 transition shrink-0"
+              >
+                <ArrowLeft size={16} />
+              </button>
+              <div
+                className="rounded-full grid place-items-center shrink-0 font-display font-semibold text-primary-foreground overflow-hidden"
+                style={{ width: 36, height: 36, fontSize: 15, background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))" }}
+              >
+                {activeDm.other?.avatar_url ? (
+                  <img src={activeDm.other.avatar_url} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  (activeDm.other?.display_name || activeDm.other?.username || "?")[0]?.toUpperCase()
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-semibold truncate">
+                  {activeDm.other?.display_name || activeDm.other?.username || "Chat individual"}
+                </div>
+                <div className="text-[10px] text-muted-foreground">Chat individual · se siguen mutuamente</div>
+              </div>
+            </>
+          ) : (
+            <div className="flex items-center gap-2.5 flex-1 min-w-0">
+              <div
+                className="rounded-full grid place-items-center shrink-0 font-display font-semibold text-primary-foreground"
+                style={{ width: 36, height: 36, fontSize: 15, background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))" }}
+              >
+                {view === "dms" ? <MessageCircle size={16} /> : <Users size={16} />}
+              </div>
+              <div className="min-w-0">
+                <div className="text-sm font-semibold truncate">
+                  {view === "dms" ? "Chats individuales" : chatInfo?.name ?? COMMUNITY_CHAT_NAME}
+                </div>
+                <div className="text-[10px] text-muted-foreground">
+                  {view === "dms"
+                    ? "Solo con personas que se siguen mutuamente"
+                    : chatInfo
+                      ? chatInfo.memberOk === false
+                        ? "chat compartido · permisos por reparar"
+                        : `${chatInfo.memberCount} ${chatInfo.memberCount === 1 ? "miembro" : "miembros"} · chat compartido`
+                      : loading
+                        ? "Conectando…"
+                        : initError
+                          ? "Sin conexión"
+                          : "Conectando…"}
+                </div>
               </div>
             </div>
-          </div>
-          {isOwner && (
+          )}
+          {view === "group" && isOwner && (
             <button
               onClick={() => {
                 setAnnounceErr(null);
@@ -1494,7 +1712,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
               <Megaphone size={15} />
             </button>
           )}
-          {!isLocal && (
+          {view === "group" && !isLocal && (
             <button
               onClick={() => {
                 setGiftErr(null);
@@ -1526,6 +1744,35 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
             <X size={16} />
           </button>
         </div>
+        {/* Pestañas: chat grupal ↔ chats individuales */}
+        {!isLocal && (
+          <div className="max-w-2xl md:max-w-full mx-auto flex items-center gap-1.5 px-4 pb-2.5">
+            <button
+              onClick={() => {
+                setView("group");
+                setActiveDm(null);
+              }}
+              className={`flex-1 py-1.5 rounded-xl text-[10px] font-display tracking-[0.14em] flex items-center justify-center gap-1.5 transition active:scale-[0.98] ${view === "group" ? "bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[0_4px_12px_-5px_oklch(0.488_0.185_264/0.5)]" : "bg-card border border-border text-muted-foreground hover:text-foreground"}`}
+            >
+              <Users size={12} /> GRUPO
+            </button>
+            <button
+              onClick={() => {
+                setView("dms");
+                setActiveDm(null);
+                void loadDmList();
+              }}
+              className={`relative flex-1 py-1.5 rounded-xl text-[10px] font-display tracking-[0.14em] flex items-center justify-center gap-1.5 transition active:scale-[0.98] ${view === "dms" ? "bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[0_4px_12px_-5px_oklch(0.488_0.185_264/0.5)]" : "bg-card border border-border text-muted-foreground hover:text-foreground"}`}
+            >
+              <MessageCircle size={12} /> DIRECTOS
+              {totalDmUnread > 0 && (
+                <span className="shrink-0 min-w-[16px] h-4 px-1 rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground text-[9px] font-display grid place-items-center">
+                  {totalDmUnread >= 100 ? "99" : totalDmUnread}
+                </span>
+              )}
+            </button>
+          </div>
+        )}
       </header>
 
       {/* Aviso de modo local */}
@@ -1671,6 +1918,67 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
         </div>
       )}
 
+      {/* ───── Chats individuales: lista ───── */}
+      {view === "dms" && !activeDm ? (
+        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-2 min-h-0 no-scrollbar">
+          {dmLoading ? (
+            <div className="flex justify-center py-10">
+              <Loader2 size={18} className="animate-spin text-muted-foreground" />
+            </div>
+          ) : dmList.length === 0 ? (
+            <div className="text-center text-xs text-muted-foreground py-12 px-6 leading-relaxed">
+              Aún no tienes chats individuales.
+              <br />
+              Cuando tú y otra persona se <b>siguen mutuamente</b>, su conversación aparece aquí automáticamente.
+            </div>
+          ) : (
+            dmList.map((dm) => (
+              <button
+                key={dm.chat_id || dm.other?.id || dm.other?.username || Math.random()}
+                onClick={() => void openDm(dm)}
+                className="w-full flex items-center gap-2.5 p-2.5 rounded-xl border border-border bg-card hover:border-primary/40 hover:bg-primary/5 transition text-left group active:scale-[0.99]"
+              >
+                <div
+                  className="rounded-full grid place-items-center shrink-0 font-display font-semibold text-primary-foreground overflow-hidden"
+                  style={{ width: 40, height: 40, fontSize: 15, background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))" }}
+                >
+                  {dm.other?.avatar_url ? (
+                    <img src={dm.other.avatar_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    (dm.other?.display_name || dm.other?.username || "?")[0]?.toUpperCase()
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[13px] font-semibold truncate">{dm.other?.display_name || dm.other?.username}</span>
+                    <span className="text-[9px] text-muted-foreground/70 shrink-0">{dm.last_at ? fmtDay(dm.last_at) : ""}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2 mt-0.5">
+                    <span className="text-[11px] text-muted-foreground truncate">
+                      {dm.last_message
+                        ? isAudioMessage(dm.last_message)
+                          ? "🎤 Audio de voz"
+                          : dm.last_message.media_url
+                            ? "🖼️ Sticker"
+                            : dm.last_message.content || "Mensaje"
+                        : dm.chat_id
+                          ? "Sin mensajes todavía"
+                          : "Se siguen mutuamente · inicia la conversación"}
+                    </span>
+                    {dm.unread > 0 && (
+                      <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground text-[9px] font-display grid place-items-center">
+                        {dm.unread >= 100 ? "99" : dm.unread}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <ChevronRight size={14} className="text-muted-foreground/40 group-hover:text-primary shrink-0" />
+              </button>
+            ))
+          )}
+        </div>
+      ) : (
+        <>
       {/* ───── Mensajes ───── */}
             {/* No leídos: contador arriba, en azul (a partir de 100 se muestra 99) */}
       {unseen > 0 && (
@@ -1694,9 +2002,11 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
           <div className="flex justify-center py-10">
             <Loader2 size={18} className="animate-spin text-muted-foreground" />
           </div>
-        ) : !chatInfo ? null : !messages.length ? (
-          <div className="text-center text-xs text-muted-foreground py-10">
-            Sé el primero en saludar a la comunidad 👋
+        ) : !currentChatId ? null : !messages.length ? (
+          <div className="text-center text-xs text-muted-foreground py-10 px-6">
+            {activeDm
+              ? "Sin mensajes todavía · saluda a esta persona 👋"
+              : "Sé el primero en saludar a la comunidad 👋"}
           </div>
         ) : (
           messages.map((m) =>
@@ -1719,6 +2029,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                 m={m}
                 mine={m.sender_id === myId}
                 sender={senders.get(m.sender_id)}
+                senders={senders}
                 reply={m.reply_to_id ? messages.find((x) => x.id === m.reply_to_id) ?? null : null}
                 mediaUrl={resolveMediaUrl(m.media_url, signedMedia)}
                 copied={copiedId === m.id}
@@ -1742,8 +2053,12 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
           </button>
         )}
       </div>
+        </>
+      )}
 
       {/* ───── Barra de respuesta ───── */}
+      {(view === "group" || activeDm) && (
+      <>
       <AnimatePresence>
         {replyTo && (
           <motion.div
@@ -1811,10 +2126,47 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
             ref={inputRef}
             value={draft}
             onChange={(e) => {
-              setDraft(e.target.value);
+              const v = e.target.value;
+              setDraft(v);
               textareaAutoGrow(e.target);
+              // Detectar @ antes del cursor para sugerir menciones
+              const caret = e.target.selectionStart ?? v.length;
+              const before = v.slice(0, caret);
+              const m = before.match(/(?:^|\s)@([\w.]*)$/);
+              if (m) {
+                mentionRef.current = { start: caret - m[0].length + (m[0].startsWith("@") ? 0 : 1), end: caret };
+                setMentionQuery(m[1]);
+                setMentionOpen(true);
+              } else {
+                setMentionOpen(false);
+                mentionRef.current = null;
+              }
             }}
             onKeyDown={(e) => {
+              if (mentionOpen && mentionCandidates.length > 0) {
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setMentionIndex((i) => (i + 1) % mentionCandidates.length);
+                  return;
+                }
+                if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setMentionIndex((i) => (i - 1 + mentionCandidates.length) % mentionCandidates.length);
+                  return;
+                }
+                if (e.key === "Enter" || e.key === "Tab") {
+                  const p = mentionCandidates[mentionIndex];
+                  if (p) {
+                    e.preventDefault();
+                    insertMention(p);
+                    return;
+                  }
+                }
+                if (e.key === "Escape") {
+                  setMentionOpen(false);
+                  return;
+                }
+              }
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
                 void handleSend();
@@ -1822,9 +2174,48 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
             }}
             enterKeyHint="send"
             rows={1}
-            placeholder="Escribe un mensaje…"
+            placeholder="Escribe un mensaje… usa @ para mencionar"
             className="flex-1 resize-none bg-transparent outline-none text-sm leading-snug py-1.5 max-h-[120px] placeholder:text-muted-foreground/60"
           />
+          {/* Sugerencias de menciones @usuario */}
+          <AnimatePresence>
+            {mentionOpen && mentionCandidates.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.98 }}
+                transition={{ duration: 0.15, ease: "easeOut" }}
+                className="absolute bottom-full left-0 right-0 mb-2 bg-card border border-border rounded-2xl shadow-xl p-1.5 z-20 max-h-56 overflow-y-auto"
+              >
+                <div className="px-2 py-1 text-[10px] font-display tracking-widest text-muted-foreground flex items-center gap-1.5">
+                  <AtSign size={11} /> MENCIONAR · @{mentionQuery || "…"}
+                </div>
+                {mentionCandidates.map((p, i) => (
+                  <button
+                    key={p.id}
+                    onClick={() => insertMention(p)}
+                    onMouseEnter={() => setMentionIndex(i)}
+                    className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-xl text-left transition ${i === mentionIndex ? "bg-primary/10" : "hover:bg-muted/60"}`}
+                  >
+                    <div
+                      className="rounded-full grid place-items-center shrink-0 font-display font-semibold text-primary-foreground overflow-hidden"
+                      style={{ width: 26, height: 26, fontSize: 11, background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))" }}
+                    >
+                      {p.avatar_url ? (
+                        <img src={p.avatar_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        (p.display_name || p.username || "?")[0]?.toUpperCase()
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[12px] font-semibold truncate">{p.display_name || p.username}</div>
+                      <div className="text-[10px] font-mono text-muted-foreground truncate">@{p.username ?? "?"}</div>
+                    </div>
+                  </button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
           <button
             onClick={() => void handleSend()}
             disabled={!draft.trim()}
@@ -1916,6 +2307,8 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
           </AnimatePresence>
         </div>
       </div>
+      </>
+      )}
 
       {/* Diálogo de conexión (solo modo local) */}
       <AnimatePresence>
