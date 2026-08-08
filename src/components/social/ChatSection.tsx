@@ -1,7 +1,7 @@
 import { Component, useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, Copy, Check, Reply, SmilePlus, ImagePlus, Film, Loader2, Users, Users2, Settings2, UserPlus, UserMinus, Camera, Pencil, LogOut, MessageCircle, AtSign, BarChart3, Shield, ShieldCheck, ArrowLeft, WifiOff, Database, Plug, RefreshCw, KeyRound, CheckCircle2, AlertTriangle, Mic, Play, Pause, Trash2, ArrowDown, ExternalLink, Megaphone, Gift, PartyPopper, Lock, Sparkles, Timer, Undo2, ChevronRight } from "lucide-react";
+import { X, Send, Copy, Check, Reply, SmilePlus, ImagePlus, Film, Loader2, Users, Users2, Settings2, UserPlus, UserMinus, Camera, Pencil, LogOut, MessageCircle, AtSign, BarChart3, Shield, ShieldCheck, ArrowLeft, WifiOff, RefreshCw, KeyRound, CheckCircle2, AlertTriangle, Mic, Play, Pause, Trash2, ArrowDown, ExternalLink, Megaphone, Gift, PartyPopper, Lock, Sparkles, Timer, Undo2, ChevronRight, Briefcase, ClipboardList, FolderOpen, MessagesSquare, Download, Paperclip, MessageSquarePlus } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
@@ -21,7 +21,6 @@ import {
   isNetworkError,
   queuePendingMessage,
   flushPendingMessages,
-  isChatSchemaOutdated,
   createAnnouncement,
   createOrbGift,
   claimOrbGift,
@@ -60,12 +59,18 @@ import {
   type GroupChat,
   type GroupMember,
 } from "@/lib/social/chat";
-import { supabase, hasSupabaseConfig, saveSupabaseCredentials, isSchemaMissing, getSupabaseUrl } from "@/integrations/supabase/client";
+import {
+  listWorkChats,
+  markWorkChat,
+  listThreads,
+  listThreadMessages,
+} from "@/lib/social/work";
+import type { WorkThread } from "@/lib/social/work";
+import { TaskManager, FileManager, ThreadsManager, ThreadView } from "./WorkChatPanel";
+import { supabase, hasSupabaseConfig, saveSupabaseCredentials } from "@/integrations/supabase/client";
 import { UserName } from "./UserName";
 import { getMyProfile, getMyOrbes, isAdmin, pushNotification, uploadAvatar } from "@/lib/social/api";
 import type { Profile } from "@/lib/social/api";
-import { runChatSchemaSetup, SUPABASE_ACCESS_TOKEN, sqlEditorUrl } from "@/lib/supabase/setup";
-import { CHAT_SCHEMA_SQL } from "@/lib/supabase/chat-schema";
 
 function fmtTime(iso: string): string {
   const d = new Date(iso);
@@ -84,9 +89,9 @@ function connHint(msg: string): string {
   if (/invalid api key|apikey|401|invalid key/i.test(msg))
     return "La anon key guardada no es válida. Cópiala de Supabase → Project Settings → API Keys (empieza por eyJ… o sb_publishable_) y guárdala en ⋮ → Supabase → «Pegar claves». Si el error persiste, usa «Restablecer la conexión» en el login.";
   if (/infinite recursion|recursion detected|recursive/i.test(msg))
-    return "Hay políticas RLS antiguas en las tablas del chat (de una instalación previa) que causan un bucle de seguridad. Pulsa «Instalar chat» para limpiarlas y reinstalarlas bien (necesita tu token sbp_…).";
+    return "Hay políticas de seguridad antiguas en las tablas del chat que causan un bucle. Revisa los permisos de la base de datos o contacta con el administrador.";
   if (/permission denied|row-level security|42501|PGRST301|new row violates|violates row-level/i.test(msg))
-    return "Las tablas existen pero los permisos (RLS) bloquean el chat: suele pasar si se instaló un esquema antiguo o la sesión no coincide. Pulsa «Instalar chat» para reinstalar los permisos, o entra de nuevo con tu cuenta.";
+    return "Las tablas existen pero los permisos (RLS) bloquean el chat: revisa los permisos de la base de datos o entra de nuevo con tu cuenta.";
   if (/failed to fetch|networkerror|load failed|network request failed|ERR_/i.test(msg))
     return "El servidor de Supabase no respondió. No es necesariamente tu internet: puede ser un bloqueo temporal o del dominio en esta vista previa. Reintenta en unos segundos o revisa la URL y la anon key (⋮ → Supabase).";
   return "Revisa que la URL y la anon key sean correctas (Supabase → Project Settings → API Keys).";
@@ -113,19 +118,18 @@ function sendErrorDetail(err: unknown): { title: string; desc: string; action?: 
   if (/permission denied|row-level security|42501|pgrst301|new row violates|infinite recursion/i.test(msg))
     return {
       title: "Los permisos bloquean el envío",
-      desc: "Reinstala las tablas del chat con «Instalar chat» (necesita tu token sbp_…) o entra con tu cuenta de Supabase.",
-      action: "install",
+      desc: "Revisa los permisos de la base de datos o entra con tu cuenta de Supabase.",
     };
   if (/schema cache/i.test(msg) || /could not find the .* column/i.test(msg) || code === "PGRST204")
     return {
       title: "La tabla del chat está desactualizada",
-      desc: "Falta una columna en chat_messages (suele pasar si instalaste el chat antes de que existiera el audio de voz). Pulsa «Instalar chat» con tu token sbp_ para actualizar la tabla y vuelve a enviar.",
+      desc: "La tabla del chat no está actualizada. Contacta con el administrador para actualizar el esquema.",
       action: "install",
     };
   if (/foreign key|23503|does not exist|undefined_table|42p01/i.test(msg))
     return {
       title: "Falta algo en la base de datos",
-      desc: "Parece que tu cuenta no tiene perfil en la base o falta una tabla. Entra con tu cuenta de Supabase y, si persiste, pulsa «Instalar chat».",
+      desc: "Parece que tu cuenta no tiene perfil en la base o falta una tabla. Entra con tu cuenta de Supabase.",
     };
   if (isNetworkError(err))
     return {
@@ -907,12 +911,6 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
   const [initError, setInitError] = useState<"schema" | "conn" | "auth" | "rls" | null>(null);
   const [errorDetail, setErrorDetail] = useState("");
   const [retryKey, setRetryKey] = useState(0);
-  const [installOpen, setInstallOpen] = useState(false);
-  const [installToken, setInstallToken] = useState(SUPABASE_ACCESS_TOKEN ?? "");
-  const [installing, setInstalling] = useState(false);
-  const [installResult, setInstallResult] = useState<string | null>(null);
-  const [installOk, setInstallOk] = useState(false);
-  const [copiedSql, setCopiedSql] = useState(false);
   // Paginación por cursor + scroll infinito
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -920,7 +918,6 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
   // URLs firmadas de los media de los mensajes (cacheadas: nunca expiran en la base)
   const [signedMedia, setSignedMedia] = useState<Map<string, string>>(new Map());
   // ¿La tabla del chat está desactualizada (sin la columna media_type)?
-  const [schemaOutdated, setSchemaOutdated] = useState(false);
   // Avisos del grupo y paquetes de regalo (solo el administrador puede crearlos)
   const [isOwner, setIsOwner] = useState(false);
   const [announceOpen, setAnnounceOpen] = useState(false);
@@ -949,6 +946,12 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
   const [gRoleBusyId, setGRoleBusyId] = useState<string | null>(null);
   const [deleteArm, setDeleteArm] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
+  // Chats de trabajo: tareas, archivos e hilos (marcador local por chat)
+  const [workChatIds, setWorkChatIds] = useState<Set<string>>(() => new Set(listWorkChats()));
+  const [cgIsWork, setCgIsWork] = useState(false);
+  const [manager, setManager] = useState<"tasks" | "files" | "threads" | null>(null);
+  const [openThread, setOpenThread] = useState<WorkThread | null>(null);
+  const [threads, setThreads] = useState<WorkThread[]>([]);
   const [gifts, setGifts] = useState<Map<string, OrbGift>>(new Map());
   const giftsRef = useRef<Map<string, OrbGift>>(new Map());
   const [claimingId, setClaimingId] = useState<string | null>(null);
@@ -1023,6 +1026,13 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
   const canManageMembers = groupRole === "owner" || groupRole === "admin";
   const canDeleteGroup = groupRole === "owner" || groupRole === "admin";
   const canManageRoles = groupRole === "owner";
+  // Chat de trabajo: marcado localmente (no es el chat de la comunidad).
+  const isWork = !!activeGroup && workChatIds.has(activeGroup.chat_id);
+  const canAssignTasks =
+    isWork && (groupRole === "owner" || groupRole === "admin" || groupRole === "moderator");
+  const myName = myId
+    ? senders.get(myId)?.display_name || senders.get(myId)?.username || "Yo"
+    : "Yo";
 
   // Load senders for a batch of messages
   const loadSenders = useCallback(async (msgs: ChatMessage[]) => {
@@ -1076,18 +1086,6 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
     };
   }, [myId]);
 
-  const copyChatSql = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(CHAT_SCHEMA_SQL);
-      setCopiedSql(true);
-      setTimeout(() => setCopiedSql(false), 2500);
-    } catch {
-      toast.error("No se pudo copiar el SQL", {
-        description: "Cópialo manualmente o usa el botón «Instalar» si tu token sbp_… funciona.",
-      });
-    }
-  }, []);
-
   const doConnect = useCallback(() => {
     const res = saveSupabaseCredentials(connectUrl.trim(), connectKey.trim());
     if (!res.ok) {
@@ -1113,13 +1111,6 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
           // El aviso de «modo local» depende del modo activo real del chat
           // (cuenta local + Supabase conectado también opera en local).
           setIsLocal(!hasSupabaseConfig() || !!info.local);
-          // Comprueba si la tabla del chat está desactualizada (sin media_type)
-          // para avisar de reinstalar el esquema antes de que falle un audio.
-          isChatSchemaOutdated()
-            .then((outdated) => {
-              if (!cancelled) setSchemaOutdated(outdated);
-            })
-            .catch(() => {});
         }
         if (cancelled) return;
         const threadId = activeGroupRef.current ? activeGroupRef.current.chat_id : activeDmRef.current ? activeDmRef.current.chat_id : (chatInfo?.id ?? null);
@@ -1166,7 +1157,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
           setInitError("auth");
         } else {
           const msg = (err as Error)?.message ?? "";
-          if (isSchemaMissing(err)) {
+          if (/relation .* does not exist|could not find the table|undefined_table|42p01/i.test(msg)) {
             setInitError("schema");
           } else if (/infinite recursion|recursion detected|permission denied|row-level security|42501|PGRST301/i.test(msg)) {
             // Permisos (RLS) del chat desactualizados: se reparan reinstalando las tablas.
@@ -1313,6 +1304,15 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
     return unsub;
   }, [currentChatId]);
 
+  // Hilos del chat de trabajo: recarga las tarjetas al cambiar de chat o gestor.
+  useEffect(() => {
+    if (activeGroup && workChatIds.has(activeGroup.chat_id)) {
+      setThreads(listThreads(activeGroup.chat_id));
+    } else {
+      setThreads([]);
+    }
+  }, [activeGroup, workChatIds, manager, openThread]);
+
   // Reenvía automáticamente los mensajes que quedaron pendientes por un fallo de
   // red (el servidor no respondió) cuando el chat está listo o vuelve la conexión.
   useEffect(() => {
@@ -1449,23 +1449,10 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
     })();
   }, [stickersOpen]);
 
-  /** Muestra el motivo real de un fallo de envío, con acción directa si aplica (instalar esquema). */
+  /** Muestra el motivo real de un fallo de envío. */
   const reportSendError = useCallback((err: unknown) => {
     const detail = sendErrorDetail(err);
-    toast.error(detail.title, {
-      description: detail.desc,
-      action:
-        detail.action === "install"
-          ? {
-              label: "INSTALAR CHAT",
-              onClick: () => {
-                setInstallToken(SUPABASE_ACCESS_TOKEN ?? "");
-                setInstallResult(null);
-                setInstallOpen(true);
-              },
-            }
-          : undefined,
-    });
+    toast.error(detail.title, { description: detail.desc });
   }, []);
 
   const handleSend = useCallback(
@@ -1473,7 +1460,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
       const content = draft.trim();
       if (!currentChatId) {
         toast.error("El chat aún no está conectado", {
-          description: initError === "schema" ? "Instala las tablas del chat con el botón de abajo." : "Reintenta en unos segundos.",
+          description: "Reintenta en unos segundos.",
         });
         return;
       }
@@ -1523,7 +1510,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
         reportSendError(err);
       }
     },
-    [currentChatId, draft, replyTo, initError]
+    [currentChatId, draft, replyTo]
   );
 
   const copyMessage = useCallback(async (m: ChatMessage) => {
@@ -1923,15 +1910,20 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
       setCgAvatarFile(null);
       setCgAvatarPreview(null);
       setCgSelected(new Set());
+      if (cgIsWork && r.chatId) {
+        markWorkChat(r.chatId, true);
+        setWorkChatIds((prev) => new Set(prev).add(r.chatId!));
+      }
+      setCgIsWork(false);
       setView("groups");
       void loadGroupList();
-      toast.success("Grupo creado ✓");
+      toast.success(cgIsWork ? "Chat de trabajo creado ✓" : "Grupo creado ✓");
     } catch (e) {
       setCgErr((e as Error).message || "No se pudo crear el grupo");
     } finally {
       setCgBusy(false);
     }
-  }, [cgBusy, cgName, cgDesc, cgAvatarFile, cgSelected, loadGroupList]);
+  }, [cgBusy, cgName, cgDesc, cgAvatarFile, cgSelected, cgIsWork, loadGroupList]);
 
   /** Guarda los cambios de edición del grupo (nombre, descripción, foto). */
   const handleEditGroup = useCallback(async () => {
@@ -2320,6 +2312,9 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                 <div className="text-sm font-semibold truncate">{activeGroup.name}</div>
                 <div className="text-[10px] text-muted-foreground truncate">
                   {activeGroup.member_count} {activeGroup.member_count === 1 ? "miembro" : "miembros"}
+                  {isWork && (
+                    <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-primary/10 text-primary text-[9px] font-bold">TRABAJO</span>
+                  )}
                   {activeGroup.my_role === "owner" ? " · tú eres el creador" : ""}
                 </div>
               </div>
@@ -2432,21 +2427,34 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
               <Gift size={15} />
             </button>
           )}
-          <button
-            onClick={() => {
-              setInstallToken(SUPABASE_ACCESS_TOKEN ?? "");
-              setInstallResult(null);
-              setInstallOpen(true);
-            }}
-            title="Instalar / reparar tablas del chat"
-            className="w-9 h-9 rounded-xl border border-border/70 bg-background grid place-items-center active:scale-95 transition shrink-0 hover:border-primary/40 hover:text-primary"
-          >
-            <Database size={15} />
-          </button>
           <button onClick={onClose} className="w-9 h-9 rounded-xl border border-border/70 bg-background grid place-items-center active:scale-95 transition shrink-0">
             <X size={16} />
           </button>
         </div>
+        {/* Gestores del chat de trabajo (siempre visibles arriba) */}
+        {isWork && (
+          <div className="px-4 pb-2.5 flex items-center gap-1.5">
+            <button
+              onClick={() => setManager("tasks")}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border border-border bg-card text-[10px] font-display tracking-[0.14em] text-muted-foreground hover:text-primary hover:border-primary/40 transition active:scale-[0.98]"
+            >
+              <ClipboardList size={12} /> TAREAS
+            </button>
+            <button
+              onClick={() => setManager("files")}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border border-border bg-card text-[10px] font-display tracking-[0.14em] text-muted-foreground hover:text-primary hover:border-primary/40 transition active:scale-[0.98]"
+            >
+              <FolderOpen size={12} /> ARCHIVOS
+            </button>
+            <button
+              onClick={() => setManager("threads")}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border border-border bg-card text-[10px] font-display tracking-[0.14em] text-muted-foreground hover:text-primary hover:border-primary/40 transition active:scale-[0.98]"
+            >
+              <MessagesSquare size={12} /> HILOS
+            </button>
+          </div>
+        )}
+
         {/* Pestañas: chat grupal ↔ chats individuales */}
         {!isLocal && (
           <div className="max-w-2xl md:max-w-full mx-auto flex items-center gap-1.5 px-4 pb-2.5">
@@ -2529,18 +2537,14 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
             <div className="text-[11px] leading-relaxed text-muted-foreground">
               {initError === "schema" ? (
                 <>
-                  <span className="font-semibold text-foreground">Las tablas del chat no existen</span>{" "}
-                  en tu base de datos. Pulsa «Instalar chat» (necesita tu token{" "}
-                  <span className="font-mono">sbp_…</span> de Supabase) o abre el menú (⋮) → <b>Supabase</b> →{" "}
-                  <b>Crear esquema</b>.
+                  <span className="font-semibold text-foreground">Faltan tablas del chat</span> en la base
+                  de datos. Revisa la conexión de Supabase y reintenta.
                 </>
               ) : initError === "rls" ? (
                 <>
                   <span className="font-semibold text-foreground">Permisos del chat desactualizados</span>{" "}
-                  (una instalación anterior dejó políticas que se bloquean entre sí). Pulsa{" "}
-                  <b>«Instalar chat»</b> con tu token <span className="font-mono">sbp_…</span> para limpiarlas y
-                  reinstalarlas. La anon key <span className="font-mono">eyJ…</span> no puede reparar
-                  permisos: solo sirve para leer y escribir.
+                  (políticas antiguas que se bloquean entre sí). Revisa la configuración de permisos de la
+                  base de datos.
                 </>
               ) : initError === "auth" ? (
                 <>
@@ -2563,18 +2567,6 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
             </p>
           )}
           <div className="flex gap-2">
-            {(initError === "schema" || initError === "rls") && (
-              <button
-                onClick={() => {
-                  setInstallToken(SUPABASE_ACCESS_TOKEN ?? "");
-                  setInstallResult(null);
-                  setInstallOpen(true);
-                }}
-                className="flex-1 py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-[10px] font-display tracking-widest active:scale-[0.98] transition flex items-center justify-center gap-1.5"
-              >
-                <Database size={12} /> INSTALAR CHAT
-              </button>
-            )}
             {initError === "auth" && (
               <Link
                 to="/auth"
@@ -2593,51 +2585,6 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
         </div>
       )}
 
-      {/* Aviso: la tabla del chat está desactualizada (falta media_type) */}
-      {chatInfo && schemaOutdated && (
-        <div className="shrink-0 mx-3 mt-2 px-3 py-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 flex items-start gap-2">
-          <AlertTriangle size={13} className="text-amber-500 shrink-0 mt-0.5" />
-          <span className="flex-1 text-[11px] leading-relaxed text-amber-700 dark:text-amber-300">
-            <span className="font-semibold">La tabla del chat está desactualizada:</span> falta la columna
-            para el audio de voz. Pulsa{" "}
-            <button
-              onClick={() => {
-                setInstallToken(SUPABASE_ACCESS_TOKEN ?? "");
-                setInstallResult(null);
-                setInstallOpen(true);
-              }}
-              className="underline font-semibold active:opacity-70"
-            >
-              «Instalar chat»
-            </button>{" "}
-            con tu token <span className="font-mono">sbp_…</span> para actualizarla (los mensajes de texto y
-            los stickers funcionan igualmente).
-          </span>
-        </div>
-      )}
-
-      {/* Aviso no bloqueante: las políticas de miembros quedaron rotas pero el chat sigue usable */}
-      {chatInfo && chatInfo.memberOk === false && (
-        <div className="shrink-0 mx-3 mt-2 px-3 py-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 flex items-start gap-2">
-          <AlertTriangle size={13} className="text-amber-500 shrink-0 mt-0.5" />
-          <span className="flex-1 text-[11px] leading-relaxed text-amber-700 dark:text-amber-300">
-            <span className="font-semibold">Los mensajes cargan, pero quedaron políticas antiguas</span> que
-            bloquean el registro de miembros. Pulsa{" "}
-            <button
-              onClick={() => {
-                setInstallToken(SUPABASE_ACCESS_TOKEN ?? "");
-                setInstallResult(null);
-                setInstallOpen(true);
-              }}
-              className="underline font-semibold active:opacity-70"
-            >
-              «Instalar chat»
-            </button>{" "}
-            para repararlo (necesita tu token <span className="font-mono">sbp_…</span>).
-          </span>
-        </div>
-      )}
-
       {/* ───── Grupos personalizados: lista ───── */}
       {view === "groups" && !activeGroup ? (
         <div className="flex-1 overflow-y-auto px-3 py-4 space-y-2 min-h-0 no-scrollbar">
@@ -2649,6 +2596,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
               setCgAvatarFile(null);
               setCgAvatarPreview(null);
               setCgSelected(new Set());
+              setCgIsWork(false);
               void fetchMutualFollows()
                 .then((m) => setCgMutuals(m))
                 .catch(() => setCgMutuals([]));
@@ -2688,7 +2636,12 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-[13px] font-semibold truncate">{g.name}</span>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="text-[13px] font-semibold truncate">{g.name}</span>
+                      {workChatIds.has(g.chat_id) && (
+                        <span className="shrink-0 px-1.5 py-0.5 rounded-full bg-primary/10 text-primary text-[8px] font-bold">TRABAJO</span>
+                      )}
+                    </div>
                     <span className="text-[9px] text-muted-foreground/70 shrink-0">{g.last_at ? fmtDay(g.last_at) : ""}</span>
                   </div>
                   <div className="flex items-center justify-between gap-2 mt-0.5">
@@ -2862,6 +2815,41 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
               )}
             </SafeRow>
           ))
+        )}
+        {isWork && threads.length > 0 && (
+          <div className="pt-1">
+            <div className="text-[9px] font-display tracking-[0.18em] text-muted-foreground/70 mb-1.5 flex items-center gap-1.5">
+              <MessagesSquare size={10} /> HILOS DEL CHAT
+            </div>
+            <div className="space-y-1.5">
+              {threads.map((t) => {
+                const tCount = listThreadMessages(t.id).length;
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => setOpenThread(t)}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl border border-border/70 bg-card hover:border-primary/40 hover:bg-primary/5 transition text-left active:scale-[0.99]"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center shrink-0">
+                      <MessagesSquare size={13} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[12px] font-semibold truncate flex items-center gap-1.5">
+                        {t.title}
+                        <span className="text-[9px] text-muted-foreground/70 shrink-0">
+                          {tCount} {tCount === 1 ? "msg" : "msgs"}
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-muted-foreground truncate">
+                        por {t.created_by_name || "alguien"} · {fmtDay(t.created_at)}
+                      </div>
+                    </div>
+                    <ChevronRight size={14} className="text-muted-foreground/60 shrink-0" />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         )}
         <div ref={endRef} />
         {unseen > 0 && (
@@ -3290,8 +3278,25 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                 onChange={(e) => setCgDesc(e.target.value)}
                 maxLength={120}
                 placeholder="Descripción (opcional) — p. ej. «Squad de juegos»"
-                className="w-full bg-input/50 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40 border border-border/60 mb-3"
+                className="w-full bg-input/50 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40 border border-border/60 mb-2"
               />
+              <button
+                onClick={() => setCgIsWork((v) => !v)}
+                className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border transition mb-3 ${
+                  cgIsWork ? "border-primary/50 bg-primary/10" : "border-border/60 bg-background hover:bg-muted/40"
+                }`}
+              >
+                <Briefcase size={15} className={cgIsWork ? "text-primary" : "text-muted-foreground"} />
+                <span className="flex-1 text-left">
+                  <span className="block text-[12px] font-semibold">Chat de trabajo</span>
+                  <span className="block text-[10px] text-muted-foreground mt-0.5">
+                    Con gestor de tareas, archivos e hilos para el equipo.
+                  </span>
+                </span>
+                <span className={`w-5 h-5 rounded-md border grid place-items-center shrink-0 transition ${cgIsWork ? "bg-primary border-primary text-primary-foreground" : "border-border"}`}>
+                  {cgIsWork && <Check size={12} />}
+                </span>
+              </button>
 
               <div className="text-[10px] font-display tracking-widest text-muted-foreground mb-1.5 flex items-center gap-1.5">
                 <UserPlus size={11} /> AMIGOS (SEGUIMIENTO MUTUO)
@@ -3517,6 +3522,26 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                 )
               )}
 
+              {(activeGroup.my_role === "owner" || activeGroup.my_role === "admin") && (
+                <button
+                  onClick={() => {
+                    const on = !workChatIds.has(activeGroup.chat_id);
+                    markWorkChat(activeGroup.chat_id, on);
+                    setWorkChatIds((prev) => {
+                      const next = new Set(prev);
+                      if (on) next.add(activeGroup.chat_id);
+                      else next.delete(activeGroup.chat_id);
+                      return next;
+                    });
+                    toast.success(on ? "Marcado como chat de trabajo" : "Ya no es chat de trabajo");
+                  }}
+                  className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-primary/30 bg-primary/5 text-primary text-[11px] font-display tracking-widest hover:bg-primary/10 active:scale-[0.98] transition mb-3"
+                >
+                  <Briefcase size={13} />{" "}
+                  {workChatIds.has(activeGroup.chat_id) ? "QUITAR MODO TRABAJO" : "MARCAR COMO CHAT DE TRABAJO"}
+                </button>
+              )}
+
               <div className="text-[10px] font-display tracking-widest text-muted-foreground mb-1.5 flex items-center gap-1.5">
                 <Users size={11} /> MIEMBROS
               </div>
@@ -3680,7 +3705,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
             >
               <div className="text-sm font-semibold mb-0.5">Conectar Supabase</div>
               <p className="text-[11px] text-muted-foreground mb-3">
-                Pega la URL y la anon key de tu proyecto (están en Keys como V1 y V2). Los mensajes y la comunidad se sincronizarán entre dispositivos. Si tras conectar el chat sigue sin cargar, instala las tablas del chat con el botón «Instalar chat» que aparece abajo.
+                Pega la URL y la anon key de tu proyecto (están en Keys como V1 y V2). Los mensajes y la comunidad se sincronizarán entre dispositivos.
               </p>
               <input
                 value={connectUrl}
@@ -3704,9 +3729,9 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                 </div>
               )}
               <p className="text-[10px] text-muted-foreground/60 leading-relaxed mb-3">
-                ⚠️ <b>No pegues aquí tu token de acceso personal (sbp_…)</b> — ese solo sirve para instalar
-                tablas y rompería la app con «Invalid API key». La anon key es el JWT que empieza por{" "}
-                <span className="font-mono">eyJ…</span> (Project Settings → API Keys).
+                ⚠️ <b>No pegues aquí tu token de acceso personal (sbp_…)</b> — la app espera la anon key (el JWT
+                que empieza por{" "}<span className="font-mono">eyJ…</span>, Project Settings → API Keys) y un token
+                sbp_ rompería la conexión con «Invalid API key».
               </p>
               <div className="flex gap-2">
                 <button
@@ -3722,123 +3747,6 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                 >
                   CONECTAR
                 </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Diálogo de instalación de las tablas del chat */}
-      <AnimatePresence>
-        {installOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            className="fixed inset-0 z-[95] bg-black/55 backdrop-blur-md grid place-items-center p-4"
-            onClick={() => setInstallOpen(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.96, y: 8 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.96, y: 8 }}
-              transition={{ duration: 0.16, ease: "easeOut" }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-sm bg-card border border-border rounded-2xl p-4 shadow-xl"
-            >
-              <div className="text-sm font-semibold mb-0.5 flex items-center gap-2">
-                <Database size={15} className="text-primary" /> Instalar tablas del chat
-              </div>
-              <p className="text-[11px] text-muted-foreground mb-3">
-                Tu clave anon no puede crear tablas. Pega tu token de acceso personal (Supabase Dashboard →{" "}
-                <b>Account → Access Tokens → Generate new token</b>) y la app creará{" "}
-                <b>chats</b>, <b>chat_members</b> y <b>chat_messages</b> al instante.
-              </p>
-              <label className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5 mb-1.5">
-                <KeyRound size={12} /> Token de acceso personal (sbp_…)
-              </label>
-              <input
-                value={installToken}
-                onChange={(e) => setInstallToken(e.target.value)}
-                type="password"
-                placeholder="sbp_xxxxxxxxxxxxxxxx"
-                autoComplete="off"
-                className="w-full bg-input/50 rounded-xl px-3 py-2 text-sm font-mono outline-none focus:ring-2 focus:ring-primary/40 border border-border/60 mb-3"
-              />
-              {installResult && (
-                <div
-                  className={`mb-3 rounded-xl border p-2.5 text-[11px] flex items-start gap-2 ${
-                    installOk
-                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-                      : "border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-300"
-                  }`}
-                >
-                  {installOk ? <CheckCircle2 size={13} className="shrink-0 mt-0.5" /> : <AlertTriangle size={13} className="shrink-0 mt-0.5" />}
-                  <span className="break-words">{installResult}</span>
-                </div>
-              )}
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setInstallOpen(false)}
-                  className="flex-1 py-2 rounded-xl border border-border bg-background text-xs font-display tracking-widest active:scale-[0.98] transition"
-                >
-                  CANCELAR
-                </button>
-                <button
-                  onClick={async () => {
-                    if (!installToken.trim().startsWith("sbp_")) return;
-                    setInstalling(true);
-                    setInstallResult(null);
-                    const r = await runChatSchemaSetup(installToken.trim());
-                    setInstalling(false);
-                    let msg = r.message;
-                    if (!r.ok && /invalid api key|unauthorized|401|forbidden/i.test(r.message)) {
-                      msg =
-                        "Tu token de acceso (sbp_…) no es válido o expiró. Genérate uno nuevo en Supabase → Account → Access Tokens. " +
-                        "Recuerda: el token sbp_ no es la anon key (esa empieza por eyJ…).";
-                    }
-                    setInstallResult(msg);
-                    setInstallOk(r.ok);
-                    if (r.ok) {
-                      toast.success("Tablas del chat instaladas");
-                      setInstallOpen(false);
-                      setRetryKey((k) => k + 1);
-                    }
-                  }}
-                  disabled={installing || !installToken.trim().startsWith("sbp_")}
-                  className="flex-1 py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-xs font-display tracking-widest active:scale-[0.98] transition disabled:opacity-40 flex items-center justify-center gap-1.5"
-                >
-                  {installing ? <Loader2 size={13} className="animate-spin" /> : <Plug size={13} />}
-                  {installing ? "INSTALANDO…" : "INSTALAR"}
-                </button>
-              </div>
-
-              {/* Respaldo manual: copiar el SQL / abrir el SQL Editor */}
-              <div className="mt-3 pt-3 border-t border-border/60 space-y-2">
-                <div className="text-[10px] text-muted-foreground/70 leading-relaxed">
-                  ¿El botón de arriba falla (CORS o token)? Copia el SQL y pégalo en el SQL Editor de tu
-                  proyecto (limpia las políticas antiguas y las reinstala).
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => void copyChatSql()}
-                    className="flex-1 py-2 rounded-xl border border-border bg-background text-[10px] font-display tracking-widest active:scale-[0.98] transition flex items-center justify-center gap-1.5"
-                  >
-                    {copiedSql ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
-                    {copiedSql ? "¡COPIADO!" : "COPIAR SQL"}
-                  </button>
-                  {sqlEditorUrl(getSupabaseUrl() ?? "") && (
-                    <a
-                      href={sqlEditorUrl(getSupabaseUrl() ?? "") ?? "#"}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex-1 py-2 rounded-xl border border-border bg-background text-[10px] font-display tracking-widest transition flex items-center justify-center gap-1.5 hover:text-primary hover:border-primary/40"
-                    >
-                      <ExternalLink size={12} /> ABRIR SQL EDITOR
-                    </a>
-                  )}
-                </div>
               </div>
             </motion.div>
           </motion.div>
@@ -4109,6 +4017,49 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
               </div>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Gestores del chat de trabajo */}
+      <AnimatePresence>
+        {manager === "tasks" && activeGroup && isWork && (
+          <TaskManager
+            chatId={activeGroup.chat_id}
+            myId={myId ?? ""}
+            myName={myName}
+            canAssign={canAssignTasks}
+            onClose={() => setManager(null)}
+          />
+        )}
+        {manager === "files" && activeGroup && isWork && (
+          <FileManager
+            chatId={activeGroup.chat_id}
+            myId={myId ?? ""}
+            canDelete={canAssignTasks}
+            onClose={() => setManager(null)}
+          />
+        )}
+        {manager === "threads" && activeGroup && isWork && (
+          <ThreadsManager
+            chatId={activeGroup.chat_id}
+            myId={myId ?? ""}
+            canDelete={canAssignTasks}
+            onClose={() => setManager(null)}
+            onOpen={(t) => {
+              setManager(null);
+              setOpenThread(t);
+            }}
+          />
+        )}
+        {openThread && activeGroup && isWork && (
+          <ThreadView
+            thread={openThread}
+            chatId={activeGroup.chat_id}
+            myId={myId ?? ""}
+            senders={senders}
+            onBack={() => setOpenThread(null)}
+            onClose={() => setOpenThread(null)}
+          />
         )}
       </AnimatePresence>
     </motion.div>
