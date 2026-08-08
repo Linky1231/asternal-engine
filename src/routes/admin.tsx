@@ -18,6 +18,8 @@ import {
   fetchEvents, createEvent, updateEventStatus,
   type EventItem,
 } from "@/lib/social/api";
+import { fetchChatProfiles } from "@/lib/social/chat";
+import type { Profile } from "@/lib/social/api";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Admin · Asternal" }] }),
@@ -35,6 +37,7 @@ function AdminPage() {
   const [bans, setBans] = useState<BannedEmail[]>([]);
   const [threads, setThreads] = useState<ForumThread[]>([]);
   const [categories, setCategories] = useState<ForumCategory[]>([]);
+  const [threadAuthors, setThreadAuthors] = useState<Map<string, Profile>>(new Map());
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
@@ -65,8 +68,16 @@ function AdminPage() {
       else if (tab === "bans") setBans(await listBannedEmails());
       else if (tab === "eventos") setEvents(await fetchEvents());
       else {
-        setThreads(await getForumThreads());
+        const ts = await getForumThreads();
+        setThreads(ts);
         setCategories(await getForumCategories());
+        // Fotos de perfil de los autores de los hilos (carga en lote).
+        const ids = Array.from(new Set(ts.map(t => t.authorId).filter(Boolean)));
+        if (ids.length) {
+          fetchChatProfiles(ids).then(setThreadAuthors).catch(() => {});
+        } else {
+          setThreadAuthors(new Map());
+        }
       }
     } finally { setLoading(false); }
   };
@@ -185,18 +196,28 @@ function AdminPage() {
             <div className="text-center text-xs text-muted-foreground py-10">Sin resultados.</div>
           ) : users.map(u => (
             <div key={u.id} className="panel border border-border/50 rounded-xl px-3 py-2.5 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-primary grid place-items-center text-primary-foreground font-display">
-                {(u.display_name?.[0] ?? u.username[0] ?? "?").toUpperCase()}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="font-display text-sm truncate">{u.display_name || u.username}</div>
-                <div className="text-[10px] font-mono text-muted-foreground truncate">@{u.username}</div>
-              </div>
+              <Link
+                to="/profile/$userId" params={{ userId: u.id }}
+                className="flex items-center gap-3 flex-1 min-w-0 group"
+                title={`Ver perfil de ${u.display_name || u.username}`}
+              >
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/40 to-accent/30 grid place-items-center text-primary-foreground font-display overflow-hidden shrink-0 ring-2 ring-primary/15">
+                  {u.avatar_url ? (
+                    <img src={u.avatar_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    (u.display_name?.[0] ?? u.username[0] ?? "?").toUpperCase()
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="font-display text-sm truncate group-hover:text-primary transition-colors">{u.display_name || u.username}</div>
+                  <div className="text-[10px] font-mono text-muted-foreground truncate group-hover:text-foreground/70 transition-colors">@{u.username}</div>
+                </div>
+              </Link>
               {u.is_admin ? (
-                <span className="text-[9px] font-display tracking-widest px-2 py-0.5 rounded-full bg-accent/20 text-primary-glow border border-accent/40">ADMIN</span>
+                <span className="text-[9px] font-display tracking-widest px-2 py-0.5 rounded-full bg-accent/20 text-primary-glow border border-accent/40 shrink-0">ADMIN</span>
               ) : (
                 <button onClick={() => toggleMod(u)} disabled={busy === u.id}
-                  className={`text-[10px] font-display tracking-widest px-3 py-1.5 rounded-lg border flex items-center gap-1.5 active:scale-95 transition disabled:opacity-60 ${u.is_mod ? "bg-primary/15 border-primary/40 text-primary-glow" : "border-border text-muted-foreground"}`}>
+                  className={`text-[10px] font-display tracking-widest px-3 py-1.5 rounded-lg border flex items-center gap-1.5 active:scale-95 transition disabled:opacity-60 shrink-0 ${u.is_mod ? "bg-primary/15 border-primary/40 text-primary-glow" : "border-border text-muted-foreground"}`}>
                   {busy === u.id ? <Loader2 size={12} className="animate-spin"/> : <Shield size={12}/>}
                   {u.is_mod ? "MOD" : "HACER MOD"}
                 </button>
@@ -404,11 +425,18 @@ function AdminPage() {
 
             {threads.length === 0 ? (
               <div className="text-center text-xs text-muted-foreground py-10">No hay hilos en el foro.</div>
-            ) : threads.map(t => (
+            ) : threads.map(t => {
+              const author = t.authorId ? threadAuthors.get(t.authorId) ?? null : null;
+              return (
               <div key={t.id} className="panel border border-border/50 rounded-xl px-3 py-2.5 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-muted/40 to-muted/20 border border-border/30 grid place-items-center shrink-0 text-muted-foreground/60">
-                  <MessageSquare size={15} />
-                </div>
+                <Link to="/profile/$userId" params={{ userId: t.authorId }} title={`Ver perfil de ${t.authorUsername}`}
+                  className="w-9 h-9 rounded-full bg-gradient-to-br from-primary/40 to-accent/30 border border-border/30 grid place-items-center overflow-hidden shrink-0 text-muted-foreground/60 font-display text-[10px] text-primary-glow">
+                  {author?.avatar_url ? (
+                    <img src={author.avatar_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    t.authorUsername[0]?.toUpperCase() ?? "?"
+                  )}
+                </Link>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-display truncate flex items-center gap-1.5">
                     {t.pinned && <span className="text-[8px] text-primary uppercase tracking-wider font-semibold">📌</span>}
@@ -416,7 +444,7 @@ function AdminPage() {
                     {t.title}
                   </div>
                   <div className="text-[10px] text-muted-foreground/60 mt-0.5 flex items-center gap-2">
-                    <span>@{t.authorUsername}</span>
+                    <Link to="/profile/$userId" params={{ userId: t.authorId }} className="hover:text-primary hover:underline transition-colors">@{t.authorUsername}</Link>
                     <span>{t.postCount} respuestas</span>
                     <span>{t.views} vistas</span>
                   </div>
@@ -434,7 +462,8 @@ function AdminPage() {
                   )}
                 </div>
               </div>
-            ))}
+            );
+            })}
           </>
         )}
       </main>
