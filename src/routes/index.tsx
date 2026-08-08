@@ -203,7 +203,7 @@ function HomePage() {
   const closeMenu = () => { setMenuOpen(false); setNotifOpen(false); };
 
   return (
-    <div className="min-h-screen w-screen flex flex-col bg-background text-foreground">
+    <div className="min-h-screen w-full flex flex-col bg-background text-foreground">
       {/* Header */}
       <header className="app-header sticky top-0 z-20 bg-background/92 backdrop-blur-xl border-b border-border/60">
         <div className={`max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto flex items-center gap-1.5 sm:gap-2.5 px-3 sm:px-4 ${inPreview ? "pt-14 pb-3" : "py-3"}`}>
@@ -217,7 +217,7 @@ function HomePage() {
               </span>
             )}
           </button>
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 header-name">
             <div className="font-display text-[13px] sm:text-sm font-semibold text-foreground leading-none truncate">Asternal</div>
             <div className="text-[10px] sm:text-[11px] text-muted-foreground/70 truncate mt-1">@{me?.username ?? "…"}</div>
           </div>
@@ -258,31 +258,31 @@ function HomePage() {
               onClick={() => setTab("games")}
               className={`relative z-10 flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-2 rounded-xl text-[10px] sm:text-[11px] font-display tracking-wider sm:tracking-widest transition-colors duration-200 ${tab === "games" ? "text-primary-foreground" : "text-muted-foreground"}`}
             >
-              <Gamepad2 size={14} /> JUEGOS
+              <Gamepad2 size={14} className="shrink-0" /> <span className="hidden min-[380px]:inline">JUEGOS</span>
             </button>
             <button
               onClick={() => setTab("feed")}
               className={`relative z-10 flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-2 rounded-xl text-[10px] sm:text-[11px] font-display tracking-wider sm:tracking-widest transition-colors duration-200 ${tab === "feed" ? "text-primary-foreground" : "text-muted-foreground"}`}
             >
-              <Newspaper size={14} /> FEED
+              <Newspaper size={14} className="shrink-0" /> <span className="hidden min-[380px]:inline">FEED</span>
             </button>
             <button
               onClick={() => setTab("gallery")}
               className={`relative z-10 flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-2 rounded-xl text-[10px] sm:text-[11px] font-display tracking-wider sm:tracking-widest transition-colors duration-200 ${tab === "gallery" ? "text-primary-foreground" : "text-muted-foreground"}`}
             >
-              <Palette size={14} /> GALERÍA
+              <Palette size={14} className="shrink-0" /> <span className="hidden min-[380px]:inline">GALERÍA</span>
             </button>
             <button
               onClick={() => setTab("events")}
               className={`relative z-10 flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-2 rounded-xl text-[10px] sm:text-[11px] font-display tracking-wider sm:tracking-widest transition-colors duration-200 ${tab === "events" ? "text-primary-foreground" : "text-muted-foreground"}`}
             >
-              <Trophy size={14} /> EVENTOS
+              <Trophy size={14} className="shrink-0" /> <span className="hidden min-[380px]:inline">EVENTOS</span>
             </button>
             <button
               onClick={() => setTab("profile")}
               className={`relative z-10 flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-2 rounded-xl text-[10px] sm:text-[11px] font-display tracking-wider sm:tracking-widest transition-colors duration-200 ${tab === "profile" ? "text-primary-foreground" : "text-muted-foreground"}`}
             >
-              <User size={14} /> PERFIL
+              <User size={14} className="shrink-0" /> <span className="hidden min-[380px]:inline">PERFIL</span>
             </button>
             <div
               className="absolute top-1 bottom-1 w-[calc(20%_-_4px)] rounded-xl bg-gradient-to-br from-primary to-accent shadow-sm transition-transform duration-300 ease-out"
@@ -383,7 +383,7 @@ function HomePage() {
       {/* Floating CTA to editor */}
       <Link
         to="/editor"
-        className="fixed bottom-5 right-5 z-30 h-14 pl-4 pr-5 rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[0_6px_24px_-6px_oklch(0.488_0.185_264/0.5)] flex items-center gap-2 active:scale-95 transition font-display tracking-widest text-xs"
+        className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-[max(1.25rem,env(safe-area-inset-right))] z-30 h-14 pl-4 pr-5 rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[0_6px_24px_-6px_oklch(0.488_0.185_264/0.5)] flex items-center gap-2 active:scale-95 transition font-display tracking-widest text-xs"
       >
         <Plus size={18} /> CREAR
       </Link>
@@ -537,14 +537,14 @@ function FeedSubTabs({ value, onChange }: { value: FeedSub; onChange: (v: FeedSu
     { id: "forums", label: "Foros", icon: <MessageSquare size={13} /> },
   ];
   return (
-    <div className="flex gap-2 py-2">
+    <div className="flex gap-1.5 py-2 overflow-x-auto no-scrollbar -mx-1 px-1">
       {items.map(it => {
         const active = value === it.id;
         return (
           <button
             key={it.id}
             onClick={() => onChange(it.id)}
-            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-display tracking-widest transition-all duration-200 outline-none focus:outline-none ${
+            className={`flex-1 min-w-[86px] shrink-0 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-full text-[10px] sm:text-[11px] font-display tracking-wide sm:tracking-widest whitespace-nowrap transition-all duration-200 outline-none focus:outline-none ${
               active
               ? "bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[0_2px_8px_-3px_oklch(0.488_0.185_264/0.35)]"
               : "bg-background text-muted-foreground hover:text-foreground"

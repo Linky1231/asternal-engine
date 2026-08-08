@@ -158,7 +158,7 @@ export function AsternalEditor() {
 
   if (playing) {
     return (
-      <div className="h-screen w-screen">
+      <div className="h-screen w-full">
         <GameRuntime
           scene={activeScene}
           fpsCap={60}
@@ -188,7 +188,7 @@ export function AsternalEditor() {
   ];
 
   return (
-    <div className={`flex h-screen w-screen overflow-hidden ${isTablet ? "flex-row" : "flex-col"}`}>
+    <div className={`flex h-screen w-full overflow-hidden ${isTablet ? "flex-row" : "flex-col"}`}>
       {/* Left rail (tablet/desktop) */}
       {isTablet && (
         <nav className="w-[88px] panel border-r flex flex-col items-stretch py-3 gap-1 px-2 shrink-0">

@@ -48,7 +48,7 @@ function FeedPage() {
   };
 
   return (
-    <div className="min-h-screen w-screen flex flex-col bg-background">
+    <div className="min-h-screen w-full flex flex-col bg-background">
       <header className="sticky top-0 z-10 flex items-center gap-2 px-3 py-2 panel border-b">
         <Link to="/" className="w-9 h-9 rounded-md bg-gradient-to-br from-primary to-accent grid place-items-center shadow-[0_0_16px_oklch(0.68_0.21_250/0.5)]">
           <span className="font-display text-sm text-primary-foreground">A</span>

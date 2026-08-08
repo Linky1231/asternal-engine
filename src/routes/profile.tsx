@@ -34,7 +34,7 @@ function ProfilePage() {
 
   if (!myId) return null;
   return (
-    <div className="min-h-screen w-screen flex flex-col bg-background text-foreground">
+    <div className="min-h-screen w-full flex flex-col bg-background text-foreground">
       <header className="sticky top-0 z-20 panel border-b backdrop-blur-xl">
         <div className="max-w-2xl md:max-w-3xl lg:max-w-4xl mx-auto flex items-center gap-2 px-3 py-2.5">
           <button onClick={() => navigate({ to: "/" })}

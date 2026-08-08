@@ -171,7 +171,7 @@ export function ProjectManager({
   };
 
   return (
-    <div className="h-screen w-screen flex flex-col overflow-hidden bg-background">
+    <div className="h-screen w-full flex flex-col overflow-hidden bg-background">
       <header className="flex items-center justify-between px-3 py-2 panel border-b">
         <div className="flex items-center gap-2">
           <div className="w-9 h-9 rounded-md bg-gradient-to-br from-primary to-accent grid place-items-center shadow-[0_0_16px_oklch(0.68_0.21_250/0.7)]">

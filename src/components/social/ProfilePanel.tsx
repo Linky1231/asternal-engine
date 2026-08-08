@@ -466,16 +466,16 @@ export function ProfilePanel({
 
       <div className="relative flex bg-muted/40 rounded-2xl p-1">
         <button onClick={() => setTab("games")}
-          className={`relative z-10 flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-display tracking-widest transition-colors ${tab === "games" ? "text-primary-foreground" : "text-muted-foreground"}`}>
-          <Gamepad2 size={14} /> JUEGOS · {games.length}
+          className={`relative z-10 flex-1 flex items-center justify-center gap-1 sm:gap-2 py-2 rounded-xl text-[10px] sm:text-xs font-display tracking-wide sm:tracking-widest whitespace-nowrap transition-colors ${tab === "games" ? "text-primary-foreground" : "text-muted-foreground"}`}>
+          <Gamepad2 size={13} className="hidden sm:block shrink-0" /> <span className="truncate">JUEGOS · {games.length}</span>
         </button>
         <button onClick={() => setTab("posts")}
-          className={`relative z-10 flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-display tracking-widest transition-colors ${tab === "posts" ? "text-primary-foreground" : "text-muted-foreground"}`}>
-          <Newspaper size={14} /> POSTS · {posts.length}
+          className={`relative z-10 flex-1 flex items-center justify-center gap-1 sm:gap-2 py-2 rounded-xl text-[10px] sm:text-xs font-display tracking-wide sm:tracking-widest whitespace-nowrap transition-colors ${tab === "posts" ? "text-primary-foreground" : "text-muted-foreground"}`}>
+          <Newspaper size={13} className="hidden sm:block shrink-0" /> <span className="truncate">POSTS · {posts.length}</span>
         </button>
         <button onClick={() => setTab("gallery")}
-          className={`relative z-10 flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-display tracking-widest transition-colors ${tab === "gallery" ? "text-primary-foreground" : "text-muted-foreground"}`}>
-          <Palette size={14} /> GALERÍA · {artworks.length}
+          className={`relative z-10 flex-1 flex items-center justify-center gap-1 sm:gap-2 py-2 rounded-xl text-[10px] sm:text-xs font-display tracking-wide sm:tracking-widest whitespace-nowrap transition-colors ${tab === "gallery" ? "text-primary-foreground" : "text-muted-foreground"}`}>
+          <Palette size={13} className="hidden sm:block shrink-0" /> <span className="truncate">GALERÍA · {artworks.length}</span>
         </button>
         <div className="absolute top-1 bottom-1 w-[calc(33.333%_-_4px)] rounded-xl bg-gradient-to-r from-primary to-accent shadow-[0_4px_14px_-4px_oklch(0.68_0.21_250/0.55)] transition-transform duration-300 ease-out"
           style={{ transform: `translateX(${tab === "games" ? "0%" : tab === "posts" ? "calc(100% + 6px)" : "calc(200% + 12px)"})` }} />

@@ -394,7 +394,7 @@ function ThreadListView({
       </div>
 
       {/* ── Search bar ── */}
-      <div className="flex items-center gap-2.5 bg-white/70 rounded-2xl px-4 py-2.5 border border-border/30 focus-within:border-primary/25 focus-within:shadow-md focus-within:shadow-primary/5 transition-all duration-200">
+      <div className="flex items-center gap-2.5 bg-white/70 rounded-2xl px-3 sm:px-4 py-2 sm:py-2.5 border border-border/30 focus-within:border-primary/25 focus-within:shadow-md focus-within:shadow-primary/5 transition-all duration-200">
         <Search size={14} className="text-muted-foreground/40 shrink-0" />
         <input value={searchQ} onChange={e => setSearchQ(e.target.value)}
           placeholder="Buscar hilos por título o contenido…"
@@ -414,7 +414,7 @@ function ThreadListView({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] as const }}
-            className="p-5 rounded-2xl border border-primary/20 bg-gradient-to-b from-primary/[0.03] to-transparent shadow-sm space-y-3.5"
+            className="p-3.5 sm:p-5 rounded-2xl border border-primary/20 bg-gradient-to-b from-primary/[0.03] to-transparent shadow-sm space-y-3.5"
             >
               <div className="flex items-center gap-2.5 mb-1">
                 <Sparkles size={14} className="text-primary/60" />
@@ -753,7 +753,7 @@ function ThreadDetailView({
       {/* ── Thread body + replies ── */}
       <motion.div initial="initial" animate="animate" variants={stagger.container} className="space-y-2.5 max-h-[65vh] overflow-y-auto pr-1.5 no-scrollbar">
         {/* ── Original post (featured) ── */}
-        <motion.div variants={stagger.item} className="p-5 rounded-2xl border border-border/30 bg-gradient-to-b from-white/80 to-white/50 shadow-sm">
+        <motion.div variants={stagger.item} className="p-3.5 sm:p-5 rounded-2xl border border-border/30 bg-gradient-to-b from-white/80 to-white/50 shadow-sm">
           {/* Author header */}
           <div className="flex items-start gap-3 mb-4">
             <AvatarMini username={thread.authorUsername} size="lg" />

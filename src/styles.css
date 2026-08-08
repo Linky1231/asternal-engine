@@ -130,6 +130,11 @@
     height: 100%;
   }
 
+  html {
+    /* Corta cualquier desborde horizontal (nunca scroll lateral por 100vw). */
+    overflow-x: clip;
+  }
+
   body {
     background: var(--gradient-deep);
     color: var(--color-foreground);
@@ -141,6 +146,20 @@
     overscroll-behavior: none;
     touch-action: manipulation;
     letter-spacing: 0;
+    overflow-x: clip;
+  }
+
+  /* Imágenes, vídeos e iframes nunca desbordan su contenedor. */
+  img, video, iframe, canvas, svg {
+    max-width: 100%;
+  }
+
+  /* iOS: evita el zoom automático al enfocar inputs pequeños. */
+  @media (max-width: 767px) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="range"]),
+    textarea, select {
+      font-size: 16px;
+    }
   }
 
   h1, h2, h3, h4, .font-display {
@@ -600,6 +619,44 @@
 @keyframes orbit-slow-rev {
   from { transform: rotate(360deg); }
   to   { transform: rotate(0deg); }
+}
+
+/* ============ Responsive global: todas las pantallas ============ */
+
+/* Safe-areas para móviles con notch (iPhone, Android gestural). */
+@utility safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+@utility safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@utility safe-left {
+  padding-left: env(safe-area-inset-left, 0px);
+}
+@utility safe-right {
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+/* Alturas de 100% del viewport dinámico (evita el salto con la barra del navegador). */
+@utility h-dvh {
+  height: 100dvh;
+}
+
+/* Punto de ruptura universal: pantallas muy pequeñas (<360px). */
+@media (max-width: 359px) {
+  .app-compact {
+    --app-gap: 2px;
+  }
+  .panel {
+    border-radius: 0.875rem;
+  }
+}
+
+/* El header sticky nunca debe desbordar: sus hijos que no caben se ocultan. */
+@media (max-width: 639px) {
+  .app-header .header-name {
+    max-width: 34vw;
+  }
 }
 
 /* ============ Rendimiento: reduce motion ============ */

@@ -506,7 +506,7 @@ function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen w-screen flex flex-col bg-background overflow-y-auto relative">
+    <div className="min-h-screen w-full flex flex-col bg-background overflow-y-auto relative">
 
       <ConfettiBurst active={!!successMsg} />
 
