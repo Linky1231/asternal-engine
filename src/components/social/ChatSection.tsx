@@ -281,11 +281,13 @@ function ProfileLinkCard({ userId }: { userId: string }) {
 
   if (profile === "loading") {
     return (
-      <div className="mt-1.5 flex items-center gap-2.5 rounded-xl border border-primary/20 bg-primary/5 p-2 animate-pulse">
-        <div className="w-9 h-9 rounded-full bg-primary/15 shrink-0" />
-        <div className="flex-1 space-y-1.5">
-          <div className="h-2.5 w-1/3 rounded bg-primary/15" />
-          <div className="h-2 w-2/3 rounded bg-primary/10" />
+      <div className="mt-1.5 w-60 max-w-full rounded-2xl border border-border bg-card shadow-sm p-2.5 animate-pulse">
+        <div className="flex items-center gap-2.5">
+          <div className="w-11 h-11 rounded-full bg-primary/15 shrink-0" />
+          <div className="flex-1 space-y-1.5">
+            <div className="h-2.5 w-1/3 rounded bg-primary/15" />
+            <div className="h-2 w-2/3 rounded bg-primary/10" />
+          </div>
         </div>
       </div>
     );
@@ -296,25 +298,38 @@ function ProfileLinkCard({ userId }: { userId: string }) {
     <Link
       to="/profile/$userId"
       params={{ userId }}
-      className="mt-1.5 flex items-center gap-2.5 rounded-xl border border-primary/25 bg-primary/5 hover:bg-primary/10 transition-colors p-2 group"
+      className="mt-1.5 block w-60 max-w-full rounded-2xl border border-border bg-card shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md hover:-translate-y-px active:scale-[0.99] group"
     >
-      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary/40 to-accent/30 grid place-items-center overflow-hidden shrink-0 text-[11px] font-display text-primary-glow">
-        {profile.avatar_url ? (
-          <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
-        ) : (
-          (profile.display_name ?? profile.username ?? "?")[0]?.toUpperCase()
-        )}
+      <div className="flex items-center gap-1.5 px-2.5 pt-2 text-[9px] font-display font-bold tracking-[0.16em] text-primary/90 uppercase">
+        <ExternalLink size={10} /> Perfil compartido
       </div>
-      <div className="min-w-0 flex-1">
-        <div className="text-[12px] font-display font-semibold truncate group-hover:text-primary transition-colors">
-          {profile.display_name || profile.username || "Jugador"}
+      <div className="flex items-center gap-2.5 p-2.5 pt-1.5">
+        <div className="w-11 h-11 rounded-full bg-gradient-to-br from-primary to-accent p-[2px] shrink-0">
+          <div className="w-full h-full rounded-full overflow-hidden grid place-items-center bg-card text-[13px] font-display font-bold text-primary">
+            {profile.avatar_url ? (
+              <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+            ) : (
+              (profile.display_name ?? profile.username ?? "?")[0]?.toUpperCase()
+            )}
+          </div>
         </div>
-        <div className="text-[10px] font-mono text-muted-foreground truncate">@{profile.username ?? "?"}</div>
-        {profile.bio ? (
-          <div className="text-[11px] text-muted-foreground/80 mt-0.5 line-clamp-2 leading-snug">{profile.bio}</div>
-        ) : null}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline gap-1.5 min-w-0">
+            <span className="text-[13px] font-display font-bold truncate text-foreground">
+              {profile.display_name || profile.username || "Jugador"}
+            </span>
+            <span className="shrink-0 text-[10px] font-mono text-primary/90 truncate">@{profile.username ?? "?"}</span>
+          </div>
+          {profile.bio ? (
+            <div className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2 leading-snug">{profile.bio}</div>
+          ) : (
+            <div className="text-[10px] text-muted-foreground/70 mt-0.5">Toca para ver su perfil</div>
+          )}
+        </div>
+        <div className="shrink-0 flex flex-col items-center gap-0.5 text-primary/80 group-hover:text-primary transition-colors">
+          <ChevronRight size={15} />
+        </div>
       </div>
-      <ChevronRight size={14} className="text-muted-foreground/40 group-hover:text-primary shrink-0" />
     </Link>
   );
 }
@@ -339,6 +354,11 @@ function MessageBubble({
   onReply: () => void;
 }) {
   const contentProfileId = m.content ? extractProfileLink(m.content) : null;
+  // Si el mensaje contiene un enlace de perfil, la URL cruda no se muestra: la tarjeta lo representa.
+  const displayContent =
+    contentProfileId && m.content
+      ? m.content.replace(/[^\s]*\/profile\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}[^\s]*/gi, "").trim()
+      : m.content;
   return (
     <div className={`group relative flex gap-2 ${mine ? "justify-end pl-10" : "justify-start pr-10"}`}>
       {!mine && (
@@ -372,7 +392,7 @@ function MessageBubble({
               {isAudioMessage(reply) ? "🎤 Audio de voz" : reply.media_url ? "🖼️ Sticker" : reply.content || "Mensaje"}
             </div>
           )}
-          {m.content && <div className="text-[13px] leading-snug whitespace-pre-wrap break-words">{m.content}</div>}
+          {displayContent && <div className="text-[13px] leading-snug whitespace-pre-wrap break-words">{displayContent}</div>}
           {contentProfileId && <ProfileLinkCard userId={contentProfileId} />}
           {mediaUrl && isAudioMessage(m) ? (
             <AudioBubble url={mediaUrl} mine={mine} duration={0} />
