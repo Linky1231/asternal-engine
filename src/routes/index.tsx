@@ -87,6 +87,7 @@ function HomePage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [chatShareText, setChatShareText] = useState<string | null>(null);
   const [inPreview, setInPreview] = useState(false);
 
   // When the app runs embedded in the Freebuff preview (inside an iframe), the
@@ -96,6 +97,18 @@ function HomePage() {
     try {
       setInPreview(typeof window !== "undefined" && window.self !== window.top);
     } catch { /* cross-origin access can throw; treat as standalone */ }
+  }, []);
+
+  // Abrir el chat con un mensaje compartido (botón «Compartir en el chat» del perfil).
+  useEffect(() => {
+    try {
+      const t = sessionStorage.getItem("asternal_chat_share");
+      if (t) {
+        sessionStorage.removeItem("asternal_chat_share");
+        setChatShareText(t);
+        setChatOpen(true);
+      }
+    } catch { /* noop */ }
   }, []);
 
   const reload = useCallback(async (which: Tab) => {
@@ -444,7 +457,7 @@ function HomePage() {
       {/* Full-screen chat */}
       {chatOpen && (
         <ChatBoundary onClose={() => setChatOpen(false)}>
-          <ChatSection myId={myId} onClose={() => setChatOpen(false)} />
+          <ChatSection myId={myId} onClose={() => { setChatOpen(false); setChatShareText(null); }} initialText={chatShareText ?? undefined} />
         </ChatBoundary>
       )}
 

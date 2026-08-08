@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import {
   Loader2, Camera, Save, Gamepad2, Newspaper, CheckCircle2, Star, ChevronRight,
   ImagePlus, MapPin, Cake, Palette, Tag, Sparkles as SparklesIcon, Eye, EyeOff,
-  Heart, MessageCircle, ChevronDown, ChevronUp,
+  Heart, MessageCircle, ChevronDown, ChevronUp, Share2, Link2, Check,
   Youtube, Instagram, Globe, UserPlus, UserCheck, X,
 } from "lucide-react";
 import {
@@ -35,6 +35,7 @@ export function ProfilePanel({
   userId: string; myId: string | null; isMod: boolean; viewingOwn: boolean;
   onProfileChange?: (p: Profile) => void;
 }) {
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -71,6 +72,8 @@ export function ProfilePanel({
   const [contentLoading, setContentLoading] = useState(false);
   const [follow, setFollow] = useState<FollowStats>({ followers: 0, following: 0, i_follow: false });
   const [followBusy, setFollowBusy] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
   const [followList, setFollowList] = useState<null | { kind: "followers" | "following"; items: Profile[]; loading: boolean }>(null);
 
   const load = async () => {
@@ -123,6 +126,41 @@ export function ProfilePanel({
       await loadFollow();
     } finally { setFollowBusy(false); }
   };
+
+  // ─── Compartir perfil: enlace directo + compartir en el chat grupal ───
+  const shareLink = typeof window !== "undefined" ? window.location.origin + "/profile/" + userId : "";
+  const shareToChat = () => {
+    setShareOpen(false);
+    try { sessionStorage.setItem("asternal_chat_share", shareLink); } catch { /* noop */ }
+    navigate({ to: "/" });
+  };
+  const copyLink = async () => {
+    setShareOpen(false);
+    try { await navigator.clipboard.writeText(shareLink); } catch { /* noop */ }
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 1800);
+  };
+  const shareMenu = (
+    <div className="relative">
+      <button onClick={() => setShareOpen(s => !s)}
+        className="px-3 py-1.5 rounded-xl border border-border text-[10px] font-display tracking-widest flex items-center gap-1 active:scale-95 transition">
+        <Share2 size={12} /> COMPARTIR
+      </button>
+      {shareOpen && (
+        <div className="absolute right-0 top-full mt-1.5 z-30 panel border border-border rounded-xl p-1 min-w-[210px] shadow-xl">
+          <button onClick={shareToChat}
+            className="flex w-full items-center gap-2 px-3 py-2 rounded-lg text-xs hover:bg-muted/40 transition-colors text-left">
+            <MessageCircle size={14} className="text-primary shrink-0" /> Compartir en el chat grupal
+          </button>
+          <button onClick={() => void copyLink()}
+            className="flex w-full items-center gap-2 px-3 py-2 rounded-lg text-xs hover:bg-muted/40 transition-colors text-left">
+            {copiedLink ? <Check size={14} className="text-emerald-500 shrink-0" /> : <Link2 size={14} className="text-primary shrink-0" />}
+            {copiedLink ? "¡Enlace copiado!" : "Copiar enlace al perfil"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
 
   // Abre la lista de seguidores o de "siguiendo" cargando los perfiles.
   const openFollowList = async (kind: "followers" | "following") => {
@@ -256,14 +294,20 @@ export function ProfilePanel({
                   {saving ? <Loader2 size={12} className="animate-spin" /> : saved ? <CheckCircle2 size={12}/> : <Save size={12} />} GUARDAR
                 </button>
               ) : (
-                <button onClick={() => setEditing(true)}
-                  className="mt-12 px-3 py-1.5 rounded-xl border border-border text-[10px] font-display tracking-widest active:scale-95">EDITAR</button>
+                <div className="mt-12 flex items-center gap-2">
+                  <button onClick={() => setEditing(true)}
+                    className="px-3 py-1.5 rounded-xl border border-border text-[10px] font-display tracking-widest active:scale-95">EDITAR</button>
+                  {shareMenu}
+                </div>
               )
             ) : (
-              <button onClick={toggleFollow} disabled={followBusy}
-                className={`mt-12 px-3 py-1.5 rounded-xl text-[10px] font-display tracking-widest flex items-center gap-1 active:scale-95 disabled:opacity-60 ${follow.i_follow ? "border border-border text-muted-foreground" : "bg-gradient-to-r from-primary to-accent text-primary-foreground"}`}>
-                {followBusy ? <Loader2 size={12} className="animate-spin"/> : follow.i_follow ? <><UserCheck size={12}/> SIGUIENDO</> : <><UserPlus size={12}/> SEGUIR</>}
-              </button>
+              <div className="mt-12 flex items-center gap-2">
+                <button onClick={toggleFollow} disabled={followBusy}
+                  className={`px-3 py-1.5 rounded-xl text-[10px] font-display tracking-widest flex items-center gap-1 active:scale-95 disabled:opacity-60 ${follow.i_follow ? "border border-border text-muted-foreground" : "bg-gradient-to-r from-primary to-accent text-primary-foreground"}`}>
+                  {followBusy ? <Loader2 size={12} className="animate-spin"/> : follow.i_follow ? <><UserCheck size={12}/> SIGUIENDO</> : <><UserPlus size={12}/> SEGUIR</>}
+                </button>
+                {shareMenu}
+              </div>
             )}
           </div>
 

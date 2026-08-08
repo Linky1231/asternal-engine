@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, Copy, Check, Reply, SmilePlus, ImagePlus, Loader2, Users, WifiOff, Database, Plug, RefreshCw, KeyRound, CheckCircle2, AlertTriangle, Mic, Play, Pause, Trash2, ArrowDown, ExternalLink, Megaphone, Gift, PartyPopper, Lock, Sparkles, Timer, Undo2 } from "lucide-react";
+import { X, Send, Copy, Check, Reply, SmilePlus, ImagePlus, Loader2, Users, WifiOff, Database, Plug, RefreshCw, KeyRound, CheckCircle2, AlertTriangle, Mic, Play, Pause, Trash2, ArrowDown, ExternalLink, Megaphone, Gift, PartyPopper, Lock, Sparkles, Timer, Undo2, ChevronRight } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
@@ -253,6 +253,72 @@ function resolveMediaUrl(u: string | null | undefined, cache: Map<string, string
   return cache.get(u) ?? null;
 }
 
+/* ─── Tarjeta de perfil compartido: el enlace /profile/<id> se muestra con foto y bio ─── */
+const profileCardCache = new Map<string, Profile | null>();
+
+function extractProfileLink(content: string): string | null {
+  const m = content.match(/\/profile\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+  return m ? m[1] : null;
+}
+
+function ProfileLinkCard({ userId }: { userId: string }) {
+  const [profile, setProfile] = useState<Profile | null | "loading">(() =>
+    profileCardCache.has(userId) ? (profileCardCache.get(userId) ?? null) : "loading"
+  );
+  useEffect(() => {
+    let alive = true;
+    if (profileCardCache.has(userId)) return;
+    fetchChatProfiles([userId])
+      .then((map) => {
+        profileCardCache.set(userId, map.get(userId) ?? null);
+        if (alive) setProfile(map.get(userId) ?? null);
+      })
+      .catch(() => {
+        if (alive) setProfile(null);
+      });
+    return () => { alive = false; };
+  }, [userId]);
+
+  if (profile === "loading") {
+    return (
+      <div className="mt-1.5 flex items-center gap-2.5 rounded-xl border border-primary/20 bg-primary/5 p-2 animate-pulse">
+        <div className="w-9 h-9 rounded-full bg-primary/15 shrink-0" />
+        <div className="flex-1 space-y-1.5">
+          <div className="h-2.5 w-1/3 rounded bg-primary/15" />
+          <div className="h-2 w-2/3 rounded bg-primary/10" />
+        </div>
+      </div>
+    );
+  }
+  if (!profile) return null;
+
+  return (
+    <Link
+      to="/profile/$userId"
+      params={{ userId }}
+      className="mt-1.5 flex items-center gap-2.5 rounded-xl border border-primary/25 bg-primary/5 hover:bg-primary/10 transition-colors p-2 group"
+    >
+      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary/40 to-accent/30 grid place-items-center overflow-hidden shrink-0 text-[11px] font-display text-primary-glow">
+        {profile.avatar_url ? (
+          <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+        ) : (
+          (profile.display_name ?? profile.username ?? "?")[0]?.toUpperCase()
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="text-[12px] font-display font-semibold truncate group-hover:text-primary transition-colors">
+          {profile.display_name || profile.username || "Jugador"}
+        </div>
+        <div className="text-[10px] font-mono text-muted-foreground truncate">@{profile.username ?? "?"}</div>
+        {profile.bio ? (
+          <div className="text-[11px] text-muted-foreground/80 mt-0.5 line-clamp-2 leading-snug">{profile.bio}</div>
+        ) : null}
+      </div>
+      <ChevronRight size={14} className="text-muted-foreground/40 group-hover:text-primary shrink-0" />
+    </Link>
+  );
+}
+
 function MessageBubble({
   m,
   mine,
@@ -272,6 +338,7 @@ function MessageBubble({
   onCopy: () => void;
   onReply: () => void;
 }) {
+  const contentProfileId = m.content ? extractProfileLink(m.content) : null;
   return (
     <div className={`group relative flex gap-2 ${mine ? "justify-end pl-10" : "justify-start pr-10"}`}>
       {!mine && (
@@ -306,6 +373,7 @@ function MessageBubble({
             </div>
           )}
           {m.content && <div className="text-[13px] leading-snug whitespace-pre-wrap break-words">{m.content}</div>}
+          {contentProfileId && <ProfileLinkCard userId={contentProfileId} />}
           {mediaUrl && isAudioMessage(m) ? (
             <AudioBubble url={mediaUrl} mine={mine} duration={0} />
           ) : m.media_url && !mediaUrl ? (
@@ -595,7 +663,7 @@ function GiftCard({
   );
 }
 
-export default function ChatSection({ myId, onClose }: { myId: string | null; onClose: () => void }) {
+export default function ChatSection({ myId, onClose, initialText }: { myId: string | null; onClose: () => void; initialText?: string }) {
   const [chatInfo, setChatInfo] = useState<{ id: string; name: string; memberCount: number; memberOk?: boolean; local?: boolean } | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [senders, setSenders] = useState<Map<string, Profile>>(new Map());
@@ -756,6 +824,15 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
         if (cancelled) return;
         setMessages(msgs);
         setHasMore(more);
+        // No leídos: mensajes más nuevos que la última vez que se abrió el chat.
+        try {
+          const lastSeen = Number(localStorage.getItem("_chat_last_seen") ?? 0);
+          const missed = msgs.filter((m) => m.sender_id !== myId && new Date(m.created_at).getTime() > lastSeen).length;
+          if (missed > 0) setUnseen(missed);
+          localStorage.setItem("_chat_last_seen", String(Date.now()));
+        } catch {
+          /* noop */
+        }
         if (msgs.length) cursorRef.current = { created_at: msgs[0].created_at, id: msgs[0].id };
         stickToBottomRef.current = true;
         await loadSenders(msgs);
@@ -792,6 +869,14 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
     };
   }, [loadSenders, retryKey]);
 
+  // Texto inicial: mensaje compartido (botón «Compartir en el chat» del perfil).
+  useEffect(() => {
+    if (!initialText) return;
+    setDraft(initialText);
+    const t = setTimeout(() => inputRef.current?.focus(), 500);
+    return () => clearTimeout(t);
+  }, [initialText]);
+
   // Suscripción en tiempo real: INSERT (nuevos), UPDATE (ediciones), DELETE (eliminaciones)
   useEffect(() => {
     if (!chatInfo) return;
@@ -800,6 +885,9 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
         setMessages((prev) => (prev.some((m) => m.id === ev.message.id) ? prev : [...prev, ev.message]));
         loadSenders([ev.message]);
         if (!stickToBottomRef.current) setUnseen((n) => n + 1);
+        else {
+          try { localStorage.setItem("_chat_last_seen", String(Date.now())); } catch { /* noop */ }
+        }
       } else if (ev.type === "UPDATE") {
         setMessages((prev) => prev.map((m) => (m.id === ev.message.id ? { ...m, ...ev.message } : m)));
       } else if (ev.type === "DELETE") {
@@ -968,13 +1056,17 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
     if (!el) return;
     const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
     stickToBottomRef.current = nearBottom;
-    if (nearBottom && unseen > 0) setUnseen(0);
+    if (nearBottom && unseen > 0) {
+      setUnseen(0);
+      try { localStorage.setItem("_chat_last_seen", String(Date.now())); } catch { /* noop */ }
+    }
     if (el.scrollTop < 60 && hasMore && !loadingMore) void loadOlder();
   }, [hasMore, loadingMore, loadOlder, unseen]);
 
   const jumpToBottom = useCallback(() => {
     stickToBottomRef.current = true;
     setUnseen(0);
+    try { localStorage.setItem("_chat_last_seen", String(Date.now())); } catch { /* noop */ }
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, []);
 
@@ -1560,7 +1652,19 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
       )}
 
       {/* ───── Mensajes ───── */}
-      <div ref={listRef} onScroll={onScrollList} className="relative flex-1 overflow-y-auto px-3 py-4 space-y-3 no-scrollbar min-h-0">
+            {/* No leídos: contador arriba, en azul (a partir de 100 se muestra 99) */}
+      {unseen > 0 && (
+        <div className="shrink-0 mx-3 mt-2">
+          <button
+            onClick={jumpToBottom}
+            className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-primary to-accent text-primary-foreground text-[11px] font-display tracking-wide shadow-lg shadow-primary/25 active:scale-[0.98] transition"
+          >
+            <ArrowDown size={12} /> {unseen >= 100 ? "99" : unseen} mensaje{unseen === 1 ? "" : "s"} nuevo{unseen === 1 ? "" : "s"}
+          </button>
+        </div>
+      )}
+
+<div ref={listRef} onScroll={onScrollList} className="relative flex-1 overflow-y-auto px-3 py-4 space-y-3 no-scrollbar min-h-0">
         {loadingMore && (
           <div className="flex justify-center py-1">
             <Loader2 size={14} className="animate-spin text-muted-foreground" />
@@ -1614,7 +1718,7 @@ export default function ChatSection({ myId, onClose }: { myId: string | null; on
             onClick={jumpToBottom}
             className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground text-[11px] font-display tracking-wide shadow-lg active:scale-95 transition"
           >
-            <ArrowDown size={12} /> {unseen} nuevo{unseen > 1 ? "s" : ""}
+            <ArrowDown size={12} /> {unseen >= 100 ? "99" : unseen} nuevo{unseen > 1 ? "s" : ""}
           </button>
         )}
       </div>
