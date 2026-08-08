@@ -1,7 +1,7 @@
 import { Component, useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, Copy, Check, Reply, SmilePlus, ImagePlus, Loader2, Users, Users2, Settings2, UserPlus, UserMinus, Camera, Pencil, LogOut, MessageCircle, AtSign, ArrowLeft, WifiOff, Database, Plug, RefreshCw, KeyRound, CheckCircle2, AlertTriangle, Mic, Play, Pause, Trash2, ArrowDown, ExternalLink, Megaphone, Gift, PartyPopper, Lock, Sparkles, Timer, Undo2, ChevronRight } from "lucide-react";
+import { X, Send, Copy, Check, Reply, SmilePlus, ImagePlus, Film, Loader2, Users, Users2, Settings2, UserPlus, UserMinus, Camera, Pencil, LogOut, MessageCircle, AtSign, ArrowLeft, WifiOff, Database, Plug, RefreshCw, KeyRound, CheckCircle2, AlertTriangle, Mic, Play, Pause, Trash2, ArrowDown, ExternalLink, Megaphone, Gift, PartyPopper, Lock, Sparkles, Timer, Undo2, ChevronRight } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
@@ -14,6 +14,8 @@ import {
   deleteSticker,
   signMedia,
   isAudioMessage,
+  isVideoMessage,
+  isImageMessage,
   uploadChatMedia,
   fetchChatProfiles,
   isNetworkError,
@@ -434,7 +436,7 @@ function MessageBubble({
         >
           {reply && (
             <div className="mb-1.5 border-l-2 border-primary/50 pl-2 py-0.5 rounded-r-md bg-black/5 dark:bg-white/5 text-[11px] text-muted-foreground line-clamp-2">
-              {isAudioMessage(reply) ? "🎤 Audio de voz" : reply.media_url ? "🖼️ Sticker" : reply.content || "Mensaje"}
+              {isAudioMessage(reply) ? "🎤 Audio de voz" : isVideoMessage(reply) ? "🎬 Vídeo" : isImageMessage(reply) ? "🖼️ Foto" : reply.media_url ? "🖼️ Sticker" : reply.content || "Mensaje"}
             </div>
           )}
           {displayContent && (
@@ -449,6 +451,16 @@ function MessageBubble({
             <div className="text-[10px] text-muted-foreground/70 py-1.5 flex items-center gap-1.5">
               <Loader2 size={11} className="animate-spin" /> Cargando media…
             </div>
+          ) : mediaUrl && isVideoMessage(m) ? (
+            <video
+              src={mediaUrl}
+              controls
+              playsInline
+              className="max-w-72 max-h-72 rounded-xl mt-0.5 bg-black object-contain"
+              preload="metadata"
+            />
+          ) : mediaUrl && isImageMessage(m) ? (
+            <img src={mediaUrl} alt="Foto" className="max-w-72 max-h-72 rounded-xl mt-0.5 object-contain" draggable={false} />
           ) : mediaUrl ? (
             <img src={mediaUrl} alt="Sticker" className="max-w-44 max-h-44 rounded-xl mt-0.5 object-contain" draggable={false} />
           ) : null}
@@ -763,6 +775,9 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
   const [myStickers, setMyStickers] = useState<ChatSticker[]>([]);
   const [signedStickers, setSignedStickers] = useState<Map<string, string>>(new Map());
   const [stickerUploading, setStickerUploading] = useState(false);
+  // Foto / vídeo pendiente de enviar (subida previa + preview)
+  const [pendingMedia, setPendingMedia] = useState<{ file: File; preview: string; kind: "image" | "video" } | null>(null);
+  const [mediaUploading, setMediaUploading] = useState(false);
   const [recording, setRecording] = useState(false);
   const [recSeconds, setRecSeconds] = useState(0);
   const [sendingAudio, setSendingAudio] = useState(false);
@@ -858,6 +873,8 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
   const fileRef = useRef<HTMLInputElement>(null);
   const cgAvatarRef = useRef<HTMLInputElement>(null);
   const egAvatarRef = useRef<HTMLInputElement>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
   const sendersRef = useRef<Set<string>>(new Set());
   const listRef = useRef<HTMLDivElement>(null);
   const stickToBottomRef = useRef(true);
@@ -1344,6 +1361,73 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
       /* noop */
     }
   }, []);
+
+  // ───── Enviar fotos y vídeos ─────
+
+  /** Selecciona una foto o vídeo y lo deja pendiente (con preview). */
+  const pickMedia = useCallback((file: File | null) => {
+    if (!file || !currentChatId) return;
+    const kind: "image" | "video" = file.type.startsWith("video") ? "video" : "image";
+    if (kind === "image" && !file.type.startsWith("image/") && !/gif|webp|png|jpe?g|heic/i.test(file.name)) {
+      toast.error("Solo imágenes (JPG, PNG, GIF, WebP)");
+      return;
+    }
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error("El archivo supera 50 MB", { description: "Comprime el vídeo o elige otro archivo." });
+      return;
+    }
+    setPendingMedia((prev) => {
+      if (prev) URL.revokeObjectURL(prev.preview);
+      return { file, preview: URL.createObjectURL(file), kind };
+    });
+  }, [currentChatId]);
+
+  /** Sube y envía la foto/vídeo pendiente. */
+  const sendPendingMedia = useCallback(async () => {
+    if (!pendingMedia || !currentChatId || mediaUploading) return;
+    setMediaUploading(true);
+    try {
+      const path = await uploadChatMedia(pendingMedia.file, myId ?? "me");
+      const [signed] = await signMedia([path]);
+      if (signed) {
+        signedMediaRef.current = new Map(signedMediaRef.current).set(path, signed);
+        setSignedMedia(signedMediaRef.current);
+      }
+      const caption = draft.trim();
+      const sent = await sendChatMessage(currentChatId, {
+        content: caption || undefined,
+        mediaUrl: path,
+        mediaType: pendingMedia.kind === "video" ? "video" : "image",
+        replyToId: replyTo?.id ?? null,
+      });
+      setMessages((prev) => (prev.some((m) => m.id === sent.id) ? prev : [...prev, sent]));
+      setDraft("");
+      setReplyTo(null);
+      setStickersOpen(false);
+      setPendingMedia((prev) => {
+        if (prev) URL.revokeObjectURL(prev.preview);
+        return null;
+      });
+      if (activeDmRef.current) {
+        setDmList((prev) => prev.map((d) => (d.chat_id === sent.chat_id ? { ...d, last_message: sent, last_at: sent.created_at, unread: 0 } : d)));
+        void markDmRead(sent.chat_id).catch(() => {});
+      } else if (activeGroupRef.current) {
+        setGroupList((prev) => prev.map((g) => (g.chat_id === sent.chat_id ? { ...g, last_message: sent, last_at: sent.created_at, unread: 0 } : g)));
+        void markDmRead(sent.chat_id).catch(() => {});
+      }
+    } catch (err) {
+      if (isNetworkError(err) && currentChatId && pendingMedia) {
+        queuePendingMessage(currentChatId, {
+          mediaUrl: pendingMedia.file.name,
+          mediaType: pendingMedia.kind,
+          replyToId: replyTo?.id ?? null,
+        });
+      }
+      reportSendError(err);
+    } finally {
+      setMediaUploading(false);
+    }
+  }, [pendingMedia, currentChatId, mediaUploading, myId, replyTo, draft]);
 
   const publishAnnouncement = useCallback(async () => {
     const text = announceText.trim();
@@ -1885,6 +1969,16 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
     [chatInfo, replyTo, myId]
   );
 
+  // Libera el objectURL del preview de media al desmontar.
+  useEffect(() => {
+    return () => {
+      setPendingMedia((p) => {
+        if (p) URL.revokeObjectURL(p.preview);
+        return p;
+      });
+    };
+  }, []);
+
   // Si cierras el chat grabando, detén el micrófono y el timer.
   useEffect(() => {
     return () => {
@@ -2300,9 +2394,13 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                       {g.last_message
                         ? isAudioMessage(g.last_message)
                           ? "🎤 Audio de voz"
-                          : g.last_message.media_url
-                            ? "🖼️ Sticker"
-                            : g.last_message.content || "Mensaje"
+                          : isVideoMessage(g.last_message)
+                            ? "🎬 Vídeo"
+                            : isImageMessage(g.last_message)
+                              ? "🖼️ Foto"
+                              : g.last_message.media_url
+                                ? "🖼️ Sticker"
+                                : g.last_message.content || "Mensaje"
                         : g.description || `${g.member_count} ${g.member_count === 1 ? "miembro" : "miembros"}`}
                     </span>
                     {g.unread > 0 && (
@@ -2357,9 +2455,13 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                       {dm.last_message
                         ? isAudioMessage(dm.last_message)
                           ? "🎤 Audio de voz"
-                          : dm.last_message.media_url
-                            ? "🖼️ Sticker"
-                            : dm.last_message.content || "Mensaje"
+                          : isVideoMessage(dm.last_message)
+                            ? "🎬 Vídeo"
+                            : isImageMessage(dm.last_message)
+                              ? "🖼️ Foto"
+                              : dm.last_message.media_url
+                                ? "🖼️ Sticker"
+                                : dm.last_message.content || "Mensaje"
                         : dm.chat_id
                           ? "Sin mensajes todavía"
                           : "Se siguen mutuamente · inicia la conversación"}
@@ -2455,6 +2557,35 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
         </>
       )}
 
+      {/* Preview de foto/vídeo pendiente */}
+      {pendingMedia && (
+        <div className="shrink-0 px-3 pt-2">
+          <div className="relative inline-flex rounded-2xl border border-border overflow-hidden bg-card shadow-sm">
+            {pendingMedia.kind === "video" ? (
+              <video src={pendingMedia.preview} className="w-40 h-28 object-cover" muted />
+            ) : (
+              <img src={pendingMedia.preview} alt="" className="w-40 h-28 object-cover" />
+            )}
+            <span className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-black/60 text-white text-[9px] font-display tracking-widest flex items-center gap-1">
+              {pendingMedia.kind === "video" ? <Film size={9} /> : <ImagePlus size={9} />}
+              {pendingMedia.kind === "video" ? "VÍDEO" : "FOTO"}
+            </span>
+            <button
+              onClick={() => {
+                setPendingMedia((prev) => {
+                  if (prev) URL.revokeObjectURL(prev.preview);
+                  return null;
+                });
+              }}
+              disabled={mediaUploading}
+              className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 text-white grid place-items-center active:scale-90 transition disabled:opacity-40"
+            >
+              <X size={11} />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ───── Barra de respuesta ───── */}
       {(view === "group" || activeDm || activeGroup) && (
       <>
@@ -2476,7 +2607,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                   ""}
               </div>
               <div className="text-[11px] text-muted-foreground truncate">
-                {isAudioMessage(replyTo) ? "🎤 Audio de voz" : replyTo.media_url ? "🖼️ Sticker" : replyTo.content || ""}
+                {isAudioMessage(replyTo) ? "🎤 Audio de voz" : isVideoMessage(replyTo) ? "🎬 Vídeo" : isImageMessage(replyTo) ? "🖼️ Foto" : replyTo.media_url ? "🖼️ Sticker" : replyTo.content || ""}
               </div>
             </div>
             <button onClick={() => setReplyTo(null)} className="w-6 h-6 grid place-items-center rounded-md hover:bg-muted/70 text-muted-foreground shrink-0">
@@ -2516,11 +2647,50 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
           ) : (
             <>
           <button
+            onClick={() => photoInputRef.current?.click()}
+            disabled={mediaUploading}
+            title="Enviar foto"
+            className={`w-9 h-9 rounded-xl grid place-items-center active:scale-95 transition shrink-0 disabled:opacity-40 ${pendingMedia?.kind === "image" ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted/60"}`}
+          >
+            <ImagePlus size={18} />
+          </button>
+          <button
+            onClick={() => videoInputRef.current?.click()}
+            disabled={mediaUploading}
+            title="Enviar vídeo"
+            className={`w-9 h-9 rounded-xl grid place-items-center active:scale-95 transition shrink-0 disabled:opacity-40 ${pendingMedia?.kind === "video" ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted/60"}`}
+          >
+            <Film size={18} />
+          </button>
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0] ?? null;
+              e.target.value = "";
+              if (f) pickMedia(f);
+            }}
+          />
+          <input
+            ref={videoInputRef}
+            type="file"
+            accept="video/*"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0] ?? null;
+              e.target.value = "";
+              if (f) pickMedia(f);
+            }}
+          />
+          <button
             onClick={() => setStickersOpen((o) => !o)}
             className={`w-9 h-9 rounded-xl grid place-items-center active:scale-95 transition shrink-0 ${stickersOpen ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted/60"}`}
           >
             <SmilePlus size={18} />
           </button>
+
           <textarea
             ref={inputRef}
             value={draft}
@@ -2568,7 +2738,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
               }
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
-                void handleSend();
+                void (pendingMedia ? sendPendingMedia() : handleSend());
               }
             }}
             enterKeyHint="send"
@@ -2616,8 +2786,8 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
             )}
           </AnimatePresence>
           <button
-            onClick={() => void handleSend()}
-            disabled={!draft.trim()}
+            onClick={() => void (pendingMedia ? sendPendingMedia() : handleSend())}
+            disabled={!draft.trim() && !pendingMedia}
             className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center active:scale-95 transition shrink-0 disabled:opacity-40 disabled:active:scale-100 shadow-[0_4px_12px_-5px_oklch(0.488_0.185_264/0.5)]"
           >
             <Send size={15} />

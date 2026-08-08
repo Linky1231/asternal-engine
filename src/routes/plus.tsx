@@ -61,6 +61,19 @@ const CARD_THEMES: { id: NonNullable<CreatorCardStyle["theme"]>; label: string; 
 
 function PlusPage() {
   const navigate = useNavigate();
+
+  // Bug de navegación: si entras a Plus desde tu perfil (o desde cualquier
+  // pantalla), el botón/gesto de «atrás» del navegador volvía a la pantalla
+  // anterior (p. ej. la página aislada de tu perfil) en vez del menú principal.
+  // Interceptamos el popstate: al salir de Plus, SIEMPRE se va al menú
+  // principal (/) en lugar de a la ruta anterior.
+  useEffect(() => {
+    const onPop = () => {
+      navigate({ to: "/", replace: true });
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [navigate]);
   const [me, setMe] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState(false);

@@ -296,7 +296,7 @@ export async function fetchChatMessages(
 
 export async function sendChatMessage(
   chatId: string,
-  opts: { content?: string; mediaUrl?: string; mediaType?: "image" | "audio"; replyToId?: string | null }
+  opts: { content?: string; mediaUrl?: string; mediaType?: "image" | "video" | "audio" | "sticker"; replyToId?: string | null }
 ): Promise<ChatMessage> {
   const me = await requireMe();
 
@@ -331,6 +331,9 @@ export async function sendChatMessage(
     reply_to_id: opts.replyToId ?? null,
   };
   if (opts.mediaType === "audio") payload.media_type = "audio";
+  else if (opts.mediaType === "video") payload.media_type = "video";
+  else if (opts.mediaType === "image") payload.media_type = "image";
+  else if (opts.mediaType === "sticker") payload.media_type = "sticker";
 
   const { data, error } = await supabase
     .from("chat_messages")
@@ -344,6 +347,16 @@ export async function sendChatMessage(
 
 export function isAudioMessage(m: Pick<ChatMessage, "media_type" | "media_url">): boolean {
   return !!m.media_url && (m.media_type === "audio" || /^audio\//.test(m.media_url ?? ""));
+}
+
+/** ¿Es un vídeo? (se renderiza con un reproductor). */
+export function isVideoMessage(m: Pick<ChatMessage, "media_type" | "media_url">): boolean {
+  return !!m.media_url && (m.media_type === "video" || /^video\//.test(m.media_url ?? ""));
+}
+
+/** ¿Es una imagen normal (foto, no sticker)? */
+export function isImageMessage(m: Pick<ChatMessage, "media_type" | "media_url">): boolean {
+  return !!m.media_url && m.media_type === "image";
 }
 
 export type ChatEvent =
@@ -682,7 +695,7 @@ type PendingSend = {
   chatId: string;
   content?: string;
   mediaUrl?: string;
-  mediaType?: "image" | "audio";
+  mediaType?: "image" | "video" | "audio" | "sticker";
   replyToId?: string | null;
   queuedAt: string;
 };
@@ -698,7 +711,7 @@ export function isNetworkError(err: unknown): boolean {
 /** Guarda un mensaje en la cola local para reenviarlo cuando haya conexión. */
 export function queuePendingMessage(
   chatId: string,
-  opts: { content?: string; mediaUrl?: string; mediaType?: "image" | "audio"; replyToId?: string | null }
+  opts: { content?: string; mediaUrl?: string; mediaType?: "image" | "video" | "audio" | "sticker"; replyToId?: string | null }
 ): void {
   try {
     const list: PendingSend[] = JSON.parse(localStorage.getItem(PENDING_KEY) || "[]");
