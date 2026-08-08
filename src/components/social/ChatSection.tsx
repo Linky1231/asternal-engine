@@ -1,7 +1,7 @@
 import { Component, useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, Copy, Check, Reply, SmilePlus, ImagePlus, Film, Loader2, Users, Users2, Settings2, UserPlus, UserMinus, Camera, Pencil, LogOut, MessageCircle, AtSign, BarChart3, Shield, ShieldCheck, ArrowLeft, WifiOff, RefreshCw, KeyRound, CheckCircle2, AlertTriangle, Mic, Play, Pause, Trash2, ArrowDown, ExternalLink, Megaphone, Gift, PartyPopper, Lock, Sparkles, Timer, Undo2, ChevronRight, Briefcase, ClipboardList, FolderOpen, MessagesSquare, Download, Paperclip, MessageSquarePlus, Search, Layers } from "lucide-react";
+import { X, Send, Copy, Check, Reply, SmilePlus, ImagePlus, Film, Loader2, Users, Users2, Settings2, UserPlus, UserMinus, Camera, Pencil, LogOut, MessageCircle, AtSign, BarChart3, Shield, ShieldCheck, ArrowLeft, WifiOff, RefreshCw, KeyRound, CheckCircle2, AlertTriangle, Mic, Play, Pause, Trash2, ArrowDown, ExternalLink, Megaphone, Gift, PartyPopper, Lock, Sparkles, Timer, Undo2, ChevronRight, CalendarClock, Clock, Briefcase, ClipboardList, FolderOpen, MessagesSquare, Download, Paperclip, MessageSquarePlus, Search, Layers } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
@@ -18,6 +18,11 @@ import {
   isImageMessage,
   uploadChatMedia,
   fetchChatProfiles,
+  ScheduledMessage,
+  scheduleChatMessage,
+  listScheduledMessages,
+  cancelScheduledMessage,
+  sendDueScheduledMessages,
   isNetworkError,
   queuePendingMessage,
   flushPendingMessages,
@@ -883,6 +888,16 @@ function GiftCard({
   );
 }
 
+/** Formatea la hora de un mensaje programado: «hoy 14:30» o «12 ago, 09:00». */
+function fmtScheduledAt(iso: string): string {
+  const d = new Date(iso);
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  const sameDay = d.toDateString() === new Date().toDateString();
+  if (sameDay) return `hoy ${hh}:${mm}`;
+  return `${d.getDate()} ${d.toLocaleDateString("es", { month: "short" })}, ${hh}:${mm}`;
+}
+
 export default function ChatSection({ myId, onClose, initialText }: { myId: string | null; onClose: () => void; initialText?: string }) {
   const [chatInfo, setChatInfo] = useState<{ id: string; name: string; memberCount: number; memberOk?: boolean; local?: boolean } | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -891,6 +906,10 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
   const [draft, setDraft] = useState("");
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
   const [stickersOpen, setStickersOpen] = useState(false);
+  // Mensajes programados: se envían solos cuando llega su hora.
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [scheduleAt, setScheduleAt] = useState("");
+  const [scheduledMsgs, setScheduledMsgs] = useState<ScheduledMessage[]>([]);
   const [myStickers, setMyStickers] = useState<ChatSticker[]>([]);
   const [signedStickers, setSignedStickers] = useState<Map<string, string>>(new Map());
   const [stickerUploading, setStickerUploading] = useState(false);
@@ -1522,6 +1541,68 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
     },
     [currentChatId, draft, replyTo]
   );
+
+  // ───── Mensajes programados ─────
+  const reloadScheduled = useCallback(() => {
+    setScheduledMsgs(currentChatId ? listScheduledMessages(currentChatId) : []);
+  }, [currentChatId]);
+
+  const handleScheduleMessage = useCallback(async () => {
+    const content = draft.trim();
+    if (!currentChatId || !content || !scheduleAt) {
+      toast.error("Escribe el mensaje y elige fecha y hora");
+      return;
+    }
+    const when = new Date(scheduleAt);
+    if (when.getTime() <= Date.now()) {
+      toast.error("Elige una hora futura para programar");
+      return;
+    }
+    try {
+      await scheduleChatMessage(currentChatId, { content, scheduledAt: when.toISOString() });
+      setDraft("");
+      setScheduleOpen(false);
+      reloadScheduled();
+      toast.success("Mensaje programado ✓");
+    } catch {
+      toast.error("No se pudo programar el mensaje");
+    }
+  }, [currentChatId, draft, scheduleAt, reloadScheduled]);
+
+  const handleCancelScheduled = useCallback(
+    (id: string) => {
+      cancelScheduledMessage(id);
+      reloadScheduled();
+    },
+    [reloadScheduled]
+  );
+
+  // Refresca los mensajes del chat actual tras un envío automático.
+  const refreshMessagesAfterSend = useCallback(async () => {
+    if (!currentChatId) return;
+    try {
+      const { messages: msgs, hasMore: more } = await fetchChatMessages(currentChatId);
+      setMessages(msgs);
+      setHasMore(more);
+    } catch {
+      /* noop */
+    }
+  }, [currentChatId]);
+
+  // Vigila los mensajes programados: se envían solos cuando llega su hora.
+  useEffect(() => {
+    reloadScheduled();
+    const t = setInterval(() => {
+      void sendDueScheduledMessages()
+        .then((r) => {
+          if (r.count <= 0) return;
+          reloadScheduled();
+          if (currentChatId && r.chats.includes(currentChatId)) void refreshMessagesAfterSend();
+        })
+        .catch(() => {});
+    }, 15000);
+    return () => clearInterval(t);
+  }, [reloadScheduled, currentChatId, refreshMessagesAfterSend]);
 
   const copyMessage = useCallback(async (m: ChatMessage) => {
     if (!m.content) return;
@@ -2518,7 +2599,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
           </div>
         )}
 
-        {/* Pestañas: chat grupal ↔ chats individuales */}
+        {/* Pestañas: chat comunitario ↔ grupos ↔ chats individuales */}
         {!isLocal && (
           <div className="max-w-2xl md:max-w-full mx-auto flex items-center gap-1.5 px-4 pb-2.5">
             <button
@@ -2528,7 +2609,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
               }}
               className={`flex-1 py-1.5 rounded-xl text-[10px] font-display tracking-[0.14em] flex items-center justify-center gap-1.5 transition active:scale-[0.98] ${view === "group" ? "bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[0_4px_12px_-5px_oklch(0.488_0.185_264/0.5)]" : "bg-card border border-border text-muted-foreground hover:text-foreground"}`}
             >
-              <Users size={12} /> GRUPO
+              <Users size={12} /> CHAT COMUNITARIO
             </button>
             <button
               onClick={() => {
@@ -2817,6 +2898,31 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
             <Loader2 size={14} className="animate-spin text-muted-foreground" />
           </div>
         )}
+        {/* Mensajes programados pendientes de enviar */}
+        {currentChatId && scheduledMsgs.length > 0 && (
+          <div className="space-y-2 pb-1">
+            {scheduledMsgs.map((s) => (
+              <div key={s.id} className="flex items-center gap-2.5 rounded-2xl border border-dashed border-primary/40 bg-primary/5 px-3 py-2.5">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 grid place-items-center shrink-0">
+                  <Clock size={15} className="text-primary" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[10px] font-display tracking-widest text-primary">
+                    PROGRAMADO · {fmtScheduledAt(s.scheduled_at)}
+                  </div>
+                  <div className="text-[12px] text-muted-foreground truncate">{s.content ?? "Mensaje programado"}</div>
+                </div>
+                <button
+                  onClick={() => handleCancelScheduled(s.id)}
+                  className="shrink-0 w-7 h-7 rounded-lg grid place-items-center text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 active:scale-95 transition"
+                  title="Cancelar envío"
+                >
+                  <X size={13} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
         {loading ? (
           <div className="flex justify-center py-10">
             <Loader2 size={18} className="animate-spin text-muted-foreground" />
@@ -3060,6 +3166,16 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
           >
             <SmilePlus size={18} />
           </button>
+          <button
+            onClick={() => {
+              setScheduleOpen((o) => !o);
+              setStickersOpen(false);
+            }}
+            className={`w-9 h-9 rounded-xl grid place-items-center active:scale-95 transition shrink-0 ${scheduleOpen ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted/60"}`}
+            title="Programar mensaje"
+          >
+            <CalendarClock size={18} />
+          </button>
 
           <textarea
             ref={inputRef}
@@ -3241,6 +3357,63 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                     void onPickStickerFile(f);
                   }}
                 />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Panel de mensaje programado */}
+          <AnimatePresence>
+            {scheduleOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.98 }}
+                transition={{ duration: 0.16, ease: "easeOut" }}
+                className="absolute bottom-full left-0 right-0 mb-2 bg-card border border-border rounded-2xl shadow-xl p-3 z-20"
+              >
+                <div className="flex items-center gap-1.5 text-[10px] font-display tracking-widest text-muted-foreground mb-2">
+                  <CalendarClock size={11} /> PROGRAMAR MENSAJE
+                </div>
+                <input
+                  type="datetime-local"
+                  value={scheduleAt}
+                  min={new Date(Date.now() + 60000).toISOString().slice(0, 16)}
+                  onChange={(e) => setScheduleAt(e.target.value)}
+                  className="w-full rounded-xl border border-border bg-muted/40 px-3 py-2 text-sm outline-none focus:border-primary/50 mb-2"
+                />
+                <p className="text-[11px] text-muted-foreground mb-2 truncate">
+                  {draft.trim() ? `Se enviará: «${draft.trim()}»` : "Escribe el mensaje que quieres programar"}
+                </p>
+                <button
+                  onClick={() => void handleScheduleMessage()}
+                  disabled={!draft.trim() || !scheduleAt}
+                  className="w-full py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-[11px] font-display tracking-wide active:scale-[0.98] transition disabled:opacity-40"
+                >
+                  PROGRAMAR
+                </button>
+                {scheduledMsgs.length > 0 && (
+                  <div className="mt-3 space-y-1.5 max-h-36 overflow-y-auto no-scrollbar">
+                    <div className="text-[10px] font-display tracking-widest text-muted-foreground">
+                      PROGRAMADOS · {scheduledMsgs.length}
+                    </div>
+                    {scheduledMsgs.map((s) => (
+                      <div key={s.id} className="flex items-center gap-2 rounded-xl bg-muted/40 px-2.5 py-1.5">
+                        <Clock size={11} className="text-primary shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <div className="text-[10px] font-mono text-primary">{fmtScheduledAt(s.scheduled_at)}</div>
+                          <div className="text-[11px] truncate">{s.content ?? "…"}</div>
+                        </div>
+                        <button
+                          onClick={() => handleCancelScheduled(s.id)}
+                          className="shrink-0 w-7 h-7 rounded-lg grid place-items-center text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 active:scale-95 transition"
+                          title="Cancelar"
+                        >
+                          <X size={13} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </motion.div>
             )}
           </AnimatePresence>

@@ -346,6 +346,95 @@ export async function sendChatMessage(
   return data as ChatMessage;
 }
 
+/** Mensaje programado: se guarda localmente y se envía solo cuando llega su hora. */
+export type ScheduledMessage = {
+  id: string;
+  chat_id: string;
+  sender_id: string;
+  content: string | null;
+  media_url?: string | null;
+  media_type?: string | null;
+  reply_to_id?: string | null;
+  scheduled_at: string;
+  created_at: string;
+};
+
+const SCHEDULED_KEY = "_scheduled_messages";
+
+/** Todos los mensajes programados (de un chat si se pasa chatId), ordenados por hora. */
+export function listScheduledMessages(chatId?: string): ScheduledMessage[] {
+  try {
+    const raw = localStorage.getItem(SCHEDULED_KEY);
+    const rows = raw ? (JSON.parse(raw) as ScheduledMessage[]) : [];
+    return rows
+      .filter((s) => (chatId ? s.chat_id === chatId : true))
+      .sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
+  } catch {
+    return [];
+  }
+}
+
+/** Programa un mensaje para una hora futura. */
+export async function scheduleChatMessage(
+  chatId: string,
+  opts: { content: string; scheduledAt: string }
+): Promise<ScheduledMessage> {
+  const me = await requireMe();
+  const row: ScheduledMessage = {
+    id: crypto.randomUUID(),
+    chat_id: chatId,
+    sender_id: me.id,
+    content: opts.content,
+    scheduled_at: opts.scheduledAt,
+    created_at: new Date().toISOString(),
+  };
+  const rows = listScheduledMessages();
+  rows.push(row);
+  localStorage.setItem(SCHEDULED_KEY, JSON.stringify(rows));
+  return row;
+}
+
+/** Cancela un mensaje programado que aún no se ha enviado. */
+export function cancelScheduledMessage(id: string): void {
+  localStorage.setItem(
+    SCHEDULED_KEY,
+    JSON.stringify(listScheduledMessages().filter((s) => s.id !== id))
+  );
+}
+
+/**
+ * Envía ahora todos los mensajes programados cuya hora ya llegó.
+ * Devuelve cuántos se enviaron y en qué chats, para refrescar la UI.
+ */
+export async function sendDueScheduledMessages(): Promise<{ count: number; chats: string[] }> {
+  const all = listScheduledMessages();
+  const due = all.filter((s) => new Date(s.scheduled_at).getTime() <= Date.now());
+  if (due.length === 0) return { count: 0, chats: [] };
+  // Se quitan de la cola antes de enviar para evitar envíos duplicados;
+  // si uno falla (p. ej. sin red) se vuelve a encolar y se reintenta después.
+  const pending = all.filter((s) => !due.some((d) => d.id === s.id));
+  localStorage.setItem(SCHEDULED_KEY, JSON.stringify(pending));
+  let count = 0;
+  const okChats = new Set<string>();
+  for (const s of due) {
+    try {
+      await sendChatMessage(s.chat_id, {
+        content: s.content ?? undefined,
+        mediaUrl: s.media_url ?? undefined,
+        mediaType: s.media_type as "image" | "video" | "audio" | "sticker" | undefined,
+        replyToId: s.reply_to_id ?? null,
+      });
+      count++;
+      okChats.add(s.chat_id);
+    } catch {
+      const again = listScheduledMessages();
+      again.push(s);
+      localStorage.setItem(SCHEDULED_KEY, JSON.stringify(again));
+    }
+  }
+  return { count, chats: Array.from(okChats) };
+}
+
 export function isAudioMessage(m: Pick<ChatMessage, "media_type" | "media_url">): boolean {
   return !!m.media_url && (m.media_type === "audio" || /^audio\//.test(m.media_url ?? ""));
 }
