@@ -136,6 +136,11 @@ export function listFiles(chatId: string): WorkFile[] {
     .sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
 }
 
+/** Todos los archivos de los chats de trabajo (para la búsqueda global). */
+export function listAllWorkFiles(): WorkFile[] {
+  return rows<WorkFile>("work_files").sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+}
+
 export function addFile(input: {
   chat_id: string;
   name: string;
@@ -172,6 +177,11 @@ export function listThreads(chatId: string): WorkThread[] {
     .sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
 }
 
+/** Todos los hilos de los chats de trabajo (para la búsqueda global). */
+export function listAllThreads(): WorkThread[] {
+  return rows<WorkThread>("work_threads");
+}
+
 export function createThread(chatId: string, title: string, createdBy: string, createdByName: string): WorkThread {
   const thread: WorkThread = {
     id: uid(),
@@ -194,6 +204,11 @@ export function listThreadMessages(threadId: string): ThreadMessage[] {
   return rows<ThreadMessage>("thread_messages")
     .filter((m) => m.thread_id === threadId)
     .sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+}
+
+/** Todos los mensajes de hilos (para la búsqueda global). */
+export function listAllThreadMessages(): ThreadMessage[] {
+  return rows<ThreadMessage>("thread_messages");
 }
 
 export function addThreadMessage(threadId: string, chatId: string, senderId: string, content: string): ThreadMessage {

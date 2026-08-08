@@ -1,7 +1,7 @@
 import { Component, useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, Copy, Check, Reply, SmilePlus, ImagePlus, Film, Loader2, Users, Users2, Settings2, UserPlus, UserMinus, Camera, Pencil, LogOut, MessageCircle, AtSign, BarChart3, Shield, ShieldCheck, ArrowLeft, WifiOff, RefreshCw, KeyRound, CheckCircle2, AlertTriangle, Mic, Play, Pause, Trash2, ArrowDown, ExternalLink, Megaphone, Gift, PartyPopper, Lock, Sparkles, Timer, Undo2, ChevronRight, Briefcase, ClipboardList, FolderOpen, MessagesSquare, Download, Paperclip, MessageSquarePlus } from "lucide-react";
+import { X, Send, Copy, Check, Reply, SmilePlus, ImagePlus, Film, Loader2, Users, Users2, Settings2, UserPlus, UserMinus, Camera, Pencil, LogOut, MessageCircle, AtSign, BarChart3, Shield, ShieldCheck, ArrowLeft, WifiOff, RefreshCw, KeyRound, CheckCircle2, AlertTriangle, Mic, Play, Pause, Trash2, ArrowDown, ExternalLink, Megaphone, Gift, PartyPopper, Lock, Sparkles, Timer, Undo2, ChevronRight, Briefcase, ClipboardList, FolderOpen, MessagesSquare, Download, Paperclip, MessageSquarePlus, Search } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
@@ -67,6 +67,7 @@ import {
 } from "@/lib/social/work";
 import type { WorkThread } from "@/lib/social/work";
 import { TaskManager, FileManager, ThreadsManager, ThreadView } from "./WorkChatPanel";
+import { GlobalSearchPanel } from "./GlobalSearchPanel";
 import { supabase, hasSupabaseConfig, saveSupabaseCredentials } from "@/integrations/supabase/client";
 import { UserName } from "./UserName";
 import { getMyProfile, getMyOrbes, isAdmin, pushNotification, uploadAvatar } from "@/lib/social/api";
@@ -952,6 +953,8 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
   const [manager, setManager] = useState<"tasks" | "files" | "threads" | null>(null);
   const [openThread, setOpenThread] = useState<WorkThread | null>(null);
   const [threads, setThreads] = useState<WorkThread[]>([]);
+  // Búsqueda global (mensajes, usuarios, proyectos y archivos)
+  const [searchOpen, setSearchOpen] = useState(false);
   const [gifts, setGifts] = useState<Map<string, OrbGift>>(new Map());
   const giftsRef = useRef<Map<string, OrbGift>>(new Map());
   const [claimingId, setClaimingId] = useState<string | null>(null);
@@ -1033,6 +1036,13 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
   const myName = myId
     ? senders.get(myId)?.display_name || senders.get(myId)?.username || "Yo"
     : "Yo";
+  // Alcance inicial de la búsqueda según el chat en el que estés.
+  const searchDefaultScope: "all" | "community" | "work" =
+    view === "groups" && activeGroup && isWork
+      ? "work"
+      : view === "group" && !!chatInfo
+        ? "community"
+        : "all";
 
   // Load senders for a batch of messages
   const loadSenders = useCallback(async (msgs: ChatMessage[]) => {
@@ -2055,6 +2065,46 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
     void loadGroupList();
   }, [activeGroup, deleteBusy, deleteArm, loadGroupList]);
 
+  /** Búsqueda global: abre el chat al que pertenece un resultado. */
+  const handleOpenSearchChat = useCallback(
+    async (chatId: string) => {
+      setSearchOpen(false);
+      if (chatInfo && chatId === chatInfo.id) {
+        setView("group");
+        setActiveDm(null);
+        setActiveGroup(null);
+        return;
+      }
+      let dm = dmList.find((d) => d.chat_id === chatId);
+      let g = groupList.find((gr) => gr.chat_id === chatId);
+      if (!dm && !g) {
+        try {
+          const [dms, groups] = await Promise.all([fetchMyDmChats(), fetchMyGroupChats()]);
+          setDmList(dms);
+          setGroupList(groups);
+          dm = dms.find((d) => d.chat_id === chatId);
+          g = groups.find((gr) => gr.chat_id === chatId);
+        } catch {
+          /* noop */
+        }
+      }
+      if (dm) {
+        setView("dms");
+        setActiveGroup(null);
+        void openDm(dm);
+        return;
+      }
+      if (g) {
+        setView("groups");
+        setActiveDm(null);
+        openGroup(g);
+        return;
+      }
+      toast.error("No se encontró ese chat");
+    },
+    [chatInfo, dmList, groupList, openDm, openGroup]
+  );
+
   /** Inserta la mención @usuario en el cuadro de texto (en el cursor). */
   const insertMention = useCallback((p: Profile) => {
     const r = mentionRef.current;
@@ -2427,6 +2477,13 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
               <Gift size={15} />
             </button>
           )}
+          <button
+            onClick={() => setSearchOpen(true)}
+            title="Búsqueda global"
+            className="w-9 h-9 rounded-xl border border-border/70 bg-background grid place-items-center active:scale-95 transition shrink-0 hover:border-primary/40 hover:text-primary"
+          >
+            <Search size={15} />
+          </button>
           <button onClick={onClose} className="w-9 h-9 rounded-xl border border-border/70 bg-background grid place-items-center active:scale-95 transition shrink-0">
             <X size={16} />
           </button>
@@ -4059,6 +4116,17 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
             senders={senders}
             onBack={() => setOpenThread(null)}
             onClose={() => setOpenThread(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Búsqueda global */}
+      <AnimatePresence>
+        {searchOpen && (
+          <GlobalSearchPanel
+            defaultScope={searchDefaultScope}
+            onClose={() => setSearchOpen(false)}
+            onOpenMessage={(chatId) => void handleOpenSearchChat(chatId)}
           />
         )}
       </AnimatePresence>
