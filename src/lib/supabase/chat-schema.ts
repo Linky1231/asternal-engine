@@ -17,11 +17,16 @@ create table if not exists public.chats (
   type text not null default 'group',
   name text not null,
   description text,
+  avatar_url text,
   created_by uuid references public.profiles(id) on delete set null,
   is_community boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+-- Descripción y foto de perfil de los chats (grupos personalizados)
+alter table public.chats add column if not exists description text;
+alter table public.chats add column if not exists avatar_url text;
 
 create table if not exists public.chat_members (
   chat_id uuid not null references public.chats(id) on delete cascade,
@@ -30,6 +35,12 @@ create table if not exists public.chat_members (
   joined_at timestamptz not null default now(),
   primary key (chat_id, user_id)
 );
+
+-- El rol 'owner' identifica al creador de un grupo personalizado.
+-- Se recrea el CHECK para que lo admita (instalaciones antiguas solo tenían
+-- member/admin).
+alter table public.chat_members drop constraint if exists chat_members_role_check;
+alter table public.chat_members add constraint chat_members_role_check check (role in ('member', 'admin', 'owner'));
 
 create table if not exists public.chat_messages (
   id uuid primary key default gen_random_uuid(),
@@ -131,10 +142,10 @@ create policy chat_members_read on public.chat_members for select using (true);
 create policy chat_members_self_insert on public.chat_members for insert with check (auth.uid() = user_id);
 create policy chat_members_self_delete on public.chat_members for delete using (auth.uid() = user_id);
 
--- chat_messages: el chat del grupo es de lectura pública; los chats
--- individuales (dm) solo los leen sus participantes.
+-- chat_messages: el chat COMUNITARIO es de lectura pública; los chats
+-- individuales (dm) y los grupos PERSONALIZADOS solo los leen sus miembros.
 create policy chat_messages_read on public.chat_messages for select using (
-  exists (select 1 from public.chats c where c.id = chat_messages.chat_id and c.type = 'group')
+  exists (select 1 from public.chats c where c.id = chat_messages.chat_id and c.is_community)
   or exists (select 1 from public.chat_members m
              where m.chat_id = chat_messages.chat_id and m.user_id = auth.uid())
 );
@@ -244,6 +255,217 @@ returns void language sql security definer set search_path = public as $$
   update public.chat_members set last_read_at = now()
   where chat_id = _chat_id and user_id = auth.uid();
 $$;
+
+-- ─────── GRUPOS PERSONALIZADOS ───────
+-- Chats grupales que cualquier usuario puede crear con amigos que se siguen
+-- mutuamente. Tienen nombre, descripción y foto de perfil (avatar_url). El
+-- creador es el owner; puede editar el grupo y añadir/quitar miembros.
+
+-- Crea un grupo personalizado con los amigos indicados. Solo se admiten
+-- personas con las que te sigues mutuamente (máximo 50 miembros). El creador
+-- entra como 'owner'.
+create or replace function public.create_group_chat(
+  _name text,
+  _description text,
+  _avatar_url text,
+  _member_ids uuid[]
+)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  v_me uuid := auth.uid();
+  v_chat_id uuid;
+  v_m uuid;
+  v_count int := 0;
+begin
+  if v_me is null then
+    return jsonb_build_object('ok', false, 'error', 'Inicia sesión para crear un grupo');
+  end if;
+  if _name is null or length(trim(_name)) = 0 then
+    return jsonb_build_object('ok', false, 'error', 'Ponle un nombre al grupo');
+  end if;
+  if _member_ids is null or array_length(_member_ids, 1) is null or array_length(_member_ids, 1) < 1 then
+    return jsonb_build_object('ok', false, 'error', 'Elige al menos un amigo');
+  end if;
+  if array_length(_member_ids, 1) > 50 then
+    return jsonb_build_object('ok', false, 'error', 'Máximo 50 miembros por grupo');
+  end if;
+
+  insert into public.chats (type, name, description, avatar_url, created_by, is_community)
+  values ('group', trim(_name), coalesce(_description, ''), _avatar_url, v_me, false)
+  returning id into v_chat_id;
+
+  insert into public.chat_members (chat_id, user_id, role)
+  values (v_chat_id, v_me, 'owner');
+
+  for v_m in select distinct unnest(_member_ids) loop
+    if v_m = v_me then continue; end if;
+    -- Solo amigos con seguimiento mutuo.
+    if public.are_mutual(v_me, v_m) then
+      insert into public.chat_members (chat_id, user_id, role)
+      values (v_chat_id, v_m, 'member')
+      on conflict (chat_id, user_id) do nothing;
+      v_count := v_count + 1;
+    end if;
+  end loop;
+
+  if v_count = 0 then
+    -- No se pudo añadir a nadie: deshacemos el grupo.
+    delete from public.chats where id = v_chat_id;
+    return jsonb_build_object('ok', false, 'error', 'Ninguno de los elegidos es un amigo con seguimiento mutuo');
+  end if;
+
+  return jsonb_build_object('ok', true, 'chat_id', v_chat_id, 'members', v_count + 1);
+end $$;
+
+-- Lista mis grupos personalizados (no la comunidad): nombre, foto,
+-- descripción, nº de miembros, último mensaje y no leídos.
+create or replace function public.my_group_chats()
+returns jsonb language sql stable security definer set search_path = public as $$
+  select coalesce(jsonb_agg(x order by x->>'last_at' desc nulls last), '[]'::jsonb)
+  from (
+    select jsonb_build_object(
+      'chat_id', c.id,
+      'name', c.name,
+      'description', c.description,
+      'avatar_url', c.avatar_url,
+      'created_by', c.created_by,
+      'my_role', (select m.role from public.chat_members m
+        where m.chat_id = c.id and m.user_id = auth.uid()),
+      'member_count', (select count(*) from public.chat_members m where m.chat_id = c.id),
+      'last_message', (select to_jsonb(msg) from public.chat_messages msg
+        where msg.chat_id = c.id order by msg.created_at desc limit 1),
+      'last_at', (select max(msg.created_at) from public.chat_messages msg where msg.chat_id = c.id),
+      'unread', (select count(*) from public.chat_messages msg
+        where msg.chat_id = c.id and msg.sender_id <> auth.uid()
+          and (msg.created_at > coalesce(
+            (select m.last_read_at from public.chat_members m
+             where m.chat_id = c.id and m.user_id = auth.uid()),
+            'epoch'::timestamptz)))
+    ) x
+    from public.chats c
+    join public.chat_members cm on cm.chat_id = c.id and cm.user_id = auth.uid()
+    where c.type = 'group' and not c.is_community
+  ) t
+$$;
+
+-- Miembros de un grupo personalizado (con su perfil completo).
+create or replace function public.group_members(_chat_id uuid)
+returns jsonb language sql stable security definer set search_path = public as $$
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'profile', to_jsonb(p),
+    'role', m.role,
+    'joined_at', m.joined_at
+  ) order by (m.role = 'owner') desc, p.display_name), '[]'::jsonb)
+  from public.chat_members m
+  join public.profiles p on p.id = m.user_id
+  where m.chat_id = _chat_id
+$$;
+
+-- Edita el nombre / descripción / foto de un grupo (solo el owner).
+create or replace function public.update_group_chat(
+  _chat_id uuid,
+  _name text,
+  _description text,
+  _avatar_url text
+)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  v_me uuid := auth.uid();
+  v_role text;
+begin
+  if v_me is null then
+    return jsonb_build_object('ok', false, 'error', 'Inicia sesión');
+  end if;
+  select role into v_role from public.chat_members where chat_id = _chat_id and user_id = v_me;
+  if v_role <> 'owner' then
+    return jsonb_build_object('ok', false, 'error', 'Solo el creador del grupo puede editarlo');
+  end if;
+  if _name is null or length(trim(_name)) = 0 then
+    return jsonb_build_object('ok', false, 'error', 'Ponle un nombre al grupo');
+  end if;
+  update public.chats
+  set name = trim(_name),
+      description = coalesce(_description, ''),
+      avatar_url = _avatar_url,
+      updated_at = now()
+  where id = _chat_id;
+  return jsonb_build_object('ok', true);
+end $$;
+
+-- Añade un miembro a un grupo personalizado (solo el owner y si se siguen
+-- mutuamente).
+create or replace function public.add_group_member(_chat_id uuid, _user_id uuid)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  v_me uuid := auth.uid();
+  v_role text;
+begin
+  if v_me is null then
+    return jsonb_build_object('ok', false, 'error', 'Inicia sesión');
+  end if;
+  select role into v_role from public.chat_members where chat_id = _chat_id and user_id = v_me;
+  if v_role <> 'owner' then
+    return jsonb_build_object('ok', false, 'error', 'Solo el creador del grupo puede añadir miembros');
+  end if;
+  if _user_id = v_me then
+    return jsonb_build_object('ok', false, 'error', 'Ya eres miembro');
+  end if;
+  if not public.are_mutual(v_me, _user_id) then
+    return jsonb_build_object('ok', false, 'error', 'Solo puedes añadir a personas que se siguen mutuamente contigo');
+  end if;
+  insert into public.chat_members (chat_id, user_id, role)
+  values (_chat_id, _user_id, 'member')
+  on conflict (chat_id, user_id) do nothing;
+  return jsonb_build_object('ok', true);
+end $$;
+
+-- Quita a un miembro de un grupo (solo el owner, y nunca a sí mismo).
+create or replace function public.remove_group_member(_chat_id uuid, _user_id uuid)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  v_me uuid := auth.uid();
+  v_role text;
+begin
+  if v_me is null then
+    return jsonb_build_object('ok', false, 'error', 'Inicia sesión');
+  end if;
+  select role into v_role from public.chat_members where chat_id = _chat_id and user_id = v_me;
+  if v_role <> 'owner' then
+    return jsonb_build_object('ok', false, 'error', 'Solo el creador del grupo puede quitar miembros');
+  end if;
+  if _user_id = v_me then
+    return jsonb_build_object('ok', false, 'error', 'No puedes salir usando esta opción');
+  end if;
+  delete from public.chat_members where chat_id = _chat_id and user_id = _user_id;
+  return jsonb_build_object('ok', true);
+end $$;
+
+-- Sale del grupo (cualquier miembro, incluyendo el owner). Si el owner sale,
+-- el grupo pasa a otro miembro o se elimina si queda vacío.
+create or replace function public.leave_group_chat(_chat_id uuid)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  v_me uuid := auth.uid();
+  v_count int;
+begin
+  if v_me is null then
+    return jsonb_build_object('ok', false, 'error', 'Inicia sesión');
+  end if;
+  delete from public.chat_members where chat_id = _chat_id and user_id = v_me;
+  -- ¿Queda alguien? Si no, el grupo desaparece (con sus mensajes en cascada).
+  select count(*) into v_count from public.chat_members where chat_id = _chat_id;
+  if v_count = 0 then
+    delete from public.chats where id = _chat_id;
+  else
+    -- Si era el owner, el primer miembro pasa a ser el nuevo owner.
+    update public.chat_members
+    set role = 'owner'
+    where chat_id = _chat_id
+      and user_id = (select user_id from public.chat_members
+                     where chat_id = _chat_id order by joined_at limit 1);
+  end if;
+  return jsonb_build_object('ok', true);
+end $$;
 
 -- ─────── RPC: AVISOS Y REGALOS ───────
 -- ¿El usuario conectado es el administrador propietario? Solo

@@ -1,7 +1,7 @@
 import { Component, useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, Copy, Check, Reply, SmilePlus, ImagePlus, Loader2, Users, MessageCircle, AtSign, ArrowLeft, WifiOff, Database, Plug, RefreshCw, KeyRound, CheckCircle2, AlertTriangle, Mic, Play, Pause, Trash2, ArrowDown, ExternalLink, Megaphone, Gift, PartyPopper, Lock, Sparkles, Timer, Undo2, ChevronRight } from "lucide-react";
+import { X, Send, Copy, Check, Reply, SmilePlus, ImagePlus, Loader2, Users, Users2, Settings2, UserPlus, UserMinus, Camera, Pencil, LogOut, MessageCircle, AtSign, ArrowLeft, WifiOff, Database, Plug, RefreshCw, KeyRound, CheckCircle2, AlertTriangle, Mic, Play, Pause, Trash2, ArrowDown, ExternalLink, Megaphone, Gift, PartyPopper, Lock, Sparkles, Timer, Undo2, ChevronRight } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
@@ -33,16 +33,25 @@ import {
   fetchMutualFollows,
   markDmRead,
   searchProfilesForMention,
+  createGroupChat,
+  fetchMyGroupChats,
+  fetchGroupMembers,
+  updateGroupChat,
+  addGroupMember,
+  removeGroupMember,
+  leaveGroupChat,
   COMMUNITY_CHAT_NAME,
   CHAT_ERR,
   type ChatMessage,
   type ChatSticker,
   type OrbGift,
   type DmChat,
+  type GroupChat,
+  type GroupMember,
 } from "@/lib/social/chat";
 import { supabase, hasSupabaseConfig, saveSupabaseCredentials, isSchemaMissing, getSupabaseUrl } from "@/integrations/supabase/client";
 import { UserName } from "./UserName";
-import { getMyProfile, getMyOrbes, isAdmin, pushNotification } from "@/lib/social/api";
+import { getMyProfile, getMyOrbes, isAdmin, pushNotification, uploadAvatar } from "@/lib/social/api";
 import type { Profile } from "@/lib/social/api";
 import { runChatSchemaSetup, SUPABASE_ACCESS_TOKEN, sqlEditorUrl } from "@/lib/supabase/setup";
 import { CHAT_SCHEMA_SQL } from "@/lib/supabase/chat-schema";
@@ -802,13 +811,42 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
   const [claimingId, setClaimingId] = useState<string | null>(null);
   const [expiringId, setExpiringId] = useState<string | null>(null);
   const [myClaims, setMyClaims] = useState<Map<string, number>>(new Map());
-  // Chats individuales (DMs) y menciones @usuario
-  const [view, setView] = useState<"group" | "dms">("group");
+  // Chats individuales (DMs), grupos personalizados y menciones @usuario
+  const [view, setView] = useState<"group" | "dms" | "groups">("group");
   const [dmList, setDmList] = useState<DmChat[]>([]);
   const [dmLoading, setDmLoading] = useState(false);
   const [activeDm, setActiveDm] = useState<DmChat | null>(null);
   const activeDmRef = useRef<DmChat | null>(null);
   activeDmRef.current = activeDm;
+  const [groupList, setGroupList] = useState<GroupChat[]>([]);
+  const [groupLoading, setGroupLoading] = useState(false);
+  const [activeGroup, setActiveGroup] = useState<GroupChat | null>(null);
+  const activeGroupRef = useRef<GroupChat | null>(null);
+  activeGroupRef.current = activeGroup;
+  // Diálogo: crear grupo
+  const [createGroupOpen, setCreateGroupOpen] = useState(false);
+  const [cgName, setCgName] = useState("");
+  const [cgDesc, setCgDesc] = useState("");
+  const [cgAvatarFile, setCgAvatarFile] = useState<File | null>(null);
+  const [cgAvatarPreview, setCgAvatarPreview] = useState<string | null>(null);
+  const [cgMutuals, setCgMutuals] = useState<Profile[]>([]);
+  const [cgSelected, setCgSelected] = useState<Set<string>>(new Set());
+  const [cgBusy, setCgBusy] = useState(false);
+  const [cgErr, setCgErr] = useState<string | null>(null);
+  // Diálogo: info del grupo
+  const [groupInfoOpen, setGroupInfoOpen] = useState(false);
+  const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
+  const [gInfoMutuals, setGInfoMutuals] = useState<Profile[]>([]);
+  const [gInfoBusy, setGInfoBusy] = useState(false);
+  const [gInfoErr, setGInfoErr] = useState<string | null>(null);
+  // Editar grupo (dentro de info)
+  const [editGroupOpen, setEditGroupOpen] = useState(false);
+  const [egName, setEgName] = useState("");
+  const [egDesc, setEgDesc] = useState("");
+  const [egAvatarFile, setEgAvatarFile] = useState<File | null>(null);
+  const [egAvatarPreview, setEgAvatarPreview] = useState<string | null>(null);
+  const [egBusy, setEgBusy] = useState(false);
+  const [egErr, setEgErr] = useState<string | null>(null);
   const [mentionOpen, setMentionOpen] = useState(false);
   const [mentionQuery, setMentionQuery] = useState("");
   const [mentionCandidates, setMentionCandidates] = useState<Profile[]>([]);
@@ -818,6 +856,8 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const cgAvatarRef = useRef<HTMLInputElement>(null);
+  const egAvatarRef = useRef<HTMLInputElement>(null);
   const sendersRef = useRef<Set<string>>(new Set());
   const listRef = useRef<HTMLDivElement>(null);
   const stickToBottomRef = useRef(true);
@@ -825,9 +865,10 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
   const prevScrollHeightRef = useRef(0);
   const signedMediaRef = useRef<Map<string, string>>(new Map());
 
-  // Hilo activo: chat de la comunidad (grupo) o chat individual (DM).
-  const currentChatId = activeDm ? activeDm.chat_id : (chatInfo?.id ?? null);
+  // Hilo activo: chat de la comunidad (grupo), chat individual (DM) o grupo personalizado.
+  const currentChatId = activeGroup ? activeGroup.chat_id : activeDm ? activeDm.chat_id : (chatInfo?.id ?? null);
   const totalDmUnread = dmList.reduce((s, d) => s + (d.unread || 0), 0);
+  const totalGroupUnread = groupList.reduce((s, g) => s + (g.unread || 0), 0);
 
   // Load senders for a batch of messages
   const loadSenders = useCallback(async (msgs: ChatMessage[]) => {
@@ -911,7 +952,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
     setLoading(true);
     (async () => {
       try {
-        if (!chatInfo && !activeDmRef.current) {
+        if (!chatInfo && !activeDmRef.current && !activeGroupRef.current) {
           const info = await getCommunityChat();
           if (cancelled) return;
           setChatInfo(info);
@@ -927,7 +968,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
             .catch(() => {});
         }
         if (cancelled) return;
-        const threadId = activeDmRef.current ? activeDmRef.current.chat_id : (chatInfo?.id ?? null);
+        const threadId = activeGroupRef.current ? activeGroupRef.current.chat_id : activeDmRef.current ? activeDmRef.current.chat_id : (chatInfo?.id ?? null);
         if (!threadId) {
           if (!cancelled) setLoading(false);
           return;
@@ -945,6 +986,12 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
           if (unread > 0) setUnseen(unread >= 100 ? 99 : unread);
           void markDmRead(threadId).catch(() => {});
           setDmList((prev) => prev.map((d) => (d.chat_id === threadId ? { ...d, unread: 0 } : d)));
+        } else if (activeGroupRef.current) {
+          // Grupo personalizado: marcar como leído y limpiar el badge.
+          const unread = activeGroupRef.current.unread || 0;
+          if (unread > 0) setUnseen(unread >= 100 ? 99 : unread);
+          void markDmRead(threadId).catch(() => {});
+          setGroupList((prev) => prev.map((g) => (g.chat_id === threadId ? { ...g, unread: 0 } : g)));
         } else {
           // Grupo: no leídos = mensajes más nuevos que la última visita.
           try {
@@ -982,7 +1029,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
     return () => {
       cancelled = true;
     };
-  }, [loadSenders, retryKey, chatInfo, activeDm]);
+  }, [loadSenders, retryKey, chatInfo, activeDm, activeGroup]);
 
   // Texto inicial: mensaje compartido (botón «Compartir en el chat» del perfil).
   useEffect(() => {
@@ -1254,6 +1301,10 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
         if (activeDmRef.current) {
           setDmList((prev) => prev.map((d) => (d.chat_id === sent.chat_id ? { ...d, last_message: sent, last_at: sent.created_at, unread: 0 } : d)));
           void markDmRead(sent.chat_id).catch(() => {});
+        } else if (activeGroupRef.current) {
+          // Grupo personalizado: refrescar la lista (preview + último mensaje).
+          setGroupList((prev) => prev.map((g) => (g.chat_id === sent.chat_id ? { ...g, last_message: sent, last_at: sent.created_at, unread: 0 } : g)));
+          void markDmRead(sent.chat_id).catch(() => {});
         } else if (content) {
           // Grupo: avisar a los usuarios mencionados (@usuario).
           void notifyMentions(content);
@@ -1469,6 +1520,177 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
     setMentionOpen(false);
   }, []);
 
+  // ───── Grupos personalizados ─────
+
+  /** Carga la lista de mis grupos personalizados. */
+  const loadGroupList = useCallback(async () => {
+    setGroupLoading(true);
+    try {
+      setGroupList(await fetchMyGroupChats());
+    } catch {
+      /* noop */
+    } finally {
+      setGroupLoading(false);
+    }
+  }, []);
+
+  /** Abre un grupo personalizado (hilo de mensajes). */
+  const openGroup = useCallback((g: GroupChat) => {
+    setActiveGroup(g);
+    setActiveDm(null);
+    setReplyTo(null);
+    setStickersOpen(false);
+    setMentionOpen(false);
+  }, []);
+
+  /** Carga los miembros del grupo activo en el panel de info. */
+  const loadGroupInfo = useCallback(async (chatId: string) => {
+    setGInfoBusy(true);
+    setGInfoErr(null);
+    try {
+      const [members, mutuals] = await Promise.all([fetchGroupMembers(chatId), fetchMutualFollows()]);
+      setGroupMembers(members);
+      const ids = new Set(members.map((m) => m.profile.id));
+      setGInfoMutuals(mutuals.filter((m) => !ids.has(m.id)));
+    } catch (e) {
+      setGInfoErr((e as Error).message || "No se pudo cargar la info del grupo");
+    } finally {
+      setGInfoBusy(false);
+    }
+  }, []);
+
+  /** Abre el panel de info del grupo activo y carga sus datos. */
+  const openGroupInfo = useCallback(async () => {
+    if (!activeGroup) return;
+    setGroupInfoOpen(true);
+    setEditGroupOpen(false);
+    void loadGroupInfo(activeGroup.chat_id);
+  }, [activeGroup, loadGroupInfo]);
+
+  /** Crea un grupo personalizado con los amigos seleccionados. */
+  const handleCreateGroup = useCallback(async () => {
+    if (cgBusy) return;
+    if (!cgName.trim()) {
+      setCgErr("Ponle un nombre al grupo");
+      return;
+    }
+    if (cgSelected.size === 0) {
+      setCgErr("Elige al menos un amigo");
+      return;
+    }
+    setCgBusy(true);
+    setCgErr(null);
+    try {
+      let avatarUrl: string | null = null;
+      if (cgAvatarFile) avatarUrl = await uploadAvatar(cgAvatarFile);
+      const r = await createGroupChat({
+        name: cgName.trim(),
+        description: cgDesc.trim() || undefined,
+        avatarUrl,
+        memberIds: Array.from(cgSelected),
+      });
+      if (!r.ok || !r.chatId) {
+        setCgErr(r.error ?? "No se pudo crear el grupo");
+        return;
+      }
+      setCreateGroupOpen(false);
+      setCgName("");
+      setCgDesc("");
+      setCgAvatarFile(null);
+      setCgAvatarPreview(null);
+      setCgSelected(new Set());
+      setView("groups");
+      void loadGroupList();
+      toast.success("Grupo creado ✓");
+    } catch (e) {
+      setCgErr((e as Error).message || "No se pudo crear el grupo");
+    } finally {
+      setCgBusy(false);
+    }
+  }, [cgBusy, cgName, cgDesc, cgAvatarFile, cgSelected, loadGroupList]);
+
+  /** Guarda los cambios de edición del grupo (nombre, descripción, foto). */
+  const handleEditGroup = useCallback(async () => {
+    if (!activeGroup || egBusy) return;
+    if (!egName.trim()) {
+      setEgErr("Ponle un nombre al grupo");
+      return;
+    }
+    setEgBusy(true);
+    setEgErr(null);
+    try {
+      let avatarUrl: string | null = egAvatarPreview ?? activeGroup.avatar_url;
+      if (egAvatarFile) avatarUrl = await uploadAvatar(egAvatarFile);
+      const r = await updateGroupChat(activeGroup.chat_id, {
+        name: egName.trim(),
+        description: egDesc.trim() || undefined,
+        avatarUrl,
+      });
+      if (!r.ok) {
+        setEgErr(r.error ?? "No se pudo editar el grupo");
+        return;
+      }
+      setGroupList((prev) => prev.map((g) => (g.chat_id === activeGroup.chat_id ? { ...g, name: egName.trim(), description: egDesc.trim() || null, avatar_url: avatarUrl } : g)));
+      setActiveGroup((prev) => (prev ? { ...prev, name: egName.trim(), description: egDesc.trim() || null, avatar_url: avatarUrl } : prev));
+      setEditGroupOpen(false);
+      toast.success("Grupo actualizado ✓");
+    } catch (e) {
+      setEgErr((e as Error).message || "No se pudo editar el grupo");
+    } finally {
+      setEgBusy(false);
+    }
+  }, [activeGroup, egBusy, egName, egDesc, egAvatarFile, egAvatarPreview]);
+
+  /** Añade a un amigo mutuo al grupo. */
+  const handleAddMember = useCallback(async (userId: string) => {
+    if (!activeGroup) return;
+    setGInfoErr(null);
+    const r = await addGroupMember(activeGroup.chat_id, userId);
+    if (!r.ok) {
+      setGInfoErr(r.error ?? "No se pudo añadir");
+      return;
+    }
+    await loadGroupInfo(activeGroup.chat_id);
+    setGroupList((prev) => prev.map((g) => (g.chat_id === activeGroup.chat_id ? { ...g, member_count: g.member_count + 1 } : g)));
+    toast.success("Miembro añadido ✓");
+  }, [activeGroup, loadGroupInfo]);
+
+  /** Quita a un miembro del grupo. */
+  const handleRemoveMember = useCallback(async (userId: string) => {
+    if (!activeGroup) return;
+    setGInfoErr(null);
+    const r = await removeGroupMember(activeGroup.chat_id, userId);
+    if (!r.ok) {
+      setGInfoErr(r.error ?? "No se pudo quitar");
+      return;
+    }
+    await loadGroupInfo(activeGroup.chat_id);
+    setGroupList((prev) => prev.map((g) => (g.chat_id === activeGroup.chat_id ? { ...g, member_count: Math.max(0, g.member_count - 1) } : g)));
+    toast.success("Miembro eliminado");
+  }, [activeGroup, loadGroupInfo]);
+
+  /** Sale del grupo (cualquier miembro). */
+  const handleLeaveGroup = useCallback(async () => {
+    if (!activeGroup) return;
+    setGInfoBusy(true);
+    setGInfoErr(null);
+    try {
+      const r = await leaveGroupChat(activeGroup.chat_id);
+      if (!r.ok) {
+        setGInfoErr(r.error ?? "No se pudo salir del grupo");
+        return;
+      }
+      setGroupInfoOpen(false);
+      setEditGroupOpen(false);
+      setActiveGroup(null);
+      setView("groups");
+      void loadGroupList();
+      toast.success("Saliste del grupo");
+    } finally {
+      setGInfoBusy(false);
+    }
+  }, [activeGroup, loadGroupList]);
+
   /** Inserta la mención @usuario en el cuadro de texto (en el cursor). */
   const insertMention = useCallback((p: Profile) => {
     const r = mentionRef.current;
@@ -1507,6 +1729,11 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
   useEffect(() => {
     if (view === "dms" && !activeDm) void loadDmList();
   }, [view, activeDm, loadDmList]);
+
+  // Carga la lista de grupos al entrar en la pestaña GRUPOS.
+  useEffect(() => {
+    if (view === "groups" && !activeGroup) void loadGroupList();
+  }, [view, activeGroup, loadGroupList]);
 
   // Busca candidatos para las menciones @ mientras se escribe.
   useEffect(() => {
@@ -1688,7 +1915,42 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
       {/* ───── Header ───── */}
       <header className="shrink-0 border-b border-border/60 bg-background/80 backdrop-blur-md">
         <div className="max-w-2xl md:max-w-full mx-auto flex items-center gap-2 px-4 py-3">
-          {view === "dms" && activeDm ? (
+          {view === "groups" && activeGroup ? (
+            <>
+              <button
+                onClick={() => setActiveGroup(null)}
+                title="Volver a mis grupos"
+                className="w-9 h-9 rounded-xl border border-border/70 bg-background grid place-items-center active:scale-95 transition shrink-0"
+              >
+                <ArrowLeft size={16} />
+              </button>
+              <div
+                className="rounded-full grid place-items-center shrink-0 font-display font-semibold text-primary-foreground overflow-hidden"
+                style={{ width: 36, height: 36, fontSize: 15, background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))" }}
+              >
+                {activeGroup.avatar_url ? (
+                  <img src={activeGroup.avatar_url} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  (activeGroup.name || "?")[0]?.toUpperCase()
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-semibold truncate">{activeGroup.name}</div>
+                <div className="text-[10px] text-muted-foreground truncate">
+                  {activeGroup.member_count} {activeGroup.member_count === 1 ? "miembro" : "miembros"}
+                  {activeGroup.my_role === "owner" ? " · tú eres el creador" : ""}
+                </div>
+              </div>
+              <button
+                onClick={() => void openGroupInfo()}
+                title="Info del grupo"
+                className="w-9 h-9 rounded-xl border border-border/70 bg-background grid place-items-center active:scale-95 transition shrink-0 hover:border-primary/40 hover:text-primary"
+              >
+                <Settings2 size={15} />
+              </button>
+            </>
+          ) : view === "dms" && activeDm ? (
+
             <>
               <button
                 onClick={() => setActiveDm(null)}
@@ -1720,15 +1982,17 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                 className="rounded-full grid place-items-center shrink-0 font-display font-semibold text-primary-foreground"
                 style={{ width: 36, height: 36, fontSize: 15, background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))" }}
               >
-                {view === "dms" ? <MessageCircle size={16} /> : <Users size={16} />}
+                {view === "dms" ? <MessageCircle size={16} /> : view === "groups" ? <Users2 size={16} /> : <Users size={16} />}
               </div>
               <div className="min-w-0">
                 <div className="text-sm font-semibold truncate">
-                  {view === "dms" ? "Chats individuales" : chatInfo?.name ?? COMMUNITY_CHAT_NAME}
+                  {view === "dms" ? "Chats individuales" : view === "groups" ? "Mis grupos" : chatInfo?.name ?? COMMUNITY_CHAT_NAME}
                 </div>
                 <div className="text-[10px] text-muted-foreground">
                   {view === "dms"
                     ? "Solo con personas que se siguen mutuamente"
+                    : view === "groups"
+                      ? "Crea grupos con tus amigos (seguimiento mutuo)"
                     : chatInfo
                       ? chatInfo.memberOk === false
                         ? "chat compartido · permisos por reparar"
@@ -1801,10 +2065,27 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
             </button>
             <button
               onClick={() => {
+                setView("groups");
+                setActiveGroup(null);
+                setActiveDm(null);
+                void loadGroupList();
+              }}
+              className={`relative flex-1 py-1.5 rounded-xl text-[10px] font-display tracking-[0.14em] flex items-center justify-center gap-1.5 transition active:scale-[0.98] ${view === "groups" ? "bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[0_4px_12px_-5px_oklch(0.488_0.185_264/0.5)]" : "bg-card border border-border text-muted-foreground hover:text-foreground"}`}
+            >
+              <Users2 size={12} /> GRUPOS
+              {totalGroupUnread > 0 && (
+                <span className="shrink-0 min-w-[16px] h-4 px-1 rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground text-[9px] font-display grid place-items-center">
+                  {totalGroupUnread >= 100 ? "99" : totalGroupUnread}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => {
                 setView("dms");
                 setActiveDm(null);
                 void loadDmList();
               }}
+
               className={`relative flex-1 py-1.5 rounded-xl text-[10px] font-display tracking-[0.14em] flex items-center justify-center gap-1.5 transition active:scale-[0.98] ${view === "dms" ? "bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[0_4px_12px_-5px_oklch(0.488_0.185_264/0.5)]" : "bg-card border border-border text-muted-foreground hover:text-foreground"}`}
             >
               <MessageCircle size={12} /> DIRECTOS
@@ -1961,8 +2242,83 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
         </div>
       )}
 
-      {/* ───── Chats individuales: lista ───── */}
-      {view === "dms" && !activeDm ? (
+      {/* ───── Grupos personalizados: lista ───── */}
+      {view === "groups" && !activeGroup ? (
+        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-2 min-h-0 no-scrollbar">
+          <button
+            onClick={() => {
+              setCgErr(null);
+              setCgName("");
+              setCgDesc("");
+              setCgAvatarFile(null);
+              setCgAvatarPreview(null);
+              setCgSelected(new Set());
+              void fetchMutualFollows()
+                .then((m) => setCgMutuals(m))
+                .catch(() => setCgMutuals([]));
+              setCreateGroupOpen(true);
+            }}
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-dashed border-primary/40 bg-primary/5 text-primary text-[11px] font-display tracking-widest hover:bg-primary/10 active:scale-[0.99] transition mb-1"
+          >
+            <Users2 size={15} /> NUEVO GRUPO
+          </button>
+          {groupLoading ? (
+            <div className="flex justify-center py-10">
+              <Loader2 size={18} className="animate-spin text-muted-foreground" />
+            </div>
+          ) : groupList.length === 0 ? (
+            <div className="text-center text-xs text-muted-foreground py-12 px-6 leading-relaxed">
+              Aún no tienes grupos.
+              <br />
+              Crea uno con amigos que te <b>siguen mutuamente</b>: ponle nombre,
+              una foto y una descripción.
+            </div>
+          ) : (
+            groupList.map((g) => (
+              <button
+                key={g.chat_id}
+                onClick={() => void openGroup(g)}
+                className="w-full flex items-center gap-2.5 p-2.5 rounded-xl border border-border bg-card hover:border-primary/40 hover:bg-primary/5 transition text-left group active:scale-[0.99]"
+              >
+                <div
+                  className="rounded-full grid place-items-center shrink-0 font-display font-semibold text-primary-foreground overflow-hidden"
+                  style={{ width: 42, height: 42, fontSize: 16, background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))" }}
+                >
+                  {g.avatar_url ? (
+                    <img src={g.avatar_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    (g.name || "?")[0]?.toUpperCase()
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[13px] font-semibold truncate">{g.name}</span>
+                    <span className="text-[9px] text-muted-foreground/70 shrink-0">{g.last_at ? fmtDay(g.last_at) : ""}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2 mt-0.5">
+                    <span className="text-[11px] text-muted-foreground truncate">
+                      {g.last_message
+                        ? isAudioMessage(g.last_message)
+                          ? "🎤 Audio de voz"
+                          : g.last_message.media_url
+                            ? "🖼️ Sticker"
+                            : g.last_message.content || "Mensaje"
+                        : g.description || `${g.member_count} ${g.member_count === 1 ? "miembro" : "miembros"}`}
+                    </span>
+                    {g.unread > 0 && (
+                      <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground text-[9px] font-display grid place-items-center">
+                        {g.unread >= 100 ? "99" : g.unread}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <ChevronRight size={14} className="text-muted-foreground/40 group-hover:text-primary shrink-0" />
+              </button>
+            ))
+          )}
+        </div>
+      ) : view === "dms" && !activeDm ? (
+
         <div className="flex-1 overflow-y-auto px-3 py-4 space-y-2 min-h-0 no-scrollbar">
           {dmLoading ? (
             <div className="flex justify-center py-10">
@@ -2100,7 +2456,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
       )}
 
       {/* ───── Barra de respuesta ───── */}
-      {(view === "group" || activeDm) && (
+      {(view === "group" || activeDm || activeGroup) && (
       <>
       <AnimatePresence>
         {replyTo && (
@@ -2353,7 +2709,410 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
       </>
       )}
 
+      {/* Diálogo: crear grupo personalizado */}
+      <AnimatePresence>
+        {createGroupOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-[95] bg-black/55 backdrop-blur-md grid place-items-center p-4"
+            onClick={() => !cgBusy && setCreateGroupOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.96, y: 8 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.96, y: 8 }}
+              transition={{ duration: 0.16, ease: "easeOut" }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm bg-card border border-border rounded-2xl p-4 shadow-xl max-h-[85vh] overflow-y-auto"
+            >
+              <div className="text-sm font-semibold mb-0.5 flex items-center gap-2">
+                <Users2 size={15} className="text-primary" /> Crear grupo
+              </div>
+              <p className="text-[11px] text-muted-foreground mb-3">
+                Un chat solo para ti y tus amigos. Solo pueden entrar personas que te siguen mutuamente.
+              </p>
+
+              {/* Foto del grupo */}
+              <div className="flex items-center gap-3 mb-3">
+                <button
+                  onClick={() => cgAvatarRef.current?.click()}
+                  className="relative w-16 h-16 rounded-full overflow-hidden grid place-items-center shrink-0 font-display font-semibold text-primary-foreground active:scale-95 transition border-2 border-primary/30"
+                  style={{ background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))" }}
+                >
+                  {cgAvatarPreview ? (
+                    <img src={cgAvatarPreview} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    (cgName.trim() || "G")[0]?.toUpperCase()
+                  )}
+                  <span className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-background border border-border grid place-items-center">
+                    <Camera size={11} />
+                  </span>
+                </button>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[11px] font-medium mb-1">Foto del grupo</div>
+                  <button
+                    onClick={() => cgAvatarRef.current?.click()}
+                    className="text-[11px] text-primary underline underline-offset-2"
+                  >
+                    {cgAvatarPreview ? "Cambiar foto" : "Subir foto"}
+                  </button>
+                  {cgAvatarPreview && (
+                    <button
+                      onClick={() => {
+                        setCgAvatarFile(null);
+                        setCgAvatarPreview(null);
+                      }}
+                      className="text-[11px] text-muted-foreground underline underline-offset-2 ml-2"
+                    >
+                      Quitar
+                    </button>
+                  )}
+                </div>
+                <input
+                  ref={cgAvatarRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0] ?? null;
+                    e.target.value = "";
+                    if (!f) return;
+                    setCgAvatarFile(f);
+                    setCgAvatarPreview(URL.createObjectURL(f));
+                  }}
+                />
+              </div>
+
+              <input
+                value={cgName}
+                onChange={(e) => {
+                  setCgName(e.target.value);
+                  setCgErr(null);
+                }}
+                maxLength={40}
+                placeholder="Nombre del grupo (obligatorio)"
+                className="w-full bg-input/50 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40 border border-border/60 mb-2"
+              />
+              <input
+                value={cgDesc}
+                onChange={(e) => setCgDesc(e.target.value)}
+                maxLength={120}
+                placeholder="Descripción (opcional) — p. ej. «Squad de juegos»"
+                className="w-full bg-input/50 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40 border border-border/60 mb-3"
+              />
+
+              <div className="text-[10px] font-display tracking-widest text-muted-foreground mb-1.5 flex items-center gap-1.5">
+                <UserPlus size={11} /> AMIGOS (SEGUIMIENTO MUTUO)
+              </div>
+              {cgMutuals.length === 0 ? (
+                <div className="text-[11px] text-muted-foreground/70 py-3 text-center leading-relaxed">
+                  No tienes amigos con seguimiento mutuo todavía.
+                  <br />
+                  Sigue a alguien y que te siga para poder crear un grupo.
+                </div>
+              ) : (
+                <div className="space-y-1 max-h-44 overflow-y-auto no-scrollbar mb-2">
+                  {cgMutuals.map((p) => {
+                    const on = cgSelected.has(p.id);
+                    return (
+                      <button
+                        key={p.id}
+                        onClick={() => {
+                          setCgSelected((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(p.id)) next.delete(p.id);
+                            else next.add(p.id);
+                            return next;
+                          });
+                          setCgErr(null);
+                        }}
+                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-xl border transition text-left ${on ? "border-primary/50 bg-primary/10" : "border-border/50 bg-background hover:bg-muted/40"}`}
+                      >
+                        <div
+                          className="rounded-full grid place-items-center shrink-0 font-display font-semibold text-primary-foreground overflow-hidden"
+                          style={{ width: 28, height: 28, fontSize: 12, background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))" }}
+                        >
+                          {p.avatar_url ? (
+                            <img src={p.avatar_url} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            (p.display_name || p.username || "?")[0]?.toUpperCase()
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-[12px] font-medium truncate">{p.display_name || p.username}</div>
+                          <div className="text-[10px] font-mono text-muted-foreground truncate">@{p.username ?? "?"}</div>
+                        </div>
+                        <span className={`w-5 h-5 rounded-md border grid place-items-center shrink-0 transition ${on ? "bg-primary border-primary text-primary-foreground" : "border-border"}`}>
+                          {on && <Check size={12} />}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              {cgErr && (
+                <div className="mb-2 rounded-lg border border-rose-500/30 bg-rose-500/[0.06] px-3 py-2 text-[11px] text-rose-700 dark:text-rose-300 flex items-start gap-1.5">
+                  <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+                  <span>{cgErr}</span>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setCreateGroupOpen(false)}
+                  disabled={cgBusy}
+                  className="flex-1 py-2 rounded-xl border border-border bg-background text-xs font-display tracking-widest active:scale-[0.98] transition disabled:opacity-40"
+                >
+                  CANCELAR
+                </button>
+                <button
+                  onClick={() => void handleCreateGroup()}
+                  disabled={cgBusy}
+                  className="flex-1 py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-xs font-display tracking-widest active:scale-[0.98] transition disabled:opacity-40 flex items-center justify-center gap-1.5"
+                >
+                  {cgBusy ? <Loader2 size={13} className="animate-spin" /> : <Users2 size={13} />}
+                  {cgBusy ? "CREANDO…" : "CREAR GRUPO"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Diálogo: info del grupo */}
+      <AnimatePresence>
+        {groupInfoOpen && activeGroup && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-[95] bg-black/55 backdrop-blur-md grid place-items-center p-4"
+            onClick={() => setGroupInfoOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.96, y: 8 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.96, y: 8 }}
+              transition={{ duration: 0.16, ease: "easeOut" }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm bg-card border border-border rounded-2xl p-4 shadow-xl max-h-[85vh] overflow-y-auto"
+            >
+              <div className="flex items-start gap-3 mb-3">
+                <div
+                  className="rounded-full grid place-items-center shrink-0 font-display font-semibold text-primary-foreground overflow-hidden"
+                  style={{ width: 52, height: 52, fontSize: 20, background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))" }}
+                >
+                  {activeGroup.avatar_url ? (
+                    <img src={activeGroup.avatar_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    (activeGroup.name || "?")[0]?.toUpperCase()
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold truncate">{activeGroup.name}</div>
+                  <div className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">
+                    {activeGroup.description || "Sin descripción"}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground/70 mt-1 flex items-center gap-1">
+                    <Users size={11} /> {activeGroup.member_count} {activeGroup.member_count === 1 ? "miembro" : "miembros"}
+                    {activeGroup.my_role === "owner" && (
+                      <span className="ml-1 px-1.5 py-0.5 rounded-full bg-primary/10 text-primary text-[9px] font-semibold">CREADOR</span>
+                    )}
+                  </div>
+                </div>
+                <button onClick={() => setGroupInfoOpen(false)} className="w-8 h-8 rounded-lg border border-border grid place-items-center active:scale-95 shrink-0">
+                  <X size={14} />
+                </button>
+              </div>
+
+              {gInfoErr && (
+                <div className="mb-2 rounded-lg border border-rose-500/30 bg-rose-500/[0.06] px-3 py-2 text-[11px] text-rose-700 dark:text-rose-300 flex items-start gap-1.5">
+                  <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+                  <span>{gInfoErr}</span>
+                </div>
+              )}
+
+              {editGroupOpen ? (
+                <div className="space-y-2 mb-3">
+                  <input
+                    value={egName}
+                    onChange={(e) => {
+                      setEgName(e.target.value);
+                      setEgErr(null);
+                    }}
+                    maxLength={40}
+                    placeholder="Nombre del grupo"
+                    className="w-full bg-input/50 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40 border border-border/60"
+                  />
+                  <input
+                    value={egDesc}
+                    onChange={(e) => setEgDesc(e.target.value)}
+                    maxLength={120}
+                    placeholder="Descripción (opcional)"
+                    className="w-full bg-input/50 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40 border border-border/60"
+                  />
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => egAvatarRef.current?.click()}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-[11px] font-medium hover:bg-muted/40 transition active:scale-95"
+                    >
+                      <Camera size={12} /> {egAvatarPreview ? "Cambiar foto" : "Subir foto"}
+                    </button>
+                    {(egAvatarPreview || activeGroup.avatar_url) && (
+                      <button
+                        onClick={() => {
+                          setEgAvatarFile(null);
+                          setEgAvatarPreview(null);
+                        }}
+                        className="text-[11px] text-muted-foreground underline underline-offset-2"
+                      >
+                        Quitar foto
+                      </button>
+                    )}
+                    <input
+                      ref={egAvatarRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0] ?? null;
+                        e.target.value = "";
+                        if (!f) return;
+                        setEgAvatarFile(f);
+                        setEgAvatarPreview(URL.createObjectURL(f));
+                      }}
+                    />
+                  </div>
+                  {egErr && (
+                    <div className="rounded-lg border border-rose-500/30 bg-rose-500/[0.06] px-3 py-2 text-[11px] text-rose-700 dark:text-rose-300 flex items-start gap-1.5">
+                      <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+                      <span>{egErr}</span>
+                    </div>
+                  )}
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={() => setEditGroupOpen(false)}
+                      disabled={egBusy}
+                      className="flex-1 py-2 rounded-xl border border-border bg-background text-xs font-display tracking-widest active:scale-[0.98] transition disabled:opacity-40"
+                    >
+                      CANCELAR
+                    </button>
+                    <button
+                      onClick={() => void handleEditGroup()}
+                      disabled={egBusy}
+                      className="flex-1 py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-xs font-display tracking-widest active:scale-[0.98] transition disabled:opacity-40 flex items-center justify-center gap-1.5"
+                    >
+                      {egBusy ? <Loader2 size={13} className="animate-spin" /> : <Pencil size={13} />}
+                      {egBusy ? "GUARDANDO…" : "GUARDAR"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                activeGroup.my_role === "owner" && (
+                  <button
+                    onClick={() => {
+                      setEgName(activeGroup.name);
+                      setEgDesc(activeGroup.description ?? "");
+                      setEgAvatarFile(null);
+                      setEgAvatarPreview(null);
+                      setEgErr(null);
+                      setEditGroupOpen(true);
+                    }}
+                    className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-primary/30 bg-primary/5 text-primary text-[11px] font-display tracking-widest hover:bg-primary/10 active:scale-[0.98] transition mb-3"
+                  >
+                    <Pencil size={13} /> EDITAR GRUPO
+                  </button>
+                )
+              )}
+
+              <div className="text-[10px] font-display tracking-widest text-muted-foreground mb-1.5 flex items-center gap-1.5">
+                <Users size={11} /> MIEMBROS
+              </div>
+              {gInfoBusy ? (
+                <div className="flex justify-center py-6">
+                  <Loader2 size={16} className="animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <div className="space-y-1 max-h-44 overflow-y-auto no-scrollbar mb-2">
+                  {groupMembers.map((m) => (
+                    <div key={m.profile.id} className="flex items-center gap-2 px-2 py-1.5 rounded-xl bg-background border border-border/50">
+                      <div
+                        className="rounded-full grid place-items-center shrink-0 font-display font-semibold text-primary-foreground overflow-hidden"
+                        style={{ width: 30, height: 30, fontSize: 13, background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))" }}
+                      >
+                        {m.profile.avatar_url ? (
+                          <img src={m.profile.avatar_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          (m.profile.display_name || m.profile.username || "?")[0]?.toUpperCase()
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[12px] font-medium truncate">{m.profile.display_name || m.profile.username}</div>
+                        <div className="text-[10px] font-mono text-muted-foreground truncate">@{m.profile.username ?? "?"}</div>
+                      </div>
+                      {m.role === "owner" ? (
+                        <span className="shrink-0 px-1.5 py-0.5 rounded-full bg-primary/10 text-primary text-[9px] font-semibold">CREADOR</span>
+                      ) : activeGroup.my_role === "owner" ? (
+                        <button
+                          onClick={() => void handleRemoveMember(m.profile.id)}
+                          title="Quitar del grupo"
+                          className="shrink-0 w-7 h-7 rounded-lg border border-border text-muted-foreground hover:text-destructive hover:border-rose-300 grid place-items-center active:scale-95 transition"
+                        >
+                          <UserMinus size={12} />
+                        </button>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {activeGroup.my_role === "owner" && gInfoMutuals.length > 0 && (
+                <div className="mb-3">
+                  <div className="text-[10px] font-display tracking-widest text-muted-foreground mb-1.5 flex items-center gap-1.5">
+                    <UserPlus size={11} /> AÑADIR AMIGO
+                  </div>
+                  <div className="space-y-1 max-h-32 overflow-y-auto no-scrollbar">
+                    {gInfoMutuals.map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => void handleAddMember(p.id)}
+                        className="w-full flex items-center gap-2 px-2 py-1.5 rounded-xl border border-border/50 bg-background hover:bg-primary/5 hover:border-primary/30 transition text-left active:scale-[0.99]"
+                      >
+                        <div
+                          className="rounded-full grid place-items-center shrink-0 font-display font-semibold text-primary-foreground overflow-hidden"
+                          style={{ width: 26, height: 26, fontSize: 11, background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))" }}
+                        >
+                          {p.avatar_url ? (
+                            <img src={p.avatar_url} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            (p.display_name || p.username || "?")[0]?.toUpperCase()
+                          )}
+                        </div>
+                        <span className="min-w-0 flex-1 text-[12px] font-medium truncate">{p.display_name || p.username}</span>
+                        <UserPlus size={13} className="text-primary shrink-0" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <button
+                onClick={() => void handleLeaveGroup()}
+                disabled={gInfoBusy}
+                className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-rose-300/50 bg-rose-500/[0.06] text-rose-600 dark:text-rose-400 text-[11px] font-display tracking-widest hover:bg-rose-500/10 active:scale-[0.98] transition disabled:opacity-40"
+              >
+                <LogOut size={13} /> SALIR DEL GRUPO
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Diálogo de conexión (solo modo local) */}
+
       <AnimatePresence>
         {connecting && (
           <motion.div

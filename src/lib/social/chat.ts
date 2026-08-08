@@ -454,6 +454,105 @@ export async function markDmRead(chatId: string): Promise<void> {
   }
 }
 
+// ───── Grupos personalizados ─────
+// Chats grupales que cualquier usuario crea con amigos (seguimiento mutuo).
+// Tienen nombre, descripción y foto de perfil. El creador es el owner y puede
+// editar el grupo y gestionar miembros.
+
+export type GroupChat = {
+  chat_id: string;
+  name: string;
+  description: string | null;
+  avatar_url: string | null;
+  created_by: string | null;
+  my_role: "owner" | "member" | "admin" | null;
+  member_count: number;
+  last_message: ChatMessage | null;
+  last_at: string | null;
+  unread: number;
+};
+
+export type GroupMember = {
+  profile: Profile;
+  role: "owner" | "member" | "admin";
+  joined_at: string;
+};
+
+/** Crea un grupo personalizado con amigos (solo seguimiento mutuo). */
+export async function createGroupChat(
+  opts: { name: string; description?: string; avatarUrl?: string | null; memberIds: string[] }
+): Promise<{ ok: boolean; chatId?: string; error?: string }> {
+  const { data, error } = await supabase.rpc("create_group_chat", {
+    _name: opts.name,
+    _description: opts.description ?? "",
+    _avatar_url: opts.avatarUrl ?? null,
+    _member_ids: opts.memberIds,
+  } as never);
+  if (error) return { ok: false, error: error.message };
+  const r = (data as { ok?: boolean; chat_id?: string; error?: string }) ?? {};
+  return { ok: !!r.ok, chatId: r.chat_id, error: r.error };
+}
+
+/** Lista mis grupos personalizados (no la comunidad) con no leídos. */
+export async function fetchMyGroupChats(): Promise<GroupChat[]> {
+  const { data, error } = await supabase.rpc("my_group_chats" as never);
+  if (error) throw error;
+  return (data as GroupChat[]) ?? [];
+}
+
+/** Miembros de un grupo personalizado (perfil + rol). */
+export async function fetchGroupMembers(chatId: string): Promise<GroupMember[]> {
+  const { data, error } = await supabase.rpc("group_members", { _chat_id: chatId } as never);
+  if (error) throw error;
+  return (data as GroupMember[]) ?? [];
+}
+
+/** Edita nombre / descripción / foto de un grupo (solo el owner). */
+export async function updateGroupChat(
+  chatId: string,
+  opts: { name: string; description?: string; avatarUrl?: string | null }
+): Promise<{ ok: boolean; error?: string }> {
+  const { data, error } = await supabase.rpc("update_group_chat", {
+    _chat_id: chatId,
+    _name: opts.name,
+    _description: opts.description ?? "",
+    _avatar_url: opts.avatarUrl ?? null,
+  } as never);
+  if (error) return { ok: false, error: error.message };
+  const r = (data as { ok?: boolean; error?: string }) ?? {};
+  return { ok: !!r.ok, error: r.error };
+}
+
+/** Añade un miembro al grupo (solo el owner y si se siguen mutuamente). */
+export async function addGroupMember(chatId: string, userId: string): Promise<{ ok: boolean; error?: string }> {
+  const { data, error } = await supabase.rpc("add_group_member", {
+    _chat_id: chatId,
+    _user_id: userId,
+  } as never);
+  if (error) return { ok: false, error: error.message };
+  const r = (data as { ok?: boolean; error?: string }) ?? {};
+  return { ok: !!r.ok, error: r.error };
+}
+
+/** Quita a un miembro del grupo (solo el owner). */
+export async function removeGroupMember(chatId: string, userId: string): Promise<{ ok: boolean; error?: string }> {
+  const { data, error } = await supabase.rpc("remove_group_member", {
+    _chat_id: chatId,
+    _user_id: userId,
+  } as never);
+  if (error) return { ok: false, error: error.message };
+  const r = (data as { ok?: boolean; error?: string }) ?? {};
+  return { ok: !!r.ok, error: r.error };
+}
+
+/** Sale de un grupo (cualquier miembro). Si el owner sale, pasa a otro. */
+export async function leaveGroupChat(chatId: string): Promise<{ ok: boolean; error?: string }> {
+  const { data, error } = await supabase.rpc("leave_group_chat", { _chat_id: chatId } as never);
+  if (error) return { ok: false, error: error.message };
+  const r = (data as { ok?: boolean; error?: string }) ?? {};
+  return { ok: !!r.ok, error: r.error };
+}
+
 /**
  * Busca perfiles para las menciones @usuario (por nombre de usuario o
  * nombre visible). Devuelve los que coinciden, limitados.
