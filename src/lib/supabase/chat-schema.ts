@@ -36,11 +36,12 @@ create table if not exists public.chat_members (
   primary key (chat_id, user_id)
 );
 
--- El rol 'owner' identifica al creador de un grupo personalizado.
--- Se recrea el CHECK para que lo admita (instalaciones antiguas solo tenían
--- member/admin).
+-- El rol 'owner' identifica al creador de un grupo personalizado; 'admin' y
+-- 'moderator' los designa el creador (permisos de administración).
+-- Se recrea el CHECK para que los admita (instalaciones antiguas solo tenían
+-- member/admin/owner).
 alter table public.chat_members drop constraint if exists chat_members_role_check;
-alter table public.chat_members add constraint chat_members_role_check check (role in ('member', 'admin', 'owner'));
+alter table public.chat_members add constraint chat_members_role_check check (role in ('member', 'admin', 'moderator', 'owner'));
 
 create table if not exists public.chat_messages (
   id uuid primary key default gen_random_uuid(),
@@ -93,6 +94,38 @@ create table if not exists public.orb_gift_claims (
 create index if not exists orb_gifts_chat_status_idx on public.orb_gifts (chat_id, status);
 create index if not exists orb_gift_claims_gift_idx on public.orb_gift_claims (gift_id);
 
+-- ─────── ENCUESTAS DEL CHAT ───────
+-- El administrador de la comunidad (o el creador/administrador de un grupo
+-- personalizado) crea encuestas; cualquier miembro del chat vota una vez.
+-- Los resultados se agregan en el servidor (get_chat_poll) para no exponer
+-- quién votó a qué.
+alter table public.chat_messages add column if not exists poll_id uuid;
+
+create table if not exists public.chat_polls (
+  id uuid primary key default gen_random_uuid(),
+  chat_id uuid not null references public.chats(id) on delete cascade,
+  created_by uuid not null references public.profiles(id) on delete cascade,
+  question text not null,
+  options text[] not null,
+  multiple boolean not null default false,
+  status text not null default 'open',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.chat_poll_votes (
+  id uuid primary key default gen_random_uuid(),
+  poll_id uuid not null references public.chat_polls(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  option_index int not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (poll_id, user_id)
+);
+
+create index if not exists chat_polls_chat_idx on public.chat_polls (chat_id);
+create index if not exists chat_poll_votes_poll_idx on public.chat_poll_votes (poll_id);
+
 -- Caducidad de paquetes de regalo (para tablas creadas antes de esta función).
 alter table public.orb_gifts add column if not exists expires_at timestamptz not null default now() + interval '24 hours';
 
@@ -114,6 +147,8 @@ alter table public.chat_messages enable row level security;
 alter table public.stickers enable row level security;
 alter table public.orb_gifts enable row level security;
 alter table public.orb_gift_claims enable row level security;
+alter table public.chat_polls enable row level security;
+alter table public.chat_poll_votes enable row level security;
 
 -- Limpieza total: elimina CUALQUIER política previa de las tablas del chat,
 -- incluidas las de instalaciones antiguas con otros nombres que provocan el
@@ -123,7 +158,7 @@ do $$
 declare _t text;
 declare _p record;
 begin
-  for _t in select unnest(array['chats', 'chat_members', 'chat_messages', 'stickers', 'orb_gifts', 'orb_gift_claims']) loop
+  for _t in select unnest(array['chats', 'chat_members', 'chat_messages', 'stickers', 'orb_gifts', 'orb_gift_claims', 'chat_polls', 'chat_poll_votes']) loop
     for _p in
       select policyname from pg_policies
       where schemaname = 'public' and tablename = _t
@@ -165,6 +200,18 @@ create policy orb_gifts_read on public.orb_gifts for select using (true);
 
 -- orb_gift_claims: cada usuario solo ve sus propios registros.
 create policy orb_gift_claims_read on public.orb_gift_claims for select using (auth.uid() = user_id);
+
+-- chat_polls: lectura para los miembros del chat (la escritura va SOLO por
+-- RPC, donde se comprueba que sea el admin de la comunidad o el creador o
+-- administrador del grupo).
+create policy chat_polls_read on public.chat_polls for select using (
+  exists (select 1 from public.chats c where c.id = chat_polls.chat_id and c.is_community)
+  or exists (select 1 from public.chat_members m
+             where m.chat_id = chat_polls.chat_id and m.user_id = auth.uid())
+);
+
+-- chat_poll_votes: cada usuario solo ve sus propios votos.
+create policy chat_poll_votes_read on public.chat_poll_votes for select using (auth.uid() = user_id);
 
 -- ─────── CHATS INDIVIDUALES (DMs) ───────
 -- Reutilizan chats (type='dm'), chat_members (los 2 participantes) y
@@ -419,7 +466,7 @@ begin
   return jsonb_build_object('ok', true);
 end $$;
 
--- Quita a un miembro de un grupo (solo el owner, y nunca a sí mismo).
+-- Quita a un miembro de un grupo (el creador o un administrador; nunca al creador).
 create or replace function public.remove_group_member(_chat_id uuid, _user_id uuid)
 returns jsonb language plpgsql security definer set search_path = public as $$
 declare
@@ -430,11 +477,14 @@ begin
     return jsonb_build_object('ok', false, 'error', 'Inicia sesión');
   end if;
   select role into v_role from public.chat_members where chat_id = _chat_id and user_id = v_me;
-  if v_role <> 'owner' then
-    return jsonb_build_object('ok', false, 'error', 'Solo el creador del grupo puede quitar miembros');
+  if v_role not in ('owner', 'admin') then
+    return jsonb_build_object('ok', false, 'error', 'Solo el creador o un administrador puede quitar miembros');
   end if;
   if _user_id = v_me then
     return jsonb_build_object('ok', false, 'error', 'No puedes salir usando esta opción');
+  end if;
+  if (select role from public.chat_members where chat_id = _chat_id and user_id = _user_id) = 'owner' then
+    return jsonb_build_object('ok', false, 'error', 'No puedes quitar al creador del grupo');
   end if;
   delete from public.chat_members where chat_id = _chat_id and user_id = _user_id;
   return jsonb_build_object('ok', true);
@@ -475,21 +525,36 @@ returns boolean language sql stable security definer set search_path = public as
   select lower(coalesce(auth.jwt() ->> 'email', '')) = 'linkyteam989@gmail.com'
 $$;
 
--- Publica un aviso del grupo, destacado y visible para todos (solo admin).
+-- Publica un aviso del grupo, destacado y visible para todos. En la comunidad
+-- solo el administrador (linkyteam989@gmail.com); en un grupo personalizado,
+-- el creador, los administradores o los moderadores.
 create or replace function public.create_announcement(_chat_id uuid, _content text)
 returns jsonb language plpgsql security definer set search_path = public as $$
 declare
   v_admin uuid := auth.uid();
+  v_role text;
+  v_community boolean;
   v_msg jsonb;
 begin
   if v_admin is null then
     return jsonb_build_object('ok', false, 'error', 'Inicia sesión para publicar avisos');
   end if;
-  if not public.is_owner_admin() then
-    return jsonb_build_object('ok', false, 'error', 'Solo el administrador puede publicar avisos');
-  end if;
   if _content is null or length(trim(_content)) = 0 then
     return jsonb_build_object('ok', false, 'error', 'El aviso no puede estar vacío');
+  end if;
+  select is_community into v_community from public.chats where id = _chat_id;
+  if v_community is null then
+    return jsonb_build_object('ok', false, 'error', 'El chat no existe');
+  end if;
+  if v_community then
+    if not public.is_owner_admin() then
+      return jsonb_build_object('ok', false, 'error', 'Solo el administrador puede publicar avisos');
+    end if;
+  else
+    select role into v_role from public.chat_members where chat_id = _chat_id and user_id = v_admin;
+    if v_role not in ('owner', 'admin', 'moderator') then
+      return jsonb_build_object('ok', false, 'error', 'Solo el creador, un administrador o un moderador del grupo puede publicar avisos');
+    end if;
   end if;
   insert into public.chat_messages (chat_id, sender_id, content, kind)
     values (_chat_id, v_admin, trim(_content), 'announcement')
@@ -632,6 +697,221 @@ begin
   return v_count;
 end $$;
 
+-- ─────── RPC: ENCUESTAS Y ADMINISTRACIÓN DE GRUPOS ───────
+
+-- Crea una encuesta y publica el mensaje 'poll' en el chat (solo el admin de
+-- la comunidad o el creador/administrador de un grupo personalizado).
+create or replace function public.create_chat_poll(
+  _chat_id uuid,
+  _question text,
+  _options text[],
+  _multiple boolean
+)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  v_me uuid := auth.uid();
+  v_role text;
+  v_community boolean;
+  v_poll_id uuid;
+  v_msg jsonb;
+begin
+  if v_me is null then
+    return jsonb_build_object('ok', false, 'error', 'Inicia sesión para crear encuestas');
+  end if;
+  if _question is null or length(trim(_question)) = 0 then
+    return jsonb_build_object('ok', false, 'error', 'Escribe una pregunta para la encuesta');
+  end if;
+  if _options is null or array_length(_options, 1) < 2 or array_length(_options, 1) > 10 then
+    return jsonb_build_object('ok', false, 'error', 'La encuesta necesita entre 2 y 10 opciones');
+  end if;
+  select is_community into v_community from public.chats where id = _chat_id;
+  if v_community is null then
+    return jsonb_build_object('ok', false, 'error', 'El chat no existe');
+  end if;
+  if v_community then
+    if not public.is_owner_admin() then
+      return jsonb_build_object('ok', false, 'error', 'Solo el administrador de la comunidad puede crear encuestas');
+    end if;
+  else
+    select role into v_role from public.chat_members where chat_id = _chat_id and user_id = v_me;
+    if v_role not in ('owner', 'admin') then
+      return jsonb_build_object('ok', false, 'error', 'Solo el creador o un administrador del grupo puede crear encuestas');
+    end if;
+  end if;
+  insert into public.chat_polls (chat_id, created_by, question, options, multiple)
+    values (_chat_id, v_me, trim(_question), _options, coalesce(_multiple, false))
+    returning id into v_poll_id;
+  insert into public.chat_messages (chat_id, sender_id, content, kind, poll_id)
+    values (_chat_id, v_me, trim(_question), 'poll', v_poll_id)
+    returning to_jsonb(chat_messages) into v_msg;
+  return jsonb_build_object('ok', true, 'poll_id', v_poll_id, 'message', v_msg);
+end $$;
+
+-- Vota (o cambia el voto) en una encuesta abierta. Solo una vez por persona.
+create or replace function public.vote_chat_poll(_poll_id uuid, _option_index int)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  v_me uuid := auth.uid();
+  v_poll public.chat_polls%rowtype;
+begin
+  if v_me is null then
+    return jsonb_build_object('ok', false, 'error', 'Inicia sesión para votar');
+  end if;
+  select * into v_poll from public.chat_polls where id = _poll_id;
+  if v_poll.id is null then
+    return jsonb_build_object('ok', false, 'error', 'La encuesta no existe');
+  end if;
+  if v_poll.status <> 'open' then
+    return jsonb_build_object('ok', false, 'error', 'Esta encuesta ya está cerrada');
+  end if;
+  if _option_index is null or _option_index < 0 or _option_index >= array_length(v_poll.options, 1) then
+    return jsonb_build_object('ok', false, 'error', 'Opción no válida');
+  end if;
+  -- Solo miembros (la comunidad es pública y todos están dentro).
+  if not exists (select 1 from public.chat_members m
+                 where m.chat_id = v_poll.chat_id and m.user_id = v_me)
+     and v_poll.chat_id <> 'c0000000-0000-4000-8000-000000000000' then
+    return jsonb_build_object('ok', false, 'error', 'No eres miembro de este chat');
+  end if;
+  insert into public.chat_poll_votes (poll_id, user_id, option_index)
+    values (_poll_id, v_me, _option_index)
+  on conflict (poll_id, user_id)
+    do update set option_index = excluded.option_index, updated_at = now();
+  return jsonb_build_object('ok', true);
+end $$;
+
+-- Cierra una encuesta (el creador, el admin de la comunidad o el creador o
+-- administrador del grupo). Al cerrarse ya no se puede votar.
+create or replace function public.close_chat_poll(_poll_id uuid)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  v_me uuid := auth.uid();
+  v_poll public.chat_polls%rowtype;
+  v_role text;
+  v_community boolean;
+begin
+  if v_me is null then
+    return jsonb_build_object('ok', false, 'error', 'Inicia sesión');
+  end if;
+  select * into v_poll from public.chat_polls where id = _poll_id;
+  if v_poll.id is null then
+    return jsonb_build_object('ok', false, 'error', 'La encuesta no existe');
+  end if;
+  if v_poll.created_by <> v_me then
+    select is_community into v_community from public.chats where id = v_poll.chat_id;
+    if v_community then
+      if not public.is_owner_admin() then
+        return jsonb_build_object('ok', false, 'error', 'Solo el administrador puede cerrar esta encuesta');
+      end if;
+    else
+      select role into v_role from public.chat_members where chat_id = v_poll.chat_id and user_id = v_me;
+      if v_role not in ('owner', 'admin') then
+        return jsonb_build_object('ok', false, 'error', 'Solo el creador o un administrador puede cerrar la encuesta');
+      end if;
+    end if;
+  end if;
+  update public.chat_polls set status = 'closed', closed_at = now(), updated_at = now()
+  where id = _poll_id;
+  return jsonb_build_object('ok', true);
+end $$;
+
+-- Estado de una encuesta con el recuento de votos agregado (sin exponer el
+-- voto individual de cada usuario).
+create or replace function public.get_chat_poll(_poll_id uuid)
+returns jsonb language sql stable security definer set search_path = public as $$
+  select jsonb_build_object(
+    'id', p.id,
+    'chat_id', p.chat_id,
+    'created_by', p.created_by,
+    'question', p.question,
+    'options', p.options,
+    'multiple', p.multiple,
+    'status', p.status,
+    'created_at', p.created_at,
+    'closed_at', p.closed_at,
+    'votes', (select coalesce(jsonb_agg(jsonb_build_object('option_index', v.option_index, 'count', v.c)), '[]'::jsonb)
+              from (select option_index, count(*) as c
+                    from public.chat_poll_votes v
+                    where v.poll_id = p.id
+                    group by option_index) v),
+    'total_votes', (select count(*) from public.chat_poll_votes v where v.poll_id = p.id),
+    'my_votes', (select coalesce(jsonb_agg(option_index), '[]'::jsonb)
+                from public.chat_poll_votes v
+                where v.poll_id = p.id and v.user_id = auth.uid())
+  )
+  from public.chat_polls p
+  where p.id = _poll_id
+$$;
+
+-- Los votos nuevos 'tocan' la encuesta (updated_at) para que el realtime avise
+-- a todos y los resultados se actualicen en vivo.
+create or replace function public.touch_chat_poll()
+returns trigger language plpgsql security definer set search_path = public as $$
+declare
+  v_pid uuid := coalesce(new.poll_id, old.poll_id);
+begin
+  if v_pid is not null then
+    update public.chat_polls set updated_at = now() where id = v_pid;
+  end if;
+  return new;
+end $$;
+drop trigger if exists chat_poll_votes_touch on public.chat_poll_votes;
+create trigger chat_poll_votes_touch
+  after insert or update or delete on public.chat_poll_votes
+  for each row execute function public.touch_chat_poll();
+
+-- El creador designa administradores y moderadores. Los administradores
+-- pueden eliminar el grupo, publicar avisos y gestionar miembros.
+create or replace function public.set_group_role(_chat_id uuid, _user_id uuid, _role text)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  v_me uuid := auth.uid();
+  v_role text;
+  v_target text;
+begin
+  if v_me is null then
+    return jsonb_build_object('ok', false, 'error', 'Inicia sesión');
+  end if;
+  if _role not in ('admin', 'moderator', 'member') then
+    return jsonb_build_object('ok', false, 'error', 'Rol no válido');
+  end if;
+  if _user_id = v_me then
+    return jsonb_build_object('ok', false, 'error', 'No puedes cambiar tu propio rol');
+  end if;
+  select role into v_role from public.chat_members where chat_id = _chat_id and user_id = v_me;
+  if v_role <> 'owner' then
+    return jsonb_build_object('ok', false, 'error', 'Solo el creador del grupo puede gestionar administradores');
+  end if;
+  select role into v_target from public.chat_members where chat_id = _chat_id and user_id = _user_id;
+  if v_target is null then
+    return jsonb_build_object('ok', false, 'error', 'Ese usuario no es miembro del grupo');
+  end if;
+  if v_target = 'owner' then
+    return jsonb_build_object('ok', false, 'error', 'No puedes cambiar el rol del creador');
+  end if;
+  update public.chat_members set role = _role where chat_id = _chat_id and user_id = _user_id;
+  return jsonb_build_object('ok', true);
+end $$;
+
+-- Elimina el grupo y todo su contenido (mensajes, encuestas, miembros) en
+-- cascada. Solo el creador o un administrador.
+create or replace function public.delete_group_chat(_chat_id uuid)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  v_me uuid := auth.uid();
+  v_role text;
+begin
+  if v_me is null then
+    return jsonb_build_object('ok', false, 'error', 'Inicia sesión');
+  end if;
+  select role into v_role from public.chat_members where chat_id = _chat_id and user_id = v_me;
+  if v_role not in ('owner', 'admin') then
+    return jsonb_build_object('ok', false, 'error', 'Solo el creador o un administrador puede eliminar el grupo');
+  end if;
+  delete from public.chats where id = _chat_id;
+  return jsonb_build_object('ok', true);
+end $$;
+
 -- Realtime: los mensajes nuevos llegan al instante a todos los clientes conectados.
 -- Se protege por si la publicación ya existe o el proyecto no la tiene.
 do $$
@@ -650,6 +930,10 @@ begin
   end;
   begin
     alter publication supabase_realtime add table public.orb_gifts;
+  exception when duplicate_object then null;
+  end;
+  begin
+    alter publication supabase_realtime add table public.chat_polls;
   exception when duplicate_object then null;
   end;
 exception when undefined_object then

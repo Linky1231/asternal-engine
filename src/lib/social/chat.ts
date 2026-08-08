@@ -13,6 +13,7 @@ export type ChatMessage = {
   reply_to_id: string | null;
   kind?: string | null;
   gift_id?: string | null;
+  poll_id?: string | null;
   created_at: string;
 };
 
@@ -478,7 +479,7 @@ export type GroupChat = {
   description: string | null;
   avatar_url: string | null;
   created_by: string | null;
-  my_role: "owner" | "member" | "admin" | null;
+  my_role: "owner" | "member" | "admin" | "moderator" | null;
   member_count: number;
   last_message: ChatMessage | null;
   last_at: string | null;
@@ -487,7 +488,7 @@ export type GroupChat = {
 
 export type GroupMember = {
   profile: Profile;
-  role: "owner" | "member" | "admin";
+  role: "owner" | "member" | "admin" | "moderator";
   joined_at: string;
 };
 
@@ -564,6 +565,238 @@ export async function leaveGroupChat(chatId: string): Promise<{ ok: boolean; err
   if (error) return { ok: false, error: error.message };
   const r = (data as { ok?: boolean; error?: string }) ?? {};
   return { ok: !!r.ok, error: r.error };
+}
+
+/** Cambia el rol de un miembro del grupo (solo el creador). */
+export async function setGroupRole(
+  chatId: string,
+  userId: string,
+  role: "admin" | "moderator" | "member"
+): Promise<{ ok: boolean; error?: string }> {
+  const { data, error } = await supabase.rpc("set_group_role", {
+    _chat_id: chatId,
+    _user_id: userId,
+    _role: role,
+  } as never);
+  if (error) return { ok: false, error: error.message };
+  const r = (data as { ok?: boolean; error?: string }) ?? {};
+  return { ok: !!r.ok, error: r.error };
+}
+
+/** Elimina el grupo y todo su contenido (solo el creador o un administrador). */
+export async function deleteGroupChat(chatId: string): Promise<{ ok: boolean; error?: string }> {
+  const { data, error } = await supabase.rpc("delete_group_chat", { _chat_id: chatId } as never);
+  if (error) return { ok: false, error: error.message };
+  const r = (data as { ok?: boolean; error?: string }) ?? {};
+  return { ok: !!r.ok, error: r.error };
+}
+
+// ───── Encuestas del chat ─────
+// Las crea el administrador de la comunidad o el creador/administrador de un
+// grupo personalizado. Cualquier miembro vota una vez; el recuento se agrega
+// en el servidor (get_chat_poll) sin exponer quién votó a qué.
+
+export type ChatPoll = {
+  id: string;
+  chat_id: string;
+  created_by: string;
+  question: string;
+  options: string[];
+  multiple: boolean;
+  status: "open" | "closed";
+  created_at: string;
+  closed_at: string | null;
+  votes: { option_index: number; count: number }[];
+  total_votes: number;
+  my_votes: number[];
+};
+
+/** ¿Es un mensaje de encuesta (kind='poll' con poll_id)? */
+export function isPollMessage(m: Pick<ChatMessage, "kind" | "poll_id">): boolean {
+  return m.kind === "poll" && !!m.poll_id;
+}
+
+// En modo local las encuestas viven en localStorage: los votos se guardan por
+// usuario del navegador (varios perfiles locales comparten el dispositivo).
+type LocalPoll = {
+  id: string;
+  chat_id: string;
+  created_by: string;
+  question: string;
+  options: string[];
+  multiple: boolean;
+  status: "open" | "closed";
+  created_at: string;
+  closed_at: string | null;
+  votes_by_user: Record<string, number>;
+};
+
+function localPollToRemote(p: LocalPoll, meId: string | null): ChatPoll {
+  const votes: { option_index: number; count: number }[] = [];
+  const byOption = new Map<number, number>();
+  const myVotes: number[] = [];
+  for (const [uid, opt] of Object.entries(p.votes_by_user ?? {})) {
+    byOption.set(opt, (byOption.get(opt) ?? 0) + 1);
+    if (uid === meId) myVotes.push(opt);
+  }
+  for (const [opt, count] of byOption) votes.push({ option_index: opt, count });
+  votes.sort((a, b) => a.option_index - b.option_index);
+  return {
+    id: p.id,
+    chat_id: p.chat_id,
+    created_by: p.created_by,
+    question: p.question,
+    options: p.options,
+    multiple: p.multiple,
+    status: p.status,
+    created_at: p.created_at,
+    closed_at: p.closed_at,
+    votes,
+    total_votes: Object.keys(p.votes_by_user ?? {}).length,
+    my_votes: myVotes,
+  };
+}
+
+/** Crea una encuesta y publica su mensaje en el chat (solo admin/creador). */
+export async function createPoll(
+  chatId: string,
+  opts: { question: string; options: string[]; multiple?: boolean }
+): Promise<{ ok: boolean; pollId?: string; message?: ChatMessage; error?: string }> {
+  const me = await getMeId();
+  // ── Modo local ──
+  if (me?.isLocal) {
+    const id = crypto.randomUUID();
+    const poll: LocalPoll = {
+      id,
+      chat_id: chatId,
+      created_by: me.id,
+      question: opts.question.trim(),
+      options: opts.options.map((o) => o.trim()).filter(Boolean),
+      multiple: !!opts.multiple,
+      status: "open",
+      created_at: new Date().toISOString(),
+      closed_at: null,
+      votes_by_user: {},
+    };
+    const polls = localRows<LocalPoll>("chat_polls");
+    polls.push(poll);
+    localSave("chat_polls", polls);
+    const msg: ChatMessage = {
+      id: crypto.randomUUID(),
+      chat_id: chatId,
+      sender_id: me.id,
+      content: poll.question,
+      media_url: null,
+      media_type: null,
+      reply_to_id: null,
+      kind: "poll",
+      poll_id: id,
+      created_at: new Date().toISOString(),
+    };
+    const msgs = localRows<ChatMessage>("chat_messages");
+    msgs.push(msg);
+    localSave("chat_messages", msgs);
+    return { ok: true, pollId: id, message: msg };
+  }
+  const { data, error } = await supabase.rpc("create_chat_poll", {
+    _chat_id: chatId,
+    _question: opts.question,
+    _options: opts.options,
+    _multiple: !!opts.multiple,
+  } as never);
+  if (error) return { ok: false, error: error.message };
+  const r = (data as { ok?: boolean; poll_id?: string; message?: ChatMessage; error?: string }) ?? {};
+  return { ok: !!r.ok, pollId: r.poll_id, message: r.message, error: r.error };
+}
+
+/** Estado actual de una encuesta (opciones + recuento + mi voto). */
+export async function fetchPoll(pollId: string): Promise<ChatPoll | null> {
+  const me = await getMeId();
+  if (me?.isLocal) {
+    const p = localRows<LocalPoll>("chat_polls").find((x) => x.id === pollId);
+    return p ? localPollToRemote(p, me.id) : null;
+  }
+  const { data, error } = await supabase.rpc("get_chat_poll", { _poll_id: pollId } as never);
+  if (error || !data) return null;
+  return data as ChatPoll;
+}
+
+/** Vota (o cambia el voto) en una encuesta abierta. */
+export async function votePoll(pollId: string, optionIndex: number): Promise<{ ok: boolean; error?: string }> {
+  const me = await getMeId();
+  if (me?.isLocal) {
+    const rows = localRows<LocalPoll>("chat_polls");
+    const p = rows.find((x) => x.id === pollId);
+    if (!p) return { ok: false, error: "La encuesta no existe" };
+    if (p.status !== "open") return { ok: false, error: "Esta encuesta ya está cerrada" };
+    p.votes_by_user = { ...(p.votes_by_user ?? {}), [me.id]: optionIndex };
+    localSave("chat_polls", rows);
+    return { ok: true };
+  }
+  const { data, error } = await supabase.rpc("vote_chat_poll", {
+    _poll_id: pollId,
+    _option_index: optionIndex,
+  } as never);
+  if (error) return { ok: false, error: error.message };
+  const r = (data as { ok?: boolean; error?: string }) ?? {};
+  return { ok: !!r.ok, error: r.error };
+}
+
+/** Cierra una encuesta (creador / admin de la comunidad / admin del grupo). */
+export async function closePoll(pollId: string): Promise<{ ok: boolean; error?: string }> {
+  const me = await getMeId();
+  if (me?.isLocal) {
+    const rows = localRows<LocalPoll>("chat_polls");
+    const p = rows.find((x) => x.id === pollId);
+    if (!p) return { ok: false, error: "La encuesta no existe" };
+    if (p.created_by !== me.id) return { ok: false, error: "Solo quien creó la encuesta puede cerrarla" };
+    p.status = "closed";
+    p.closed_at = new Date().toISOString();
+    localSave("chat_polls", rows);
+    return { ok: true };
+  }
+  const { data, error } = await supabase.rpc("close_chat_poll", { _poll_id: pollId } as never);
+  if (error) return { ok: false, error: error.message };
+  const r = (data as { ok?: boolean; error?: string }) ?? {};
+  return { ok: !!r.ok, error: r.error };
+}
+
+/**
+ * Realtime de las encuestas: cuando alguien vota o se cierra una encuesta,
+ * todos los clientes conectados la recargan para ver los resultados en vivo.
+ * En modo local no hay realtime (los datos viven en este navegador).
+ */
+export function subscribeToPolls(
+  chatId: string,
+  onChange: (type: "INSERT" | "UPDATE" | "DELETE", pollId: string) => void
+): () => void {
+  if (typeof supabase.channel !== "function") return () => {};
+  try {
+    const base: any = supabase.channel(`polls-${chatId}`);
+    if (!base || typeof base.on !== "function") {
+      if (typeof base?.subscribe === "function") base.subscribe();
+      return () => {};
+    }
+    const filter = `chat_id=eq.${chatId}`;
+    const cb = (ev: "INSERT" | "UPDATE" | "DELETE") => (p: any) => {
+      const id = (p.new?.id ?? p.old?.id) as string | undefined;
+      if (id) onChange(ev, id);
+    };
+    const chained: any = base
+      .on("postgres_changes", { schema: "public", table: "chat_polls", filter, event: "INSERT" }, cb("INSERT"))
+      .on("postgres_changes", { schema: "public", table: "chat_polls", filter, event: "UPDATE" }, cb("UPDATE"))
+      .on("postgres_changes", { schema: "public", table: "chat_polls", filter, event: "DELETE" }, cb("DELETE"));
+    chained.subscribe();
+    return () => {
+      try {
+        supabase.removeChannel(chained);
+      } catch {
+        /* noop */
+      }
+    };
+  } catch {
+    return () => {};
+  }
 }
 
 /**
@@ -779,10 +1012,18 @@ export async function isChatSchemaOutdated(): Promise<boolean> {
   const me = await getMeId();
   if (me?.isLocal) return false;
   try {
-    const { error } = await supabase.from("chat_messages").select("media_type").limit(1);
+    // Las encuestas son la última incorporación al esquema: si la tabla falta,
+    // el esquema está desactualizado (se reinstala con «Instalar chat»).
+    const { error } = await supabase.from("chat_polls").select("id").limit(1);
     if (!error) return false;
     const msg = (error as Error)?.message ?? "";
-    return error.code === "PGRST204" || /schema cache/i.test(msg) || /could not find the .* column/i.test(msg);
+    if (error.code === "PGRST204" || /schema cache/i.test(msg) || /could not find the .* column/i.test(msg)) {
+      return true;
+    }
+    // Instalaciones antiguas sin la columna media_type (audio de voz).
+    const { error: err2 } = await supabase.from("chat_messages").select("media_type").limit(1);
+    if (err2) return err2.code === "PGRST204" || /schema cache/i.test(err2.message ?? "");
+    return false;
   } catch {
     return false;
   }

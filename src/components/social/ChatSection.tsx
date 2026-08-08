@@ -1,7 +1,7 @@
 import { Component, useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, Copy, Check, Reply, SmilePlus, ImagePlus, Film, Loader2, Users, Users2, Settings2, UserPlus, UserMinus, Camera, Pencil, LogOut, MessageCircle, AtSign, ArrowLeft, WifiOff, Database, Plug, RefreshCw, KeyRound, CheckCircle2, AlertTriangle, Mic, Play, Pause, Trash2, ArrowDown, ExternalLink, Megaphone, Gift, PartyPopper, Lock, Sparkles, Timer, Undo2, ChevronRight } from "lucide-react";
+import { X, Send, Copy, Check, Reply, SmilePlus, ImagePlus, Film, Loader2, Users, Users2, Settings2, UserPlus, UserMinus, Camera, Pencil, LogOut, MessageCircle, AtSign, BarChart3, Shield, ShieldCheck, ArrowLeft, WifiOff, Database, Plug, RefreshCw, KeyRound, CheckCircle2, AlertTriangle, Mic, Play, Pause, Trash2, ArrowDown, ExternalLink, Megaphone, Gift, PartyPopper, Lock, Sparkles, Timer, Undo2, ChevronRight } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
@@ -30,6 +30,14 @@ import {
   subscribeToOrbGifts,
   isAnnouncement,
   isGiftMessage,
+  isPollMessage,
+  createPoll,
+  fetchPoll,
+  votePoll,
+  closePoll,
+  subscribeToPolls,
+  setGroupRole,
+  deleteGroupChat,
   getOrCreateDm,
   fetchMyDmChats,
   fetchMutualFollows,
@@ -47,6 +55,7 @@ import {
   type ChatMessage,
   type ChatSticker,
   type OrbGift,
+  type ChatPoll,
   type DmChat,
   type GroupChat,
   type GroupMember,
@@ -525,6 +534,111 @@ function AnnouncementCard({ m, sender }: { m: ChatMessage; sender?: Profile | nu
   );
 }
 
+/** Encuesta del chat: vota, recuento en vivo y cierre por el administrador. */
+function PollCard({
+  m,
+  poll,
+  sender,
+  votingId,
+  closingId,
+  canClose,
+  onVote,
+  onClose,
+}: {
+  m: ChatMessage;
+  poll?: ChatPoll | null;
+  sender?: Profile | null;
+  votingId: string | null;
+  closingId: string | null;
+  canClose: boolean;
+  onVote: (optionIndex: number) => void;
+  onClose: () => void;
+}) {
+  const voted = (poll?.my_votes ?? []).length > 0;
+  const total = poll?.total_votes ?? 0;
+  const pct = (n: number) => (total ? Math.round((n / total) * 100) : 0);
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-primary/25 bg-card shadow-sm px-3.5 py-3">
+      <div className="absolute -right-8 -top-8 w-28 h-28 rounded-full bg-accent/15 blur-2xl pointer-events-none" />
+      <div className="relative">
+        <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center shrink-0 shadow-[0_4px_10px_-6px_oklch(0.488_0.185_264/0.5)]">
+            <BarChart3 size={13} />
+          </div>
+          <span className="text-[9px] font-display tracking-[0.18em] text-primary font-bold">ENCUESTA</span>
+          <span className="text-[9px] text-muted-foreground/70 ml-auto">
+            {poll?.status === "closed"
+              ? `CERRADA · ${total} ${total === 1 ? "voto" : "votos"}`
+              : total > 0
+                ? `${total} ${total === 1 ? "voto" : "votos"}`
+                : "Sin votos todavía"}
+          </span>
+        </div>
+        <div className="text-[10px] text-muted-foreground/70">
+          {sender?.display_name || sender?.username ? `${sender?.display_name || sender?.username} · ` : ""}
+          {fmtDay(m.created_at)}
+        </div>
+        <p className="text-[13px] leading-snug font-semibold mt-1 mb-2.5 whitespace-pre-wrap break-words">
+          {m.content || poll?.question}
+        </p>
+        <div className="space-y-1.5">
+          {(poll?.options ?? []).map((opt, i) => {
+            const count = poll?.votes.find((v) => v.option_index === i)?.count ?? 0;
+            const mine = (poll?.my_votes ?? []).includes(i);
+            const closed = poll?.status === "closed";
+            const disabled = closed || !!votingId || (voted && !mine);
+            return (
+              <button
+                key={i}
+                onClick={() => onVote(i)}
+                disabled={disabled}
+                className={`relative w-full text-left overflow-hidden rounded-xl border px-3 py-2 transition active:scale-[0.99] ${
+                  closed
+                    ? "border-border/60 bg-background/50"
+                    : mine
+                      ? "border-primary/50 bg-primary/10"
+                      : "border-border bg-background hover:border-primary/40"
+                } disabled:opacity-70`}
+              >
+                {total > 0 && (
+                  <span
+                    className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary/15 to-accent/10"
+                    style={{ width: `${pct(count)}%` }}
+                  />
+                )}
+                <span className="relative flex items-center gap-2">
+                  <span className="flex-1 text-[12px] font-medium truncate">{opt}</span>
+                  {total > 0 && (
+                    <span className="text-[11px] font-display tabular-nums text-muted-foreground shrink-0">
+                      {count} · {pct(count)}%
+                    </span>
+                  )}
+                  {mine && <ShieldCheck size={12} className="text-primary shrink-0" />}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        {poll?.status === "open" && !voted && (
+          <div className="text-[10px] text-muted-foreground/70 mt-2 flex items-center gap-1">
+            <Sparkles size={10} /> Toca una opción para votar · puedes cambiar tu voto
+          </div>
+        )}
+        {poll?.status === "open" && canClose && (
+          <button
+            onClick={onClose}
+            disabled={!!closingId}
+            className="mt-2 w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-border text-[10px] font-display tracking-widest text-muted-foreground hover:text-primary hover:border-primary/40 transition disabled:opacity-40"
+          >
+            {closingId ? <Loader2 size={11} className="animate-spin" /> : <Timer size={11} />}
+            {closingId ? "CERRANDO…" : "CERRAR ENCUESTA"}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /** Paquete de regalos de orbes: abre, cuenta atrás y animaciones al abrir/cerrar. */
 function GiftCard({
   m,
@@ -821,6 +935,20 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
   const giftBusyRef = useRef(false); // guard síncrono contra dobles toques
   const [giftErr, setGiftErr] = useState<string | null>(null);
   const [myOrbes, setMyOrbes] = useState<number | null>(null);
+  // Encuestas del chat (las crea el admin de la comunidad o el creador/admin del grupo)
+  const [pollOpen, setPollOpen] = useState(false);
+  const [pollQuestion, setPollQuestion] = useState("");
+  const [pollOptions, setPollOptions] = useState<string[]>(["", ""]);
+  const [pollBusy, setPollBusy] = useState(false);
+  const [pollErr, setPollErr] = useState<string | null>(null);
+  const [polls, setPolls] = useState<Map<string, ChatPoll>>(new Map());
+  const pollsRef = useRef<Map<string, ChatPoll>>(new Map());
+  const [votingId, setVotingId] = useState<string | null>(null);
+  const [closingId, setClosingId] = useState<string | null>(null);
+  // Administración del grupo: roles (solo el creador) y eliminar grupo
+  const [gRoleBusyId, setGRoleBusyId] = useState<string | null>(null);
+  const [deleteArm, setDeleteArm] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
   const [gifts, setGifts] = useState<Map<string, OrbGift>>(new Map());
   const giftsRef = useRef<Map<string, OrbGift>>(new Map());
   const [claimingId, setClaimingId] = useState<string | null>(null);
@@ -886,6 +1014,15 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
   const currentChatId = activeGroup ? activeGroup.chat_id : activeDm ? activeDm.chat_id : (chatInfo?.id ?? null);
   const totalDmUnread = dmList.reduce((s, d) => s + (d.unread || 0), 0);
   const totalGroupUnread = groupList.reduce((s, g) => s + (g.unread || 0), 0);
+  // Permisos de administración: en la comunidad → isOwner; en un grupo
+  // personalizado → según el rol del usuario (owner/admin/moderator).
+  const groupRole = activeGroup?.my_role ?? null;
+  const canAnnounce =
+    view === "group" ? isOwner : groupRole === "owner" || groupRole === "admin" || groupRole === "moderator";
+  const canPoll = view === "group" ? isOwner : groupRole === "owner" || groupRole === "admin";
+  const canManageMembers = groupRole === "owner" || groupRole === "admin";
+  const canDeleteGroup = groupRole === "owner" || groupRole === "admin";
+  const canManageRoles = groupRole === "owner";
 
   // Load senders for a batch of messages
   const loadSenders = useCallback(async (msgs: ChatMessage[]) => {
@@ -1124,6 +1261,29 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
     };
   }, [messages]);
 
+  // Carga el estado de las encuestas referenciadas en los mensajes.
+  useEffect(() => {
+    const ids = Array.from(new Set(messages.map((m) => m.poll_id).filter((x): x is string => !!x)));
+    const need = ids.filter((id) => !pollsRef.current.has(id));
+    if (!need.length) return;
+    let cancelled = false;
+    (async () => {
+      for (const id of need) {
+        try {
+          const p = await fetchPoll(id);
+          if (cancelled || !p) continue;
+          pollsRef.current.set(id, p);
+        } catch {
+          /* noop */
+        }
+      }
+      if (!cancelled) setPolls(new Map(pollsRef.current));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [messages]);
+
   // Realtime de los paquetes: aperturas y cierres en vivo para todos.
   useEffect(() => {
     if (!chatInfo) return;
@@ -1137,6 +1297,21 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
     });
     return unsub;
   }, [chatInfo]);
+
+  // Realtime de las encuestas: votos y cierres llegan en vivo a todos.
+  useEffect(() => {
+    if (!currentChatId) return;
+    const unsub = subscribeToPolls(currentChatId, (_type, pollId) => {
+      void fetchPoll(pollId)
+        .then((p) => {
+          if (!p) return;
+          pollsRef.current.set(p.id, p);
+          setPolls(new Map(pollsRef.current));
+        })
+        .catch(() => {});
+    });
+    return unsub;
+  }, [currentChatId]);
 
   // Reenvía automáticamente los mensajes que quedaron pendientes por un fallo de
   // red (el servidor no respondió) cuando el chat está listo o vuelve la conexión.
@@ -1449,6 +1624,71 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
     setAnnounceText("");
     toast.success("Aviso publicado para toda la comunidad");
   }, [chatInfo, announceText, loadSenders]);
+
+  // Encuestas del chat: las crea el admin de la comunidad (chat grupal) o el
+  // creador/admin de un grupo personalizado. Cualquier miembro vota una vez.
+  const handleCreatePoll = useCallback(async () => {
+    const question = pollQuestion.trim();
+    const options = pollOptions.map((o) => o.trim()).filter(Boolean);
+    if (!currentChatId) return;
+    if (!question || options.length < 2) {
+      setPollErr("Escribe la pregunta y al menos 2 opciones.");
+      return;
+    }
+    setPollBusy(true);
+    setPollErr(null);
+    const r = await createPoll(currentChatId, { question, options, multiple: false });
+    setPollBusy(false);
+    if (!r.ok) {
+      setPollErr(r.error ?? "No se pudo crear la encuesta");
+      return;
+    }
+    if (r.message) {
+      const msg = r.message;
+      setMessages((prev) => (prev.some((x) => x.id === msg.id) ? prev : [...prev, msg]));
+      void loadSenders([msg]);
+    }
+    setPollOpen(false);
+    setPollQuestion("");
+    setPollOptions(["", ""]);
+    toast.success("Encuesta publicada en el chat");
+  }, [currentChatId, pollQuestion, pollOptions, loadSenders]);
+
+  const handleVotePoll = useCallback(
+    async (poll: ChatPoll, optionIndex: number) => {
+      if (votingId || poll.status !== "open") return;
+      setVotingId(poll.id);
+      const r = await votePoll(poll.id, optionIndex);
+      if (r.ok) {
+        const p = await fetchPoll(poll.id).catch(() => null);
+        if (p) {
+          pollsRef.current.set(p.id, p);
+          setPolls(new Map(pollsRef.current));
+        }
+      } else {
+        toast.error(r.error ?? "No se pudo registrar tu voto");
+      }
+      setVotingId(null);
+    },
+    [votingId]
+  );
+
+  const handleClosePoll = useCallback(async (poll: ChatPoll) => {
+    if (closingId) return;
+    setClosingId(poll.id);
+    const r = await closePoll(poll.id);
+    if (r.ok) {
+      const p = await fetchPoll(poll.id).catch(() => null);
+      if (p) {
+        pollsRef.current.set(p.id, p);
+        setPolls(new Map(pollsRef.current));
+      }
+      toast.success("Encuesta cerrada");
+    } else {
+      toast.error(r.error ?? "No se pudo cerrar la encuesta");
+    }
+    setClosingId(null);
+  }, [closingId]);
 
   const createGiftPackage = useCallback(async () => {
     if (!chatInfo) return;
@@ -1775,6 +2015,54 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
     }
   }, [activeGroup, loadGroupList]);
 
+  /** Cambia el rol de un miembro (solo el creador): admin, moderador o miembro. */
+  const handleSetGroupRole = useCallback(
+    async (userId: string, role: "admin" | "moderator" | "member") => {
+      if (!activeGroup || gRoleBusyId) return;
+      setGRoleBusyId(userId);
+      const r = await setGroupRole(activeGroup.chat_id, userId, role);
+      setGRoleBusyId(null);
+      if (!r.ok) {
+        toast.error(r.error ?? "No se pudo cambiar el rol");
+        return;
+      }
+      toast.success(
+        role === "member"
+          ? "Quitado de la moderación"
+          : role === "admin"
+            ? "Ahora es administrador"
+            : "Ahora es moderador"
+      );
+      await loadGroupInfo(activeGroup.chat_id);
+    },
+    [activeGroup, gRoleBusyId, loadGroupInfo]
+  );
+
+  /** Elimina el grupo y todo su contenido (solo creador/admin), con doble confirmación. */
+  const handleDeleteGroup = useCallback(async () => {
+    if (!activeGroup || deleteBusy) return;
+    if (!deleteArm) {
+      setDeleteArm(true);
+      window.setTimeout(() => setDeleteArm(false), 3500);
+      return;
+    }
+    setDeleteBusy(true);
+    const r = await deleteGroupChat(activeGroup.chat_id);
+    setDeleteBusy(false);
+    setDeleteArm(false);
+    if (!r.ok) {
+      toast.error(r.error ?? "No se pudo eliminar el grupo");
+      return;
+    }
+    toast.success("Grupo eliminado");
+    setGroupInfoOpen(false);
+    setEditGroupOpen(false);
+    setActiveGroup(null);
+    setView("groups");
+    setGroupList((prev) => prev.filter((g) => g.chat_id !== activeGroup.chat_id));
+    void loadGroupList();
+  }, [activeGroup, deleteBusy, deleteArm, loadGroupList]);
+
   /** Inserta la mención @usuario en el cuadro de texto (en el cursor). */
   const insertMention = useCallback((p: Profile) => {
     const r = mentionRef.current;
@@ -2100,7 +2388,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
               </div>
             </div>
           )}
-          {view === "group" && isOwner && (
+          {canAnnounce && (view === "group" || !!activeGroup) && (
             <button
               onClick={() => {
                 setAnnounceErr(null);
@@ -2111,6 +2399,20 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
               className="w-9 h-9 rounded-xl border border-primary/40 bg-primary/10 text-primary grid place-items-center active:scale-95 transition shrink-0 hover:bg-primary/20"
             >
               <Megaphone size={15} />
+            </button>
+          )}
+          {canPoll && (view === "group" || !!activeGroup) && (
+            <button
+              onClick={() => {
+                setPollErr(null);
+                setPollQuestion("");
+                setPollOptions(["", ""]);
+                setPollOpen(true);
+              }}
+              title="Crear encuesta"
+              className="w-9 h-9 rounded-xl border border-primary/40 bg-primary/10 text-primary grid place-items-center active:scale-95 transition shrink-0 hover:bg-primary/20"
+            >
+              <BarChart3 size={15} />
             </button>
           )}
           {view === "group" && !isLocal && (
@@ -2523,6 +2825,23 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                   claimedAmount={m.gift_id ? myClaims.get(m.gift_id) : undefined}
                   onClaim={() => m.gift_id && void handleClaimGift(m.gift_id)}
                   onExpire={() => m.gift_id && void handleExpireGift(m.gift_id)}
+                />
+              ) : isPollMessage(m) ? (
+                <PollCard
+                  m={m}
+                  poll={m.poll_id ? polls.get(m.poll_id) ?? null : null}
+                  sender={senders.get(m.sender_id)}
+                  votingId={votingId}
+                  closingId={closingId}
+                  canClose={!!m.poll_id && (view === "group" ? isOwner : groupRole === "owner" || groupRole === "admin")}
+                  onVote={(oi) => {
+                    const p = m.poll_id ? polls.get(m.poll_id) ?? null : null;
+                    if (p) void handleVotePoll(p, oi);
+                  }}
+                  onClose={() => {
+                    const p = m.poll_id ? polls.get(m.poll_id) ?? null : null;
+                    if (p) void handleClosePoll(p);
+                  }}
                 />
               ) : (
                 <MessageBubble
@@ -3269,6 +3588,64 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                 </div>
               )}
 
+              {canManageRoles && (
+                <div className="mb-3">
+                  <div className="text-[10px] font-display tracking-widest text-muted-foreground mb-1.5 flex items-center gap-1.5">
+                    <Shield size={11} /> MODERACIÓN
+                  </div>
+                  <p className="text-[10px] text-muted-foreground/70 mb-2">
+                    Nombra administradores (editar, añadir miembros, avisos y encuestas) o
+                    moderadores (avisos y encuestas). Toca el rol para asignarlo o quitarlo.
+                  </p>
+                  <div className="space-y-1 max-h-36 overflow-y-auto no-scrollbar">
+                    {groupMembers
+                      .filter((mem) => mem.role !== "owner")
+                      .map((mem) => (
+                        <div key={mem.profile.id} className="flex items-center gap-2 px-2 py-1.5 rounded-xl bg-background border border-border/50">
+                          <div className="min-w-0 flex-1">
+                            <div className="text-[12px] font-medium truncate">{mem.profile.display_name || mem.profile.username}</div>
+                            <div className="text-[10px] font-mono text-muted-foreground truncate">@{mem.profile.username ?? "?"}</div>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            {(["moderator", "admin"] as const).map((role) => (
+                              <button
+                                key={role}
+                                onClick={() => void handleSetGroupRole(mem.profile.id, mem.role === role ? "member" : role)}
+                                disabled={gRoleBusyId === mem.profile.id}
+                                className={`px-2 py-1 rounded-lg text-[9px] font-display tracking-wider transition active:scale-95 disabled:opacity-40 ${
+                                  mem.role === role
+                                    ? "bg-primary/15 text-primary border border-primary/40"
+                                    : "border border-border text-muted-foreground hover:border-primary/40 hover:text-primary"
+                                }`}
+                              >
+                                {role === "admin" ? "ADMIN" : "MOD"}
+                              </button>
+                            ))}
+                            {gRoleBusyId === mem.profile.id && (
+                              <Loader2 size={11} className="animate-spin text-primary shrink-0" />
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {canDeleteGroup && (
+                <button
+                  onClick={() => void handleDeleteGroup()}
+                  disabled={deleteBusy}
+                  className={`w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border text-[11px] font-display tracking-widest transition active:scale-[0.98] disabled:opacity-40 mb-2 ${
+                    deleteArm
+                      ? "border-rose-500/60 bg-rose-500/15 text-rose-600 dark:text-rose-400"
+                      : "border-rose-300/50 bg-rose-500/[0.06] text-rose-600 dark:text-rose-400 hover:bg-rose-500/10"
+                  }`}
+                >
+                  {deleteBusy ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                  {deleteBusy ? "ELIMINANDO…" : deleteArm ? "¿SEGURO? TOCA OTRA VEZ" : "ELIMINAR GRUPO"}
+                </button>
+              )}
+
               <button
                 onClick={() => void handleLeaveGroup()}
                 disabled={gInfoBusy}
@@ -3633,6 +4010,101 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                 >
                   {giftBusy ? <Loader2 size={13} className="animate-spin" /> : <Gift size={13} />}
                   {giftBusy ? "CREANDO…" : "CREAR REGALOS"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Diálogo: crear encuesta (admin de la comunidad / creador o admin del grupo) */}
+      <AnimatePresence>
+        {pollOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-[95] bg-black/55 backdrop-blur-md grid place-items-center p-4"
+            onClick={() => setPollOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.96, y: 8 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.96, y: 8 }}
+              transition={{ duration: 0.16, ease: "easeOut" }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm bg-card border border-border rounded-2xl p-4 shadow-xl max-h-[85vh] overflow-y-auto"
+            >
+              <div className="text-sm font-semibold mb-0.5 flex items-center gap-2">
+                <BarChart3 size={15} className="text-primary" /> Crear encuesta del chat
+              </div>
+              <p className="text-[11px] text-muted-foreground mb-3">
+                Pregunta a la comunidad o al grupo. Cualquier miembro vota una vez y puede cambiar su
+                voto; los resultados se actualizan en vivo. Solo los administradores pueden crear y
+                cerrar encuestas.
+              </p>
+              <input
+                value={pollQuestion}
+                onChange={(e) => {
+                  setPollQuestion(e.target.value);
+                  setPollErr(null);
+                }}
+                maxLength={160}
+                placeholder="Pregunta — p. ej. ¿Qué juego quieren a continuación?"
+                className="w-full bg-input/50 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40 border border-border/60 mb-2"
+              />
+              {pollOptions.map((opt, i) => (
+                <div key={i} className="flex items-center gap-1.5 mb-1.5">
+                  <input
+                    value={opt}
+                    onChange={(e) => {
+                      setPollErr(null);
+                      setPollOptions((prev) => prev.map((o, j) => (j === i ? e.target.value : o)));
+                    }}
+                    maxLength={80}
+                    placeholder={`Opción ${i + 1}`}
+                    className="flex-1 bg-input/50 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40 border border-border/60"
+                  />
+                  {pollOptions.length > 2 && (
+                    <button
+                      onClick={() => setPollOptions((prev) => prev.filter((_, j) => j !== i))}
+                      title="Quitar opción"
+                      className="w-8 h-8 rounded-lg border border-border text-muted-foreground hover:text-destructive grid place-items-center active:scale-95 shrink-0"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  )}
+                </div>
+              ))}
+              {pollOptions.length < 6 && (
+                <button
+                  onClick={() => setPollOptions((prev) => [...prev, ""])}
+                  className="mb-2 w-full py-1.5 rounded-lg border border-dashed border-border text-[11px] text-muted-foreground hover:text-primary hover:border-primary/40 transition"
+                >
+                  + Añadir opción
+                </button>
+              )}
+              {pollErr && (
+                <div className="mb-3 rounded-lg border border-rose-500/30 bg-rose-500/[0.06] px-3 py-2 text-[11px] text-rose-700 dark:text-rose-300 flex items-start gap-1.5">
+                  <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+                  <span>{pollErr}</span>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPollOpen(false)}
+                  className="flex-1 py-2 rounded-xl border border-border bg-background text-xs font-display tracking-widest active:scale-[0.98] transition"
+                >
+                  CANCELAR
+                </button>
+                <button
+                  onClick={() => void handleCreatePoll()}
+                  disabled={pollBusy || !pollQuestion.trim() || pollOptions.filter((o) => o.trim()).length < 2}
+                  className="flex-1 py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-xs font-display tracking-widest active:scale-[0.98] transition disabled:opacity-40 flex items-center justify-center gap-1.5"
+                >
+                  {pollBusy ? <Loader2 size={13} className="animate-spin" /> : <BarChart3 size={13} />}
+                  {pollBusy ? "PUBLICANDO…" : "PUBLICAR ENCUESTA"}
                 </button>
               </div>
             </motion.div>
