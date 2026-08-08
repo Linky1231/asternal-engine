@@ -275,15 +275,23 @@ function MessageBubble({
   return (
     <div className={`group relative flex gap-2 ${mine ? "justify-end pl-10" : "justify-start pr-10"}`}>
       {!mine && (
-        <Link to="/profile/$userId" params={{ userId: m.sender_id }} className="shrink-0" onClick={e => e.stopPropagation()}>
-          <Avatar p={sender} size={28} />
-        </Link>
+        m.sender_id ? (
+          <Link to="/profile/$userId" params={{ userId: m.sender_id }} className="shrink-0" onClick={e => e.stopPropagation()}>
+            <Avatar p={sender} size={28} />
+          </Link>
+        ) : (
+          <div className="shrink-0"><Avatar p={sender} size={28} /></div>
+        )
       )}
       <div className={`flex flex-col min-w-0 max-w-[78%] ${mine ? "items-end" : "items-start"}`}>
         <div className={`mb-0.5 ${mine ? "pr-1" : "pl-1"}`}>
-          <Link to="/profile/$userId" params={{ userId: m.sender_id }} className="hover:opacity-80 transition-opacity">
+          {m.sender_id ? (
+            <Link to="/profile/$userId" params={{ userId: m.sender_id }} className="hover:opacity-80 transition-opacity">
+              <UserName p={sender} size="xs" />
+            </Link>
+          ) : (
             <UserName p={sender} size="xs" />
-          </Link>
+          )}
         </div>
         <div
           className={
@@ -311,9 +319,13 @@ function MessageBubble({
         </div>
       </div>
       {mine && (
-        <Link to="/profile/$userId" params={{ userId: m.sender_id }} className="shrink-0" onClick={e => e.stopPropagation()}>
-          <Avatar p={sender} size={28} />
-        </Link>
+        m.sender_id ? (
+          <Link to="/profile/$userId" params={{ userId: m.sender_id }} className="shrink-0" onClick={e => e.stopPropagation()}>
+            <Avatar p={sender} size={28} />
+          </Link>
+        ) : (
+          <div className="shrink-0"><Avatar p={sender} size={28} /></div>
+        )
       )}
       <BubbleActions mine={mine} copied={copied} onCopy={onCopy} onReply={onReply} />
     </div>

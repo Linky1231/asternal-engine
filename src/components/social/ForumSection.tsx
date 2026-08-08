@@ -22,17 +22,19 @@ import {
 
 /* ─── Motion variants ─── */
 const stagger = {
-  container: { initial: {}, animate: { transition: { staggerChildren: 0.025 } } },
+  container: { initial: {}, animate: { transition: { staggerChildren: 0.02 } } },
   item: {
-    initial: { opacity: 0, y: 12, scale: 0.98, filter: "blur(3px)" },
-    animate: { opacity: 1, y: 0, scale: 1, filter: "blur(0px)", transition: { duration: 0.25, ease: [0.25, 0, 0, 1] as const } },
+    initial: { opacity: 0, y: 10 },
+    animate: { opacity: 1, y: 0, transition: { duration: 0.22, ease: [0.22, 1, 0.36, 1] as const } },
   },
 };
 
+// Transición de vistas: solo opacidad + desplazamiento mínimo (GPU, sin blur,
+// sin reflow) para que el cambio entre categorías/hilos se sienta fluido.
 const fadeSlide = {
-  initial: { opacity: 0, y: 8, filter: "blur(1.5px)" },
-  animate: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.2, ease: [0.25, 0, 0, 1] as const } },
-  exit: { opacity: 0, y: -4, filter: "blur(1.5px)", transition: { duration: 0.12 } },
+  initial: { opacity: 0, y: 6 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.18, ease: [0.22, 1, 0.36, 1] as const } },
+  exit: { opacity: 0, y: -3, transition: { duration: 0.1, ease: "easeOut" as const } },
 };
 
 /* ─── Time ago ─── */
@@ -262,7 +264,7 @@ function CategoryListView({ onSelect }: { onSelect: (id: string, name: string) =
       {/* Category grid */}
       <div className="grid gap-2 sm:grid-cols-2">
         {cats.map(cat => (
-          <motion.button key={cat.id} variants={stagger.item} layout
+          <motion.button key={cat.id} variants={stagger.item}
             onClick={() => onSelect(cat.id, cat.name)}
             className="group w-full text-left p-3.5 sm:p-4 rounded-2xl border border-border/40 bg-white/60 hover:bg-white/90 hover:border-primary/20 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 active:scale-[0.98]"
           >
@@ -407,10 +409,12 @@ function ThreadListView({
       {/* ── New thread form ── */}
       <AnimatePresence>
         {showNew && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden">
-            <motion.div initial={{ y: -8 }} animate={{ y: 0 }} exit={{ y: -8 }}
-              className="p-5 rounded-2xl border border-primary/20 bg-gradient-to-b from-primary/[0.03] to-transparent shadow-sm space-y-3.5"
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] as const }}
+            className="p-5 rounded-2xl border border-primary/20 bg-gradient-to-b from-primary/[0.03] to-transparent shadow-sm space-y-3.5"
             >
               <div className="flex items-center gap-2.5 mb-1">
                 <Sparkles size={14} className="text-primary/60" />
@@ -502,7 +506,6 @@ function ThreadListView({
                 </motion.button>
               </div>
             </motion.div>
-          </motion.div>
         )}
       </AnimatePresence>
 

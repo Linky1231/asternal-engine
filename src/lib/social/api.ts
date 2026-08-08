@@ -411,6 +411,19 @@ export async function toggleReaction(opts: { postId?: string; commentId?: string
     comment_id: opts.commentId ?? null,
     type: opts.type,
   });
+  // Notificar al autor del post/comentario (una sola vez hasta que se lea).
+  void (async () => {
+    try {
+      const type = opts.type === "like" ? "like" : "favorite";
+      if (opts.postId) {
+        const { data: p } = await supabase.from("posts").select("author_id").eq("id", opts.postId).maybeSingle();
+        if (p) await pushNotification({ userId: p.author_id, type, postId: opts.postId });
+      } else if (opts.commentId) {
+        const { data: c } = await supabase.from("comments").select("author_id").eq("id", opts.commentId).maybeSingle();
+        if (c) await pushNotification({ userId: c.author_id, type, commentId: opts.commentId });
+      }
+    } catch { /* noop */ }
+  })();
   return true;
 }
 
@@ -423,6 +436,13 @@ export async function toggleRepost(postId: string, quote?: string) {
     return false;
   }
   await supabase.from("reposts").insert({ user_id: user.id, post_id: postId, quote: quote || null });
+  // Notificar al autor del post.
+  void (async () => {
+    try {
+      const { data: p } = await supabase.from("posts").select("author_id").eq("id", postId).maybeSingle();
+      if (p) await pushNotification({ userId: p.author_id, type: "repost", postId });
+    } catch { /* noop */ }
+  })();
   return true;
 }
 
@@ -464,6 +484,31 @@ export async function addComment(postId: string, content: string, parentId?: str
     post_id: postId, author_id: user.id, parent_id: parentId ?? null, content,
   });
   if (error) throw error;
+
+  // Notificaciones (best-effort): respuesta → autor del comentario padre;
+  // comentario → autor del post; y menciones @usuario dentro del texto.
+  void (async () => {
+    try {
+      if (parentId) {
+        const { data: c } = await supabase.from("comments").select("author_id").eq("id", parentId).maybeSingle();
+        if (c) await pushNotification({ userId: c.author_id, type: "reply", postId, commentId: parentId });
+      } else {
+        const { data: p } = await supabase.from("posts").select("author_id").eq("id", postId).maybeSingle();
+        if (p) await pushNotification({ userId: p.author_id, type: "comment", postId });
+      }
+    } catch { /* noop */ }
+    try {
+      const mentions = Array.from(new Set(
+        (content.match(/@([a-zA-Z0-9_]{2,24})/g) ?? []).map(t => t.slice(1))
+      ));
+      if (mentions.length) {
+        const { data: rows } = await supabase.from("profiles").select("id, username").in("username", mentions);
+        for (const row of rows ?? []) {
+          await pushNotification({ userId: row.id, type: "mention", postId, commentId: parentId ?? undefined });
+        }
+      }
+    } catch { /* noop */ }
+  })();
 }
 
 export async function deleteComment(id: string) {
@@ -487,6 +532,31 @@ export async function blockUser(blockedId: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
   await supabase.from("blocks").insert({ blocker_id: user.id, blocked_id: blockedId });
+}
+
+export type NotifType = "comment" | "reply" | "reaction" | "repost" | "mention" | "follow" | "like" | "favorite" | "game";
+
+/** Crea una notificación para otro usuario (best-effort). `push_notification` (SQL, security definer) aplica las reglas de «solo lo importante». */
+export async function pushNotification(opts: {
+  userId: string;
+  type: NotifType;
+  postId?: string;
+  commentId?: string;
+  actorId?: string;
+}): Promise<void> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase.rpc("push_notification", {
+      _user_id: opts.userId,
+      _actor_id: opts.actorId ?? user.id,
+      _type: opts.type,
+      _post_id: opts.postId ?? null,
+      _comment_id: opts.commentId ?? null,
+    } as never);
+  } catch {
+    /* best effort */
+  }
 }
 
 export async function fetchNotifications() {
@@ -573,6 +643,18 @@ export async function publishGame(input: {
   } as never).select().single();
   if (error) throw error;
   await upsertTagsFor(post!.id, input.tags);
+  // Notifica a tus seguidores (best-effort): publicaste un juego nuevo.
+  void (async () => {
+    try {
+      const { data: followers } = await supabase
+        .from("follows" as never)
+        .select("follower_id" as never)
+        .eq("following_id" as never, user.id);
+      for (const f of (followers ?? []) as { follower_id: string }[]) {
+        await pushNotification({ userId: f.follower_id, type: "game", postId: post!.id });
+      }
+    } catch { /* noop */ }
+  })();
   return post as PostRow;
 }
 
@@ -1192,6 +1274,8 @@ export async function followUser(userId: string): Promise<void> {
   if (user.id === userId) return;
   const { error } = await supabase.from("follows" as never).insert({ follower_id: user.id, following_id: userId } as never);
   if (error && !String(error.message).includes("duplicate")) throw error;
+  // Avisa al seguido (solo una vez hasta que lo lea).
+  void pushNotification({ userId, type: "follow" }).catch(() => {});
 }
 
 export async function unfollowUser(userId: string): Promise<void> {

@@ -21,6 +21,13 @@ do $$ begin
 exception when duplicate_object then null; end $$;
 
 do $$ begin
+  alter type public.notification_type add value if not exists 'follow';
+  alter type public.notification_type add value if not exists 'like';
+  alter type public.notification_type add value if not exists 'favorite';
+  alter type public.notification_type add value if not exists 'game';
+exception when duplicate_object then null; end $$;
+
+do $$ begin
   create type public.post_media_type as enum ('none','image','video','link');
 exception when duplicate_object then null; end $$;
 
@@ -440,13 +447,72 @@ create policy reposts_insert on public.reposts for insert with check (auth.uid()
 drop policy if exists reposts_delete on public.reposts;
 create policy reposts_delete on public.reposts for delete using (auth.uid() = user_id);
 
--- notifications: solo el dueño
+-- notifications: solo el dueño lee/actualiza. El INSERT se permite a quien
+-- actúa (actor_id = auth.uid()) para que otras cuentas puedan notificarle,
+-- y la función push_notification (security definer) centraliza las reglas.
 drop policy if exists notif_read on public.notifications;
 create policy notif_read on public.notifications for select using (auth.uid() = user_id);
 drop policy if exists notif_insert on public.notifications;
-create policy notif_insert on public.notifications for insert with check (auth.uid() = user_id);
+create policy notif_insert on public.notifications for insert with check (auth.uid() = actor_id);
 drop policy if exists notif_update on public.notifications;
 create policy notif_update on public.notifications for update using (auth.uid() = user_id);
+
+-- ─────────────── NOTIFICACIONES: crear (con reglas de «solo lo importante») ───────────────
+-- La usan follows, comentarios, respuestas, reacciones, reposts y menciones.
+-- Reglas:
+--  * No notificar a uno mismo.
+--  * No duplicar reacciones del mismo actor sobre el mismo objetivo sin leer.
+--  * Un follow solo notifica una vez (si ya existe una del mismo actor, no duplica).
+create or replace function public.push_notification(
+  _user_id uuid,
+  _actor_id uuid,
+  _type public.notification_type,
+  _post_id uuid default null,
+  _comment_id uuid default null
+) returns void
+language plpgsql security definer set search_path = public
+as $$
+begin
+  if _user_id is null or _actor_id is null or _user_id = _actor_id then
+    return;
+  end if;
+  -- Reacciones: solo la primera cuenta (hasta que se lea); las demás se ignoran.
+  if _type in ('reaction', 'like', 'favorite') then
+    if exists (
+      select 1 from public.notifications n
+      where n.user_id = _user_id
+        and n.actor_id = _actor_id
+        and n.type = _type
+        and n.post_id is not distinct from _post_id
+        and n.comment_id is not distinct from _comment_id
+        and n.read = false
+    ) then
+      return;
+    end if;
+  end if;
+  -- Follows: si ya notificaste a esta persona y no lo ha leído, no acumular.
+  if _type = 'follow' then
+    if exists (
+      select 1 from public.notifications n
+      where n.user_id = _user_id and n.actor_id = _actor_id and n.type = 'follow' and n.read = false
+    ) then
+      return;
+    end if;
+  end if;
+  insert into public.notifications (user_id, actor_id, type, post_id, comment_id)
+  values (_user_id, _actor_id, _type, _post_id, _comment_id);
+end;
+$$;
+
+grant execute on function public.push_notification(uuid, uuid, public.notification_type, uuid, uuid) to anon, authenticated, service_role;
+
+-- Realtime: cada usuario recibe solo sus propias notificaciones (RLS aplica).
+do $$
+begin
+  alter publication supabase_realtime add table public.notifications;
+exception when duplicate_object then null;
+  when others then null;
+end $$;
 
 -- reports
 drop policy if exists reports_read on public.reports;
