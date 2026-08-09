@@ -23,6 +23,7 @@ function kindMeta(k: OrbeTx["kind"]) {
     case "welcome_bonus": return { label: "Bienvenida", Icon: Gift, tone: "text-emerald-500" };
     case "game_purchase": return { label: "Compra de juego", Icon: Gamepad2, tone: "text-primary" };
     case "adjustment":    return { label: "Ajuste", Icon: Wallet, tone: "text-muted-foreground" };
+    default:              return { label: "Movimiento", Icon: Wallet, tone: "text-muted-foreground" };
   }
 }
 

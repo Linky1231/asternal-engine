@@ -173,7 +173,7 @@ export function GameCard({
       <div
         onClick={play}
         className="relative aspect-[16/10] grid place-items-center cursor-pointer active:scale-[0.99] transition overflow-hidden"
-        style={post.signed_cover ? undefined : { background: "linear-gradient(135deg, oklch(0.72 0.17 250 / 0.25), oklch(0.72 0.17 250 / 0.1))" }}
+        style={post.signed_cover ? undefined : { background: "linear-gradient(135deg, oklch(0.67 0.14 250 / 0.25), oklch(0.67 0.14 250 / 0.1))" }}
       >
         {post.signed_cover ? (
           <>
@@ -181,7 +181,7 @@ export function GameCard({
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
           </>
         ) : (
-          <div className="absolute inset-0 opacity-40" style={{ background: "radial-gradient(circle at 30% 30%, oklch(0.72 0.17 250 / 0.35), transparent 60%)" }} />
+          <div className="absolute inset-0 opacity-40" style={{ background: "radial-gradient(circle at 30% 30%, oklch(0.67 0.14 250 / 0.35), transparent 60%)" }} />
         )}
         <button
           className="relative w-16 h-16 rounded-full bg-white/95 backdrop-blur grid place-items-center shadow-xl active:scale-95 hover:scale-105 transition-transform duration-200"

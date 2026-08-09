@@ -900,7 +900,7 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
                   <button key={c} onClick={() => setColor(c)} className="aspect-square rounded-md transition-all min-h-[20px]" style={{
                     background: c,
                     boxShadow: color.toLowerCase() === c.toLowerCase()
-                      ? "inset 0 0 0 1.5px white, 0 0 0 2px oklch(0.72 0.17 250 / 0.7)"
+                      ? "inset 0 0 0 1.5px white, 0 0 0 2px oklch(0.67 0.14 250 / 0.7)"
                       : "inset 0 0 0 1px oklch(1 0 0 / 0.12)",
                     transform: color.toLowerCase() === c.toLowerCase() ? "scale(1.08)" : undefined,
                   }} aria-label={c} />

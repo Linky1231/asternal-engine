@@ -477,7 +477,7 @@ export function ProfilePanel({
           className={`relative z-10 flex-1 flex items-center justify-center gap-1 sm:gap-2 py-2 rounded-xl text-[10px] sm:text-xs font-display tracking-wide sm:tracking-widest whitespace-nowrap transition-colors ${tab === "gallery" ? "text-primary-foreground" : "text-muted-foreground"}`}>
           <Palette size={13} className="hidden sm:block shrink-0" /> <span className="truncate">GALERÍA · {artworks.length}</span>
         </button>
-        <div className="absolute top-1 bottom-1 w-[calc(33.333%_-_4px)] rounded-xl bg-gradient-to-r from-primary to-accent shadow-[0_4px_14px_-4px_oklch(0.68_0.21_250/0.55)] transition-transform duration-300 ease-out"
+        <div className="absolute top-1 bottom-1 w-[calc(33.333%_-_4px)] rounded-xl bg-gradient-to-r from-primary to-accent shadow-[0_4px_14px_-4px_oklch(0.63_0.17_250/0.55)] transition-transform duration-300 ease-out"
           style={{ transform: `translateX(${tab === "games" ? "0%" : tab === "posts" ? "calc(100% + 6px)" : "calc(200% + 12px)"})` }} />
       </div>
 

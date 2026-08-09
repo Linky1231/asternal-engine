@@ -1,12 +1,43 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, Gamepad2, Clock, BarChart3, Loader2, ChevronRight, ExternalLink } from "lucide-react";
+import { Heart, Gamepad2, Clock, BarChart3, Loader2, Flame, CalendarDays, TrendingUp, Award } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import type { PostWithMeta } from "@/lib/social/api";
-import { getMyLikedPosts, getAggregatedPlayTime, formatPlayTime } from "@/lib/social/history";
+import {
+  getMyLikedPosts,
+  getAggregatedPlayTime,
+  getUsageStats,
+  getTopGame,
+  formatPlayTime,
+} from "@/lib/social/history";
 import { UserName } from "./UserName";
 
 type HistoryTab = "games" | "likes";
+
+/** Tarjeta compacta de estadística. */
+function StatCard({ icon, label, value, sub, tone }: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  sub?: string;
+  tone?: "primary" | "accent" | "emerald" | "rose";
+}) {
+  const toneCls =
+    tone === "primary" ? "from-primary/15 to-accent/10 text-primary"
+    : tone === "accent" ? "from-accent/15 to-primary/10 text-accent"
+    : tone === "emerald" ? "from-emerald-500/15 to-teal-500/10 text-emerald-600 dark:text-emerald-400"
+    : "from-rose-500/15 to-pink-500/10 text-rose-500";
+  return (
+    <div className="panel rounded-xl border border-border/50 p-2.5 flex flex-col gap-1 min-w-0">
+      <div className={`w-7 h-7 rounded-lg bg-gradient-to-br grid place-items-center ${toneCls}`}>
+        {icon}
+      </div>
+      <div className="text-sm font-semibold font-display leading-tight truncate">{value}</div>
+      <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider truncate">{label}</div>
+      {sub && <div className="text-[9px] text-muted-foreground/60 truncate">{sub}</div>}
+    </div>
+  );
+}
 
 export function HistorySection() {
   const [tab, setTab] = useState<HistoryTab>("games");
@@ -16,6 +47,9 @@ export function HistorySection() {
 
   const agg = getAggregatedPlayTime();
   const sortedGames = Array.from(agg.entries()).sort((a, b) => b[1].lastPlayed.localeCompare(a[1].lastPlayed));
+  const stats = getUsageStats();
+  const topGame = getTopGame("total");
+  const max7 = Math.max(1, ...stats.last7.map(d => d.seconds));
 
   useEffect(() => {
     // Simulate loading time for the view transition
@@ -53,8 +87,85 @@ export function HistorySection() {
           </div>
         </div>
 
+        {/* Estadísticas de uso */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
+          <StatCard
+            icon={<Flame size={13} />}
+            label="Hoy"
+            value={formatPlayTime(stats.today.seconds)}
+            sub={`${stats.today.sessions} sesión${stats.today.sessions !== 1 ? "es" : ""} · ${stats.today.uniqueGames} juego${stats.today.uniqueGames !== 1 ? "s" : ""}`}
+            tone="primary"
+          />
+          <StatCard
+            icon={<CalendarDays size={13} />}
+            label="7 días"
+            value={formatPlayTime(stats.week.seconds)}
+            sub={`${stats.week.sessions} sesiones · ${stats.week.uniqueGames} juegos`}
+            tone="accent"
+          />
+          <StatCard
+            icon={<TrendingUp size={13} />}
+            label="30 días"
+            value={formatPlayTime(stats.month.seconds)}
+            sub={`${stats.month.sessions} sesiones · ${stats.month.uniqueGames} juegos`}
+            tone="emerald"
+          />
+          <StatCard
+            icon={<CalendarDays size={13} />}
+            label="Este año"
+            value={formatPlayTime(stats.year.seconds)}
+            sub={`${stats.year.sessions} sesiones · ${stats.year.uniqueGames} juegos`}
+            tone="accent"
+          />
+          <StatCard
+            icon={<BarChart3 size={13} />}
+            label="Total"
+            value={formatPlayTime(stats.total.seconds)}
+            sub={`${stats.total.sessions} sesiones · ${stats.total.uniqueGames} juegos`}
+            tone="primary"
+          />
+          <StatCard
+            icon={<Flame size={13} />}
+            label="Racha"
+            value={`${stats.streakDays} día${stats.streakDays !== 1 ? "s" : ""}`}
+            sub={stats.bestDay ? `Mejor día: ${stats.bestDay.seconds >= 3600 ? formatPlayTime(stats.bestDay.seconds) : `${Math.floor(stats.bestDay.seconds / 60)}m`}` : "Sin actividad"}
+            tone="rose"
+          />
+        </div>
+
+        {/* Mini gráfica de los últimos 7 días + top juego */}
+        <div className="flex gap-3 items-end">
+          <div className="flex-1 min-w-0">
+            <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1.5">Últimos 7 días</div>
+            <div className="flex items-end gap-1 h-12">
+              {stats.last7.map((d, i) => (
+                <div key={i} className="flex-1 flex flex-col items-center gap-1 min-w-0">
+                  <div
+                    className="w-full rounded-md bg-gradient-to-t from-primary/70 to-accent/70 transition-all hover:from-primary hover:to-accent"
+                    style={{ height: `${Math.max(6, (d.seconds / max7) * 100)}%`, minHeight: 4 }}
+                    title={formatPlayTime(d.seconds)}
+                  />
+                  <span className="text-[7px] font-mono text-muted-foreground/60 truncate w-full text-center">{d.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          {topGame && (
+            <div className="shrink-0 max-w-[38%]">
+              <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1.5">Más jugado</div>
+              <div className="panel rounded-xl border border-border/50 px-2.5 py-2 flex items-center gap-2">
+                <Award size={14} className="text-primary shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-[11px] font-medium truncate">{topGame.title}</div>
+                  <div className="text-[9px] font-mono text-muted-foreground">{formatPlayTime(topGame.seconds)}</div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Sub-tabs */}
-        <div className="relative flex bg-muted/40 rounded-xl p-0.5">
+        <div className="relative flex bg-muted/40 rounded-xl p-0.5 mt-3">
           <button
             onClick={() => setTab("games")}
             className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-display tracking-widest transition-colors ${

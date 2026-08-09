@@ -48,7 +48,7 @@ function ConfettiBurst({ active }: { active: boolean }) {
           style={{
             left: `${45 + (i % 5) * 3}%`, top: `${30 + (i % 7) * 4}%`,
             width: 3 + (i % 4), height: 3 + (i % 4),
-            background: ["oklch(0.55 0.22 258)","oklch(0.72 0.14 235)","oklch(0.65 0.2 150)","oklch(0.85 0.2 85)"][i % 4],
+            background: ["oklch(0.52 0.19 258)","oklch(0.72 0.14 235)","oklch(0.65 0.2 150)","oklch(0.85 0.2 85)"][i % 4],
             animation: `confetti-fall ${1 + (i % 4) * 0.3}s ease-out ${(i % 8) * 0.05}s both`,
             opacity: 0,
           }}
@@ -78,7 +78,7 @@ function Star({ index }: { index: number }) {
 function CircuitLines() {
   return (
     <svg className="absolute inset-0 w-full h-full opacity-[0.05]" xmlns="http://www.w3.org/2000/svg" fill="none" preserveAspectRatio="none">
-      <g stroke="oklch(0.55 0.22 258)" strokeWidth="0.7">
+      <g stroke="oklch(0.52 0.19 258)" strokeWidth="0.7">
         <path d="M0 12% H 35% V 7% H 65%" />
         <path d="M0 24% H 20% V 18% H 55%" />
         <path d="M100% 10% H 68% V 5% H 45%" />
@@ -86,7 +86,7 @@ function CircuitLines() {
         <path d="M35% 100% V 60% H 60%" />
         <path d="M70% 100% V 50% H 88%" />
       </g>
-      <g fill="oklch(0.55 0.22 258)">
+      <g fill="oklch(0.52 0.19 258)">
         <circle cx="35%" cy="7%" r="2.2" />
         <circle cx="65%" cy="7%" r="2.2" />
         <circle cx="20%" cy="18%" r="2.2" />
@@ -112,7 +112,7 @@ const SPRITE_PX = [
   "·","b","b","b","b","b","b","·",
 ];
 const PX_COLORS: Record<string, string> = {
-  c: "oklch(0.55 0.22 258)",
+  c: "oklch(0.52 0.19 258)",
   s: "oklch(0.84 0.12 85)",
   e: "oklch(0.25 0.02 250)",
   b: "oklch(0.62 0.14 252)",
@@ -129,8 +129,8 @@ function CreatorRobot() {
       </div>
       {/* Head */}
       <div className="w-12 h-11 rounded-[10px] bg-gradient-to-b from-white to-white/70 border-2 border-primary/25 shadow-lg flex items-center justify-center gap-[3px]">
-        <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_6px_oklch(0.55_0.22_258/0.6)]" />
-        <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_6px_oklch(0.55_0.22_258/0.6)]" />
+        <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_6px_oklch(0.52_0.19_258/0.6)]" />
+        <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_6px_oklch(0.52_0.19_258/0.6)]" />
       </div>
       {/* Neck */}
       <div className="w-1.5 h-2 bg-primary/20 mx-auto" />
@@ -215,7 +215,7 @@ function HeroScene() {
 
           {/* Ambient glows */}
           <div className="absolute left-1/2 top-[42%] -translate-x-1/2 -translate-y-1/2 w-[360px] h-[360px] rounded-full animate-mesh-grad"
-            style={{ background: "radial-gradient(circle, oklch(0.55 0.22 258 / 0.14), transparent 62%)" }} />
+            style={{ background: "radial-gradient(circle, oklch(0.52 0.19 258 / 0.14), transparent 62%)" }} />
           <div className="absolute left-1/2 top-[42%] -translate-x-1/2 -translate-y-1/2 w-[220px] h-[220px] rounded-full animate-mesh-grad-alt"
             style={{ background: "radial-gradient(circle, oklch(0.72 0.14 235 / 0.12), transparent 60%)" }} />
 
@@ -226,7 +226,7 @@ function HeroScene() {
               <div className="absolute inset-8 rounded-full border border-accent/10" style={{ transform: "rotateX(68deg)" }} />
               <div className="absolute inset-0" style={{ transform: "rotateX(68deg)" }}>
                 <div className="absolute inset-0 animate-orbit-slow" style={{ animationDuration: "16s" }}>
-                  <div className="absolute left-1/2 top-0 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-primary/80 shadow-[0_0_12px_oklch(0.55_0.22_258/0.8)]" />
+                  <div className="absolute left-1/2 top-0 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-primary/80 shadow-[0_0_12px_oklch(0.52_0.19_258/0.8)]" />
                 </div>
               </div>
               <div className="absolute inset-8" style={{ transform: "rotateX(68deg)" }}>
@@ -249,11 +249,11 @@ function HeroScene() {
               <div className="w-5 h-8 rounded-t-lg rounded-b-sm bg-gradient-to-b from-accent to-primary/40 shadow-lg shadow-accent/30 rotate-12" />
             </div>
             {/* Disc */}
-            <div className="relative -mt-1 z-10 w-[250px] h-[54px] rounded-[50%] bg-gradient-to-b from-white/90 to-white/40 border border-white/70 shadow-[0_25px_60px_-15px_oklch(0.55_0.22_258/0.4)]">
+            <div className="relative -mt-1 z-10 w-[250px] h-[54px] rounded-[50%] bg-gradient-to-b from-white/90 to-white/40 border border-white/70 shadow-[0_25px_60px_-15px_oklch(0.52_0.19_258/0.4)]">
               <div className="absolute inset-0 rounded-[50%] overflow-hidden opacity-40"
                 style={{
                   background:
-                    "repeating-linear-gradient(90deg, transparent 0 13px, oklch(0.55 0.22 258 / 0.1) 13px 14px), repeating-linear-gradient(0deg, transparent 0 13px, oklch(0.55 0.22 258 / 0.1) 13px 14px)",
+                    "repeating-linear-gradient(90deg, transparent 0 13px, oklch(0.52 0.19 258 / 0.1) 13px 14px), repeating-linear-gradient(0deg, transparent 0 13px, oklch(0.52 0.19 258 / 0.1) 13px 14px)",
                 }} />
               <div className="absolute left-1/2 top-0 -translate-x-1/2 w-3/4 h-[3px] rounded-full bg-white/80 blur-[1px]" />
             </div>
@@ -329,7 +329,7 @@ function FloatInput({
     <div className="space-y-1">
       <div className="relative group/input">
         <div className={`absolute -inset-1 rounded-xl opacity-0 blur-sm transition-opacity duration-500 ${focused ? 'opacity-100' : ''}`}
-          style={{ background: "radial-gradient(ellipse at center, oklch(0.55 0.22 258 / 0.06), transparent 70%)" }}
+          style={{ background: "radial-gradient(ellipse at center, oklch(0.52 0.19 258 / 0.06), transparent 70%)" }}
         />
         <div className={`relative flex items-center border rounded-xl bg-white transition-all duration-300 ${
           focused
@@ -535,10 +535,10 @@ function AuthPage() {
       {/* ─── Background layers ─── */}
       <div className="fixed inset-0 pointer-events-none select-none overflow-hidden" style={{ transform: "translateZ(0)" }}>
         {/* Base glow */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,oklch(0.55_0.22_258/0.09),transparent)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,oklch(0.52_0.19_258/0.09),transparent)]" />
         {/* Mesh blobs */}
         <div className="absolute -top-[30%] -left-[20%] w-[70%] h-[70%] opacity-50 animate-mesh-grad"
-          style={{ background: "radial-gradient(circle at 30% 50%, oklch(0.55 0.22 258 / 0.07), transparent 60%)" }} />
+          style={{ background: "radial-gradient(circle at 30% 50%, oklch(0.52 0.19 258 / 0.07), transparent 60%)" }} />
         <div className="absolute -bottom-[30%] -right-[20%] w-[70%] h-[70%] opacity-50 animate-mesh-grad-alt"
           style={{ background: "radial-gradient(circle at 70% 50%, oklch(0.72 0.14 235 / 0.06), transparent 60%)" }} />
         {/* Stars */}
@@ -549,7 +549,7 @@ function AuthPage() {
         <svg className="absolute inset-0 w-full h-full opacity-[0.02]" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <pattern id="dot-grid-auth" x="0" y="0" width="28" height="28" patternUnits="userSpaceOnUse">
-              <circle cx="1" cy="1" r="0.5" fill="oklch(0.55 0.22 258)" />
+              <circle cx="1" cy="1" r="0.5" fill="oklch(0.52 0.19 258)" />
             </pattern>
           </defs>
           <rect width="100%" height="100%" fill="url(#dot-grid-auth)" />
@@ -636,7 +636,7 @@ function AuthPage() {
               animation: loaded ? 'fade-in-up 800ms 700ms cubic-bezier(0.22,1,0.36,1) both' : 'none',
             }}>
                 {/* Tarjeta premium: borde degradado + sombras en capas + radius 24px */}
-                <div className="relative rounded-3xl p-px bg-gradient-to-b from-white/70 via-white/25 to-primary/15 shadow-[0_30px_80px_-20px_oklch(0.55_0.22_258/0.3),0_10px_30px_-10px_oklch(0.55_0.22_258/0.18)]">
+                <div className="relative rounded-3xl p-px bg-gradient-to-b from-white/70 via-white/25 to-primary/15 shadow-[0_30px_80px_-20px_oklch(0.52_0.19_258/0.3),0_10px_30px_-10px_oklch(0.52_0.19_258/0.18)]">
                   <div className="relative bg-white/75 backdrop-blur-md rounded-[calc(1.5rem-1px)] p-7 overflow-hidden group/form-card">
 
                     {/* Shine superior */}

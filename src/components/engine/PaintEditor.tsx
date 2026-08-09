@@ -878,7 +878,7 @@ export function PaintEditor({ onSave, onClose, size: initialSize = 512 }: Props)
                 {PALETTE.map((c) => (
                   <button key={c} onClick={() => setColor(c)} className="aspect-square rounded-lg transition-all" style={{
                     background: c,
-                    boxShadow: color.toLowerCase() === c.toLowerCase() ? "inset 0 0 0 1.5px oklch(1 0 0 / 0.9), 0 0 0 2px oklch(0.72 0.17 250 / 0.7)" : "inset 0 0 0 1px oklch(1 0 0 / 0.12)",
+                    boxShadow: color.toLowerCase() === c.toLowerCase() ? "inset 0 0 0 1.5px oklch(1 0 0 / 0.9), 0 0 0 2px oklch(0.67 0.14 250 / 0.7)" : "inset 0 0 0 1px oklch(1 0 0 / 0.12)",
                     transform: color.toLowerCase() === c.toLowerCase() ? "scale(1.06)" : undefined,
                   }} aria-label={c} />
                 ))}

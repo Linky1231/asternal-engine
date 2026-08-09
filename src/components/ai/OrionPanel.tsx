@@ -1,9 +1,19 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  X, Send, Sparkles, Loader2, Trash2, Bot, Rocket, Zap, HelpCircle,
+  X, Send, Sparkles, Loader2, Trash2, Bot, Rocket, HelpCircle, Plus, MessageSquare, ChevronDown, Check, Zap,
 } from "lucide-react";
 import { orionChatStream, needsCodingModel, type OrionMessage } from "@/lib/ai/orion";
+import {
+  loadOrionChats,
+  saveOrionChats,
+  loadOrionActiveChat,
+  saveOrionActiveChat,
+  createOrionChat,
+  orionTitleFrom,
+  type OrionStoredChat,
+  type OrionStoredMsg,
+} from "@/lib/ai/orion";
 
 /** Renders texto con bloques de código y markdown básico sin dependencias. */
 function RichText({ text }: { text: string }) {
@@ -35,21 +45,12 @@ const QUICK_PROMPTS = [
   "¿Cómo se crean escenas y personajes?",
 ];
 
-const WELCOME = `¡Hola! 👋 Soy **Orión**, tu asistente de desarrollo de juegos.
-
-Conozco a fondo el **motor de Asternal** (entidades, escenas, scripting, animaciones, sonido y nube). Estoy aquí para ayudarte a crear tu juego de forma profesional, paso a paso.
-
-Pregúntame lo que quieras: cómo funciona el motor, ideas para tu juego, o cómo resolver algo concreto. 🚀`;
-
-interface Msg {
-  role: "user" | "assistant";
-  content: string;
-  model?: string;
-  cost?: number;
-}
+const WELCOME = `¡Hola! 👋 Soy **Orión**, tu asistente de desarrollo de juegos.\n\nConozco a fondo el **motor de Asternal** (entidades, escenas, scripting, animaciones, sonido y nube). Estoy aquí para ayudarte a crear tu juego de forma profesional, paso a paso.\n\nPregúntame lo que quieras: cómo funciona el motor, ideas para tu juego, o cómo resolver algo concreto. 🚀`;
 
 export default function OrionPanel({ onClose }: { onClose: () => void }) {
-  const [messages, setMessages] = useState<Msg[]>([{ role: "assistant", content: WELCOME }]);
+  const [chats, setChats] = useState<OrionStoredChat[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [balance, setBalance] = useState<number | null>(null);
@@ -58,6 +59,44 @@ export default function OrionPanel({ onClose }: { onClose: () => void }) {
   const taRef = useRef<HTMLTextAreaElement>(null);
   const busyRef = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
+  const messagesRef = useRef<OrionStoredMsg[]>([]);
+
+  const activeChat = useMemo(
+    () => chats.find(c => c.id === activeId) ?? null,
+    [chats, activeId]
+  );
+  const messages = activeChat?.messages ?? [];
+
+  // Sincroniza el ref con los mensajes del chat activo para el envío.
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
+  // Restaura chats guardados al abrir el panel.
+  useEffect(() => {
+    const saved = loadOrionChats();
+    if (saved.length) {
+      setChats(saved);
+      const last = loadOrionActiveChat();
+      const target = saved.find(c => c.id === last) ?? saved[0];
+      setActiveId(target.id);
+    } else {
+      const fresh = createOrionChat();
+      setChats([fresh]);
+      setActiveId(fresh.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persiste los chats en cada cambio.
+  useEffect(() => {
+    if (!chats.length) return;
+    saveOrionChats(chats);
+  }, [chats]);
+
+  useEffect(() => {
+    if (activeId) saveOrionActiveChat(activeId);
+  }, [activeId]);
 
   // Cancela la petición en curso si se cierra el panel.
   useEffect(() => {
@@ -74,7 +113,7 @@ export default function OrionPanel({ onClose }: { onClose: () => void }) {
 
   useEffect(() => {
     taRef.current?.focus();
-  }, []);
+  }, [activeId]);
 
   const stop = useCallback(() => {
     abortRef.current?.abort();
@@ -83,28 +122,41 @@ export default function OrionPanel({ onClose }: { onClose: () => void }) {
     setBusy(false);
   }, []);
 
+  const patchActiveMessages = useCallback((fn: (prev: OrionStoredMsg[]) => OrionStoredMsg[]) => {
+    setChats(prev => prev.map(c => (c.id === activeId ? { ...c, messages: fn(c.messages), updatedAt: new Date().toISOString() } : c)));
+  }, [activeId]);
+
   const send = useCallback(
     async (text: string) => {
       const q = text.trim();
-      if (!q || busyRef.current) return;
+      if (!q || busyRef.current || !activeId) return;
       busyRef.current = true;
       setBusy(true);
       setErr(null);
-      setMessages((prev) => [...prev, { role: "user", content: q }]);
+      patchActiveMessages(prev => [...prev, { role: "user", content: q }]);
       // Burbuja de respuesta vacía: se va rellenando en vivo con el streaming.
-      setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
+      patchActiveMessages(prev => [...prev, { role: "assistant", content: "" }]);
       setInput("");
+      // Título del chat con la primera pregunta (solo si aún no tiene título propio).
+      setChats(prev => prev.map(c => {
+        if (c.id !== activeId) return c;
+        const userCount = c.messages.filter(m => m.role === "user").length;
+        if (userCount <= 1 && (c.title === "Nueva conversación" || c.title === "Conversación")) {
+          return { ...c, title: orionTitleFrom(q) };
+        }
+        return c;
+      }));
       const controller = new AbortController();
       abortRef.current = controller;
       try {
-        const history: OrionMessage[] = messages
+        const history: OrionMessage[] = messagesRef.current
           .filter((m) => m.role !== "assistant" || m.content !== WELCOME)
           .concat({ role: "user", content: q })
           .map((m) => ({ role: m.role, content: m.content }));
         const res = await orionChatStream(
           history,
           (delta) => {
-            setMessages((prev) => {
+            patchActiveMessages(prev => {
               const next = [...prev];
               const last = next[next.length - 1];
               if (last && last.role === "assistant") {
@@ -118,7 +170,7 @@ export default function OrionPanel({ onClose }: { onClose: () => void }) {
             signal: controller.signal,
           }
         );
-        setMessages((prev) => {
+        patchActiveMessages(prev => {
           const next = [...prev];
           const last = next[next.length - 1];
           if (last && last.role === "assistant") {
@@ -135,7 +187,7 @@ export default function OrionPanel({ onClose }: { onClose: () => void }) {
       } catch (e) {
         // Si el usuario detuvo el stream, no mostrar error.
         if ((e as Error).name === "AbortError") return;
-        setMessages((prev) => {
+        patchActiveMessages(prev => {
           const next = [...prev];
           const last = next[next.length - 1];
           if (last && last.role === "assistant" && !last.content) {
@@ -151,13 +203,32 @@ export default function OrionPanel({ onClose }: { onClose: () => void }) {
         taRef.current?.focus();
       }
     },
-    [messages]
+    [activeId, patchActiveMessages]
   );
 
-  const clear = useCallback(() => {
-    setMessages([{ role: "assistant", content: WELCOME }]);
+  const newChat = useCallback(() => {
+    stop();
+    const fresh = createOrionChat();
+    setChats(prev => [fresh, ...prev]);
+    setActiveId(fresh.id);
     setErr(null);
-  }, []);
+    setPickerOpen(false);
+    setInput("");
+    setTimeout(() => taRef.current?.focus(), 50);
+  }, [stop]);
+
+  const deleteChat = useCallback((id: string) => {
+    if (busyRef.current) stop();
+    const next = chats.filter(c => c.id !== id);
+    if (id === activeId) {
+      const fallback = next[0] ?? createOrionChat();
+      setChats(next.length ? next : [fallback]);
+      setActiveId(fallback.id);
+    } else {
+      setChats(next);
+    }
+    setErr(null);
+  }, [chats, activeId, stop]);
 
   return (
     <motion.div
@@ -170,22 +241,22 @@ export default function OrionPanel({ onClose }: { onClose: () => void }) {
     >
       {/* Cabecera */}
       <header className="shrink-0 border-b border-border/60 bg-background/80 backdrop-blur-md">
-        <div className="max-w-2xl md:max-w-3xl mx-auto flex items-center gap-3 px-4 py-3">
+        <div className="max-w-2xl md:max-w-3xl mx-auto flex items-center gap-2.5 px-4 py-3">
           <div
             className="relative shrink-0 rounded-full grid place-items-center text-primary-foreground"
             style={{
-              width: 44,
-              height: 44,
+              width: 42,
+              height: 42,
               padding: 2,
               background: "conic-gradient(from 210deg, var(--color-primary), var(--color-accent), var(--color-primary))",
-              boxShadow: "0 4px 16px -6px oklch(0.55 0.22 258/0.55)",
+              boxShadow: "0 4px 16px -6px oklch(0.52 0.19 258/0.5)",
             }}
           >
             <div
               className="w-full h-full rounded-full grid place-items-center"
               style={{ background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))" }}
             >
-              <Bot size={20} strokeWidth={2.2} className="drop-shadow-[0_1px_2px_rgba(0,0,0,0.25)]" />
+              <Bot size={19} strokeWidth={2.2} className="drop-shadow-[0_1px_2px_rgba(0,0,0,0.25)]" />
             </div>
           </div>
           <div className="min-w-0 flex-1">
@@ -205,12 +276,79 @@ export default function OrionPanel({ onClose }: { onClose: () => void }) {
               )}
             </div>
           </div>
+
+          {/* Selector de chats */}
+          <div className="relative shrink-0">
+            <button
+              onClick={() => setPickerOpen(o => !o)}
+              className="flex items-center gap-1.5 max-w-[140px] sm:max-w-[200px] rounded-xl border border-border/70 bg-card px-2.5 py-1.5 active:scale-95 transition text-left"
+              title="Cambiar de conversación"
+            >
+              <MessageSquare size={13} className="text-primary shrink-0" />
+              <span className="text-[11px] font-medium truncate flex-1">
+                {activeChat?.title ?? "Conversación"}
+              </span>
+              <ChevronDown size={12} className="text-muted-foreground shrink-0" />
+            </button>
+            <AnimatePresence>
+              {pickerOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -6, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -6, scale: 0.97 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute right-0 top-full mt-1.5 w-64 rounded-2xl border border-border bg-card shadow-xl overflow-hidden z-30"
+                >
+                  <div className="flex items-center justify-between px-3 py-2 border-b border-border/50">
+                    <span className="text-[9px] font-display tracking-widest text-muted-foreground">
+                      CONVERSACIONES
+                    </span>
+                    <span className="text-[9px] font-mono text-muted-foreground/60">{chats.length}</span>
+                  </div>
+                  <div className="max-h-56 overflow-y-auto no-scrollbar py-1">
+                    {chats.map(c => (
+                      <button
+                        key={c.id}
+                        onClick={() => {
+                          setActiveId(c.id);
+                          setPickerOpen(false);
+                          setErr(null);
+                          stop();
+                        }}
+                        className={`w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/40 transition ${
+                          c.id === activeId ? "bg-primary/[0.06]" : ""
+                        }`}
+                      >
+                        <MessageSquare size={12} className={`shrink-0 ${c.id === activeId ? "text-primary" : "text-muted-foreground/60"}`} />
+                        <span className="flex-1 min-w-0">
+                          <span className="block text-[11px] font-medium truncate">{c.title}</span>
+                          <span className="block text-[9px] font-mono text-muted-foreground/50 truncate">
+                            {c.messages.length} mensaje{c.messages.length !== 1 ? "s" : ""} ·{" "}
+                            {new Date(c.updatedAt).toLocaleDateString("es", { day: "numeric", month: "short" })}
+                          </span>
+                        </span>
+                        {c.id === activeId && <Check size={12} className="text-primary shrink-0" />}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); deleteChat(c.id); }}
+                          className="p-1 rounded-md text-muted-foreground/50 hover:text-rose-500 hover:bg-rose-500/10 transition shrink-0"
+                          title="Eliminar conversación"
+                        >
+                          <Trash2 size={11} />
+                        </button>
+                      </button>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
           <button
-            onClick={clear}
-            title="Limpiar conversación"
-            className="w-9 h-9 rounded-xl border border-border/70 bg-background grid place-items-center active:scale-95 transition shrink-0 text-muted-foreground hover:text-rose-500"
+            onClick={newChat}
+            title="Nueva conversación"
+            className="w-9 h-9 rounded-xl border border-border/70 bg-card grid place-items-center active:scale-95 transition shrink-0 text-primary hover:border-primary/40"
           >
-            <Trash2 size={15} />
+            <Plus size={15} />
           </button>
           <button
             onClick={onClose}
@@ -224,6 +362,33 @@ export default function OrionPanel({ onClose }: { onClose: () => void }) {
       {/* Mensajes */}
       <div className="flex-1 overflow-y-auto no-scrollbar">
         <div className="max-w-2xl md:max-w-3xl mx-auto px-4 py-4 space-y-4">
+          {messages.length === 0 && !busy && (
+            <div className="flex flex-col items-center justify-center pt-10 pb-4 text-center">
+              <div
+                className="w-16 h-16 rounded-full grid place-items-center text-primary-foreground mb-3"
+                style={{ background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))", boxShadow: "0 8px 30px -8px oklch(0.52 0.19 258/0.5)" }}
+              >
+                <Bot size={28} />
+              </div>
+              <div className="font-display text-sm font-semibold">Nueva conversación</div>
+              <div className="text-[11px] text-muted-foreground max-w-[240px] mt-1">
+                Pregúntale a Orión sobre el motor, tu juego o cómo resolver algo concreto.
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-md mt-5">
+                {QUICK_PROMPTS.map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => void send(p)}
+                    className="text-left px-3 py-2.5 rounded-xl border border-border bg-card hover:border-primary/40 hover:bg-primary/[0.04] active:scale-[0.98] transition text-[11px] text-muted-foreground hover:text-foreground flex items-start gap-2"
+                  >
+                    <Sparkles size={12} className="text-primary shrink-0 mt-0.5" />
+                    <span>{p}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {messages.map((m, i) => (
             <div key={i} className={`flex gap-2 ${m.role === "user" ? "justify-end" : "justify-start"}`}>
               {m.role === "assistant" && (
@@ -237,7 +402,7 @@ export default function OrionPanel({ onClose }: { onClose: () => void }) {
               <div
                 className={`max-w-[82%] rounded-2xl px-3.5 py-2.5 shadow-sm ${
                   m.role === "user"
-                    ? "bg-gradient-to-br from-primary to-accent text-primary-foreground rounded-br-md shadow-[0_4px_14px_-6px_oklch(0.55_0.22_258/0.45)]"
+                    ? "bg-gradient-to-br from-primary to-accent text-primary-foreground rounded-br-md shadow-[0_4px_14px_-6px_oklch(0.52_0.19_258/0.45)]"
                     : "bg-card border border-border rounded-bl-md"
                 }`}
               >
@@ -281,21 +446,6 @@ export default function OrionPanel({ onClose }: { onClose: () => void }) {
             </div>
           )}
 
-          {messages.length <= 1 && !busy && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-              {QUICK_PROMPTS.map((p) => (
-                <button
-                  key={p}
-                  onClick={() => void send(p)}
-                  className="text-left px-3 py-2.5 rounded-xl border border-border bg-card hover:border-primary/40 hover:bg-primary/[0.04] active:scale-[0.98] transition text-[11px] text-muted-foreground hover:text-foreground flex items-start gap-2"
-                >
-                  <Sparkles size={12} className="text-primary shrink-0 mt-0.5" />
-                  <span>{p}</span>
-                </button>
-              ))}
-            </div>
-          )}
-
           <div ref={endRef} />
         </div>
       </div>
@@ -322,13 +472,13 @@ export default function OrionPanel({ onClose }: { onClose: () => void }) {
             <button
               onClick={() => void send(input)}
               disabled={busy || !input.trim()}
-              className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center active:scale-95 transition shrink-0 disabled:opacity-40 disabled:active:scale-100 shadow-[0_4px_12px_-5px_oklch(0.55_0.22_258/0.5)]"
+              className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center active:scale-95 transition shrink-0 disabled:opacity-40 disabled:active:scale-100 shadow-[0_4px_12px_-5px_oklch(0.52_0.19_258/0.5)]"
             >
               <Send size={15} />
             </button>
           </div>
           <div className="flex items-center justify-center gap-1 pt-2 text-[9px] text-muted-foreground/50">
-            <Rocket size={9} /> Orión conoce el motor de Asternal · responde en español
+            <Rocket size={9} /> Orión conoce el motor de Asternal · recuerda tus conversaciones
             <HelpCircle size={9} className="ml-1" />
           </div>
         </div>

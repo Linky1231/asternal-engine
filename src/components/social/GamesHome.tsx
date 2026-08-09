@@ -32,6 +32,15 @@ export function GamesHome({
     return () => { alive = false; };
   }, [games]);
 
+  // Ranking de los más jugados en las últimas 24 horas (real).
+  const ranking24 = useMemo(() => {
+    return [...games]
+      .map(g => ({ g, n: playCounts[g.id] ?? 0 }))
+      .filter(x => x.n > 0)
+      .sort((a, b) => b.n - a.n)
+      .slice(0, 10);
+  }, [games, playCounts]);
+
   const sections = useMemo(() => {
     if (!games.length) return null;
     const scored = [...games];
@@ -88,15 +97,6 @@ export function GamesHome({
 
   const { featured, continuePlaying, recommended, trends } = sections;
   const trendList = trends[trend];
-
-  // Ranking de los más jugados en las últimas 24 horas (real).
-  const ranking24 = useMemo(() => {
-    return [...games]
-      .map(g => ({ g, n: playCounts[g.id] ?? 0 }))
-      .filter(x => x.n > 0)
-      .sort((a, b) => b.n - a.n)
-      .slice(0, 10);
-  }, [games, playCounts]);
 
   return (
     <div className="space-y-5">

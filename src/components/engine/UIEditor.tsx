@@ -464,7 +464,7 @@ export function UIEditor({ scene, onChange }: Props) {
       {/* Preview canvas — square edges, fills entire surface */}
       <div ref={wrapRef} className="absolute inset-0 overflow-hidden flex items-center justify-center"
         style={{ paddingTop: 76, paddingBottom: sheetH + 8 }}>
-        <div className="relative border border-primary/30 shadow-[0_0_24px_oklch(0.68_0.21_250/0.3)] overflow-hidden bg-black"
+        <div className="relative border border-primary/30 shadow-[0_0_24px_oklch(0.63_0.17_250/0.3)] overflow-hidden bg-black"
           style={{ width: size.w, height: size.h }}>
           <canvas
             ref={canvasRef}
@@ -604,7 +604,7 @@ function ElementInspector({ el, update, remove, clone }: {
         <div className="grid grid-cols-9 gap-1">
           {ANCHORS.map(a => (
             <button key={a} onClick={() => update({ anchor: a })}
-              className={`h-8 rounded-lg text-[10px] font-mono border transition-all active:scale-[0.94] ${el.anchor === a ? "bg-primary/30 border-primary text-primary-glow shadow-[0_0_12px_oklch(0.72_0.17_250/0.5)]" : "border-white/10 bg-white/[0.03] text-muted-foreground hover:bg-white/[0.06]"}`}>
+              className={`h-8 rounded-lg text-[10px] font-mono border transition-all active:scale-[0.94] ${el.anchor === a ? "bg-primary/30 border-primary text-primary-glow shadow-[0_0_12px_oklch(0.67_0.14_250/0.5)]" : "border-white/10 bg-white/[0.03] text-muted-foreground hover:bg-white/[0.06]"}`}>
               {a}
             </button>
           ))}
@@ -670,7 +670,7 @@ function ElementInspector({ el, update, remove, clone }: {
               const labels: Record<UIAction, string> = { none: "NINGUNA", left: "IZQ.", right: "DER.", jump: "SALTAR", restart: "REINICIAR", exit: "SALIR", event: "EVENTO" };
               return (
                 <button key={a} onClick={() => update({ action: a })}
-                  className={`py-1.5 rounded-lg text-[10px] font-display tracking-widest border transition active:scale-[0.94] ${(el.action ?? "none") === a ? "bg-primary/25 border-primary text-primary-glow shadow-[0_0_12px_oklch(0.72_0.17_250/0.45)]" : "border-white/10 bg-white/[0.03] text-muted-foreground hover:bg-white/[0.06]"}`}>
+                  className={`py-1.5 rounded-lg text-[10px] font-display tracking-widest border transition active:scale-[0.94] ${(el.action ?? "none") === a ? "bg-primary/25 border-primary text-primary-glow shadow-[0_0_12px_oklch(0.67_0.14_250/0.45)]" : "border-white/10 bg-white/[0.03] text-muted-foreground hover:bg-white/[0.06]"}`}>
                   {labels[a]}
                 </button>
               );
@@ -690,7 +690,7 @@ function ElementInspector({ el, update, remove, clone }: {
               const labels: Record<UIBind, string> = { none: "NINGUNO", score: "PUNTOS", lives: "VIDAS", time: "TIEMPO" };
               return (
                 <button key={b} onClick={() => update({ bind: b })}
-                  className={`py-1.5 rounded-lg text-[10px] font-display tracking-widest border transition active:scale-[0.94] ${(el.bind ?? "none") === b ? "bg-primary/25 border-primary text-primary-glow shadow-[0_0_12px_oklch(0.72_0.17_250/0.45)]" : "border-white/10 bg-white/[0.03] text-muted-foreground hover:bg-white/[0.06]"}`}>
+                  className={`py-1.5 rounded-lg text-[10px] font-display tracking-widest border transition active:scale-[0.94] ${(el.bind ?? "none") === b ? "bg-primary/25 border-primary text-primary-glow shadow-[0_0_12px_oklch(0.67_0.14_250/0.45)]" : "border-white/10 bg-white/[0.03] text-muted-foreground hover:bg-white/[0.06]"}`}>
                   {labels[b]}
                 </button>
               );

@@ -51,6 +51,83 @@ export interface OrionError {
   error: string;
 }
 
+// ───────────────────────── Persistencia de chats ─────────────────────────
+
+export interface OrionStoredMsg {
+  role: "user" | "assistant";
+  content: string;
+  model?: string;
+  cost?: number;
+}
+
+export interface OrionStoredChat {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  messages: OrionStoredMsg[];
+}
+
+const CHATS_KEY = "orion_chats_v1";
+const ACTIVE_KEY = "orion_active_chat_v1";
+const MAX_CHATS = 50;
+
+function safeGet(key: string): string | null {
+  try { return localStorage.getItem(key); } catch { return null; }
+}
+
+function safeSet(key: string, value: string): void {
+  try { localStorage.setItem(key, value); } catch { /* quota */ }
+}
+
+/** Carga todos los chats guardados de Orión, más reciente primero. */
+export function loadOrionChats(): OrionStoredChat[] {
+  const raw = safeGet(CHATS_KEY);
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as OrionStoredChat[];
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter(c => c && typeof c.id === "string" && Array.isArray(c.messages))
+      .sort((a, b) => (b.updatedAt ?? "").localeCompare(a.updatedAt ?? ""));
+  } catch { return []; }
+}
+
+/** Guarda la lista completa de chats. */
+export function saveOrionChats(chats: OrionStoredChat[]): void {
+  safeSet(CHATS_KEY, JSON.stringify(chats.slice(0, MAX_CHATS)));
+}
+
+/** Devuelve el id del chat activo guardado (o null). */
+export function loadOrionActiveChat(): string | null {
+  return safeGet(ACTIVE_KEY);
+}
+
+/** Recuerda qué chat estaba abierto. */
+export function saveOrionActiveChat(id: string | null): void {
+  if (id) safeSet(ACTIVE_KEY, id);
+  else safeSet(ACTIVE_KEY, "");
+}
+
+/** Crea un chat nuevo con título derivado de la primera pregunta. */
+export function createOrionChat(title = "Nueva conversación"): OrionStoredChat {
+  const now = new Date().toISOString();
+  return {
+    id: `orion_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+    title,
+    createdAt: now,
+    updatedAt: now,
+    messages: [],
+  };
+}
+
+/** Genera un título corto a partir del primer mensaje del usuario. */
+export function orionTitleFrom(text: string): string {
+  const clean = text.replace(/\s+/g, " ").trim();
+  if (!clean) return "Nueva conversación";
+  return clean.length > 42 ? `${clean.slice(0, 42)}…` : clean;
+}
+
 const SYSTEM_PROMPT = `Eres Orión, el asistente de inteligencia artificial de Asternal: una herramienta profesional para desarrolladores de videojuegos, pensada especialmente para creadores independientes (indie). Hablas siempre en español (aunque el usuario escriba en otro idioma, responde en el idioma del usuario).
 
 Tu misión es ayudar a los desarrolladores a crear juegos de forma profesional usando el motor de Asternal. Tienes acceso al código fuente completo del motor (tipos de entidades, escenas, scripting, animaciones, sonido, imágenes, almacenamiento y sincronización en la nube).
