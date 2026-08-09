@@ -444,7 +444,7 @@ function MessageBubble({
         <div
           className={
             mine
-              ? "bg-gradient-to-br from-primary to-accent text-primary-foreground rounded-2xl rounded-br-md px-3 py-2 shadow-[0_4px_14px_-6px_oklch(0.488_0.185_264/0.45)]"
+              ? "bg-gradient-to-br from-primary to-accent text-primary-foreground rounded-2xl rounded-br-md px-3 py-2 shadow-[0_4px_14px_-6px_oklch(0.55_0.22_258/0.45)]"
               : "bg-card border border-border rounded-2xl rounded-bl-md px-3 py-2 shadow-sm"
           }
         >
@@ -521,7 +521,7 @@ function AnnouncementCard({ m, sender }: { m: ChatMessage; sender?: Profile | nu
     <div className="relative overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/[0.12] via-accent/[0.08] to-transparent px-3.5 py-3 shadow-sm">
       <div className="absolute -right-8 -top-8 w-28 h-28 rounded-full bg-primary/15 blur-2xl pointer-events-none" />
       <div className="relative flex items-start gap-2.5">
-        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center shrink-0 shadow-[0_4px_12px_-6px_oklch(0.488_0.185_264/0.6)]">
+        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center shrink-0 shadow-[0_4px_12px_-6px_oklch(0.55_0.22_258/0.6)]">
           <Megaphone size={14} />
         </div>
         <div className="min-w-0 flex-1">
@@ -567,7 +567,7 @@ function PollCard({
       <div className="absolute -right-8 -top-8 w-28 h-28 rounded-full bg-accent/15 blur-2xl pointer-events-none" />
       <div className="relative">
         <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center shrink-0 shadow-[0_4px_10px_-6px_oklch(0.488_0.185_264/0.5)]">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center shrink-0 shadow-[0_4px_10px_-6px_oklch(0.55_0.22_258/0.5)]">
             <BarChart3 size={13} />
           </div>
           <span className="text-[9px] font-display tracking-[0.18em] text-primary font-bold">ENCUESTA</span>
@@ -748,7 +748,7 @@ function GiftCard({
             animate={open ? { scale: [1, 1.06, 1] } : { scale: 1 }}
             transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
             style={{ willChange: "transform" }}
-            className="w-12 h-12 shrink-0 rounded-2xl bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center shadow-[0_8px_20px_-8px_oklch(0.488_0.185_264/0.6)]"
+            className="w-12 h-12 shrink-0 rounded-2xl bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center shadow-[0_8px_20px_-8px_oklch(0.55_0.22_258/0.6)]"
           >
             <Gift size={22} strokeWidth={2} />
             <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/20 pointer-events-none" />
@@ -803,7 +803,7 @@ function GiftCard({
             <button
               onClick={onClaim}
               disabled={claiming || expiring}
-              className="w-full py-2.5 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-[11px] font-display tracking-widest shadow-[0_6px_16px_-6px_oklch(0.488_0.185_264/0.5)] active:scale-[0.98] transition disabled:opacity-50 flex items-center justify-center gap-1.5"
+              className="w-full py-2.5 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-[11px] font-display tracking-widest shadow-[0_6px_16px_-6px_oklch(0.55_0.22_258/0.5)] active:scale-[0.98] transition disabled:opacity-50 flex items-center justify-center gap-1.5"
             >
               {claiming ? <Loader2 size={13} className="animate-spin" /> : <Gift size={13} />}
               {claiming ? "ABRIENDO…" : "ABRIR REGALO"}
@@ -838,7 +838,7 @@ function GiftCard({
                   style={{ willChange: "transform, opacity" }}
                   className="text-center px-4"
                 >
-                  <div className="w-14 h-14 mx-auto mb-2.5 rounded-2xl bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center shadow-[0_8px_20px_-8px_oklch(0.488_0.185_264/0.6)]">
+                  <div className="w-14 h-14 mx-auto mb-2.5 rounded-2xl bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center shadow-[0_8px_20px_-8px_oklch(0.55_0.22_258/0.6)]">
                     <Sparkles size={26} />
                   </div>
                   <div className="text-sm font-bold text-white drop-shadow">¡+{claimedAmount ?? gift.amount_per_person} ORBES!</div>
@@ -2526,7 +2526,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                 setView("group");
                 setActiveDm(null);
               }}
-              className={`flex-1 py-1.5 rounded-xl text-[10px] font-display tracking-[0.14em] flex items-center justify-center gap-1.5 transition active:scale-[0.98] ${view === "group" ? "bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[0_4px_12px_-5px_oklch(0.488_0.185_264/0.5)]" : "bg-card border border-border text-muted-foreground hover:text-foreground"}`}
+              className={`flex-1 py-1.5 rounded-xl text-[10px] font-display tracking-[0.14em] flex items-center justify-center gap-1.5 transition active:scale-[0.98] ${view === "group" ? "bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[0_4px_12px_-5px_oklch(0.55_0.22_258/0.5)]" : "bg-card border border-border text-muted-foreground hover:text-foreground"}`}
             >
               <Users size={12} /> GRUPO
             </button>
@@ -2537,7 +2537,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                 setActiveDm(null);
                 void loadGroupList();
               }}
-              className={`relative flex-1 py-1.5 rounded-xl text-[10px] font-display tracking-[0.14em] flex items-center justify-center gap-1.5 transition active:scale-[0.98] ${view === "groups" ? "bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[0_4px_12px_-5px_oklch(0.488_0.185_264/0.5)]" : "bg-card border border-border text-muted-foreground hover:text-foreground"}`}
+              className={`relative flex-1 py-1.5 rounded-xl text-[10px] font-display tracking-[0.14em] flex items-center justify-center gap-1.5 transition active:scale-[0.98] ${view === "groups" ? "bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[0_4px_12px_-5px_oklch(0.55_0.22_258/0.5)]" : "bg-card border border-border text-muted-foreground hover:text-foreground"}`}
             >
               <Users2 size={12} /> GRUPOS
               {totalGroupUnread > 0 && (
@@ -2553,7 +2553,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                 void loadDmList();
               }}
 
-              className={`relative flex-1 py-1.5 rounded-xl text-[10px] font-display tracking-[0.14em] flex items-center justify-center gap-1.5 transition active:scale-[0.98] ${view === "dms" ? "bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[0_4px_12px_-5px_oklch(0.488_0.185_264/0.5)]" : "bg-card border border-border text-muted-foreground hover:text-foreground"}`}
+              className={`relative flex-1 py-1.5 rounded-xl text-[10px] font-display tracking-[0.14em] flex items-center justify-center gap-1.5 transition active:scale-[0.98] ${view === "dms" ? "bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[0_4px_12px_-5px_oklch(0.55_0.22_258/0.5)]" : "bg-card border border-border text-muted-foreground hover:text-foreground"}`}
             >
               <MessageCircle size={12} /> DIRECTOS
               {totalDmUnread > 0 && (
@@ -3158,7 +3158,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
           <button
             onClick={() => void (pendingMedia ? sendPendingMedia() : handleSend())}
             disabled={!draft.trim() && !pendingMedia}
-            className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center active:scale-95 transition shrink-0 disabled:opacity-40 disabled:active:scale-100 shadow-[0_4px_12px_-5px_oklch(0.488_0.185_264/0.5)]"
+            className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center active:scale-95 transition shrink-0 disabled:opacity-40 disabled:active:scale-100 shadow-[0_4px_12px_-5px_oklch(0.55_0.22_258/0.5)]"
           >
             <Send size={15} />
           </button>

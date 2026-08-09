@@ -201,7 +201,7 @@ export function AsternalEditor() {
               onClick={() => setTab(id)}
               className={`relative flex flex-col items-center gap-1 py-3 rounded-xl transition-all duration-300 active:scale-[0.93] ${
                 tab === id
-                  ? "text-primary-glow bg-primary/15 border border-primary/40 shadow-[0_4px_18px_-6px_oklch(0.72_0.17_250/0.6)]"
+                  ? "text-primary-glow bg-primary/15 border border-primary/40 shadow-[0_4px_18px_-6px_oklch(0.7_0.16_240/0.6)]"
                   : "text-muted-foreground border border-transparent hover:bg-white/[0.04] hover:text-primary-glow/80"
               }`}
             >
@@ -421,7 +421,7 @@ export function AsternalEditor() {
                 onClick={() => setTool(toolItem.id)}
                 className={`shrink-0 flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl min-w-[64px] border transition-colors duration-200 active:scale-[0.94] ${
                   tool === toolItem.id
-                    ? "bg-primary/20 border-primary text-primary-glow shadow-[0_0_12px_oklch(0.68_0.21_250/0.45)]"
+                    ? "bg-primary/20 border-primary text-primary-glow shadow-[0_0_12px_oklch(0.66_0.19_246/0.45)]"
                     : "bg-white/[0.03] border-white/[0.06] text-muted-foreground hover:border-primary/40 hover:text-primary-glow"
                 }`}
               >
@@ -559,7 +559,7 @@ function LibrarySheet({
 
 function Logo() {
   return (
-    <a href="/" title="Volver al menú principal" className="relative w-9 h-9 rounded-md bg-gradient-to-br from-primary to-accent grid place-items-center shadow-[0_0_16px_oklch(0.68_0.21_250/0.7)] active:scale-95 transition">
+    <a href="/" title="Volver al menú principal" className="relative w-9 h-9 rounded-md bg-gradient-to-br from-primary to-accent grid place-items-center shadow-[0_0_16px_oklch(0.66_0.19_246/0.7)] active:scale-95 transition">
       <span className="font-display text-lg text-primary-foreground">A</span>
     </a>
   );
@@ -910,7 +910,7 @@ function SettingsPanel({ project, onChange }: { project: Project; onChange: (p: 
               onClick={() => set({ fpsCap: f as 30 | 60 })}
               className={`flex-1 py-2 rounded-xl font-display border transition active:scale-[0.96] ${
                 project.settings.fpsCap === f
-                  ? "bg-primary/25 border-primary text-primary-glow shadow-[0_0_14px_oklch(0.72_0.17_250/0.4)]"
+                  ? "bg-primary/25 border-primary text-primary-glow shadow-[0_0_14px_oklch(0.7_0.16_240/0.4)]"
                   : "border-white/10 bg-white/[0.04] text-muted-foreground hover:bg-white/[0.07]"
               }`}
             >{f}</button>
@@ -999,7 +999,7 @@ function Field({ label, value, onChange }: { label: string; value: string; onCha
       <input
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="w-full mt-1 bg-input/60 border border-border rounded-md px-3 py-2 text-sm font-mono focus:outline-none focus:border-primary focus:shadow-[0_0_0_3px_oklch(0.68_0.21_250/0.2)]"
+        className="w-full mt-1 bg-input/60 border border-border rounded-md px-3 py-2 text-sm font-mono focus:outline-none focus:border-primary focus:shadow-[0_0_0_3px_oklch(0.66_0.19_246/0.2)]"
       />
     </div>
   );
@@ -1015,7 +1015,7 @@ function Slider({ label, value, min, max, step, onChange }: { label: string; val
       <input
         type="range" min={min} max={max} step={step} value={value}
         onChange={e => onChange(Number(e.target.value))}
-        className="w-full accent-[oklch(0.68_0.21_250)]"
+        className="w-full accent-[oklch(0.66_0.19_246)]"
       />
     </div>
   );

@@ -69,7 +69,7 @@ export function AnimationEditor({ entity, onChange, onClose }: Props) {
               onClick={() => setActiveId(c.id)}
               className={`shrink-0 px-3 py-1.5 rounded-md min-w-[72px] border transition flex flex-col items-center gap-0.5 ${
                 activeId === c.id
-                  ? "bg-primary/20 border-primary text-primary-glow shadow-[0_0_12px_oklch(0.68_0.21_250/0.5)]"
+                  ? "bg-primary/20 border-primary text-primary-glow shadow-[0_0_12px_oklch(0.66_0.19_246/0.5)]"
                   : "border-border/40 text-muted-foreground"
               }`}
             >
@@ -274,7 +274,7 @@ function ClipPanel({
         <input
           type="range" min={1} max={30} step={1} value={clip.fps}
           onChange={e => onUpdate({ fps: Number(e.target.value) })}
-          className="w-full accent-[oklch(0.68_0.21_250)]"
+          className="w-full accent-[oklch(0.66_0.19_246)]"
         />
       </div>
 

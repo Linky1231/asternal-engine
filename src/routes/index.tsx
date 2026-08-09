@@ -208,7 +208,7 @@ function HomePage() {
       <header className="app-header sticky top-0 z-20 bg-background/92 backdrop-blur-xl border-b border-border/60">
         <div className={`max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto flex items-center gap-1.5 sm:gap-2.5 px-3 sm:px-4 ${inPreview ? "pt-14 pb-3" : "py-3"}`}>
           <button onClick={() => navigate({ to: "/profile" })} title="Mi perfil"
-            className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-gradient-to-br from-primary to-accent grid place-items-center shadow-[0_2px_10px_-3px_oklch(0.488_0.185_264/0.45)] active:scale-95 transition overflow-hidden shrink-0">
+            className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-gradient-to-br from-primary to-accent grid place-items-center shadow-[0_2px_10px_-3px_oklch(0.55_0.22_258/0.45)] active:scale-95 transition overflow-hidden shrink-0">
             {me?.avatar_url ? (
               <img src={me.avatar_url} alt="avatar" className="w-full h-full object-cover" />
             ) : (
@@ -247,7 +247,7 @@ function HomePage() {
               onKeyDown={e => e.key === "Enter" && reload(tab)}
               placeholder={tab === "games" ? "Buscar juegos…" : "Buscar publicaciones…"}
               className="flex-1 bg-input/50 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40" />
-            <button onClick={() => reload(tab)} className="px-3 py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-xs font-display tracking-widest shadow-[0_2px_8px_-3px_oklch(0.488_0.185_264/0.4)] active:scale-95 transition">IR</button>
+            <button onClick={() => reload(tab)} className="px-3 py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-xs font-display tracking-widest shadow-[0_2px_8px_-3px_oklch(0.55_0.22_258/0.4)] active:scale-95 transition">IR</button>
           </div>
         )}
 
@@ -383,7 +383,7 @@ function HomePage() {
       {/* Floating CTA to editor */}
       <Link
         to="/editor"
-        className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-[max(1.25rem,env(safe-area-inset-right))] z-30 h-14 pl-4 pr-5 rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[0_6px_24px_-6px_oklch(0.488_0.185_264/0.5)] flex items-center gap-2 active:scale-95 transition font-display tracking-widest text-xs"
+        className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-[max(1.25rem,env(safe-area-inset-right))] z-30 h-14 pl-4 pr-5 rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[0_6px_24px_-6px_oklch(0.55_0.22_258/0.5)] flex items-center gap-2 active:scale-95 transition font-display tracking-widest text-xs"
       >
         <Plus size={18} /> CREAR
       </Link>
@@ -546,7 +546,7 @@ function FeedSubTabs({ value, onChange }: { value: FeedSub; onChange: (v: FeedSu
             onClick={() => onChange(it.id)}
             className={`flex-1 min-w-[86px] shrink-0 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-full text-[10px] sm:text-[11px] font-display tracking-wide sm:tracking-widest whitespace-nowrap transition-all duration-200 outline-none focus:outline-none ${
               active
-              ? "bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[0_2px_8px_-3px_oklch(0.488_0.185_264/0.35)]"
+              ? "bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[0_2px_8px_-3px_oklch(0.55_0.22_258/0.35)]"
               : "bg-background text-muted-foreground hover:text-foreground"
             }`}
             style={active ? undefined : { boxShadow: "inset 0 0 0 1px var(--color-border)" }}

@@ -164,7 +164,7 @@ export function GlobalSearchPanel({
       onClick={onClick}
       className={`shrink-0 px-3 py-1.5 rounded-full text-[10px] font-display tracking-wider transition active:scale-95 ${
         active
-          ? "bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[0_4px_10px_-5px_oklch(0.488_0.185_264/0.5)]"
+          ? "bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[0_4px_10px_-5px_oklch(0.55_0.22_258/0.5)]"
           : "bg-card border border-border text-muted-foreground hover:text-foreground"
       }`}
     >
