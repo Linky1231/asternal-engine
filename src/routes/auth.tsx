@@ -26,18 +26,6 @@ function friendlyAuthError(msg: string): string {
   return msg;
 }
 
-/* ─── Logo oficial de Google ─── */
-function GoogleIcon({ className = "" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 48 48" className={className} aria-hidden="true">
-      <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/>
-      <path fill="#FF3D00" d="m6.306 14.691 6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/>
-      <path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0 1 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/>
-      <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/>
-    </svg>
-  );
-}
-
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Asternal — Acceso a la plataforma" }] }),
   component: AuthPage,
@@ -449,42 +437,15 @@ function AuthPage() {
   const [showPw, setShowPw] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
-  const [googleBusy, setGoogleBusy] = useState(false);
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const usernameRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      // Tras el redirect de Google, los tokens llegan en el hash de la URL.
-      // El cliente se creó con detectSessionInUrl:false, así que la sesión se
-      // recupera aquí de forma explícita (setSession) antes de comprobar si ya
-      // hay una sesión activa.
-      const params = new URLSearchParams(window.location.hash.slice(1));
-      const accessToken = params.get("access_token");
-      if (accessToken) {
-        const { error } = await (
-          supabase.auth as unknown as {
-            setSession: (s: { access_token: string; refresh_token?: string }) => Promise<{ error: Error | null }>;
-          }
-        ).setSession({
-          access_token: accessToken,
-          refresh_token: params.get("refresh_token") ?? undefined,
-        });
-        if (!error) {
-          // Limpia el hash para no re-procesarlo en recargas posteriores.
-          window.history.replaceState(null, "", window.location.pathname + window.location.search);
-        }
-      }
-      if (cancelled) return;
-      const { data } = await supabase.auth.getSession();
+    supabase.auth.getSession().then(({ data }) => {
       if (data?.session) navigate({ to: "/" });
-    })();
+    });
     requestAnimationFrame(() => setLoaded(true));
-    return () => {
-      cancelled = true;
-    };
   }, [navigate]);
 
   const clearErrors = () => { setErr(null); setFieldErrors({}); };
@@ -542,41 +503,6 @@ function AuthPage() {
       else if (/password|contraseña/i.test(msg))
         setFieldErrors(prev => ({ ...prev, password: friendly }));
     } finally { setBusy(false); }
-  };
-
-  /** Inicia sesión con Google (Supabase OAuth). */
-  const handleGoogleSignIn = async () => {
-    clearErrors();
-    setSuccessMsg(null);
-    setGoogleBusy(true);
-    try {
-      const { error } = await (
-        supabase.auth.signInWithOAuth as unknown as (c: {
-          provider: "google";
-          options?: { redirectTo?: string; queryParams?: Record<string, string> };
-        }) => Promise<{ error: Error | null }>
-      )({ provider: "google", options: { redirectTo: `${window.location.origin}/auth` } });
-      if (error) throw error;
-      // El flujo redirige a Google; si el navegador lo bloquea (pop-up),
-      // el usuario ve un aviso para volver a intentarlo.
-    } catch (e) {
-      const msg = (e as Error).message;
-      const m = msg.toLowerCase();
-      if (/provider is not enabled|not enabled|oauth|unable to get access token|no provider/i.test(m)) {
-        setErr(
-          "El acceso con Google aún no está activado en la base de datos. Actívalo en Supabase → Authentication → Providers → Google (añade tu Client ID y Client Secret de Google Cloud) y guarda. Luego vuelve a intentarlo."
-        );
-      } else if (/redirect|url|allowlist|allow list/i.test(m)) {
-        setErr(
-          "Google redirige de vuelta a una URL que Supabase no reconoce. Añade esta URL a Supabase → Authentication → URL Configuration → Redirect URLs: " +
-            `${window.location.origin}/auth`
-        );
-      } else {
-        setErr(friendlyAuthError(msg));
-      }
-    } finally {
-      setGoogleBusy(false);
-    }
   };
 
   return (
@@ -722,31 +648,6 @@ function AuthPage() {
                           {m === "signin" ? "ACCEDER" : "REGISTRARSE"}
                         </button>
                       ))}
-                    </div>
-
-                    {/* Continuar con Google */}
-                    <div style={{ animation: 'slide-in-up 300ms cubic-bezier(0.22,1,0.36,1) both', animationDelay: '140ms' }}>
-                      <button type="button" onClick={() => void handleGoogleSignIn()} disabled={busy || googleBusy}
-                        className="relative w-full py-2.5 rounded-xl border border-border/70 bg-white hover:border-primary/40 hover:shadow-md hover:shadow-primary/5 active:scale-[0.98] transition-all duration-300 disabled:opacity-50 flex items-center justify-center gap-2.5 group/ggl">
-                        {googleBusy ? (
-                          <Loader2 size={16} className="animate-spin text-muted-foreground" />
-                        ) : (
-                          <GoogleIcon className="w-[18px] h-[18px] shrink-0" />
-                        )}
-                        <span className="text-sm font-semibold text-foreground/80 group-hover/ggl:text-foreground transition-colors">
-                          {googleBusy ? "Conectando con Google…" : "Continuar con Google"}
-                        </span>
-                      </button>
-                      <div className="relative my-4">
-                        <div className="absolute inset-0 flex items-center">
-                          <span className="w-full border-t border-border/40" />
-                        </div>
-                        <div className="relative flex justify-center">
-                          <span className="bg-white/80 backdrop-blur px-3 text-[10px] uppercase tracking-wider text-muted-foreground/40">
-                            o usa tu correo
-                          </span>
-                        </div>
-                      </div>
                     </div>
 
                     {/* Form */}
