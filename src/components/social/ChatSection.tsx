@@ -10,7 +10,6 @@ import {
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
-import logo from "@/assets/logo.svg";
 import {
   getCommunityChat,
   fetchChatMessages,
@@ -2043,13 +2042,11 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                   boxShadow: "0 4px 16px -6px oklch(0.488 0.185 264/0.55)",
                 }}
               >
-                <div className="w-full h-full rounded-full bg-background grid place-items-center overflow-hidden">
-                  <img
-                    src={logo}
-                    alt="Asternal"
-                    draggable={false}
-                    className="w-[34px] h-[34px] object-contain rounded-[10px]"
-                  />
+                <div
+                  className="w-full h-full rounded-full grid place-items-center text-primary-foreground"
+                  style={{ background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))" }}
+                >
+                  <MessagesSquare size={20} strokeWidth={2.2} className="drop-shadow-[0_1px_2px_rgba(0,0,0,0.25)]" />
                 </div>
               </div>
             ) : view === "dms" && activeDm ? (
@@ -2210,7 +2207,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
             }}
             className={`flex-1 py-1.5 rounded-xl text-[10px] font-display tracking-[0.14em] flex items-center justify-center gap-1.5 transition active:scale-[0.98] ${view === "group" ? "bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[0_4px_12px_-5px_oklch(0.488_0.185_264/0.5)]" : "bg-card border border-border text-muted-foreground hover:text-foreground"}`}
           >
-            <img src={logo} alt="" draggable={false} className="w-3.5 h-3.5 object-contain rounded-[3px] shrink-0" /> CHAT COMUNITARIO
+            <MessagesSquare size={12} /> CHAT COMUNITARIO
           </button>
           <button
             onClick={() => {
