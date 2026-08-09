@@ -74,9 +74,50 @@ export function buildOrionMessages(history: OrionMessage[]): OrionMessage[] {
   return [{ role: "system", content: SYSTEM_PROMPT }, ...history];
 }
 
+/** Detecta si la pregunta pide resolver código (usa el router de código). */
+export function needsCodingModel(q: string): boolean {
+  return /(c[oó]digo|code|script|function|api|funci[oó]n|clase|class|typescript|tsx|error|bug|debug|consola|console\.|import|export|variable|m[oó]dulo|componente|hook)/i.test(
+    q
+  );
+}
+
+function buildPayload(
+  history: OrionMessage[],
+  opts: { coding?: boolean; maxTokens?: number; temperature?: number; stream?: boolean } = {}
+) {
+  const messages = buildOrionMessages(history);
+  return {
+    model: opts.coding ? ORION_MODEL_CODING : ORION_MODEL,
+    messages,
+    max_tokens: opts.maxTokens ?? 900,
+    temperature: opts.temperature ?? 0.7,
+    ...(opts.stream ? { stream: true } : {}),
+  };
+}
+
+function parseErrorBody(res: Response, text: string): string {
+  try {
+    const j = JSON.parse(text) as { error?: { message?: string } | string; message?: string };
+    const detail = typeof j.error === "string" ? j.error : j.error?.message ?? j.message ?? "";
+    return detail || `(HTTP ${res.status})`;
+  } catch {
+    return text.slice(0, 200) || `(HTTP ${res.status})`;
+  }
+}
+
+function orionErrorForStatus(status: number, detail: string): Error {
+  if (status === 401 || status === 403) {
+    return new Error("La clave de la API de Orión no es válida o no tiene permisos.");
+  }
+  if (status === 429) {
+    return new Error("Límite de peticiones alcanzado. Espera unos segundos y reintenta.");
+  }
+  return new Error(`Orión respondió con un error (${status}).${detail ? ` ${detail}` : ""}`);
+}
+
 /**
- * Envía una petición de chat a Yielding Bear (OpenAI-compatible).
- * Devuelve el texto de la respuesta. Lanza OrionError con mensaje legible.
+ * Envía una petición de chat a Yielding Bear (OpenAI-compatible) por el proxy
+ * y devuelve el texto completo. Sin streaming: útil como respaldo.
  */
 export async function orionChat(
   history: OrionMessage[],
@@ -91,7 +132,7 @@ export async function orionChat(
   const payload = {
     model: opts.coding ? ORION_MODEL_CODING : ORION_MODEL,
     messages,
-    max_tokens: opts.maxTokens ?? 1200,
+    max_tokens: opts.maxTokens ?? 900,
     temperature: opts.temperature ?? 0.7,
   };
 
@@ -165,4 +206,119 @@ export async function orionChat(
     costUsd: data.cost_usd ?? 0,
     balanceUsd: data.balance_remaining_usd ?? 0,
   };
+}
+
+/**
+ * Chat con streaming (SSE): el texto aparece en vivo mientras se genera.
+ * onDelta recibe cada fragmento de texto según llega.
+ * Si el stream falla, reintenta con orionChat (sin streaming) y entrega el
+ * texto completo de una vez a través de onDelta.
+ */
+export async function orionChatStream(
+  history: OrionMessage[],
+  onDelta: (delta: string) => void,
+  opts: { coding?: boolean; maxTokens?: number; temperature?: number; signal?: AbortSignal } = {}
+): Promise<OrionResult> {
+  const payload = buildPayload(history, { ...opts, stream: true });
+
+  let res: Response;
+  try {
+    res = await fetch(ORION_PROXY_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: opts.signal,
+    });
+  } catch {
+    // Proxy inalcanzable → intento directo (puede fallar por CORS, pero por
+    // si acaso) y si tampoco, respaldo sin streaming.
+    try {
+      const r = await orionChat(history, opts);
+      onDelta(r.content);
+      return r;
+    } catch (e) {
+      throw new Error(
+        "No se pudo conectar con Orión. Comprueba tu conexión a internet e inténtalo de nuevo."
+      );
+    }
+  }
+
+  if (!res.ok) {
+    let detail = "";
+    try {
+      const text = await res.text();
+      detail = parseErrorBody(res, text);
+    } catch {
+      /* noop */
+    }
+    // El proxy devolvió error pero puede que la clave esté bien: si el proxy
+    // falla por algo distinto a credenciales, reintenta con el chat sin stream.
+    if (res.status !== 401 && res.status !== 403 && res.status !== 429) {
+      try {
+        const r = await orionChat(history, opts);
+        onDelta(r.content);
+        return r;
+      } catch {
+        /* cae al error original */
+      }
+    }
+    throw orionErrorForStatus(res.status, detail);
+  }
+
+  if (!res.body) {
+    const r = await orionChat(history, opts);
+    onDelta(r.content);
+    return r;
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let content = "";
+  let model = ORION_MODEL;
+  let finished = false;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+    for (const line of lines) {
+      const t = line.trim();
+      if (!t.startsWith("data:")) continue;
+      const data = t.slice(5).trim();
+      if (data.includes("[ORION_DONE]") || data === "[DONE]") {
+        finished = true;
+        break;
+      }
+      if (!data) continue;
+      try {
+        const j = JSON.parse(data) as {
+          choices?: { delta?: { content?: string | null }; message?: { content?: string } }[];
+          model?: string;
+        };
+        const delta =
+          j.choices?.[0]?.delta?.content ?? j.choices?.[0]?.message?.content ?? "";
+        if (delta) {
+          content += delta;
+          onDelta(delta);
+        }
+        if (j.model) model = j.model;
+      } catch {
+        /* fragmento no-JSON (keep-alive) → ignorar */
+      }
+    }
+    if (finished) break;
+  }
+
+  // Si el proxy respondió pero no llegó texto (p. ej. stream interrumpido a
+  // mitad), reintenta sin streaming para no dejar al usuario sin respuesta.
+  if (!content) {
+    const r = await orionChat(history, opts);
+    onDelta(r.content);
+    return r;
+  }
+
+  return { content, model, costUsd: 0, balanceUsd: 0 };
 }

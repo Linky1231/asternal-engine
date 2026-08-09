@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Play, Flame, Rocket, Heart, Sparkles as SparklesIcon, Users, ChevronRight, Gamepad2 } from "lucide-react";
+import { Play, Flame, Rocket, Heart, Sparkles as SparklesIcon, Users, ChevronRight, Gamepad2, Trophy } from "lucide-react";
 import type { PostWithMeta } from "@/lib/social/api";
+import { fetchGamePlayCounts24h } from "@/lib/social/api";
 import { GameIcon } from "./GameIcon";
 import { GameCard } from "./GameCard";
 
@@ -19,6 +20,17 @@ export function GamesHome({
 }) {
   const [selected, setSelected] = useState<PostWithMeta | null>(null);
   const [trend, setTrend] = useState<TrendTab>("hot");
+  const [playCounts, setPlayCounts] = useState<Record<string, number>>({});
+
+  // Cuenta real de jugadas en las últimas 24h para el ranking.
+  useEffect(() => {
+    let alive = true;
+    if (!games.length) { setPlayCounts({}); return; }
+    fetchGamePlayCounts24h(games.map(g => g.id))
+      .then(c => { if (alive) setPlayCounts(c); })
+      .catch(() => { if (alive) setPlayCounts({}); });
+    return () => { alive = false; };
+  }, [games]);
 
   const sections = useMemo(() => {
     if (!games.length) return null;
@@ -40,7 +52,14 @@ export function GamesHome({
     const now = Date.now();
     const week = 1000 * 60 * 60 * 24 * 7;
 
-    const hot = [...scored].sort((a, b) => (b.likes + b.comments_count) - (a.likes + a.comments_count));
+    // «Más jugados hoy»: primero por jugadas reales (24h); si aún no hay
+    // datos, cae al compromiso por interacciones.
+    const playsOf = (g: PostWithMeta) => playCounts[g.id] ?? 0;
+    const hot = [...scored].sort((a, b) => {
+      const pa = playsOf(a), pb = playsOf(b);
+      if (pa !== pb) return pb - pa;
+      return (b.likes + b.comments_count) - (a.likes + a.comments_count);
+    });
     const growing = [...scored]
       .filter(g => now - new Date(g.created_at).getTime() < week * 2)
       .sort((a, b) => b.likes - a.likes);
@@ -48,7 +67,7 @@ export function GamesHome({
     const brandNew = [...scored].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
     return { featured, continuePlaying, recommended, trends: { hot, growing, rated, new: brandNew } };
-  }, [games, myId]);
+  }, [games, myId, playCounts]);
 
   if (!sections) {
     return (
@@ -70,26 +89,38 @@ export function GamesHome({
   const { featured, continuePlaying, recommended, trends } = sections;
   const trendList = trends[trend];
 
+  // Ranking de los más jugados en las últimas 24 horas (real).
+  const ranking24 = useMemo(() => {
+    return [...games]
+      .map(g => ({ g, n: playCounts[g.id] ?? 0 }))
+      .filter(x => x.n > 0)
+      .sort((a, b) => b.n - a.n)
+      .slice(0, 10);
+  }, [games, playCounts]);
+
   return (
     <div className="space-y-5">
       {/* 1. Banner destacado */}
-      <FeaturedBanner post={featured} onPlay={() => setSelected(featured)} />
+      <FeaturedBanner post={featured} plays24={playCounts[featured.id] ?? 0} onPlay={() => setSelected(featured)} />
 
-      {/* 2. Continuar jugando */}
+      {/* 2. Ranking · Más jugados en las últimas 24h */}
+      <Ranking24 games={ranking24} totalGames={games.length} onOpen={setSelected} />
+
+      {/* 3. Continuar jugando */}
       {continuePlaying.length > 0 && (
         <Section title="Continuar jugando" subtitle="Retoma donde lo dejaste">
           <IconRow games={continuePlaying} onOpen={setSelected} />
         </Section>
       )}
 
-      {/* 3. Recomendados para ti */}
+      {/* 4. Recomendados para ti */}
       {recommended.length > 0 && (
         <Section title="Recomendados para ti" subtitle="En base a lo que juega la comunidad">
           <IconRow games={recommended} onOpen={setSelected} />
         </Section>
       )}
 
-      {/* 4. Tendencias */}
+      {/* 5. Tendencias */}
       <div className="space-y-2">
         <div className="flex items-end justify-between px-1">
           <div>
@@ -157,9 +188,93 @@ function TrendChip({ active, onClick, icon, label }: { active: boolean; onClick:
   );
 }
 
-function FeaturedBanner({ post, onPlay }: { post: PostWithMeta; onPlay: () => void }) {
+function Ranking24({ games, totalGames, onOpen }: {
+  games: { g: PostWithMeta; n: number }[];
+  totalGames: number;
+  onOpen: (g: PostWithMeta) => void;
+}) {
+  if (games.length === 0) {
+    return (
+      <section className="rounded-2xl border border-border/60 bg-card/60 p-3.5 flex items-center gap-3">
+        <div className="w-10 h-10 shrink-0 rounded-xl bg-primary/10 grid place-items-center">
+          <Trophy size={17} className="text-primary" />
+        </div>
+        <div className="min-w-0">
+          <div className="font-display text-[13px] leading-tight">Ranking · Más jugados (24h)</div>
+          <div className="text-[11px] text-muted-foreground">
+            {totalGames > 0
+              ? "Aún no hay jugadas registradas hoy. ¡Dale a JUGAR y sube a la cima!"
+              : "Cuando haya juegos publicados, aquí verás los más jugados."}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  const medals = ["text-amber-400", "text-slate-400", "text-amber-700"];
+
+  return (
+    <section className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/[0.06] to-accent/[0.05] p-3.5 space-y-2.5">
+      <div className="flex items-center gap-2">
+        <Trophy size={15} className="text-primary" />
+        <div className="font-display text-[13px] leading-tight">Ranking · Más jugados (24h)</div>
+        <span className="ml-auto text-[9px] font-mono text-muted-foreground/60">en vivo</span>
+      </div>
+      <div className="space-y-1.5">
+        {games.slice(0, 5).map(({ g, n }, i) => {
+          const title = extractTitle(g.content);
+          return (
+            <button
+              key={g.id}
+              onClick={() => onOpen(g)}
+              className="w-full flex items-center gap-2.5 rounded-xl bg-card/80 border border-border/50 px-2.5 py-2 text-left hover:border-primary/40 hover:bg-card active:scale-[0.99] transition"
+            >
+              <span className={`w-6 h-6 shrink-0 rounded-lg grid place-items-center font-display text-[11px] font-bold ${i < 3 ? `bg-gradient-to-br from-primary/20 to-accent/15 ${medals[i]}` : "text-muted-foreground/60 bg-muted/60"}`}>
+                {i + 1}
+              </span>
+              <div className="relative w-11 h-11 shrink-0 rounded-lg overflow-hidden border border-border/60 bg-muted/40">
+                {g.signed_cover ? (
+                  <img src={g.signed_cover} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full grid place-items-center text-muted-foreground/50">
+                    <Gamepad2 size={16} />
+                  </div>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-[12px] font-semibold truncate leading-tight">{title}</div>
+                <div className="text-[10px] font-mono text-muted-foreground truncate">
+                  @{g.author?.username ?? "jugador"}
+                </div>
+              </div>
+              <span className="shrink-0 flex items-center gap-1 px-2 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-display font-semibold tabular-nums">
+                <Flame size={10} fill="currentColor" /> {n}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      {games.length > 5 && (
+        <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-0.5 px-0.5 pt-0.5">
+          {games.slice(5).map(({ g, n }) => (
+            <button key={g.id} onClick={() => onOpen(g)} className="shrink-0">
+              <div className="relative">
+                <GameIcon post={g} onOpen={() => onOpen(g)} />
+                <span className="absolute -bottom-1 -right-1 flex items-center gap-0.5 px-1.5 h-4 rounded-full bg-primary text-primary-foreground text-[8px] font-bold tabular-nums shadow">
+                  <Flame size={7} fill="currentColor" /> {n}
+                </span>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function FeaturedBanner({ post, plays24, onPlay }: { post: PostWithMeta; plays24?: number; onPlay: () => void }) {
   const title = extractTitle(post.content);
-  const active = 1 + Math.floor((post.likes + post.comments_count) * 1.3);
+  const active = plays24 && plays24 > 0 ? plays24 : 1 + Math.floor((post.likes + post.comments_count) * 1.3);
   return (
     <div className="relative rounded-3xl overflow-hidden border border-primary/30 shadow-lg">
       <div className="relative aspect-[16/10] w-full md:aspect-[21/9]">
@@ -189,7 +304,10 @@ function FeaturedBanner({ post, onPlay }: { post: PostWithMeta; onPlay: () => vo
           </button>
         </div>
         <div className="flex items-center gap-3 text-white/90 text-[11px]">
-          <span className="flex items-center gap-1"><Users size={11} /> {active} activos</span>
+          <span className="flex items-center gap-1">
+            {plays24 && plays24 > 0 ? <Flame size={11} fill="currentColor" /> : <Users size={11} />}
+            {plays24 && plays24 > 0 ? `${plays24} jugados hoy` : `${active} activos`}
+          </span>
           <span className="flex items-center gap-1"><Heart size={11} fill="currentColor" /> {post.likes}</span>
         </div>
       </div>

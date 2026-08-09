@@ -15,7 +15,7 @@ function friendlyAuthError(msg: string): string {
     return "Límite de envíos de correo alcanzado (el servicio integrado de Supabase permite ~2 por hora). Registrarte y acceder NO requieren correo, así que puedes intentarlo de nuevo de inmediato. Si el error aparece en «¿Olvidaste tu contraseña?», espera ~1 hora o conecta un SMTP personalizado (ej. Resend) para subir el límite.";
   }
   if (/invalid login credentials|invalid credentials|incorrect (email|password)|password.*does not match/i.test(m)) {
-    return "Email o contraseña incorrectos. Revísalos e inténtalo de nuevo.";
+    return "Usuario o contraseña incorrectos. Revísalos e inténtalo de nuevo.";
   }
   if (/user already registered|already registered|email.*already.*exist/i.test(m)) {
     return "Ese email ya tiene una cuenta. Pulsa ACCEDER para entrar.";
@@ -463,6 +463,21 @@ function AuthPage() {
     setMode(m);
   };
 
+  /** Normaliza un nombre de usuario a la forma segura (minúsculas, a-z0-9_). */
+  const cleanUsername = (v: string) => v.trim().toLowerCase().replace(/[^a-z0-9_]/g, "");
+
+  /**
+   * Resuelve el identificador de acceso: si es un correo se usa tal cual;
+   * si es un nombre de usuario se mapea de forma determinista a
+   * <usuario>@asternal.app (la misma cuenta creada al registrarse sin correo).
+   */
+  const resolveLoginEmail = (identifier: string): string => {
+    const v = identifier.trim();
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return v;
+    const u = cleanUsername(v);
+    return `${u || "usuario"}@asternal.app`;
+  };
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     clearErrors();
@@ -472,8 +487,8 @@ function AuthPage() {
     if (mode === "signup") username.setTouched(true);
 
     const errors: Record<string, string> = {};
-    if (!email.value.trim()) errors.email = "El email es obligatorio";
-    if (mode === "signup" && !username.value.trim()) errors.username = "Elige un nombre de usuario";
+    if (!email.value.trim()) errors.email = "Escribe tu usuario o correo";
+    if (mode === "signup" && !cleanUsername(username.value)) errors.username = "Elige un nombre de usuario";
     if (!password.value) errors.password = "La contraseña es obligatoria";
     else if (password.value.length < 6) errors.password = "Mínimo 6 caracteres";
 
@@ -482,15 +497,22 @@ function AuthPage() {
     setBusy(true);
     try {
       if (mode === "signup") {
+        const u = cleanUsername(username.value);
+        // Sin correo no pasa nada: se usa <usuario>@asternal.app (determinista,
+        // sirve también para acceder después solo con el nombre de usuario).
+        const emailFinal = email.value.trim() || `${u}@asternal.app`;
         const { error } = await supabase.auth.signUp({
-          email: email.value, password: password.value,
-          options: { data: { username: username.value.trim() || email.value.split("@")[0] } },
+          email: emailFinal, password: password.value,
+          options: { data: { username: u } },
         });
         if (error) throw error;
         setSuccessMsg("Cuenta creada correctamente");
         setTimeout(() => navigate({ to: "/" }), 1000);
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email: email.value, password: password.value });
+        const { error } = await supabase.auth.signInWithPassword({
+          email: resolveLoginEmail(email.value),
+          password: password.value,
+        });
         if (error) throw error;
         navigate({ to: "/" });
       }
@@ -666,12 +688,16 @@ function AuthPage() {
                       )}
 
                       <div style={{ animation: 'slide-in-up 300ms cubic-bezier(0.22,1,0.36,1) both', animationDelay: '80ms' }}>
-                        <FloatInput label="Correo electrónico" icon={Mail} type="email"
+                        <FloatInput
+                          label={mode === "signup" ? "Correo electrónico (opcional)" : "Usuario o correo"}
+                          icon={mode === "signup" ? Mail : User}
+                          type="text"
                           value={email.value} onChange={email.setValue}
                           onFocus={() => email.setFocused(true)}
                           onBlur={() => { email.setFocused(false); email.setTouched(true); }}
                           focused={email.focused} hasValue={email.hasValue}
-                          placeholder="email@ejemplo.com" autoComplete="email"
+                          placeholder={mode === "signup" ? "email@ejemplo.com (no es necesario)" : "tu_usuario o email@ejemplo.com"}
+                          autoComplete={mode === "signup" ? "email" : "username"}
                           inputRef={emailRef} error={fieldErrors.email} />
                       </div>
 
@@ -734,12 +760,12 @@ function AuthPage() {
                       {mode === "signin" && (
                         <div className="text-center pt-1">
                           <button type="button" onClick={async () => {
-                            if (!email.value.trim()) { setFieldErrors({ email: "Escribe tu email primero" }); return; }
+                            if (!email.value.trim()) { setFieldErrors({ email: "Escribe tu usuario o correo primero" }); return; }
                             setBusy(true); clearErrors(); setSuccessMsg(null);
                             try {
-                              const { error } = await supabase.auth.resetPasswordForEmail(email.value);
+                              const { error } = await supabase.auth.resetPasswordForEmail(resolveLoginEmail(email.value));
                               if (error) throw error;
-                              setSuccessMsg("Revisa tu bandeja de entrada");
+                              setSuccessMsg("Revisa tu bandeja de entrada (o si usaste solo usuario, tu correo @asternal.app)");
                             } catch (e) { setErr(friendlyAuthError((e as Error).message)); }
                             finally { setBusy(false); }
                           }} className="text-[12px] text-muted-foreground/50 hover:text-primary transition-colors">

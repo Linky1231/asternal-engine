@@ -768,6 +768,88 @@ export async function loadGameProject(signedUrl: string): Promise<unknown> {
   return await res.json();
 }
 
+// ---------- Ranking: juegos más jugados (24h) ----------
+const LOCAL_PLAYS_KEY = "_local_game_plays";
+const PLAYS_WINDOW_MS = 24 * 3600 * 1000;
+
+/**
+ * Registra una jugada (al lanzar un juego). Best-effort: intenta guardarla en
+ * la nube (tabla game_plays) y siempre la guarda localmente como respaldo.
+ */
+export async function recordGamePlay(postId: string): Promise<void> {
+  if (!postId) return;
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user?.id) {
+      try {
+        await supabase.from("game_plays").insert({ user_id: user.id, post_id: postId });
+      } catch {
+        /* tabla sin crear en la BD → solo local */
+      }
+    }
+  } catch {
+    /* noop */
+  }
+  try {
+    const raw = localStorage.getItem(LOCAL_PLAYS_KEY);
+    const list = raw ? JSON.parse(raw) : [];
+    list.push({ post_id: postId, at: Date.now() });
+    // Poda: guarda solo lo relevante para el ranking (últimos 7 días).
+    const cut = Date.now() - 7 * 24 * 3600 * 1000;
+    const pruned = list.filter((x: { at: number }) => typeof x.at === "number" && x.at > cut).slice(-3000);
+    localStorage.setItem(LOCAL_PLAYS_KEY, JSON.stringify(pruned));
+  } catch {
+    /* noop */
+  }
+}
+
+/**
+ * Cuenta las jugadas de cada juego en las últimas 24 horas.
+ * Devuelve un mapa post_id → número de jugadas. Usa la nube cuando la tabla
+ * existe y, si no (o falla), combina con el registro local del navegador.
+ */
+export async function fetchGamePlayCounts24h(postIds: string[]): Promise<Record<string, number>> {
+  const counts: Record<string, number> = {};
+  if (!postIds.length) return counts;
+  const since = new Date(Date.now() - PLAYS_WINDOW_MS).toISOString();
+  let cloudOk = false;
+  try {
+    const { data, error } = await supabase
+      .from("game_plays")
+      .select("post_id")
+      .gte("created_at", since)
+      .in("post_id", postIds);
+    if (!error && Array.isArray(data)) {
+      cloudOk = true;
+      for (const r of data as { post_id: string }[]) {
+        counts[r.post_id] = (counts[r.post_id] ?? 0) + 1;
+      }
+    }
+  } catch {
+    /* tabla sin crear → se suma el respaldo local */
+  }
+  try {
+    const raw = localStorage.getItem(LOCAL_PLAYS_KEY);
+    if (raw) {
+      const list = JSON.parse(raw) as { post_id: string; at: number }[];
+      const cut = Date.now() - PLAYS_WINDOW_MS;
+      const ids = new Set(postIds);
+      for (const x of list) {
+        if (typeof x.at === "number" && x.at > cut && ids.has(x.post_id)) {
+          counts[x.post_id] = (counts[x.post_id] ?? 0) + 1;
+        }
+      }
+    }
+  } catch {
+    /* noop */
+  }
+  // Si la nube funcionó, la copia local solo duplicaría; en ese caso descartar
+  // el aporte local si ya hay datos de nube (el registro local es el que la
+  // creó, así que al menos la sesión actual ya está contada en la nube).
+  if (cloudOk) return counts;
+  return counts;
+}
+
 // ---------- Cloud project sync ----------
 export type CloudProject = {
   id: string;

@@ -209,6 +209,17 @@ create table if not exists public.game_purchases (
 );
 alter table public.game_purchases enable row level security;
 
+-- Jugadas de juegos (para el ranking de «más jugados en las últimas 24h»).
+-- Una fila por jugada: se inserta al lanzar un juego.
+create table if not exists public.game_plays (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete set null,
+  post_id uuid not null references public.posts(id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+alter table public.game_plays enable row level security;
+create index if not exists game_plays_24h_idx on public.game_plays (post_id, created_at desc);
+
 create table if not exists public.orbe_transactions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -533,6 +544,12 @@ drop policy if exists purchases_read on public.game_purchases;
 create policy purchases_read on public.game_purchases for select using (true);
 drop policy if exists purchases_insert on public.game_purchases;
 create policy purchases_insert on public.game_purchases for insert with check (auth.uid() = user_id);
+
+-- game_plays: lectura pública (rankings) e inserción por el propio jugador
+drop policy if exists plays_read on public.game_plays;
+create policy plays_read on public.game_plays for select using (true);
+drop policy if exists plays_insert on public.game_plays;
+create policy plays_insert on public.game_plays for insert with check (auth.uid() = user_id);
 
 -- orbe_transactions: solo el dueño
 drop policy if exists orbex_read on public.orbe_transactions;

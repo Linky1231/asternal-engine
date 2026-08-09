@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   X, Send, Sparkles, Loader2, Trash2, Bot, Rocket, Zap, HelpCircle,
 } from "lucide-react";
-import { orionChat, type OrionMessage } from "@/lib/ai/orion";
+import { orionChatStream, needsCodingModel, type OrionMessage } from "@/lib/ai/orion";
 
 /** Renders texto con bloques de código y markdown básico sin dependencias. */
 function RichText({ text }: { text: string }) {
@@ -57,6 +57,12 @@ export default function OrionPanel({ onClose }: { onClose: () => void }) {
   const endRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const busyRef = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
+
+  // Cancela la petición en curso si se cierra el panel.
+  useEffect(() => {
+    return () => { abortRef.current?.abort(); };
+  }, []);
 
   const scrollBottom = useCallback(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -70,6 +76,13 @@ export default function OrionPanel({ onClose }: { onClose: () => void }) {
     taRef.current?.focus();
   }, []);
 
+  const stop = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    busyRef.current = false;
+    setBusy(false);
+  }, []);
+
   const send = useCallback(
     async (text: string) => {
       const q = text.trim();
@@ -78,21 +91,61 @@ export default function OrionPanel({ onClose }: { onClose: () => void }) {
       setBusy(true);
       setErr(null);
       setMessages((prev) => [...prev, { role: "user", content: q }]);
+      // Burbuja de respuesta vacía: se va rellenando en vivo con el streaming.
+      setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
       setInput("");
+      const controller = new AbortController();
+      abortRef.current = controller;
       try {
         const history: OrionMessage[] = messages
           .filter((m) => m.role !== "assistant" || m.content !== WELCOME)
           .concat({ role: "user", content: q })
           .map((m) => ({ role: m.role, content: m.content }));
-        const res = await orionChat(history, { coding: true });
-        setMessages((prev) => [
-          ...prev,
-          { role: "assistant", content: res.content, model: res.model, cost: res.costUsd },
-        ]);
+        const res = await orionChatStream(
+          history,
+          (delta) => {
+            setMessages((prev) => {
+              const next = [...prev];
+              const last = next[next.length - 1];
+              if (last && last.role === "assistant") {
+                next[next.length - 1] = { ...last, content: last.content + delta };
+              }
+              return next;
+            });
+          },
+          {
+            coding: needsCodingModel(q),
+            signal: controller.signal,
+          }
+        );
+        setMessages((prev) => {
+          const next = [...prev];
+          const last = next[next.length - 1];
+          if (last && last.role === "assistant") {
+            next[next.length - 1] = {
+              ...last,
+              content: res.content || last.content,
+              model: res.model,
+              cost: res.costUsd,
+            };
+          }
+          return next;
+        });
         if (res.balanceUsd > 0) setBalance(res.balanceUsd);
       } catch (e) {
+        // Si el usuario detuvo el stream, no mostrar error.
+        if ((e as Error).name === "AbortError") return;
+        setMessages((prev) => {
+          const next = [...prev];
+          const last = next[next.length - 1];
+          if (last && last.role === "assistant" && !last.content) {
+            next.pop();
+          }
+          return next;
+        });
         setErr(e instanceof Error ? e.message : "Ocurrió un error inesperado.");
       } finally {
+        abortRef.current = null;
         busyRef.current = false;
         setBusy(false);
         taRef.current?.focus();
@@ -209,7 +262,13 @@ export default function OrionPanel({ onClose }: { onClose: () => void }) {
               </div>
               <div className="bg-card border border-border rounded-2xl rounded-bl-md px-3.5 py-3 shadow-sm flex items-center gap-2">
                 <Loader2 size={13} className="animate-spin text-primary" />
-                <span className="text-[11px] text-muted-foreground">Orión está pensando…</span>
+                <span className="text-[11px] text-muted-foreground">Orión está escribiendo…</span>
+                <button
+                  onClick={stop}
+                  className="ml-1 px-2 py-1 rounded-lg border border-border/70 text-[9px] font-medium text-muted-foreground hover:text-destructive hover:border-destructive/40 active:scale-95 transition"
+                >
+                  DETENER
+                </button>
               </div>
             </div>
           )}
@@ -265,7 +324,7 @@ export default function OrionPanel({ onClose }: { onClose: () => void }) {
               disabled={busy || !input.trim()}
               className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center active:scale-95 transition shrink-0 disabled:opacity-40 disabled:active:scale-100 shadow-[0_4px_12px_-5px_oklch(0.55_0.22_258/0.5)]"
             >
-              {busy ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
+              <Send size={15} />
             </button>
           </div>
           <div className="flex items-center justify-center gap-1 pt-2 text-[9px] text-muted-foreground/50">

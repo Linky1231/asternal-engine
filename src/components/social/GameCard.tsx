@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Play, Heart, MessageCircle, Share2, Trash2, MoreHorizontal, Pencil, GitFork, Loader2, Sparkles, Lock, X, CheckCircle2, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 import { useNavigate, Link } from "@tanstack/react-router";
-import { type PostWithMeta, toggleReaction, deletePost, loadGameProject, reportContent, remixGame, purchaseGame, getMyOrbes } from "@/lib/social/api";
+import { type PostWithMeta, toggleReaction, deletePost, loadGameProject, reportContent, remixGame, purchaseGame, getMyOrbes, recordGamePlay } from "@/lib/social/api";
 import type { Project, Scene } from "@/lib/engine/core";
 import { GameRuntime } from "@/components/engine/GameRuntime";
 import { CommentSection } from "./CommentSection";
@@ -68,6 +68,8 @@ export function GameCard({
     const scene = proj.scenes.find(s => s.id === proj.activeSceneId) ?? proj.scenes[0];
     if (!scene) throw new Error("Escena inválida");
     setPlaying(scene);
+    // Registra la jugada para el ranking de «más jugados (24h)».
+    void recordGamePlay(post.id);
   };
 
   const play = async () => {
