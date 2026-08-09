@@ -128,6 +128,12 @@ create table if not exists public.posts (
 alter table public.posts enable row level security;
 -- Columna de capturas de juego (añadida después del primer despliegue: idempotente)
 alter table public.posts add column if not exists screenshots text[] not null default '{}';
+-- Reventa de obras de la galería: vendedor actual, precio de reventa y dueño actual
+-- (author_id siempre es el creador original; current_owner_id es quien la posee hoy)
+alter table public.posts add column if not exists seller_id uuid references auth.users(id) on delete set null;
+alter table public.posts add column if not exists resale_price_orbes bigint;
+alter table public.posts add column if not exists current_owner_id uuid references auth.users(id) on delete set null;
+create index if not exists posts_seller_idx on public.posts (seller_id) where seller_id is not null;
 
 -- ─────────────────────────── COMMENTS ───────────────────────────
 create table if not exists public.comments (
@@ -668,13 +674,28 @@ declare
   v_post public.posts%rowtype;
   v_buyer public.profiles%rowtype;
   v_seller public.profiles%rowtype;
+  v_seller_id uuid;
   v_price bigint;
 begin
   select * into v_post from public.posts where id = _post_id and deleted_at is null;
   if not found then return jsonb_build_object('ok', false); end if;
-  v_price := coalesce(v_post.price_orbes, 0);
-  if v_price <= 0 then return jsonb_build_object('ok', true, 'free', true, 'paid', 0); end if;
-  if v_post.author_id = auth.uid() then return jsonb_build_object('ok', true, 'free', true, 'paid', 0); end if;
+  -- Si está en reventa, el precio y el cobrador son los del vendedor actual
+  if v_post.seller_id is not null then
+    v_seller_id := v_post.seller_id;
+    v_price := coalesce(v_post.resale_price_orbes, 0);
+  else
+    v_seller_id := v_post.author_id;
+    v_price := coalesce(v_post.price_orbes, 0);
+  end if;
+  if v_seller_id = auth.uid() then return jsonb_build_object('ok', true, 'free', true, 'paid', 0, 'already_owned', true); end if;
+  if v_price <= 0 then
+    -- Recolección gratuita: registra la propiedad
+    if not exists (select 1 from public.game_purchases where user_id = auth.uid() and post_id = _post_id) then
+      insert into public.game_purchases (user_id, post_id, price_paid) values (auth.uid(), _post_id, 0);
+    end if;
+    update public.posts set current_owner_id = auth.uid(), seller_id = null, updated_at = now() where id = _post_id;
+    return jsonb_build_object('ok', true, 'free', true, 'paid', 0);
+  end if;
   select * into v_buyer from public.profiles where id = auth.uid();
   if not found then return jsonb_build_object('ok', false); end if;
   if exists (select 1 from public.game_purchases where user_id = auth.uid() and post_id = _post_id) then
@@ -684,19 +705,24 @@ begin
     return jsonb_build_object('ok', false, 'paid', 0, 'balance', coalesce(v_buyer.orbes, 0));
   end if;
   update public.profiles set orbes = orbes - v_price, updated_at = now() where id = auth.uid();
-  if v_post.author_id is not null then
-    select * into v_seller from public.profiles where id = v_post.author_id;
+  if v_seller_id is not null then
+    select * into v_seller from public.profiles where id = v_seller_id;
     if found then
-      update public.profiles set orbes = orbes + v_price, updated_at = now() where id = v_post.author_id;
+      update public.profiles set orbes = orbes + v_price, updated_at = now() where id = v_seller_id;
     end if;
+  end if;
+  -- Transferencia de propiedad en reventa: el vendedor anterior deja de ser dueño
+  if v_post.seller_id is not null and v_post.seller_id <> v_post.author_id then
+    delete from public.game_purchases where user_id = v_post.seller_id and post_id = _post_id;
   end if;
   insert into public.game_purchases (user_id, post_id, price_paid) values (auth.uid(), _post_id, v_price);
   insert into public.orbe_transactions (user_id, amount, kind, post_id, description)
     values (auth.uid(), -v_price, 'game_purchase', _post_id, 'Compra de juego/obra');
-  if v_post.author_id is not null then
+  if v_seller_id is not null then
     insert into public.orbe_transactions (user_id, amount, kind, post_id, description)
-      values (v_post.author_id, v_price, 'game_purchase', _post_id, 'Venta de juego/obra');
+      values (v_seller_id, v_price, 'game_purchase', _post_id, 'Venta de juego/obra');
   end if;
+  update public.posts set current_owner_id = auth.uid(), seller_id = null, updated_at = now() where id = _post_id;
   return jsonb_build_object('ok', true, 'paid', v_price, 'balance', coalesce(v_buyer.orbes, 0) - v_price);
 end $$;
 
@@ -704,6 +730,29 @@ create or replace function public.purchase_artwork(_post_id uuid)
 returns jsonb language plpgsql security definer set search_path = public as $$
 begin
   return public.purchase_game(_post_id);
+end $$;
+
+-- Poner/retirar una obra de la galería en reventa (solo el dueño actual)
+-- _price = 0 retira la obra de la venta
+create or replace function public.resell_artwork(_post_id uuid, _price bigint)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  v_post public.posts%rowtype;
+  v_owns boolean;
+begin
+  select * into v_post from public.posts where id = _post_id and category = 'artwork' and deleted_at is null;
+  if not found then return jsonb_build_object('ok', false, 'error', 'not_found'); end if;
+  v_owns := v_post.author_id = auth.uid()
+    or v_post.current_owner_id = auth.uid()
+    or exists (select 1 from public.game_purchases where user_id = auth.uid() and post_id = _post_id);
+  if not v_owns then return jsonb_build_object('ok', false, 'error', 'not_owner'); end if;
+  if _price is null or _price < 0 then return jsonb_build_object('ok', false, 'error', 'bad_price'); end if;
+  if _price = 0 then
+    update public.posts set seller_id = null, resale_price_orbes = null, updated_at = now() where id = _post_id;
+    return jsonb_build_object('ok', true, 'on_sale', false);
+  end if;
+  update public.posts set seller_id = auth.uid(), resale_price_orbes = _price, updated_at = now() where id = _post_id;
+  return jsonb_build_object('ok', true, 'on_sale', true, 'price', _price);
 end $$;
 
 -- Reclamo mensual de orbes Plus (10000/mes)

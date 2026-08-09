@@ -3,12 +3,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Palette, Sparkles, X, Loader2, ImagePlus, CheckCircle2,
   Heart, MessageCircle, AlertTriangle, Search, Clock, TrendingUp,
-  DollarSign, Gift, Eye, ExternalLink,
+  DollarSign, Gift, Eye, ExternalLink, Package,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import {
   type PostWithMeta, type Profile,
-  fetchArtworks, purchaseArtwork, publishArtwork,
+  fetchArtworks, fetchMyArtworks, purchaseArtwork, publishArtwork, resellArtwork,
   getMyProfile, getMyOrbes, toggleReaction,
 } from "@/lib/social/api";
 import { CommentSection } from "@/components/social/CommentSection";
@@ -54,18 +54,25 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
   const [balance, setBalance] = useState<number | null>(null);
   const [buyMsg, setBuyMsg] = useState("");
 
-  const load = async () => {
+  // Resell dialog
+  const [resellPost, setResellPost] = useState<PostWithMeta | null>(null);
+  const [resellPrice, setResellPrice] = useState(0);
+  const [reselling, setReselling] = useState(false);
+  const [resellErr, setResellErr] = useState<string | null>(null);
+
+  const load = async (forTab?: string) => {
+    const t = forTab ?? tab;
     setLoading(true);
     try {
       const [arts, p] = await Promise.all([
-        fetchArtworks(),
+        t === "misobras" ? fetchMyArtworks() : fetchArtworks(),
         getMyProfile(),
       ]);
       setArtworks(arts);
       setProfile(p);
     } finally { setLoading(false); }
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(tab); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [tab]);
 
   // --- Canvas save ---
   const handleCanvasSave = (sprite: SpriteAsset) => {
@@ -117,6 +124,33 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
     } catch (e) { setBuyState("error"); setBuyMsg((e as Error).message); }
   };
 
+  // --- Resell ---
+  const openResell = (art: PostWithMeta) => {
+    setResellPost(art);
+    setResellPrice(art.resale_price_orbes ?? 0);
+    setResellErr(null);
+  };
+  const doResell = async () => {
+    if (!resellPost) return;
+    setReselling(true); setResellErr(null);
+    try {
+      const r = await resellArtwork(resellPost.id, resellPrice);
+      if (!r.ok) {
+        setResellErr(
+          r.error === "not_owner"
+            ? "Solo el dueño actual puede revender esta obra."
+            : r.error === "not_found"
+              ? "La obra ya no existe."
+              : "No se pudo actualizar la obra.",
+        );
+        return;
+      }
+      setResellPost(null);
+      await load();
+    } catch (e) { setResellErr((e as Error).message); }
+    finally { setReselling(false); }
+  };
+
   // Filter & sort
   const q = searchQ.toLowerCase().trim();
   const filtered = useMemo(() => {
@@ -127,7 +161,8 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
       list = list.filter(a => {
         const title = a.content.replace(/^🎨\s*/, "").toLowerCase();
         const author = a.author?.username?.toLowerCase() ?? "";
-        return title.includes(q) || author.includes(q);
+        const seller = a.seller?.username?.toLowerCase() ?? "";
+        return title.includes(q) || author.includes(q) || seller.includes(q);
       });
     }
 
@@ -140,11 +175,11 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
         list.sort((a, b) => (b.likes ?? 0) - (a.likes ?? 0));
         break;
       case "free":
-        list = list.filter(a => (a.price_orbes ?? 0) === 0);
+        list = list.filter(a => (a.seller_id ? (a.resale_price_orbes ?? 0) : (a.price_orbes ?? 0)) === 0);
         list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
         break;
       case "paid":
-        list = list.filter(a => (a.price_orbes ?? 0) > 0);
+        list = list.filter(a => (a.seller_id ? (a.resale_price_orbes ?? 0) : (a.price_orbes ?? 0)) > 0);
         list.sort((a, b) => (b.likes ?? 0) - (a.likes ?? 0));
         break;
     }
@@ -153,6 +188,8 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
   }, [artworks, q, tab]);
 
   const mineCount = artworks.filter(a => a.author_id === myId).length;
+  // Precio efectivo: si está en reventa, manda el precio del vendedor actual
+  const effPrice = (art: PostWithMeta) => art.seller_id ? (art.resale_price_orbes ?? 0) : (art.price_orbes ?? 0);
 
   return (
     <div className="space-y-5">
@@ -170,14 +207,23 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
               </span>
             </div>
             <div className="flex items-center gap-2 text-[10px] font-mono text-muted-foreground/70 mt-0.5">
-              <span className="flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                {artworks.length} obra{artworks.length !== 1 ? "s" : ""}
-              </span>
-              <span>·</span>
-              <span className="flex items-center gap-1">
-                {mineCount} tuya{mineCount !== 1 ? "s" : ""}
-              </span>
+              {tab === "misobras" ? (
+                <span className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                  {artworks.length} obra{artworks.length !== 1 ? "s" : ""} en tu colección
+                </span>
+              ) : (
+                <>
+                  <span className="flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    {artworks.length} obra{artworks.length !== 1 ? "s" : ""}
+                  </span>
+                  <span>·</span>
+                  <span className="flex items-center gap-1">
+                    {mineCount} tuya{mineCount !== 1 ? "s" : ""}
+                  </span>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -237,6 +283,17 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
           <Eye size={13} />
           TODO
         </button>
+        <button
+          onClick={() => setTab("misobras")}
+          className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[10px] font-display tracking-widest transition-all active:scale-95 ${
+            tab === "misobras"
+              ? "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-sm shadow-primary/20"
+              : "text-muted-foreground hover:text-foreground bg-muted/30 hover:bg-muted/60 border border-border/40"
+          }`}
+        >
+          <Package size={13} />
+          MIS OBRAS
+        </button>
       </div>
 
       {/* ====== ARTWORKS GRID ====== */}
@@ -260,7 +317,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
             <Palette size={32} className="text-muted-foreground/40" />
           </div>
           <div className="text-base font-display text-muted-foreground">
-            {q ? `Sin resultados para "${q}"` : "Aún no hay obras aquí"}
+            {q ? `Sin resultados para "${q}"` : tab === "misobras" ? "Tu colección está vacía" : "Aún no hay obras aquí"}
           </div>
           <div className="text-xs text-muted-foreground/60 mt-1.5 max-w-xs mx-auto leading-relaxed">
             {q
@@ -269,7 +326,11 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
                 ? "No hay obras gratuitas todavía"
                 : tab === "paid"
                   ? "No hay obras de pago todavía"
-                  : "¡Sé el primero en compartir tu arte con la comunidad!"}
+                  : tab === "misobras"
+                    ? !myId
+                      ? "Inicia sesión para ver tus obras."
+                      : "Aún no tienes obras en tu colección. Compra o crea una."
+                    : "¡Sé el primero en compartir tu arte con la comunidad!"}
           </div>
           <button
             onClick={() => setCanvasOpen(true)}
@@ -282,9 +343,11 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
           {filtered.map((art, i) => {
             const imgUrl = art.signed_media?.[0] ?? art.signed_cover;
-            const price = art.price_orbes ?? 0;
+            const price = effPrice(art);
             const mine = art.author_id === myId;
             const owned = art.owned ?? false;
+            const forSale = !!art.seller_id;
+            const sellingMe = forSale && art.seller_id === myId;
             const title = art.content.replace(/^🎨\s*/, "");
             return (
               <motion.button
@@ -322,7 +385,11 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
 
                     {/* Badge row */}
                     <div className="absolute top-2.5 right-2.5 flex gap-1.5">
-                      {mine ? (
+                      {forSale ? (
+                        <span className="px-2.5 py-0.5 rounded-full text-[8px] font-display tracking-widest bg-amber-500/30 text-amber-300 border border-amber-400/40 backdrop-blur-md shadow-sm">
+                          {sellingMe ? "EN VENTA" : "REVENTA"}
+                        </span>
+                      ) : mine ? (
                         <span className="px-2.5 py-0.5 rounded-full text-[8px] font-display tracking-widest bg-primary/30 text-white border border-white/20 backdrop-blur-md shadow-sm">
                           TUYA
                         </span>
@@ -350,7 +417,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
                   {/* Info area */}
                   <div className="p-3.5 space-y-2">
                     <div className="text-sm font-display truncate font-semibold tracking-tight">{title}</div>
-                    
+
                     {/* Author + actions in a row */}
                     <div className="flex items-center justify-between gap-2">
                       <Link
@@ -397,8 +464,25 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
                       </div>
                     </div>
 
-                    {/* Buy/Get button */}
-                    {!mine && (
+                    {/* Vendedor actual (reventa) */}
+                    {forSale && art.seller && art.seller_id !== art.author_id && (
+                      <div className="flex items-center gap-1 text-[9px] text-muted-foreground/60 mt-0.5">
+                        <span className="shrink-0">Vendido por</span>
+                        <Link
+                          to="/profile/$userId" params={{ userId: art.seller_id }}
+                          onClick={e => e.stopPropagation()}
+                          className="truncate font-mono hover:text-amber-400 hover:underline transition-colors"
+                        >
+                          @{art.seller.username ?? "usuario"}
+                        </Link>
+                        <span className="shrink-0 flex items-center gap-0.5 text-amber-400/90 font-mono">
+                          <Sparkles size={8} /> {art.resale_price_orbes}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Buy / Get / Resell buttons */}
+                    {!mine && !forSale && (
                       <div className="flex gap-1.5 pt-0.5">
                         {!owned && price > 0 && (
                           <span
@@ -417,8 +501,41 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
                           </span>
                         )}
                         {owned && (
+                          <>
+                            <span className="flex-1 py-1.5 rounded-lg bg-muted/30 text-muted-foreground/50 text-[9px] font-display tracking-widest text-center border border-border/30 cursor-default">
+                              ✔ COLECTADA
+                            </span>
+                            {myId && (
+                              <button
+                                onClick={e => { e.stopPropagation(); openResell(art); }}
+                                className="px-3 py-1.5 rounded-lg border border-primary/40 text-primary-glow text-[9px] font-display tracking-widest hover:bg-primary/10 active:scale-95 transition"
+                              >
+                                <DollarSign size={9} className="inline mr-0.5" /> REVENDER
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    )}
+                    {forSale && (
+                      <div className="flex gap-1.5 pt-0.5">
+                        {sellingMe ? (
+                          <button
+                            onClick={e => { e.stopPropagation(); setResellPost(art); setResellPrice(0); setResellErr(null); }}
+                            className="flex-1 py-1.5 rounded-lg border border-amber-400/30 text-amber-400 text-[9px] font-display tracking-widest hover:bg-amber-400/10 active:scale-95 transition"
+                          >
+                            EN VENTA · {art.resale_price_orbes} · RETIRAR
+                          </button>
+                        ) : owned ? (
                           <span className="flex-1 py-1.5 rounded-lg bg-muted/30 text-muted-foreground/50 text-[9px] font-display tracking-widest text-center border border-border/30 cursor-default">
                             ✔ COLECTADA
+                          </span>
+                        ) : (
+                          <span
+                            onClick={e => { e.stopPropagation(); openBuy(art.id); }}
+                            className="flex-1 py-1.5 rounded-lg bg-gradient-to-r from-primary to-accent text-primary-foreground text-[9px] font-display tracking-widest active:scale-95 transition text-center cursor-pointer shadow-sm"
+                          >
+                            COMPRAR CON <Sparkles size={8} className="inline" /> {price}
                           </span>
                         )}
                       </div>
@@ -496,6 +613,23 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
                       </span>
                       <ExternalLink size={10} className="text-muted-foreground/40" />
                     </Link>
+
+                    {/* Vendedor actual (reventa) */}
+                    {detailPost.seller_id && detailPost.seller && detailPost.seller_id !== detailPost.author_id && (
+                      <div className="flex items-center gap-1 mt-1 text-[10px] text-muted-foreground/70">
+                        <span>Vendido por</span>
+                        <Link
+                          to="/profile/$userId" params={{ userId: detailPost.seller_id }}
+                          onClick={e => e.stopPropagation()}
+                          className="font-mono hover:text-amber-400 hover:underline transition-colors"
+                        >
+                          @{detailPost.seller.username ?? "usuario"}
+                        </Link>
+                        <span className="flex items-center gap-0.5 text-amber-400/90 font-mono">
+                          <Sparkles size={9} /> {detailPost.resale_price_orbes}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Price / Buy */}
@@ -506,19 +640,37 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
                       className={`shrink-0 px-4 py-2 rounded-xl text-[10px] font-display tracking-widest transition active:scale-95 ${
                         detailPost.owned
                           ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20"
-                          : (detailPost.price_orbes ?? 0) > 0
+                          : effPrice(detailPost) > 0
                             ? "bg-gradient-to-r from-primary to-accent text-primary-foreground hover:shadow-lg hover:shadow-primary/20"
                             : "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/25"
                       }`}
                     >
                       {detailPost.owned
                         ? "✔ COLECTADA"
-                        : (detailPost.price_orbes ?? 0) > 0
-                          ? <span className="flex items-center gap-1"><Sparkles size={11} /> {detailPost.price_orbes}</span>
+                        : effPrice(detailPost) > 0
+                          ? <span className="flex items-center gap-1"><Sparkles size={11} /> {effPrice(detailPost)}</span>
                           : "OBTENER GRATIS"}
                     </button>
                   )}
                 </div>
+
+                {/* Acciones de reventa del dueño */}
+                {(detailPost.owned && detailPost.author_id !== myId && !detailPost.seller_id) && (
+                  <button
+                    onClick={e => { e.stopPropagation(); openResell(detailPost); }}
+                    className="w-full h-10 rounded-xl border border-primary/40 text-primary-glow text-[10px] font-display tracking-widest hover:bg-primary/10 active:scale-[0.98] transition flex items-center justify-center gap-1.5"
+                  >
+                    <DollarSign size={12} /> REVENDER ESTA OBRA
+                  </button>
+                )}
+                {detailPost.seller_id === myId && (
+                  <button
+                    onClick={e => { e.stopPropagation(); setResellPost(detailPost); setResellPrice(0); setResellErr(null); }}
+                    className="w-full h-10 rounded-xl border border-amber-400/40 text-amber-400 text-[10px] font-display tracking-widest hover:bg-amber-400/10 active:scale-[0.98] transition flex items-center justify-center gap-1.5"
+                  >
+                    <DollarSign size={12} /> RETIRAR DE LA VENTA
+                  </button>
+                )}
 
                 {/* Stats */}
                 <div className="flex items-center gap-3 text-xs text-muted-foreground">
@@ -680,6 +832,84 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
         )}
       </AnimatePresence>
 
+      {/* ====== RESELL DIALOG ====== */}
+      <AnimatePresence>
+        {resellPost && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[142] bg-black/70 backdrop-blur-md grid place-items-center p-4"
+            onClick={() => !reselling && setResellPost(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 30, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 30, scale: 0.96 }}
+              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              className="w-full max-w-sm panel border border-border/60 rounded-2xl p-5 space-y-4 shadow-2xl"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-500 to-primary grid place-items-center">
+                  <DollarSign size={14} className="text-primary-foreground" />
+                </div>
+                <div className="font-display text-sm">Revender obra</div>
+                <button onClick={() => setResellPost(null)} disabled={reselling} className="ml-auto w-8 h-8 grid place-items-center rounded-xl border border-border hover:bg-muted/40 transition disabled:opacity-50">
+                  <X size={14} />
+                </button>
+              </div>
+
+              <div className="aspect-square max-h-32 rounded-xl bg-muted/20 overflow-hidden border border-border/50">
+                {(resellPost.signed_media?.[0] ?? resellPost.signed_cover) && (
+                  <img
+                    src={resellPost.signed_media?.[0] ?? resellPost.signed_cover}
+                    alt={resellPost.content.replace(/^🎨\s*/, "")}
+                    className="w-full h-full object-contain"
+                  />
+                )}
+              </div>
+
+              <div className="text-xs text-muted-foreground leading-relaxed">
+                Ponle precio a tu obra para que otros jugadores puedan comprártela. El creador original
+                (<span className="font-mono text-foreground">@{resellPost.author?.username ?? "usuario"}</span>) siempre aparecerá como autor.
+              </div>
+
+              <div>
+                <div className="text-[10px] font-display tracking-widest text-muted-foreground mb-1.5 flex items-center gap-1">
+                  <Sparkles size={10} /> PRECIO EN ORBES
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number" min={0} max={99999}
+                    value={resellPrice}
+                    onChange={e => setResellPrice(Math.max(0, Number(e.target.value)))}
+                    className="flex-1 bg-input/50 border border-border/50 rounded-xl px-3 py-2 text-sm font-mono outline-none focus:ring-2 focus:ring-primary/30 transition"
+                  />
+                  <span className="text-xs text-muted-foreground">orbes</span>
+                </div>
+                <div className="text-[10px] text-muted-foreground/60 mt-1">Pon 0 para retirarla de la venta.</div>
+              </div>
+
+              {resellErr && <div className="text-xs text-destructive">{resellErr}</div>}
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setResellPost(null)}
+                  disabled={reselling}
+                  className="flex-1 h-10 rounded-xl border border-border text-xs font-display tracking-widest active:scale-95 disabled:opacity-50 transition"
+                >CANCELAR</button>
+                <button
+                  onClick={doResell}
+                  disabled={reselling}
+                  className="flex-1 h-10 rounded-xl bg-gradient-to-r from-amber-500 to-primary text-primary-foreground text-xs font-display tracking-widest active:scale-95 disabled:opacity-50 transition shadow-sm"
+                >
+                  {reselling ? <Loader2 size={14} className="animate-spin mx-auto" /> : resellPrice > 0 ? "PONER EN VENTA" : "RETIRAR DE VENTA"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ====== BUY MODAL ====== */}
       <AnimatePresence>
         {buyPostId && (
@@ -708,7 +938,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
                   </h3>
                   {balance !== null && (() => {
                     const art = artworks.find(a => a.id === buyPostId);
-                    const price = art?.price_orbes ?? 0;
+                    const price = art ? effPrice(art) : 0;
                     const after = balance - price;
                     return (
                       <div className="rounded-xl bg-muted/30 border border-border/60 p-3 space-y-2 text-xs">
@@ -735,7 +965,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
                   })()}
                   <button
                     onClick={confirmBuy}
-                    disabled={buyState === "loading" || (balance !== null && (balance - (artworks.find(a => a.id === buyPostId)?.price_orbes ?? 0) < 0))}
+                    disabled={buyState === "loading" || (balance !== null && (balance - (artworks.find(a => a.id === buyPostId) ? effPrice(artworks.find(a => a.id === buyPostId)!) : 0) < 0))}
                     className="w-full h-10 rounded-xl bg-gradient-to-r from-primary to-accent text-primary-foreground text-xs font-display tracking-widest disabled:opacity-50 active:scale-[0.98] transition shadow-sm"
                   >
                     {buyState === "loading" ? <Loader2 size={14} className="animate-spin mx-auto" /> : "CONFIRMAR"}

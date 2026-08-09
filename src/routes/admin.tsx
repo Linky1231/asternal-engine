@@ -167,7 +167,7 @@ function AdminPage() {
                 {t === "mods" ? "MODS" : t === "bans" ? "BANEOS" : t === "foros" ? "FOROS" : "EVENTOS"}
               </button>
             ))}
-            <div className="absolute top-0.5 bottom-0.5 w-[calc(25%-3px)] rounded-xl bg-primary shadow-sm transition-transform duration-300"
+            <div className="absolute top-0.5 bottom-0.5 w-[calc(25%-3px)] rounded-xl bg-gradient-to-r from-primary to-accent shadow-sm transition-transform duration-300"
               style={{
                 transform: `translateX(${tab === "mods" ? "0%" : tab === "bans" ? "calc(100% + 4px)" : tab === "foros" ? "calc(200% + 8px)" : "calc(300% + 12px)"})`,
               }}
@@ -181,7 +181,7 @@ function AdminPage() {
               <input value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === "Enter" && load(q)}
                 placeholder="Buscar por usuario…" className="flex-1 bg-transparent py-2 text-sm outline-none" />
             </div>
-            <button onClick={() => load(q)} className="px-3 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-display tracking-widest active:scale-95">IR</button>
+            <button onClick={() => load(q)} className="px-3 py-2 rounded-xl bg-gradient-to-r from-primary to-accent text-primary-foreground text-xs font-display tracking-widest active:scale-95 shadow-sm shadow-primary/25">IR</button>
           </div>
         )}
       </header>
@@ -286,7 +286,7 @@ function AdminPage() {
                         } catch (e) { setEvErr((e as Error).message); }
                       }}
                       disabled={!evTitle.trim() || !evDesc.trim() || !evStarts || !evEnds}
-                      className="w-full py-2.5 rounded-lg bg-primary text-primary-foreground text-[10px] font-display tracking-widest disabled:opacity-50 flex items-center justify-center gap-1 active:scale-[0.98] transition">
+                      className="w-full py-2.5 rounded-lg bg-gradient-to-r from-primary to-accent text-primary-foreground text-[10px] font-display tracking-widest disabled:opacity-50 flex items-center justify-center gap-1 active:scale-[0.98] transition shadow-sm shadow-primary/25">
                       <Trophy size={12}/> CREAR EVENTO
                     </button>
                   </div>
@@ -393,7 +393,7 @@ function AdminPage() {
                       <X size={13} />
                     </button>
                     <button onClick={handleNewCategory} disabled={!catName.trim()}
-                      className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-[10px] font-display tracking-wider disabled:opacity-40 active:scale-95 transition">
+                      className="px-4 py-2 rounded-lg bg-gradient-to-r from-primary to-accent text-primary-foreground text-[10px] font-display tracking-wider disabled:opacity-40 active:scale-95 transition shadow-sm shadow-primary/25">
                       <Check size={13} />
                     </button>
                   </div>

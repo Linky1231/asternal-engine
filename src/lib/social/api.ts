@@ -82,6 +82,9 @@ export type PostRow = {
   screenshots?: string[] | null;
   allow_remix?: boolean;
   price_orbes?: number;
+  seller_id?: string | null;
+  resale_price_orbes?: number | null;
+  current_owner_id?: string | null;
   text_color?: string | null;
   html_content?: string | null;
   document_paths?: string[];
@@ -114,6 +117,7 @@ export type PostWithMeta = PostRow & {
   pinned_game?: { id: string; title: string; cover_url: string | null } | null;
   is_unlocked?: boolean;
   owned?: boolean;
+  seller?: Profile | null;
 };
 
 
@@ -172,10 +176,21 @@ export async function fetchFeed(opts: { search?: string; tag?: string; category?
   }
   if (!posts || !posts.length) return [];
 
-  const ids = posts.map(p => p.id);
-  const authorIds = Array.from(new Set(posts.map(p => p.author_id)));
   const { data: { user } } = await supabase.auth.getUser();
   const me = user?.id ?? null;
+  return enrichPosts(posts as PostRow[], me, opts.tag);
+}
+
+/**
+ * Enriquecimiento común de posts: perfiles (incluido el vendedor actual en reventas),
+ * reacciones, comentarios, media firmada y estado de propiedad.
+ */
+async function enrichPosts(rawPosts: PostRow[], me: string | null, tag?: string): Promise<PostWithMeta[]> {
+  const posts = rawPosts;
+  const ids = posts.map(p => p.id);
+  const authorIds = Array.from(new Set(
+    posts.map(p => p.author_id).concat(posts.filter(p => p.seller_id).map(p => p.seller_id!)),
+  ));
 
   const [profiles, reactions, comments, reposts, tagsJoin, purchases] = await Promise.all([
     supabase.from("profiles").select("*").in("id", authorIds),
@@ -198,7 +213,7 @@ export async function fetchFeed(opts: { search?: string; tag?: string; category?
   }
 
   let tagFiltered = posts;
-  if (opts.tag) tagFiltered = posts.filter(p => (tagMap.get(p.id) ?? []).includes(opts.tag!));
+  if (tag) tagFiltered = posts.filter(p => (tagMap.get(p.id) ?? []).includes(tag!));
 
   const result: PostWithMeta[] = [];
   for (const p of tagFiltered) {
@@ -214,7 +229,8 @@ export async function fetchFeed(opts: { search?: string; tag?: string; category?
     const signedCover = p.cover_url ? (await signMediaUrls([p.cover_url]))[0] ?? null : null;
     const signedScreens = (p as PostRow).screenshots?.length ? await signMediaUrls((p as PostRow).screenshots) : [];
     const priceOrbes = (p as PostRow).price_orbes ?? 0;
-    const owned = priceOrbes <= 0 || p.author_id === me || ownedIds.has(p.id);
+    const currentOwner = (p as PostRow).current_owner_id ?? null;
+    const owned = priceOrbes <= 0 || currentOwner === me || (currentOwner == null && (p.author_id === me || ownedIds.has(p.id)));
     const post = p as PostRow;
     const docPaths = post.document_paths ?? [];
     const docNames = post.document_names ?? [];
@@ -231,6 +247,7 @@ export async function fetchFeed(opts: { search?: string; tag?: string; category?
     result.push({
       ...post,
       author: pmap.get(p.author_id) ?? null,
+      seller: p.seller_id ? (pmap.get(p.seller_id) ?? null) : null,
       tags: tagMap.get(p.id) ?? [],
       likes, favorites: favs, comments_count: c, reposts_count: reps.length,
       my_like, my_favorite, my_repost,
@@ -1202,6 +1219,47 @@ export async function purchaseArtwork(postId: string): Promise<{ ok: boolean; pa
   const { data, error } = await supabase.rpc("purchase_artwork" as never, { _post_id: postId } as never);
   if (error) throw error;
   return (data as { ok: boolean; paid?: number; balance?: number; free?: boolean; already_owned?: boolean }) ?? { ok: false };
+}
+
+/**
+ * Pone una obra de la galería en reventa (solo el dueño actual).
+ * price = 0 retira la obra de la venta.
+ */
+export async function resellArtwork(postId: string, price: number): Promise<{ ok: boolean; on_sale?: boolean; error?: string }> {
+  const { data, error } = await supabase.rpc("resell_artwork" as never, {
+    _post_id: postId,
+    _price: Math.max(0, Math.floor(price)),
+  } as never);
+  if (error) throw error;
+  return (data as { ok: boolean; on_sale?: boolean; error?: string }) ?? { ok: false };
+}
+
+/**
+ * Obras de la galería que el usuario posee: las suyas (creador o dueño actual)
+ * y las compradas históricamente (incluye compras anteriores a la reventa).
+ */
+export async function fetchMyArtworks(): Promise<PostWithMeta[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  const me = user?.id ?? null;
+  if (!me) return [];
+
+  const { data: purchases } = await supabase.from("game_purchases").select("post_id").eq("user_id", me);
+  const legacyIds = (purchases ?? []).map(x => (x as { post_id: string }).post_id);
+
+  const rows: PostRow[] = [];
+  const q1 = await supabase.from("posts").select("*").is("deleted_at", null).eq("category", "artwork")
+    .or(`current_owner_id.eq.${me},author_id.eq.${me}`)
+    .order("created_at", { ascending: false }).limit(100);
+  if (!q1.error) rows.push(...((q1.data ?? []) as PostRow[]));
+
+  if (legacyIds.length) {
+    const q2 = await supabase.from("posts").select("*").is("deleted_at", null).eq("category", "artwork")
+      .in("id", legacyIds.slice(0, 200)).order("created_at", { ascending: false });
+    if (!q2.error) rows.push(...((q2.data ?? []) as PostRow[]));
+  }
+
+  const uniq = Array.from(new Map(rows.map(r => [r.id, r])).values());
+  return enrichPosts(uniq, me);
 }
 
 // ============ DOCUMENT upload helper ============
