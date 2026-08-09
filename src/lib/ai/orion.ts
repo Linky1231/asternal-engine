@@ -9,6 +9,8 @@
 import { ENGINE_KNOWLEDGE } from "./engine-knowledge";
 
 export const ORION_BASE_URL = "https://yieldingbear.com/api/v1";
+export const ORION_PROXY_URL =
+  "https://gxpgczwkovertezeydkt.supabase.co/functions/v1/orion-proxy";
 export const ORION_MODEL = "yieldingbear/grizzly-1.0g";
 export const ORION_MODEL_CODING = "yieldingbear/grizzly-1.0g-coding";
 
@@ -86,25 +88,48 @@ export async function orionChat(
   }
   const messages = buildOrionMessages(history);
 
+  const payload = {
+    model: opts.coding ? ORION_MODEL_CODING : ORION_MODEL,
+    messages,
+    max_tokens: opts.maxTokens ?? 1200,
+    temperature: opts.temperature ?? 0.7,
+  };
+
   let res: Response;
   try {
-    res = await fetch(`${ORION_BASE_URL}/chat/completions`, {
+    // Vía Edge Function de Supabase (CORS habilitado desde el navegador).
+    res = await fetch(ORION_PROXY_URL, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${key}`,
-      },
-      body: JSON.stringify({
-        model: opts.coding ? ORION_MODEL_CODING : ORION_MODEL,
-        messages,
-        max_tokens: opts.maxTokens ?? 1200,
-        temperature: opts.temperature ?? 0.7,
-      }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
     });
+    if (!res.ok && res.status !== 401 && res.status !== 403 && res.status !== 429) {
+      // Si el proxy falla por una razón distinta a la clave, reintenta directo.
+      const direct = await fetch(`${ORION_BASE_URL}/chat/completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${key}`,
+        },
+        body: JSON.stringify(payload),
+      });
+      res = direct;
+    }
   } catch {
-    throw new Error(
-      "No se pudo conectar con Orión. Comprueba tu conexión a internet e inténtalo de nuevo."
-    );
+    try {
+      res = await fetch(`${ORION_BASE_URL}/chat/completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${key}`,
+        },
+        body: JSON.stringify(payload),
+      });
+    } catch {
+      throw new Error(
+        "No se pudo conectar con Orión. Comprueba tu conexión a internet e inténtalo de nuevo."
+      );
+    }
   }
 
   if (!res.ok) {
