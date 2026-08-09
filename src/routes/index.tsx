@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { Component, useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Gamepad2, Newspaper, Search, LogOut, Wrench, Plus, ShieldCheck, User, Sparkles, Star, Menu, MessageCircle, Bell, X, Home, Users, Flame, MessageSquare, Palette, Trophy, History, Clock, BarChart3, ChevronDown, ChevronRight, Globe, Heart, Megaphone } from "lucide-react";
+import { Gamepad2, Newspaper, Search, LogOut, Wrench, Plus, ShieldCheck, User, Sparkles, Star, Menu, MessageCircle, Bell, X, Home, Users, Flame, MessageSquare, Palette, Trophy, History, Clock, BarChart3, ChevronDown, ChevronRight, Globe, Heart, Megaphone, Bot } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { fetchFeed, fetchGames, getMyProfile, isMod, isAdmin, type PostWithMeta, type Profile } from "@/lib/social/api";
@@ -13,6 +13,7 @@ import { NotificationBell } from "@/components/social/NotificationBell";
 import { ProfilePanel } from "@/components/social/ProfilePanel";
 import { NotificationsInline } from "@/components/social/NotificationsInline";
 import ChatSection from "@/components/social/ChatSection";
+import OrionPanel from "@/components/ai/OrionPanel";
 import { ForumSection } from "@/components/social/ForumSection";
 import { GallerySection } from "@/components/social/GallerySection";
 import { EventsSection } from "@/components/social/EventsSection";
@@ -98,6 +99,7 @@ function HomePage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [chatRetryNonce, setChatRetryNonce] = useState(0);
+  const [orionOpen, setOrionOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [chatShareText, setChatShareText] = useState<string | null>(null);
   const [inPreview, setInPreview] = useState(false);
@@ -440,6 +442,7 @@ function HomePage() {
             {/* Categoría: SOCIAL */}
             <CategoryHeader label="SOCIAL" />
             <MenuItem icon={<MessageCircle size={16} className="text-primary-glow"/>} label="Chats" onClick={() => { setChatOpen(true); closeMenu(); }} />
+            <MenuItem icon={<Bot size={16} className="text-primary-glow"/>} label="Asistencia · Orión" onClick={() => { setOrionOpen(true); closeMenu(); }} />
             <MenuItem icon={<Search size={16}/>} label="Buscar" onClick={() => { setShowSearch(s => !s); closeMenu(); }} />
             <MenuItem icon={<Bell size={16}/>} label="Notificaciones" onClick={() => setNotifOpen(o => !o)} />
             {notifOpen && <NotificationsInline />}
@@ -480,6 +483,11 @@ function HomePage() {
           />
         </ChatBoundary>
       )}
+
+      {/* Full-screen asistente Orión */}
+      <AnimatePresence>
+        {orionOpen && <OrionPanel onClose={() => setOrionOpen(false)} />}
+      </AnimatePresence>
 
     </div>
   );
