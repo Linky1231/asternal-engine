@@ -226,10 +226,9 @@ function AdminPage() {
           ))
         ) : tab === "eventos" ? (
           <>
-            {admin && (
-              <div className="panel border border-border/50 rounded-xl p-3 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="font-display text-[10px] tracking-widest text-primary flex items-center gap-1"><Trophy size={12}/> NUEVO EVENTO</div>
+            <div className="panel border border-border/50 rounded-xl p-3 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="font-display text-[10px] tracking-widest text-primary flex items-center gap-1"><Trophy size={12}/> NUEVO EVENTO</div>
                   <button onClick={() => setShowNewEvent(s => !s)}
                     className={`text-[10px] px-2.5 py-1 rounded-lg border transition ${showNewEvent ? "bg-muted/30 border-border" : "border-primary/30 bg-primary/5 text-primary"}`}>
                     {showNewEvent ? "Cancelar" : "Crear"}
@@ -292,7 +291,6 @@ function AdminPage() {
                   </div>
                 )}
               </div>
-            )}
             {events.length === 0 ? (
               <div className="text-center text-xs text-muted-foreground py-10">No hay eventos creados aún.</div>
             ) : events.map(ev => {
@@ -311,15 +309,13 @@ function AdminPage() {
                       <span>{ev.submission_count ?? 0} subs</span>
                     </div>
                   </div>
-                  {admin && (
-                    <select value={ev.status} onChange={e => {
-                      const v = e.target.value as "upcoming" | "active" | "completed";
-                      updateEventStatus(ev.id, v).then(() => load()).catch(() => {});
-                    }}
-                      className="text-[10px] bg-input/50 rounded-lg px-2 py-1 border border-border/50 outline-none">
-                      {statusOpts.map(s => <option key={s} value={s}>{s.toUpperCase()}</option>)}
-                    </select>
-                  )}
+                  <select value={ev.status} onChange={e => {
+                    const v = e.target.value as "upcoming" | "active" | "completed";
+                    updateEventStatus(ev.id, v).then(() => load()).catch(() => {});
+                  }}
+                    className="text-[10px] bg-input/50 rounded-lg px-2 py-1 border border-border/50 outline-none">
+                    {statusOpts.map(s => <option key={s} value={s}>{s.toUpperCase()}</option>)}
+                  </select>
                 </div>
               );
             })}

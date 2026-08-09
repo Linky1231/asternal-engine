@@ -607,11 +607,11 @@ create policy bans_delete on public.banned_emails for delete using (public.is_mo
 drop policy if exists events_read on public.events;
 create policy events_read on public.events for select using (true);
 drop policy if exists events_insert on public.events;
-create policy events_insert on public.events for insert with check (public.has_role('admin', auth.uid()));
+create policy events_insert on public.events for insert with check (public.is_mod_or_admin(auth.uid()));
 drop policy if exists events_update on public.events;
-create policy events_update on public.events for update using (public.has_role('admin', auth.uid()));
+create policy events_update on public.events for update using (public.is_mod_or_admin(auth.uid()));
 drop policy if exists events_delete on public.events;
-create policy events_delete on public.events for delete using (public.has_role('admin', auth.uid()));
+create policy events_delete on public.events for delete using (public.is_mod_or_admin(auth.uid()));
 drop policy if exists subs_read on public.event_submissions;
 create policy subs_read on public.event_submissions for select using (true);
 drop policy if exists subs_insert on public.event_submissions;
