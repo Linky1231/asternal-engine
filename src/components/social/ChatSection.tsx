@@ -41,6 +41,7 @@ import {
   fetchMyDmChats,
   fetchMutualFollows,
   markDmRead,
+  fetchChatReadAt,
   searchProfilesForMention,
   createGroupChat,
   fetchMyGroupChats,
@@ -1148,11 +1149,15 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
           void markDmRead(threadId).catch(() => {});
           setGroupList((prev) => prev.map((g) => (g.chat_id === threadId ? { ...g, unread: 0 } : g)));
         } else {
-          // Grupo: no leídos = mensajes más nuevos que la última visita.
+          // Chat comunitario: no leídos sincronizados por cuenta (last_read_at),
+          // con respaldo local (_chat_last_seen) para modo local/offline.
           try {
-            const lastSeen = Number(localStorage.getItem("_chat_last_seen") ?? 0);
+            const readAt = await fetchChatReadAt(threadId);
+            const lastSeen = readAt ?? Number(localStorage.getItem("_chat_last_seen") ?? 0);
             const missed = msgs.filter((m) => m.sender_id !== myId && new Date(m.created_at).getTime() > lastSeen).length;
             if (missed > 0) setUnseen(missed);
+            // Marca como leído en la cuenta (multi-dispositivo); en local solo localStorage.
+            if (readAt !== null) void markDmRead(threadId).catch(() => {});
             localStorage.setItem("_chat_last_seen", String(Date.now()));
           } catch {
             /* noop */
@@ -1202,8 +1207,9 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
         setMessages((prev) => (prev.some((m) => m.id === ev.message.id) ? prev : [...prev, ev.message]));
         loadSenders([ev.message]);
         if (!stickToBottomRef.current) setUnseen((n) => n + 1);
-        else if (activeDmRef.current) void markDmRead(currentChatId).catch(() => {});
         else {
+          // Marca leído por cuenta (comunidad, DM o grupo) + respaldo local.
+          void markDmRead(currentChatId).catch(() => {});
           try { localStorage.setItem("_chat_last_seen", String(Date.now())); } catch { /* noop */ }
         }
       } else if (ev.type === "UPDATE") {
@@ -1423,10 +1429,8 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
     stickToBottomRef.current = nearBottom;
     if (nearBottom && unseen > 0) {
       setUnseen(0);
-      if (activeDmRef.current && currentChatId) void markDmRead(currentChatId).catch(() => {});
-      else {
-        try { localStorage.setItem("_chat_last_seen", String(Date.now())); } catch { /* noop */ }
-      }
+      if (currentChatId) void markDmRead(currentChatId).catch(() => {});
+      try { localStorage.setItem("_chat_last_seen", String(Date.now())); } catch { /* noop */ }
     }
     if (el.scrollTop < 60 && hasMore && !loadingMore) void loadOlder();
   }, [hasMore, loadingMore, loadOlder, unseen]);
@@ -1434,10 +1438,8 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
   const jumpToBottom = useCallback(() => {
     stickToBottomRef.current = true;
     setUnseen(0);
-    if (activeDmRef.current && currentChatId) void markDmRead(currentChatId).catch(() => {});
-    else {
-      try { localStorage.setItem("_chat_last_seen", String(Date.now())); } catch { /* noop */ }
-    }
+    if (currentChatId) void markDmRead(currentChatId).catch(() => {});
+    try { localStorage.setItem("_chat_last_seen", String(Date.now())); } catch { /* noop */ }
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [currentChatId]);
 

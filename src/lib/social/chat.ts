@@ -468,6 +468,28 @@ export async function markDmRead(chatId: string): Promise<void> {
   }
 }
 
+/**
+ * Última lectura del usuario en un chat, sincronizada por cuenta
+ * (last_read_at en Supabase). En modo local devuelve null (usa
+ * _chat_last_seen del navegador como respaldo).
+ */
+export async function fetchChatReadAt(chatId: string): Promise<number | null> {
+  try {
+    const me = await requireMe();
+    if (me.isLocal) return null;
+    const { data, error } = await supabase
+      .from("chat_members")
+      .select("last_read_at")
+      .eq("chat_id", chatId)
+      .eq("user_id", me.id)
+      .maybeSingle();
+    if (error || !data?.last_read_at) return null;
+    return new Date(data.last_read_at as string).getTime();
+  } catch {
+    return null;
+  }
+}
+
 // ───── Grupos personalizados ─────
 // Chats grupales que cualquier usuario crea con amigos (seguimiento mutuo).
 // Tienen nombre, descripción y foto de perfil. El creador es el owner y puede
