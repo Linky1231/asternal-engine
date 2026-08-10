@@ -39,6 +39,9 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
   const tabRowRef = useRef<HTMLDivElement | null>(null);
   const tabBtnRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const [tabPill, setTabPill] = useState<{ left: number; width: number } | null>(null);
+  const [tabScrolling, setTabScrolling] = useState(false);
+  const tabRafRef = useRef<number | null>(null);
+  const tabIdleRef = useRef<number | null>(null);
 
   const measureTabPill = useCallback(() => {
     const row = tabRowRef.current;
@@ -56,10 +59,25 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
   useLayoutEffect(() => { measureTabPill(); }, [measureTabPill]);
 
   useEffect(() => {
-    window.addEventListener("resize", measureTabPill);
+    const row = tabRowRef.current;
+    const onScroll = () => {
+      // Sin transición mientras se desplaza: la píldora sigue al botón al
+      // instante y nunca se queda "persiguiéndolo" con retraso.
+      setTabScrolling(true);
+      if (tabIdleRef.current) window.clearTimeout(tabIdleRef.current);
+      tabIdleRef.current = window.setTimeout(() => setTabScrolling(false), 120);
+      if (tabRafRef.current) cancelAnimationFrame(tabRafRef.current);
+      tabRafRef.current = requestAnimationFrame(measureTabPill);
+    };
+    const onResize = () => measureTabPill();
+    window.addEventListener("resize", onResize);
+    row?.addEventListener("scroll", onScroll, { passive: true });
     const t = window.setTimeout(measureTabPill, 150);
     return () => {
-      window.removeEventListener("resize", measureTabPill);
+      window.removeEventListener("resize", onResize);
+      row?.removeEventListener("scroll", onScroll);
+      if (tabRafRef.current) cancelAnimationFrame(tabRafRef.current);
+      if (tabIdleRef.current) window.clearTimeout(tabIdleRef.current);
       window.clearTimeout(t);
     };
   }, [measureTabPill]);
@@ -292,7 +310,9 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
       <div ref={tabRowRef} className="relative flex gap-1.5 overflow-x-auto no-scrollbar pb-0.5 -mx-1 px-1">
         <span
           aria-hidden
-          className="pointer-events-none absolute top-0 bottom-0.5 rounded-xl bg-gradient-to-r from-primary to-accent shadow-sm shadow-primary/20 transition-[transform,width] duration-300 ease-out will-change-transform"
+          className={`pointer-events-none absolute top-0 bottom-0.5 rounded-xl bg-gradient-to-r from-primary to-accent shadow-sm shadow-primary/20 will-change-transform ${
+            tabScrolling ? "transition-none" : "transition-transform duration-300 ease-out"
+          }`}
           style={{
             left: 0,
             width: tabPill?.width ?? 0,

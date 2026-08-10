@@ -591,11 +591,18 @@ function FeedSubTabs({ value, onChange }: { value: FeedSub; onChange: (v: FeedSu
   const rowRef = useRef<HTMLDivElement | null>(null);
   const btnRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const [pill, setPill] = useState<{ left: number; width: number } | null>(null);
+  // Mientras la fila se desplaza (scroll del usuario o auto-scroll del
+  // navegador al enfocar un botón recortado) la píldora sigue al botón AL
+  // INSTANTE sin transición; el deslizamiento solo se anima entre pestañas.
+  const [scrolling, setScrolling] = useState(false);
+  const rafRef = useRef<number | null>(null);
+  const idleRef = useRef<number | null>(null);
 
   // Mide la posición REAL de cada botón y anima solo con transform en px: la
   // píldora queda pegada aunque los botones lleguen a su ancho mínimo y la fila
   // se desborde con scroll horizontal. Sin calc() (que no interpola y salta),
-  // sin layoutId y sin medir por frame → cero lag y cero desalineación.
+  // sin layoutId, sin medir por frame y SIN animar width (animar el ancho
+  // fuerza un recálculo de layout por frame → ese era el lag) → puro GPU.
   const measure = useCallback(() => {
     const row = rowRef.current;
     const btn = btnRefs.current[idx];
@@ -612,10 +619,25 @@ function FeedSubTabs({ value, onChange }: { value: FeedSub; onChange: (v: FeedSu
   useLayoutEffect(() => { measure(); }, [measure]);
 
   useEffect(() => {
-    window.addEventListener("resize", measure);
+    const row = rowRef.current;
+    const onScroll = () => {
+      // Sin transición mientras se desplaza: la píldora sigue al botón al
+      // instante y nunca se queda "persiguiéndolo" con retraso.
+      setScrolling(true);
+      if (idleRef.current) window.clearTimeout(idleRef.current);
+      idleRef.current = window.setTimeout(() => setScrolling(false), 120);
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(measure);
+    };
+    const onResize = () => measure();
+    window.addEventListener("resize", onResize);
+    row?.addEventListener("scroll", onScroll, { passive: true });
     const t = window.setTimeout(measure, 150);
     return () => {
-      window.removeEventListener("resize", measure);
+      window.removeEventListener("resize", onResize);
+      row?.removeEventListener("scroll", onScroll);
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (idleRef.current) window.clearTimeout(idleRef.current);
       window.clearTimeout(t);
     };
   }, [measure]);
@@ -624,7 +646,9 @@ function FeedSubTabs({ value, onChange }: { value: FeedSub; onChange: (v: FeedSu
     <div ref={rowRef} className="relative flex gap-1.5 py-2 overflow-x-auto no-scrollbar -mx-1 px-1">
       <span
         aria-hidden
-        className="pointer-events-none absolute top-2 bottom-2 rounded-full bg-gradient-to-br from-primary to-accent shadow-[0_3px_10px_-3px_oklch(0.52_0.19_258/0.4)] transition-[transform,width] duration-300 ease-out will-change-transform"
+        className={`pointer-events-none absolute top-2 bottom-2 rounded-full bg-gradient-to-br from-primary to-accent shadow-[0_3px_10px_-3px_oklch(0.52_0.19_258/0.4)] will-change-transform ${
+          scrolling ? "transition-none" : "transition-transform duration-300 ease-out"
+        }`}
         style={{
           left: 0,
           width: pill?.width ?? 86,

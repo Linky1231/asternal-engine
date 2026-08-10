@@ -40,6 +40,9 @@ function FeedPage() {
   const catRowRef = useRef<HTMLDivElement | null>(null);
   const catBtnRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const [catPill, setCatPill] = useState<{ left: number; width: number } | null>(null);
+  const [catScrolling, setCatScrolling] = useState(false);
+  const catRafRef = useRef<number | null>(null);
+  const catIdleRef = useRef<number | null>(null);
 
   const measureCatPill = useCallback(() => {
     const row = catRowRef.current;
@@ -57,10 +60,25 @@ function FeedPage() {
   useLayoutEffect(() => { measureCatPill(); }, [measureCatPill]);
 
   useEffect(() => {
-    window.addEventListener("resize", measureCatPill);
+    const row = catRowRef.current;
+    const onScroll = () => {
+      // Sin transición mientras se desplaza: la píldora sigue al botón al
+      // instante y nunca se queda "persiguiéndolo" con retraso.
+      setCatScrolling(true);
+      if (catIdleRef.current) window.clearTimeout(catIdleRef.current);
+      catIdleRef.current = window.setTimeout(() => setCatScrolling(false), 120);
+      if (catRafRef.current) cancelAnimationFrame(catRafRef.current);
+      catRafRef.current = requestAnimationFrame(measureCatPill);
+    };
+    const onResize = () => measureCatPill();
+    window.addEventListener("resize", onResize);
+    row?.addEventListener("scroll", onScroll, { passive: true });
     const t = window.setTimeout(measureCatPill, 150);
     return () => {
-      window.removeEventListener("resize", measureCatPill);
+      window.removeEventListener("resize", onResize);
+      row?.removeEventListener("scroll", onScroll);
+      if (catRafRef.current) cancelAnimationFrame(catRafRef.current);
+      if (catIdleRef.current) window.clearTimeout(catIdleRef.current);
       window.clearTimeout(t);
     };
   }, [measureCatPill]);
@@ -121,7 +139,9 @@ function FeedPage() {
         <div ref={catRowRef} className="relative flex items-center gap-1.5 overflow-x-auto no-scrollbar">
           <span
             aria-hidden
-            className="pointer-events-none absolute top-0 bottom-0 rounded-full bg-gradient-to-r from-primary to-accent shadow-[0_3px_12px_-3px_oklch(0.52_0.19_258/0.55)] transition-[transform,width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform"
+            className={`pointer-events-none absolute top-0 bottom-0 rounded-full bg-gradient-to-r from-primary to-accent shadow-[0_3px_12px_-3px_oklch(0.52_0.19_258/0.55)] will-change-transform ${
+              catScrolling ? "transition-none" : "transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
+            }`}
             style={{
               left: 0,
               width: catPill?.width ?? 0,
