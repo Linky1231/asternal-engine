@@ -95,8 +95,9 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
 
   const Chip = ({ active, onClick, title, children }: { active?: boolean; onClick: () => void; title: string; children: React.ReactNode }) => (
     <button onClick={onClick} title={title}
-      className={`shrink-0 h-9 px-3 rounded-full grid grid-flow-col auto-cols-max items-center gap-1.5 text-[11px] font-medium transition-all duration-200 active:scale-90 ${active ? "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-[0_2px_10px_-2px_oklch(0.52_0.19_258/0.45)]" : "bg-muted/50 text-muted-foreground hover:text-primary hover:bg-primary/10 hover:border-primary/25 border border-transparent"}`}>
-      {children}
+      className={`relative shrink-0 h-9 px-3 rounded-full grid grid-flow-col auto-cols-max items-center gap-1.5 text-[11px] font-medium transition-[transform,color,border-color,background-color,box-shadow] duration-300 ease-out active:scale-[0.95] ${active ? "text-primary-foreground shadow-[0_2px_10px_-2px_oklch(0.52_0.19_258/0.45)] border border-transparent" : "bg-muted/50 text-muted-foreground hover:text-primary hover:bg-primary/10 hover:border-primary/25 border border-transparent"}`}>
+      <span aria-hidden className={`absolute inset-0 rounded-full bg-gradient-to-r from-primary to-accent transition-opacity duration-300 ease-out ${active ? "opacity-100" : "opacity-0"}`} />
+      <span className="relative z-10 flex items-center gap-1.5">{children}</span>
     </button>
   );
 
@@ -131,7 +132,7 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
             {previews.map((url, i) => (
               <div key={url} className="relative rounded-xl overflow-hidden bg-muted/30 border border-border/50 group/media">
                 {mediaType === "video" ? <video src={url} className="w-full max-h-64 object-cover" muted /> : <img src={url} alt="" className="w-full max-h-64 object-cover transition-transform duration-500 group-hover/media:scale-[1.02]" />}
-                <button onClick={() => removeFile(i)} className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 text-white grid place-items-center active:scale-90 transition shadow-md backdrop-blur-sm">
+                <button onClick={() => removeFile(i)} className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 text-white grid place-items-center active:scale-[0.92] transition-transform duration-200 ease-out shadow-md backdrop-blur-sm">
                   <X size={14} />
                 </button>
               </div>
@@ -149,7 +150,7 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
                 <span className="flex-1 truncate font-medium">{d.name}</span>
                 <span className="text-muted-foreground tabular-nums">{(d.size / 1024).toFixed(0)}KB</span>
                 <button onClick={() => setDocuments(documents.filter((_, idx) => idx !== i))}
-                  className="text-muted-foreground hover:text-destructive transition-colors active:scale-90">
+                  className="text-muted-foreground hover:text-destructive transition-[transform,color] duration-200 ease-out active:scale-[0.92]">
                   <X size={14} />
                 </button>
               </div>
@@ -250,15 +251,15 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
         )}
 
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar -mx-1 px-1">
-          <label title="Imagen o GIF" className="shrink-0 h-9 px-3 rounded-full grid grid-flow-col auto-cols-max items-center gap-1.5 bg-muted/50 text-muted-foreground text-[11px] font-medium hover:text-primary hover:bg-primary/10 cursor-pointer active:scale-90 transition-all border border-transparent hover:border-primary/25">
+          <label title="Imagen o GIF" className="shrink-0 h-9 px-3 rounded-full grid grid-flow-col auto-cols-max items-center gap-1.5 bg-muted/50 text-muted-foreground text-[11px] font-medium hover:text-primary hover:bg-primary/10 cursor-pointer active:scale-[0.95] transition-[transform,color,background-color,border-color] duration-300 ease-out border border-transparent hover:border-primary/25">
             <ImageIcon size={15} /> {expanded && <span>Imagen</span>}
             <input type="file" hidden accept="image/*,image/gif" multiple onChange={e => onMedia(e, "image")} />
           </label>
-          <label title="Vídeo" className="shrink-0 h-9 px-3 rounded-full grid grid-flow-col auto-cols-max items-center gap-1.5 bg-muted/50 text-muted-foreground text-[11px] font-medium hover:text-primary hover:bg-primary/10 cursor-pointer active:scale-90 transition-all border border-transparent hover:border-primary/25">
+          <label title="Vídeo" className="shrink-0 h-9 px-3 rounded-full grid grid-flow-col auto-cols-max items-center gap-1.5 bg-muted/50 text-muted-foreground text-[11px] font-medium hover:text-primary hover:bg-primary/10 cursor-pointer active:scale-[0.95] transition-[transform,color,background-color,border-color] duration-300 ease-out border border-transparent hover:border-primary/25">
             <Film size={15} /> {expanded && <span>Vídeo</span>}
             <input type="file" hidden accept="video/*" onChange={e => onMedia(e, "video")} />
           </label>
-          <label title="Documentos" className="shrink-0 h-9 px-3 rounded-full grid grid-flow-col auto-cols-max items-center gap-1.5 bg-muted/50 text-muted-foreground text-[11px] font-medium hover:text-primary hover:bg-primary/10 cursor-pointer active:scale-90 transition-all border border-transparent hover:border-primary/25">
+          <label title="Documentos" className="shrink-0 h-9 px-3 rounded-full grid grid-flow-col auto-cols-max items-center gap-1.5 bg-muted/50 text-muted-foreground text-[11px] font-medium hover:text-primary hover:bg-primary/10 cursor-pointer active:scale-[0.95] transition-[transform,color,background-color,border-color] duration-300 ease-out border border-transparent hover:border-primary/25">
             <FileText size={15} /> {expanded && <span>Documento</span>}
             <input type="file" hidden multiple
               accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar,.7z,.json,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain,application/zip"
@@ -276,7 +277,7 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
         <div className="flex items-center justify-end gap-2 pt-1 border-t border-border/40">
           <span className={`text-[10px] font-mono text-muted-foreground ${content.length > 1900 ? "text-destructive" : ""}`}>{content.length}/2000</span>
           <button onClick={submit} disabled={!canSubmit}
-            className="h-10 pl-4 pr-5 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground font-display tracking-[0.15em] text-xs flex items-center gap-1.5 active:scale-95 transition-all shadow-[0_4px_14px_-4px_oklch(0.52_0.19_258/0.5)] disabled:opacity-40 disabled:pointer-events-none hover:shadow-[0_6px_18px_-4px_oklch(0.52_0.19_258/0.6)]">
+            className="h-10 pl-4 pr-5 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground font-display tracking-[0.15em] text-xs flex items-center gap-1.5 active:scale-[0.97] transition-[transform,box-shadow,opacity] duration-300 ease-out shadow-[0_4px_14px_-4px_oklch(0.52_0.19_258/0.5)] disabled:opacity-40 disabled:pointer-events-none hover:shadow-[0_6px_18px_-4px_oklch(0.52_0.19_258/0.6)]">
             {busy ? <Loader2 size={14} className="animate-spin" /> : <Send size={13} />}
             {busy ? "…" : "PUBLICAR"}
           </button>
@@ -305,7 +306,7 @@ function PollEditor({ poll, setPoll }: { poll: Poll | null; setPoll: (p: Poll | 
             className="flex-1 bg-background rounded-lg px-2.5 py-2 text-xs border border-border/50 focus:border-primary/40 outline-none" />
           {poll.options.length > 2 && (
             <button onClick={() => setPoll({ ...poll, options: poll.options.filter((_, idx) => idx !== i) })}
-              className="text-muted-foreground hover:text-destructive transition-colors active:scale-90">
+              className="text-muted-foreground hover:text-destructive transition-[transform,color] duration-200 ease-out active:scale-[0.92]">
               <Trash2 size={14} />
             </button>
           )}
@@ -317,8 +318,7 @@ function PollEditor({ poll, setPoll }: { poll: Poll | null; setPoll: (p: Poll | 
             className="text-[11px] flex items-center gap-1 text-primary-glow hover:underline">
             <Plus size={12} /> añadir opción
           </button>
-        )}
-        <button onClick={() => setPoll(null)} className="ml-auto text-[11px] text-muted-foreground underline hover:text-primary transition-colors">
+        )}            <button onClick={() => setPoll(null)} className="ml-auto text-[11px] text-muted-foreground underline hover:text-primary transition-colors duration-300">
           quitar encuesta
         </button>
       </div>

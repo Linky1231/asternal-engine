@@ -65,7 +65,7 @@ function FeedPage() {
   return (
     <div className="min-h-screen w-full flex flex-col bg-background">
       <header className="sticky top-0 z-20 app-header flex items-center gap-2 px-3 py-2.5 panel border-b backdrop-blur-sm bg-card/90">
-        <Link to="/" className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent grid place-items-center shadow-[0_4px_14px_-4px_oklch(0.52_0.19_258/0.6)] active:scale-95 transition-transform">
+        <Link to="/" className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent grid place-items-center shadow-[0_4px_14px_-4px_oklch(0.52_0.19_258/0.6)] active:scale-95 transition-transform duration-300 ease-out">
           <span className="font-display text-base font-bold text-primary-foreground">A</span>
         </Link>
         <div className="flex-1 min-w-0">
@@ -73,31 +73,38 @@ function FeedPage() {
           <div className="text-[10px] font-mono text-muted-foreground -mt-0.5 truncate">@{me?.username ?? "..."}</div>
         </div>
         <button onClick={() => setShowFilters(s => !s)}
-          className={`w-10 h-10 rounded-xl border grid place-items-center transition-all active:scale-90 ${showFilters ? "border-primary/50 bg-primary/10 text-primary-glow" : "border-border text-muted-foreground hover:bg-muted/50"}`}
+          className={`w-10 h-10 rounded-xl border grid place-items-center transition-[transform,background-color,border-color,color] duration-300 ease-out active:scale-[0.94] ${showFilters ? "border-primary/50 bg-primary/10 text-primary-glow" : "border-border text-muted-foreground hover:bg-muted/50"}`}
           title="Búsqueda y filtros">
           <Search size={16} />
         </button>
         <NotificationBell />
         <button onClick={logout} title="Cerrar sesión"
-          className="w-10 h-10 rounded-xl border border-border text-muted-foreground grid place-items-center hover:bg-destructive/10 hover:text-destructive active:scale-90 transition-all">
+          className="w-10 h-10 rounded-xl border border-border text-muted-foreground grid place-items-center hover:bg-destructive/10 hover:text-destructive active:scale-[0.94] transition-[transform,background-color,color] duration-300 ease-out">
           <LogOut size={15} />
         </button>
       </header>
 
       {/* Filtros por categoría */}
       <div className="px-3 pt-3 max-w-2xl md:max-w-3xl lg:max-w-4xl mx-auto w-full">
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+        <div className="relative flex items-center gap-1.5 overflow-x-auto no-scrollbar">
           {CATEGORIES.map(c => (
             <button key={c.id} onClick={() => setCategory(c.id)}
-              className={`shrink-0 h-9 px-4 rounded-full grid grid-flow-col auto-cols-max items-center gap-1.5 text-xs font-medium transition-all duration-200 active:scale-90 ${category === c.id
-                ? "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-[0_3px_12px_-3px_oklch(0.52_0.19_258/0.55)]"
-                : "bg-card border border-border text-muted-foreground hover:text-primary-glow hover:border-primary/30"}`}>
-              {c.icon}
-              {c.label}
+              className={`relative shrink-0 h-9 px-4 rounded-full grid grid-flow-col auto-cols-max items-center gap-1.5 text-xs font-medium transition-[transform,color] duration-300 ease-out active:scale-[0.96] ${category === c.id ? "text-primary-foreground" : "text-muted-foreground hover:text-primary-glow"}`}>
+              {category === c.id && (
+                <motion.span
+                  layoutId="feed-cat-pill"
+                  className="absolute inset-0 rounded-full bg-gradient-to-r from-primary to-accent shadow-[0_3px_12px_-3px_oklch(0.52_0.19_258/0.55)]"
+                  transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                />
+              )}
+              <span className="relative z-10 flex items-center gap-1.5">
+                {c.icon}
+                {c.label}
+              </span>
             </button>
           ))}
           <button onClick={() => setShowFilters(s => !s)}
-            className={`shrink-0 h-9 px-3 rounded-full grid grid-flow-col auto-cols-max items-center gap-1.5 text-xs font-medium transition-all duration-200 active:scale-90 ${showFilters ? "bg-primary/10 text-primary-glow border border-primary/30" : "bg-card border border-border text-muted-foreground hover:text-primary-glow hover:border-primary/30"}`}>
+            className={`relative shrink-0 h-9 px-3 rounded-full grid grid-flow-col auto-cols-max items-center gap-1.5 text-xs font-medium transition-[transform,color,background-color,border-color] duration-300 ease-out active:scale-[0.96] ${showFilters ? "bg-primary/10 text-primary-glow border border-primary/30" : "bg-card border border-border text-muted-foreground hover:text-primary-glow hover:border-primary/30"}`}>
             <SlidersHorizontal size={13} />
             Filtros
           </button>
@@ -113,16 +120,16 @@ function FeedPage() {
                   <Search size={14} className="text-muted-foreground shrink-0" />
                   <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar en publicaciones…"
                     className="flex-1 bg-transparent text-xs outline-none min-w-0" />
-                  {search && <button onClick={() => setSearch("")} className="text-muted-foreground hover:text-foreground active:scale-90 transition"><X size={13} /></button>}
+                  {search && <button onClick={() => setSearch("")} className="text-muted-foreground hover:text-foreground active:scale-[0.92] transition-transform duration-200"><X size={13} /></button>}
                 </label>
                 <label className="flex items-center gap-2 bg-muted/40 rounded-xl px-3 py-2.5 border border-border/50 focus-within:border-primary/40 transition-colors">
                   <span className="text-primary-glow text-sm shrink-0">#</span>
                   <input value={tag} onChange={e => setTag(e.target.value)} placeholder="Etiqueta…"
                     className="flex-1 bg-transparent text-xs outline-none min-w-0" />
-                  {tag && <button onClick={() => setTag("")} className="text-muted-foreground hover:text-foreground active:scale-90 transition"><X size={13} /></button>}
+                  {tag && <button onClick={() => setTag("")} className="text-muted-foreground hover:text-foreground active:scale-[0.92] transition-transform duration-200"><X size={13} /></button>}
                 </label>
                 <button onClick={reload}
-                  className="sm:col-span-2 py-2.5 rounded-xl bg-gradient-to-r from-primary to-accent text-primary-foreground text-[10px] font-display tracking-[0.2em] uppercase shadow-[0_3px_12px_-3px_oklch(0.52_0.19_258/0.5)] active:scale-[0.98] transition-all">
+                  className="sm:col-span-2 py-2.5 rounded-xl bg-gradient-to-r from-primary to-accent text-primary-foreground text-[10px] font-display tracking-[0.2em] uppercase shadow-[0_3px_12px_-3px_oklch(0.52_0.19_258/0.5)] active:scale-[0.98] transition-transform duration-300 ease-out">
                   Aplicar filtros
                 </button>
               </div>
@@ -165,7 +172,7 @@ function FeedPage() {
             <div className="font-display text-sm">No hay publicaciones aún</div>
             <div className="text-xs text-muted-foreground max-w-xs mx-auto">Sé el primero en compartir algo con la comunidad — un juego, un dibujo o una idea.</div>
             <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-              className="mt-2 h-9 px-5 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground text-xs font-display tracking-widest shadow-sm active:scale-95 transition-all">
+              className="mt-2 h-9 px-5 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground text-xs font-display tracking-widest shadow-sm active:scale-95 transition-transform duration-300 ease-out">
               CREAR PUBLICACIÓN
             </button>
           </motion.div>

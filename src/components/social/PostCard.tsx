@@ -79,16 +79,16 @@ export function PostCard({
   ) : null;
 
   return (
-    <article className={`group panel rounded-2xl border border-border/60 overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 hover:border-primary/25 ${entranceClass}`}>
+    <article className={`group panel rounded-2xl border border-border/60 overflow-hidden transition-[transform,box-shadow,border-color] duration-300 ease-out hover:shadow-lg hover:-translate-y-0.5 hover:border-primary/25 ${entranceClass}`}>
       {/* Hairline degradado superior */}
       <div className="h-[3px] w-full bg-gradient-to-r from-primary via-accent to-transparent opacity-70 group-hover:opacity-100 transition-opacity duration-300" />
 
       <div className="p-3 space-y-3">
         <header className="flex items-center gap-2.5">
           <Link to="/profile/$userId" params={{ userId: post.author_id }}
-            className="relative shrink-0 transition-transform active:scale-95">
+            className="relative shrink-0 transition-transform duration-300 ease-out active:scale-95">
             {frame ? (
-              <div className={`plus-frame plus-frame-${frame} w-10 h-10 rounded-full p-[2.5px]`}>
+              <div className="w-10 h-10 rounded-full p-[2px] shadow-[0_2px_10px_-2px_oklch(0.62_0.12_220/0.45)]" style={{ background: frameCss(frame) }}>
                 <div className="w-full h-full rounded-full overflow-hidden bg-background font-display text-xs text-primary-glow">
                   {avatarInner}
                 </div>
@@ -99,7 +99,7 @@ export function PostCard({
               </div>
             )}
           </Link>
-          <Link to="/profile/$userId" params={{ userId: post.author_id }} className="flex-1 min-w-0 hover:opacity-80 transition-opacity">
+          <Link to="/profile/$userId" params={{ userId: post.author_id }} className="flex-1 min-w-0 hover:opacity-80 transition-opacity duration-300">
             <div className="flex items-center gap-1.5">
               <UserName p={author} size="sm" />
               {categoryChip}
@@ -110,15 +110,15 @@ export function PostCard({
           </Link>
           <div className="relative">
             <button onClick={() => setMenuOpen(o => !o)}
-              className="w-8 h-8 rounded-lg border border-border text-muted-foreground grid place-items-center transition-all hover:bg-muted/50 hover:text-foreground active:scale-90">
+              className="w-8 h-8 rounded-lg border border-border text-muted-foreground grid place-items-center transition-[transform,background-color,color] duration-300 ease-out hover:bg-muted/50 hover:text-foreground active:scale-[0.94]">
               <MoreHorizontal size={15} />
             </button>
             {menuOpen && (
               <div className="absolute right-0 top-9 z-20 panel border border-border rounded-xl p-1 min-w-[150px] text-xs shadow-lg anim-scale-in">
-                {mine && <button onClick={() => { setEditing(true); setMenuOpen(false); }} className="flex items-center gap-2 w-full text-left px-2.5 py-2 rounded-lg hover:bg-muted/50 transition-colors"><Pencil size={13} /> Editar</button>}
-                {canDelete && <button onClick={remove} className="flex items-center gap-2 w-full text-left px-2.5 py-2 rounded-lg text-destructive hover:bg-destructive/10 transition-colors"><Trash2 size={13} /> Borrar</button>}
-                {!mine && <button onClick={report} className="flex items-center gap-2 w-full text-left px-2.5 py-2 rounded-lg hover:bg-muted/50 transition-colors"><Flag size={13} /> Reportar</button>}
-                <button onClick={share} className="flex items-center gap-2 w-full text-left px-2.5 py-2 rounded-lg hover:bg-muted/50 transition-colors"><Share2 size={13} /> Compartir</button>
+                {mine && <button onClick={() => { setEditing(true); setMenuOpen(false); }} className="flex items-center gap-2 w-full text-left px-2.5 py-2 rounded-lg hover:bg-muted/50 transition-colors duration-200"><Pencil size={13} /> Editar</button>}
+                {canDelete && <button onClick={remove} className="flex items-center gap-2 w-full text-left px-2.5 py-2 rounded-lg text-destructive hover:bg-destructive/10 transition-colors duration-200"><Trash2 size={13} /> Borrar</button>}
+                {!mine && <button onClick={report} className="flex items-center gap-2 w-full text-left px-2.5 py-2 rounded-lg hover:bg-muted/50 transition-colors duration-200"><Flag size={13} /> Reportar</button>}
+                <button onClick={share} className="flex items-center gap-2 w-full text-left px-2.5 py-2 rounded-lg hover:bg-muted/50 transition-colors duration-200"><Share2 size={13} /> Compartir</button>
               </div>
             )}
           </div>
@@ -130,9 +130,9 @@ export function PostCard({
               className="w-full bg-input/40 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary/40" />
             <div className="flex gap-2 justify-end">
               <button onClick={() => setEditing(false)}
-                className="text-xs px-3.5 py-1.5 rounded-full border border-border hover:bg-muted/40 transition-colors">Cancelar</button>
+                className="text-xs px-3.5 py-1.5 rounded-full border border-border hover:bg-muted/40 transition-colors duration-200">Cancelar</button>
               <button onClick={saveEdit}
-                className="text-xs px-3.5 py-1.5 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-sm active:scale-95 transition">Guardar</button>
+                className="text-xs px-3.5 py-1.5 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-sm active:scale-[0.96] transition-transform duration-300 ease-out">Guardar</button>
             </div>
           </div>
         ) : (
@@ -152,7 +152,7 @@ export function PostCard({
               </div>
             ) : (
               <div key={i} className="relative rounded-xl overflow-hidden bg-muted/40 border border-border/60 group/media">
-                <img src={url} alt="" className="w-full max-h-[420px] object-cover transition-transform duration-500 group-hover/media:scale-[1.02]" loading="lazy" />
+                <img src={url} alt="" className="w-full max-h-[420px] object-cover transition-transform duration-500 ease-out group-hover/media:scale-[1.02]" loading="lazy" />
               </div>
             ))}
           </div>
@@ -163,12 +163,12 @@ export function PostCard({
           <div className="space-y-1.5">
             {post.signed_documents.map((d, i) => (
               <a key={i} href={d.url} target="_blank" rel="noreferrer" download={d.name}
-                className="flex items-center gap-2.5 bg-muted/30 hover:bg-primary/10 rounded-xl px-3 py-2.5 text-xs border border-border/50 hover:border-primary/30 transition-all group/doc">
+                className="flex items-center gap-2.5 bg-muted/30 hover:bg-primary/10 rounded-xl px-3 py-2.5 text-xs border border-border/50 hover:border-primary/30 transition-[background-color,border-color] duration-300 ease-out group/doc">
                 <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/20 to-accent/15 grid place-items-center shrink-0">
                   <FileText size={14} className="text-primary" />
                 </span>
                 <span className="flex-1 truncate font-medium">{d.name}</span>
-                <Download size={13} className="text-muted-foreground group-hover/doc:text-primary transition-colors" />
+                <Download size={13} className="text-muted-foreground group-hover/doc:text-primary transition-colors duration-300" />
               </a>
             ))}
           </div>
@@ -178,10 +178,10 @@ export function PostCard({
         {post.html_content && (
           <div className="border border-border rounded-xl overflow-hidden">
             <button onClick={() => setShowHtml(s => !s)}
-              className="w-full flex items-center gap-2 px-3 py-2.5 text-xs bg-muted/30 hover:bg-muted/50 transition-colors">
+              className="w-full flex items-center gap-2 px-3 py-2.5 text-xs bg-muted/30 hover:bg-muted/50 transition-colors duration-300">
               <Code2 size={13} className="text-primary" />
               <span className="flex-1 text-left font-medium">Contenido HTML {showHtml ? "(ocultar)" : "(mostrar)"}</span>
-              <span className="text-muted-foreground">{showHtml ? "▲" : "▼"}</span>
+              <span className="text-muted-foreground transition-transform duration-300 ease-out" style={{ transform: showHtml ? "rotate(180deg)" : "none" }}>▼</span>
             </button>
             {showHtml && (
               <>
@@ -195,7 +195,7 @@ export function PostCard({
         {/* Juego fijado */}
         {post.pinned_game && (
           <Link to="/" search={{ p: post.pinned_game.id } as never}
-            className="group/game flex items-center gap-3 rounded-2xl p-2 pr-3 bg-gradient-to-r from-primary/8 via-accent/8 to-transparent border border-primary/20 hover:border-primary/40 transition-all hover:shadow-md">
+            className="group/game flex items-center gap-3 rounded-2xl p-2 pr-3 bg-gradient-to-r from-primary/8 via-accent/8 to-transparent border border-primary/20 hover:border-primary/40 transition-[border-color,box-shadow] duration-300 ease-out hover:shadow-md">
             {post.pinned_game.cover_url ? (
               <img src={post.pinned_game.cover_url} alt="" className="w-14 h-14 rounded-xl object-cover shrink-0 ring-1 ring-border/50" />
             ) : (
@@ -207,7 +207,7 @@ export function PostCard({
               <div className="text-[9px] font-display tracking-[0.18em] text-primary-glow uppercase">Juego fijado</div>
               <div className="text-sm font-display truncate mt-0.5">{post.pinned_game.title}</div>
             </div>
-            <span className="w-7 h-7 rounded-full bg-primary/10 grid place-items-center text-primary-glow transition-transform group-hover/game:translate-x-0.5">▶</span>
+            <span className="w-7 h-7 rounded-full bg-primary/10 grid place-items-center text-primary-glow transition-transform duration-300 ease-out group-hover/game:translate-x-0.5">▶</span>
           </Link>
         )}
 
@@ -216,7 +216,7 @@ export function PostCard({
 
         {/* Contenido desbloqueable */}
         {post.locked_content && (
-          <div className={`rounded-2xl border p-3.5 transition-all ${post.is_unlocked ? "border-primary/40 bg-gradient-to-br from-primary/8 to-accent/8" : "border-dashed border-border bg-muted/20"}`}>
+          <div className={`rounded-2xl border p-3.5 transition-[border-color,background-color] duration-500 ease-out ${post.is_unlocked ? "border-primary/40 bg-gradient-to-br from-primary/8 to-accent/8" : "border-dashed border-border bg-muted/20"}`}>
             <div className="flex items-center gap-2 text-[11px] font-display tracking-[0.15em] mb-2">
               <span className={`w-6 h-6 rounded-full grid place-items-center ${post.is_unlocked ? "bg-primary/15 text-primary-glow" : "bg-muted text-muted-foreground"}`}>
                 <Lock size={11} />
@@ -230,7 +230,7 @@ export function PostCard({
                 {post.unlock_reactions_goal && (
                   <div className="flex items-center gap-2">
                     <span className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
-                      <span className="block h-full bg-gradient-to-r from-primary to-accent rounded-full transition-all duration-500"
+                      <span className="block h-full bg-gradient-to-r from-primary to-accent rounded-full transition-[width] duration-700 ease-out"
                         style={{ width: `${Math.min(100, Math.round(((post.likes + post.favorites) / post.unlock_reactions_goal) * 100))}%` }} />
                     </span>
                     <span className="tabular-nums">{post.likes + post.favorites} / {post.unlock_reactions_goal}</span>
@@ -246,7 +246,7 @@ export function PostCard({
 
         {post.link_url && (
           <a href={post.link_url} target="_blank" rel="noreferrer"
-            className="flex items-center gap-2 text-xs text-primary-glow hover:underline break-all transition-colors">
+            className="flex items-center gap-2 text-xs text-primary-glow hover:underline break-all transition-colors duration-300">
             <Link2 size={13} className="shrink-0" /> {post.link_url}
           </a>
         )}
@@ -255,7 +255,7 @@ export function PostCard({
           <div className="flex flex-wrap gap-1.5">
             {post.tags.map(t => (
               <span key={t}
-                className="text-[10px] font-mono px-2 py-1 rounded-full bg-muted/40 text-muted-foreground border border-border/40 transition-colors hover:text-primary-glow hover:border-primary/30">
+                className="text-[10px] font-mono px-2 py-1 rounded-full bg-muted/40 text-muted-foreground border border-border/40 transition-[color,border-color] duration-300 ease-out hover:text-primary-glow hover:border-primary/30">
                 #{t}
               </span>
             ))}
@@ -265,22 +265,22 @@ export function PostCard({
 
       <footer className="flex items-center border-t border-border/50 bg-muted/15 px-2 py-1 text-[11px] text-muted-foreground">
         <button onClick={() => react("like")}
-          className={`flex-1 flex items-center justify-center gap-1.5 px-1 py-2 rounded-lg transition-all active:scale-90 ${post.my_like ? "text-rose-500" : "hover:bg-rose-500/10 hover:text-rose-500"}`}>
+          className={`flex-1 flex items-center justify-center gap-1.5 px-1 py-2 rounded-lg transition-[transform,color,background-color] duration-300 ease-out active:scale-[0.93] ${post.my_like ? "text-rose-500" : "hover:bg-rose-500/10 hover:text-rose-500"}`}>
           <Heart size={15} className={post.my_like ? "fill-rose-500" : ""} />
           <span className="tabular-nums font-medium">{post.likes}</span>
         </button>
         <button onClick={() => react("favorite")}
-          className={`flex-1 flex items-center justify-center gap-1.5 px-1 py-2 rounded-lg transition-all active:scale-90 ${post.my_favorite ? "text-amber-500" : "hover:bg-amber-500/10 hover:text-amber-500"}`}>
+          className={`flex-1 flex items-center justify-center gap-1.5 px-1 py-2 rounded-lg transition-[transform,color,background-color] duration-300 ease-out active:scale-[0.93] ${post.my_favorite ? "text-amber-500" : "hover:bg-amber-500/10 hover:text-amber-500"}`}>
           <Star size={15} className={post.my_favorite ? "fill-amber-500" : ""} />
           <span className="tabular-nums font-medium">{post.favorites}</span>
         </button>
         <button onClick={() => setOpenComments(o => !o)}
-          className="flex-1 flex items-center justify-center gap-1.5 px-1 py-2 rounded-lg transition-all active:scale-90 hover:bg-primary/10 hover:text-primary-glow">
+          className="flex-1 flex items-center justify-center gap-1.5 px-1 py-2 rounded-lg transition-[transform,color,background-color] duration-300 ease-out active:scale-[0.93] hover:bg-primary/10 hover:text-primary-glow">
           <MessageCircle size={15} />
           <span className="tabular-nums font-medium">{post.comments_count}</span>
         </button>
         <button onClick={repost}
-          className={`flex-1 flex items-center justify-center gap-1.5 px-1 py-2 rounded-lg transition-all active:scale-90 ${post.my_repost ? "text-emerald-600" : "hover:bg-emerald-500/10 hover:text-emerald-600"}`}>
+          className={`flex-1 flex items-center justify-center gap-1.5 px-1 py-2 rounded-lg transition-[transform,color,background-color] duration-300 ease-out active:scale-[0.93] ${post.my_repost ? "text-emerald-600" : "hover:bg-emerald-500/10 hover:text-emerald-600"}`}>
           <Repeat2 size={15} className={post.my_repost ? "stroke-emerald-600" : ""} />
           <span className="tabular-nums font-medium">{post.reposts_count}</span>
         </button>
@@ -289,6 +289,16 @@ export function PostCard({
       {openComments && <div className="border-t border-border/50 bg-muted/10 px-3 py-2.5"><CommentSection postId={post.id} myId={myId} isMod={isMod} onChange={onChange} /></div>}
     </article>
   );
+}
+
+function frameCss(id: string): string {
+  switch (id) {
+    case "aurora": return "linear-gradient(135deg, #1AA6D6, #2FD9D2, #7BE7FF)";
+    case "ocean": return "linear-gradient(135deg, #0F6C9E, #1AA6D6, #2FD9D2)";
+    case "ice": return "linear-gradient(135deg, #B8ECFF, #7BE7FF, #2FD9D2)";
+    case "neon": return "linear-gradient(135deg, #2FD9D2, #B8ECFF, #1AA6D6)";
+    default: return "linear-gradient(135deg, #1AA6D6, #2FD9D2)";
+  }
 }
 
 function PollView({ poll, onVote }: { poll: NonNullable<PostWithMeta["poll"]>; onVote: (i: number) => void }) {
@@ -307,9 +317,9 @@ function PollView({ poll, onVote }: { poll: NonNullable<PostWithMeta["poll"]>; o
         const mine = poll.my_vote === i;
         return (
           <button key={i} onClick={() => onVote(i)}
-            className={`relative w-full text-left rounded-xl overflow-hidden border transition-all active:scale-[0.98] ${mine ? "border-primary/50 shadow-sm" : "border-border/60 hover:border-primary/30"}`}>
+            className={`relative w-full text-left rounded-xl overflow-hidden border transition-[transform,border-color,box-shadow] duration-300 ease-out active:scale-[0.98] ${mine ? "border-primary/50 shadow-sm" : "border-border/60 hover:border-primary/30"}`}>
             {voted && (
-              <div className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary/20 to-accent/15 transition-all duration-700"
+              <div className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary/20 to-accent/15 transition-[width] duration-700 ease-out"
                 style={{ width: `${pct}%` }} />
             )}
             <div className="relative flex items-center justify-between px-3 py-2.5 text-xs gap-2">
@@ -329,4 +339,3 @@ function PollView({ poll, onVote }: { poll: NonNullable<PostWithMeta["poll"]>; o
     </div>
   );
 }
-
