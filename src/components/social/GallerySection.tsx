@@ -194,49 +194,53 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
   return (
     <div className="space-y-5">
       {/* ====== HEADER ====== */}
-      <div className="flex items-center justify-between gap-3 panel rounded-2xl p-3 border border-border/40">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-accent grid place-items-center shadow-md shrink-0">
-            <Palette size={22} className="text-primary-foreground" />
-          </div>
-          <div className="min-w-0">
-            <div className="font-display text-base font-semibold truncate tracking-tight flex items-center gap-2">
-              Galería
-              <span className="text-[9px] font-mono text-muted-foreground/60 bg-muted/50 px-2 py-0.5 rounded-full border border-border/30">
-                Comunidad
-              </span>
+      <div className="panel rounded-2xl border border-border/40 overflow-hidden">
+        {/* Hairline degradado superior */}
+        <div className="h-[3px] w-full bg-gradient-to-r from-primary via-accent to-transparent opacity-80" />
+        <div className="flex items-center justify-between gap-3 p-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-accent grid place-items-center shadow-md shrink-0">
+              <Palette size={22} className="text-primary-foreground" />
             </div>
-            <div className="flex items-center gap-2 text-[10px] font-mono text-muted-foreground/70 mt-0.5">
-              {tab === "misobras" ? (
-                <span className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                  {artworks.length} obra{artworks.length !== 1 ? "s" : ""} en tu colección
+            <div className="min-w-0">
+              <div className="font-display text-base font-semibold truncate tracking-tight flex items-center gap-2">
+                Galería
+                <span className="text-[9px] font-mono text-muted-foreground/60 bg-muted/50 px-2 py-0.5 rounded-full border border-border/30">
+                  Comunidad
                 </span>
-              ) : (
-                <>
-                  <span className="flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                    {artworks.length} obra{artworks.length !== 1 ? "s" : ""}
+              </div>
+              <div className="flex items-center gap-1.5 flex-wrap text-[10px] font-mono text-muted-foreground/70 mt-1">
+                {tab === "misobras" ? (
+                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted/60 border border-border/30">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                    {artworks.length} obra{artworks.length !== 1 ? "s" : ""} en tu colección
                   </span>
-                  <span>·</span>
-                  <span className="flex items-center gap-1">
-                    {mineCount} tuya{mineCount !== 1 ? "s" : ""}
-                  </span>
-                </>
-              )}
+                ) : (
+                  <>
+                    <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted/60 border border-border/30">
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                      {artworks.length} obra{artworks.length !== 1 ? "s" : ""}
+                    </span>
+                    <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted/60 border border-border/30">
+                      <span className="w-1.5 h-1.5 rounded-full bg-accent" />
+                      {mineCount} tuya{mineCount !== 1 ? "s" : ""}
+                    </span>
+                  </>
+                )}
+              </div>
             </div>
           </div>
+          <button
+            onClick={() => setCanvasOpen(true)}
+            className="h-10 pl-4 pr-5 rounded-xl bg-gradient-to-r from-primary to-accent text-primary-foreground text-[10px] font-display tracking-widest flex items-center gap-1.5 active:scale-95 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/25 transition-all duration-300 shrink-0 font-semibold"
+          >
+            <ImagePlus size={16} /> NUEVA OBRA
+          </button>
         </div>
-        <button
-          onClick={() => setCanvasOpen(true)}
-          className="h-10 pl-4 pr-5 rounded-xl bg-gradient-to-r from-primary to-accent text-primary-foreground text-[10px] font-display tracking-widest flex items-center gap-1.5 active:scale-95 hover:shadow-lg hover:shadow-primary/25 transition-all shrink-0 font-semibold"
-        >
-          <ImagePlus size={16} /> NUEVA OBRA
-        </button>
       </div>
 
       {/* ====== SEARCH BAR ====== */}
-      <div className="flex items-center gap-2 bg-input/40 border border-border/50 rounded-2xl px-3.5 py-2.5 focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary/40 transition-all">
+      <div className="flex items-center gap-2 bg-card/80 border border-border/60 rounded-2xl px-3.5 py-2.5 shadow-sm focus-within:ring-2 focus-within:ring-primary/25 focus-within:border-primary/40 transition-all duration-300">
         <Search size={15} className="text-muted-foreground shrink-0" />
         <input
           value={searchQ}
@@ -251,8 +255,8 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
         )}
       </div>
 
-      {/* ====== NAVIGATION TABS ====== */}
-      <div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
+      {/* ====== NAVIGATION TABS (píldora deslizante suave) ====== */}
+      <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-0.5 -mx-1 px-1">
         {TABS.map(t => {
           const Icon = t.icon;
           const isActive = tab === t.id;
@@ -260,39 +264,66 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[10px] font-display tracking-widest transition-all active:scale-95 whitespace-nowrap ${
+              className={`relative shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[10px] font-display tracking-widest transition-colors duration-300 active:scale-95 whitespace-nowrap border ${
                 isActive
-                  ? "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-sm shadow-primary/20"
-                  : "text-muted-foreground hover:text-foreground bg-muted/30 hover:bg-muted/60 border border-border/40"
+                  ? "border-transparent text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground bg-muted/30 hover:bg-muted/60 border-border/40"
               }`}
             >
-              <Icon size={13} />
-              {t.label}
+              {isActive && (
+                <motion.span
+                  layoutId="gallery-tab-pill"
+                  className="absolute inset-0 rounded-xl bg-gradient-to-r from-primary to-accent shadow-sm shadow-primary/20"
+                  transition={{ type: "spring", stiffness: 320, damping: 30, mass: 0.9 }}
+                />
+              )}
+              <span className="relative z-10 flex items-center gap-1.5">
+                <Icon size={13} />
+                {t.label}
+              </span>
             </button>
           );
         })}
-        <div className="flex-1" />
+        <div className="flex-1 min-w-2" />
         <button
           onClick={() => setTab("all")}
-          className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[10px] font-display tracking-widest transition-all active:scale-95 ${
+          className={`relative shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[10px] font-display tracking-widest transition-colors duration-300 active:scale-95 border ${
             tab === "all"
-              ? "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-sm shadow-primary/20"
-              : "text-muted-foreground hover:text-foreground bg-muted/30 hover:bg-muted/60 border border-border/40"
+              ? "border-transparent text-primary-foreground"
+              : "text-muted-foreground hover:text-foreground bg-muted/30 hover:bg-muted/60 border-border/40"
           }`}
         >
-          <Eye size={13} />
-          TODO
+          {tab === "all" && (
+            <motion.span
+              layoutId="gallery-tab-pill"
+              className="absolute inset-0 rounded-xl bg-gradient-to-r from-primary to-accent shadow-sm shadow-primary/20"
+              transition={{ type: "spring", stiffness: 320, damping: 30, mass: 0.9 }}
+            />
+          )}
+          <span className="relative z-10 flex items-center gap-1.5">
+            <Eye size={13} />
+            TODO
+          </span>
         </button>
         <button
           onClick={() => setTab("misobras")}
-          className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[10px] font-display tracking-widest transition-all active:scale-95 ${
+          className={`relative shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[10px] font-display tracking-widest transition-colors duration-300 active:scale-95 border ${
             tab === "misobras"
-              ? "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-sm shadow-primary/20"
-              : "text-muted-foreground hover:text-foreground bg-muted/30 hover:bg-muted/60 border border-border/40"
+              ? "border-transparent text-primary-foreground"
+              : "text-muted-foreground hover:text-foreground bg-muted/30 hover:bg-muted/60 border-border/40"
           }`}
         >
-          <Package size={13} />
-          MIS OBRAS
+          {tab === "misobras" && (
+            <motion.span
+              layoutId="gallery-tab-pill"
+              className="absolute inset-0 rounded-xl bg-gradient-to-r from-primary to-accent shadow-sm shadow-primary/20"
+              transition={{ type: "spring", stiffness: 320, damping: 30, mass: 0.9 }}
+            />
+          )}
+          <span className="relative z-10 flex items-center gap-1.5">
+            <Package size={13} />
+            MIS OBRAS
+          </span>
         </button>
       </div>
 
@@ -359,6 +390,8 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
                 className="group text-left w-full"
               >
                 <div className="relative panel rounded-2xl overflow-hidden border border-border/40 hover:border-primary/40 hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 active:scale-[0.97]">
+                  {/* Hairline degradado superior */}
+                  <div className="h-[2px] w-full bg-gradient-to-r from-primary via-accent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   {/* Image area with decorative gradient border */}
                   <div className="aspect-square bg-gradient-to-br from-muted/20 to-muted/5 relative overflow-hidden">
                     {imgUrl ? (

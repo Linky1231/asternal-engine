@@ -691,7 +691,7 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
   return (
     <div className="w-full h-full flex flex-col rounded-2xl border border-border/40 panel overflow-hidden bg-muted/95 backdrop-blur-xl">
       {/* Top bar - compact but usable */}
-      <div className="flex items-center justify-between px-2.5 py-1 border-b border-border/30 gap-1.5 shrink-0 bg-muted/50">
+      <div className="flex items-center justify-between px-2 py-0.5 border-b border-border/30 gap-1.5 shrink-0 bg-muted/50">
         <div className="flex items-center gap-1.5 min-w-0 flex-1">
           <div
             className="w-8 h-8 rounded-md shrink-0 overflow-hidden"
@@ -707,7 +707,7 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="bg-input/40 border border-border/40 rounded-md px-2.5 py-1.5 text-sm font-medium tracking-tight min-w-0 flex-1 max-w-[150px] focus:outline-none focus:border-primary/40 focus:bg-accent/30 transition"
+            className="bg-input/40 border border-border/40 rounded-md px-2 py-1 text-sm font-medium tracking-tight min-w-0 flex-1 max-w-[120px] focus:outline-none focus:border-primary/40 focus:bg-accent/30 transition"
           />
           <select
             value={size}
@@ -733,7 +733,7 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
         </div>
         <div className="flex items-center gap-1 shrink-0">
           <button onClick={() => setLayersOpen(!layersOpen)} title="Capas"
-            className={`h-9 px-2.5 rounded-md border transition inline-flex items-center gap-1.5 text-xs font-semibold ${
+            className={`h-8 px-2.5 rounded-md border transition inline-flex items-center gap-1.5 text-xs font-semibold ${
               layersOpen
                 ? "bg-primary/15 border-primary/40 text-primary"
                 : "border-border/50 bg-muted/50 text-foreground/70 hover:text-foreground hover:bg-muted/80"
@@ -741,10 +741,10 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
           >
             <Layers size={16} />{layers.length}
           </button>
-          <button onClick={onClose} className="h-9 px-3 rounded-md border border-border/50 bg-muted/50 text-foreground/70 hover:text-foreground hover:bg-muted/80 transition inline-flex items-center gap-1 text-xs font-semibold">
+          <button onClick={onClose} className="h-8 px-2.5 rounded-md border border-border/50 bg-muted/50 text-foreground/70 hover:text-foreground hover:bg-muted/80 transition inline-flex items-center gap-1 text-xs font-semibold">
             <X size={15} />
           </button>
-          <button onClick={doSave} className="h-10 px-4 rounded-md bg-gradient-to-r from-primary to-accent text-primary-foreground hover:shadow-lg hover:shadow-primary/20 transition active:scale-[0.97] inline-flex items-center gap-1.5 text-sm font-semibold shadow-sm">
+          <button onClick={doSave} className="h-9 px-3.5 rounded-md bg-gradient-to-r from-primary to-accent text-primary-foreground hover:shadow-lg hover:shadow-primary/20 transition active:scale-[0.97] inline-flex items-center gap-1.5 text-sm font-semibold shadow-sm">
             <Save size={16} />
             <span className="hidden sm:inline">Publicar</span>
           </button>
@@ -858,14 +858,14 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
           )}
         </div>
 
-        {/* Tools sidebar - legible buttons, compact width */}
-        <div className="lg:w-[140px] shrink-0 border-t lg:border-t-0 lg:border-l border-border/30 overflow-y-auto bg-muted/20">
+        {/* Tools sidebar - legible buttons, compact width (más espacio para el lienzo) */}
+        <div className="lg:w-[112px] shrink-0 border-t lg:border-t-0 lg:border-l border-border/30 overflow-y-auto bg-muted/20">
           <div className="p-1.5 space-y-1.5">
             {/* Tool dock - bigger buttons */}
             <div className="grid grid-cols-3 gap-1 p-1 rounded-lg bg-muted/80 border border-border/40">
               {TOOLS.map(t => (
                 <button key={t.id} title={t.title} onClick={() => setTool(t.id)}
-                  className={`h-10 rounded-md transition-all flex items-center justify-center ${
+                  className={`h-9 rounded-md transition-all flex items-center justify-center ${
                     tool === t.id
                       ? "text-primary-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
@@ -880,9 +880,9 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
 
             {/* History row - uniform size, delete same as others */}
             <div className="flex gap-1">
-              <button onClick={undo} title="Deshacer" className="flex-1 h-10 rounded-md border border-border/50 bg-muted/30 text-foreground/70 hover:text-foreground hover:bg-muted/60 transition flex items-center justify-center active:scale-95"><Undo2 size={18} /></button>
-              <button onClick={redo} title="Rehacer" className="flex-1 h-10 rounded-md border border-border/50 bg-muted/30 text-foreground/70 hover:text-foreground hover:bg-muted/60 transition flex items-center justify-center active:scale-95"><Redo2 size={18} /></button>
-              <button onClick={clearAll} title="Limpiar capa" className="flex-1 h-10 rounded-md border border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/20 transition flex items-center justify-center active:scale-95"><Trash2 size={18} /></button>
+              <button onClick={undo} title="Deshacer" className="flex-1 h-9 rounded-md border border-border/50 bg-muted/30 text-foreground/70 hover:text-foreground hover:bg-muted/60 transition flex items-center justify-center active:scale-95"><Undo2 size={18} /></button>
+              <button onClick={redo} title="Rehacer" className="flex-1 h-9 rounded-md border border-border/50 bg-muted/30 text-foreground/70 hover:text-foreground hover:bg-muted/60 transition flex items-center justify-center active:scale-95"><Redo2 size={18} /></button>
+              <button onClick={clearAll} title="Limpiar capa" className="flex-1 h-9 rounded-md border border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/20 transition flex items-center justify-center active:scale-95"><Trash2 size={18} /></button>
             </div>
 
             {/* Color - legible */}
