@@ -820,7 +820,7 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
                 </span>
                 <div className="flex gap-1">
                   <button onClick={(e) => { e.stopPropagation(); addLayer(); }} className="w-7 h-7 rounded-md flex items-center justify-center text-primary-foreground active:scale-95 transition" style={{ background: "linear-gradient(180deg, oklch(0.78 0.17 250), oklch(0.66 0.18 252))" }}>
-                    <Plus size={13} strokeWidth={2.5} />
+                    <Plus size={13} strokeWidth={2} />
                   </button>
                   <button onClick={() => setLayersOpen(false)} className="w-7 h-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground bg-muted/60 hover:bg-muted/80 border border-border/40 transition">
                     <X size={12} />

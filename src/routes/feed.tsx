@@ -89,12 +89,12 @@ function FeedPage() {
         <div className="relative flex items-center gap-1.5 overflow-x-auto no-scrollbar">
           {CATEGORIES.map(c => (
             <button key={c.id} onClick={() => setCategory(c.id)}
-              className={`relative shrink-0 h-9 px-4 rounded-full grid grid-flow-col auto-cols-max items-center gap-1.5 text-xs font-medium transition-[transform,color] duration-300 ease-out active:scale-[0.96] ${category === c.id ? "text-primary-foreground" : "text-muted-foreground hover:text-primary-glow"}`}>
+              className={`relative shrink-0 h-9 px-4 rounded-full grid grid-flow-col auto-cols-max items-center gap-1.5 text-xs font-medium transition-colors duration-300 ease-out active:scale-[0.96] ${category === c.id ? "text-primary-foreground" : "text-muted-foreground hover:text-primary-glow"}`}>
               {category === c.id && (
                 <motion.span
                   layoutId="feed-cat-pill"
                   className="absolute inset-0 rounded-full bg-gradient-to-r from-primary to-accent shadow-[0_3px_12px_-3px_oklch(0.52_0.19_258/0.55)]"
-                  transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                  transition={{ type: "spring", stiffness: 280, damping: 30, mass: 0.85 }}
                 />
               )}
               <span className="relative z-10 flex items-center gap-1.5">

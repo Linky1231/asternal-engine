@@ -385,9 +385,9 @@ function HomePage() {
       {/* Floating CTA to editor */}
       <Link
         to="/editor"
-        className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-[max(1.25rem,env(safe-area-inset-right))] z-30 h-14 pl-4 pr-5 rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[0_6px_24px_-6px_oklch(0.52_0.19_258/0.5)] flex items-center gap-2 active:scale-95 transition font-display tracking-widest text-xs"
+        className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-[max(1.25rem,env(safe-area-inset-right))] z-30 h-14 pl-4 pr-5 rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[0_3px_10px_-4px_oklch(0.52_0.19_258/0.5)] ring-1 ring-white/25 ring-inset flex items-center gap-2 active:scale-95 hover:shadow-[0_6px_16px_-6px_oklch(0.52_0.19_258/0.5)] transition-all duration-300 ease-out font-display tracking-widest text-xs"
       >
-        <Plus size={18} /> CREAR
+        <Plus size={18} strokeWidth={2} /> CREAR
       </Link>
 
       {/* Menu drawer — dos AnimatePresence separados (el fragment <> no desmonta en exit) */}
@@ -552,14 +552,23 @@ function FeedSubTabs({ value, onChange }: { value: FeedSub; onChange: (v: FeedSu
           <button
             key={it.id}
             onClick={() => onChange(it.id)}
-            className={`flex-1 min-w-[86px] shrink-0 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-full text-[10px] sm:text-[11px] font-display tracking-wide sm:tracking-widest whitespace-nowrap transition-all duration-200 outline-none focus:outline-none ${
+            aria-pressed={active}
+            className={`relative flex-1 min-w-[86px] shrink-0 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-full text-[10px] sm:text-[11px] font-display tracking-wide sm:tracking-widest whitespace-nowrap border transition-colors duration-300 outline-none focus:outline-none ${
               active
-              ? "bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[0_2px_8px_-3px_oklch(0.52_0.19_258/0.35)]"
-              : "bg-background text-muted-foreground hover:text-foreground"
+              ? "border-transparent text-primary-foreground"
+              : "border-border/60 bg-background text-muted-foreground hover:border-primary/25 hover:text-foreground"
             }`}
-            style={active ? undefined : { boxShadow: "inset 0 0 0 1px var(--color-border)" }}
           >
-            {it.icon} {it.label.toUpperCase()}
+            {active && (
+              <motion.span
+                layoutId="feed-sub-pill"
+                className="absolute inset-0 rounded-full bg-gradient-to-br from-primary to-accent shadow-[0_3px_10px_-3px_oklch(0.52_0.19_258/0.4)]"
+                transition={{ type: "spring", stiffness: 320, damping: 30, mass: 0.9 }}
+              />
+            )}
+            <span className="relative z-10 flex items-center gap-1.5">
+              {it.icon} {it.label.toUpperCase()}
+            </span>
           </button>
         );
       })}

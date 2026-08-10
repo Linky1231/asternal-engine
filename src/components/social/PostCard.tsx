@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
+import { motion } from "framer-motion";
 import { type PostWithMeta, toggleReaction, toggleRepost, deletePost, updatePost, reportContent, votePoll, isPlusActive } from "@/lib/social/api";
 import { CommentSection } from "./CommentSection";
 import { UserName } from "./UserName";
@@ -86,7 +87,7 @@ export function PostCard({
       <div className="p-3 space-y-3">
         <header className="flex items-center gap-2.5">
           <Link to="/profile/$userId" params={{ userId: post.author_id }}
-            className="relative shrink-0 transition-transform duration-300 ease-out active:scale-95">
+            className="relative shrink-0 transition-transform duration-300 ease-out active:scale-95 group-hover:scale-[1.06]">
             {frame ? (
               <div className="w-10 h-10 rounded-full p-[2px] shadow-[0_2px_10px_-2px_oklch(0.62_0.12_220/0.45)]" style={{ background: frameCss(frame) }}>
                 <div className="w-full h-full rounded-full overflow-hidden bg-background font-display text-xs text-primary-glow">
@@ -266,22 +267,46 @@ export function PostCard({
       <footer className="flex items-center border-t border-border/50 bg-muted/15 px-2 py-1 text-[11px] text-muted-foreground">
         <button onClick={() => react("like")}
           className={`flex-1 flex items-center justify-center gap-1.5 px-1 py-2 rounded-lg transition-[transform,color,background-color] duration-300 ease-out active:scale-[0.93] ${post.my_like ? "text-rose-500" : "hover:bg-rose-500/10 hover:text-rose-500"}`}>
-          <Heart size={15} className={post.my_like ? "fill-rose-500" : ""} />
+          <motion.span
+            key={post.my_like ? "liked" : "unliked"}
+            initial={{ scale: 0.4, rotate: -18 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: "spring", stiffness: 520, damping: 17 }}
+            className="inline-flex"
+          >
+            <Heart size={15} className={post.my_like ? "fill-rose-500" : ""} />
+          </motion.span>
           <span className="tabular-nums font-medium">{post.likes}</span>
         </button>
         <button onClick={() => react("favorite")}
           className={`flex-1 flex items-center justify-center gap-1.5 px-1 py-2 rounded-lg transition-[transform,color,background-color] duration-300 ease-out active:scale-[0.93] ${post.my_favorite ? "text-amber-500" : "hover:bg-amber-500/10 hover:text-amber-500"}`}>
-          <Star size={15} className={post.my_favorite ? "fill-amber-500" : ""} />
+          <motion.span
+            key={post.my_favorite ? "favd" : "unfavd"}
+            initial={{ scale: 0.4, rotate: 18 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: "spring", stiffness: 520, damping: 17 }}
+            className="inline-flex"
+          >
+            <Star size={15} className={post.my_favorite ? "fill-amber-500" : ""} />
+          </motion.span>
           <span className="tabular-nums font-medium">{post.favorites}</span>
         </button>
         <button onClick={() => setOpenComments(o => !o)}
-          className="flex-1 flex items-center justify-center gap-1.5 px-1 py-2 rounded-lg transition-[transform,color,background-color] duration-300 ease-out active:scale-[0.93] hover:bg-primary/10 hover:text-primary-glow">
-          <MessageCircle size={15} />
+          className={`flex-1 flex items-center justify-center gap-1.5 px-1 py-2 rounded-lg transition-[transform,color,background-color] duration-300 ease-out active:scale-[0.93] ${openComments ? "text-primary-glow bg-primary/10" : "hover:bg-primary/10 hover:text-primary-glow"}`}>
+          <MessageCircle size={15} className={openComments ? "fill-primary/20" : ""} />
           <span className="tabular-nums font-medium">{post.comments_count}</span>
         </button>
         <button onClick={repost}
           className={`flex-1 flex items-center justify-center gap-1.5 px-1 py-2 rounded-lg transition-[transform,color,background-color] duration-300 ease-out active:scale-[0.93] ${post.my_repost ? "text-emerald-600" : "hover:bg-emerald-500/10 hover:text-emerald-600"}`}>
-          <Repeat2 size={15} className={post.my_repost ? "stroke-emerald-600" : ""} />
+          <motion.span
+            key={post.my_repost ? "reposted" : "unreposted"}
+            initial={{ scale: 0.6, rotate: -25 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: "spring", stiffness: 480, damping: 16 }}
+            className="inline-flex"
+          >
+            <Repeat2 size={15} className={post.my_repost ? "stroke-emerald-600" : ""} />
+          </motion.span>
           <span className="tabular-nums font-medium">{post.reposts_count}</span>
         </button>
       </footer>
