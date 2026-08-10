@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { Component, useEffect, useState, useCallback } from "react";
+import { Component, useEffect, useState, useCallback, useRef, useLayoutEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Gamepad2, Newspaper, Search, LogOut, Wrench, Plus, ShieldCheck, User, Sparkles, Star, Menu, MessageCircle, Bell, X, Home, Users, Flame, MessageSquare, Palette, Trophy, History, Clock, BarChart3, ChevronDown, ChevronRight, Globe, Heart, Megaphone, Bot } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -103,6 +103,39 @@ function HomePage() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [chatShareText, setChatShareText] = useState<string | null>(null);
   const [inPreview, setInPreview] = useState(false);
+
+  // Píldora de las pestañas del encabezado: se mide la posición REAL de cada
+  // botón (offsetLeft/offsetWidth) y se anima solo con transform en px → queda
+  // siempre pegada, sin calc() que falle al interpolar ni desalineación por
+  // ancho mínimo / desbordamiento. Cero medición por frame → sin lag.
+  const tabIdx = tab === "games" ? 0 : tab === "feed" ? 1 : tab === "gallery" ? 2 : tab === "events" ? 3 : 4;
+  const tabRowRef = useRef<HTMLDivElement | null>(null);
+  const tabBtnRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const [tabPill, setTabPill] = useState<{ left: number; width: number } | null>(null);
+
+  const measureTabPill = useCallback(() => {
+    const row = tabRowRef.current;
+    const btn = tabBtnRefs.current[tabIdx];
+    if (!row || !btn) return;
+    const r = row.getBoundingClientRect();
+    const b = btn.getBoundingClientRect();
+    setTabPill(p =>
+      p && Math.abs(p.left - (b.left - r.left)) < 0.5 && Math.abs(p.width - b.width) < 0.5
+        ? p
+        : { left: b.left - r.left, width: b.width }
+    );
+  }, [tabIdx]);
+
+  useLayoutEffect(() => { measureTabPill(); }, [measureTabPill]);
+
+  useEffect(() => {
+    window.addEventListener("resize", measureTabPill);
+    const t = window.setTimeout(measureTabPill, 150);
+    return () => {
+      window.removeEventListener("resize", measureTabPill);
+      window.clearTimeout(t);
+    };
+  }, [measureTabPill]);
 
   // When the app runs embedded in the Freebuff preview (inside an iframe), the
   // platform's floating button overlaps the top-right of the app. Push the
@@ -255,32 +288,37 @@ function HomePage() {
 
         {/* Tabs */}
         <div className="max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto px-3 pb-2">
-          <div className="relative flex bg-muted/50 rounded-2xl p-0.5">
+          <div ref={tabRowRef} className="relative flex bg-muted/50 rounded-2xl p-0.5">
             <button
+              ref={el => { tabBtnRefs.current[0] = el; }}
               onClick={() => setTab("games")}
               className={`relative z-10 flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-2 rounded-xl text-[10px] sm:text-[11px] font-display tracking-wider sm:tracking-widest transition-colors duration-200 ${tab === "games" ? "text-primary-foreground" : "text-muted-foreground"}`}
             >
               <Gamepad2 size={14} className="shrink-0" /> <span className="hidden min-[380px]:inline">JUEGOS</span>
             </button>
             <button
+              ref={el => { tabBtnRefs.current[1] = el; }}
               onClick={() => setTab("feed")}
               className={`relative z-10 flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-2 rounded-xl text-[10px] sm:text-[11px] font-display tracking-wider sm:tracking-widest transition-colors duration-200 ${tab === "feed" ? "text-primary-foreground" : "text-muted-foreground"}`}
             >
               <Newspaper size={14} className="shrink-0" /> <span className="hidden min-[380px]:inline">FEED</span>
             </button>
             <button
+              ref={el => { tabBtnRefs.current[2] = el; }}
               onClick={() => setTab("gallery")}
               className={`relative z-10 flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-2 rounded-xl text-[10px] sm:text-[11px] font-display tracking-wider sm:tracking-widest transition-colors duration-200 ${tab === "gallery" ? "text-primary-foreground" : "text-muted-foreground"}`}
             >
               <Palette size={14} className="shrink-0" /> <span className="hidden min-[380px]:inline">GALERÍA</span>
             </button>
             <button
+              ref={el => { tabBtnRefs.current[3] = el; }}
               onClick={() => setTab("events")}
               className={`relative z-10 flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-2 rounded-xl text-[10px] sm:text-[11px] font-display tracking-wider sm:tracking-widest transition-colors duration-200 ${tab === "events" ? "text-primary-foreground" : "text-muted-foreground"}`}
             >
               <Trophy size={14} className="shrink-0" /> <span className="hidden min-[380px]:inline">EVENTOS</span>
             </button>
             <button
+              ref={el => { tabBtnRefs.current[4] = el; }}
               onClick={() => setTab("profile")}
               className={`relative z-10 flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-2 rounded-xl text-[10px] sm:text-[11px] font-display tracking-wider sm:tracking-widest transition-colors duration-200 ${tab === "profile" ? "text-primary-foreground" : "text-muted-foreground"}`}
             >
@@ -290,10 +328,9 @@ function HomePage() {
               aria-hidden
               className="absolute top-1 bottom-1 rounded-xl bg-gradient-to-br from-primary to-accent shadow-sm transition-transform duration-300 ease-out will-change-transform"
               style={{
-                // Ancho exacto de cada botón ((100% - padding 4px) / 5) → la píldora queda perfectamente alineada.
-                width: "calc(20% - 0.8px)",
-                // translateX en % es relativo al ancho de la propia píldora: 100% = un botón. Solo transform → GPU.
-                transform: `translate3d(${tab === "games" ? "0" : tab === "feed" ? "100%" : tab === "gallery" ? "200%" : tab === "events" ? "300%" : "400%"}, 0, 0)`,
+                left: 0,
+                width: tabPill?.width ?? 0,
+                transform: `translate3d(${tabPill?.left ?? 0}px, 0, 0)`,
               }}
             />
           </div>
@@ -550,26 +587,59 @@ function FeedSubTabs({ value, onChange }: { value: FeedSub; onChange: (v: FeedSu
     { id: "trending", label: "Tendencias", icon: <Flame size={13} /> },
     { id: "forums", label: "Foros", icon: <MessageSquare size={13} /> },
   ];
-  // Píldora deslizante 100% CSS: translateX en % es relativo a su propio ancho
-  // (= ancho de botón), por lo que 100%/200%/300% + 6px por hueco la alinean
-  // sin medir el layout (solo transform → GPU, cero lag en móvil).
   const idx = Math.max(0, items.findIndex(it => it.id === value));
-  const pillX = idx === 0 ? "0" : idx === 1 ? "calc(100% + 6px)" : idx === 2 ? "calc(200% + 12px)" : "calc(300% + 18px)";
+  const rowRef = useRef<HTMLDivElement | null>(null);
+  const btnRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const [pill, setPill] = useState<{ left: number; width: number } | null>(null);
+
+  // Mide la posición REAL de cada botón y anima solo con transform en px: la
+  // píldora queda pegada aunque los botones lleguen a su ancho mínimo y la fila
+  // se desborde con scroll horizontal. Sin calc() (que no interpola y salta),
+  // sin layoutId y sin medir por frame → cero lag y cero desalineación.
+  const measure = useCallback(() => {
+    const row = rowRef.current;
+    const btn = btnRefs.current[idx];
+    if (!row || !btn) return;
+    const r = row.getBoundingClientRect();
+    const b = btn.getBoundingClientRect();
+    setPill(p =>
+      p && Math.abs(p.left - (b.left - r.left)) < 0.5 && Math.abs(p.width - b.width) < 0.5
+        ? p
+        : { left: b.left - r.left, width: b.width }
+    );
+  }, [idx]);
+
+  useLayoutEffect(() => { measure(); }, [measure]);
+
+  useEffect(() => {
+    window.addEventListener("resize", measure);
+    const t = window.setTimeout(measure, 150);
+    return () => {
+      window.removeEventListener("resize", measure);
+      window.clearTimeout(t);
+    };
+  }, [measure]);
+
   return (
-    <div className="relative flex gap-1.5 py-2 overflow-x-auto no-scrollbar -mx-1 px-1">
+    <div ref={rowRef} className="relative flex gap-1.5 py-2 overflow-x-auto no-scrollbar -mx-1 px-1">
       <span
         aria-hidden
-        className="absolute top-2 bottom-2 left-1 pointer-events-none rounded-full bg-gradient-to-br from-primary to-accent shadow-[0_3px_10px_-3px_oklch(0.52_0.19_258/0.4)] transition-transform duration-300 ease-out will-change-transform"
-        style={{ width: "calc(25% - 6.5px)", transform: `translate3d(${pillX}, 0, 0)` }}
+        className="pointer-events-none absolute top-2 bottom-2 rounded-full bg-gradient-to-br from-primary to-accent shadow-[0_3px_10px_-3px_oklch(0.52_0.19_258/0.4)] transition-[transform,width] duration-300 ease-out will-change-transform"
+        style={{
+          left: 0,
+          width: pill?.width ?? 86,
+          transform: `translate3d(${pill?.left ?? 0}px, 0, 0)`,
+        }}
       />
-      {items.map(it => {
+      {items.map((it, i) => {
         const active = value === it.id;
         return (
           <button
             key={it.id}
+            ref={el => { btnRefs.current[i] = el; }}
             onClick={() => onChange(it.id)}
             aria-pressed={active}
-            className={`relative flex-1 min-w-[86px] shrink-0 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-full text-[10px] sm:text-[11px] font-display tracking-wide sm:tracking-widest whitespace-nowrap border transition-colors duration-300 outline-none focus:outline-none ${
+            className={`relative z-10 flex-1 min-w-[86px] shrink-0 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-full text-[10px] sm:text-[11px] font-display tracking-wide sm:tracking-widest whitespace-nowrap border transition-colors duration-300 outline-none focus:outline-none ${
               active
               ? "border-transparent text-primary-foreground"
               : "border-border/60 bg-background text-muted-foreground hover:border-primary/25 hover:text-foreground"

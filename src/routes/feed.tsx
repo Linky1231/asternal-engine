@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef, useLayoutEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchFeed, getMyProfile, isMod, type PostWithMeta, type Profile } from "@/lib/social/api";
@@ -32,6 +32,38 @@ function FeedPage() {
   const [tag, setTag] = useState("");
   const [category, setCategory] = useState<FilterCat>("all");
   const [showFilters, setShowFilters] = useState(false);
+
+  // Píldora de categorías medida (offsetLeft/offsetWidth reales) y animada
+  // solo con transform en px: siempre pegada al botón activo, sin layoutId
+  // (que media el layout en cada cambio y causaba lag) y sin calc().
+  const catIdx = Math.max(0, CATEGORIES.findIndex(c => c.id === category));
+  const catRowRef = useRef<HTMLDivElement | null>(null);
+  const catBtnRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const [catPill, setCatPill] = useState<{ left: number; width: number } | null>(null);
+
+  const measureCatPill = useCallback(() => {
+    const row = catRowRef.current;
+    const btn = catBtnRefs.current[catIdx];
+    if (!row || !btn) return;
+    const r = row.getBoundingClientRect();
+    const b = btn.getBoundingClientRect();
+    setCatPill(p =>
+      p && Math.abs(p.left - (b.left - r.left)) < 0.5 && Math.abs(p.width - b.width) < 0.5
+        ? p
+        : { left: b.left - r.left, width: b.width }
+    );
+  }, [catIdx]);
+
+  useLayoutEffect(() => { measureCatPill(); }, [measureCatPill]);
+
+  useEffect(() => {
+    window.addEventListener("resize", measureCatPill);
+    const t = window.setTimeout(measureCatPill, 150);
+    return () => {
+      window.removeEventListener("resize", measureCatPill);
+      window.clearTimeout(t);
+    };
+  }, [measureCatPill]);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -86,17 +118,19 @@ function FeedPage() {
 
       {/* Filtros por categoría */}
       <div className="px-3 pt-3 max-w-2xl md:max-w-3xl lg:max-w-4xl mx-auto w-full">
-        <div className="relative flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-          {CATEGORIES.map(c => (
-            <button key={c.id} onClick={() => setCategory(c.id)}
-              className={`relative shrink-0 h-9 px-4 rounded-full grid grid-flow-col auto-cols-max items-center gap-1.5 text-xs font-medium transition-colors duration-300 ease-out active:scale-[0.96] ${category === c.id ? "text-primary-foreground" : "text-muted-foreground hover:text-primary-glow"}`}>
-              {category === c.id && (
-                <motion.span
-                  layoutId="feed-cat-pill"
-                  className="absolute inset-0 rounded-full bg-gradient-to-r from-primary to-accent shadow-[0_3px_12px_-3px_oklch(0.52_0.19_258/0.55)] will-change-transform"
-                  transition={{ type: "tween", duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                />
-              )}
+        <div ref={catRowRef} className="relative flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+          <span
+            aria-hidden
+            className="pointer-events-none absolute top-0 bottom-0 rounded-full bg-gradient-to-r from-primary to-accent shadow-[0_3px_12px_-3px_oklch(0.52_0.19_258/0.55)] transition-[transform,width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform"
+            style={{
+              left: 0,
+              width: catPill?.width ?? 0,
+              transform: `translate3d(${catPill?.left ?? 0}px, 0, 0)`,
+            }}
+          />
+          {CATEGORIES.map((c, i) => (
+            <button key={c.id} ref={el => { catBtnRefs.current[i] = el; }} onClick={() => setCategory(c.id)}
+              className={`relative z-10 shrink-0 h-9 px-4 rounded-full grid grid-flow-col auto-cols-max items-center gap-1.5 text-xs font-medium transition-colors duration-300 ease-out active:scale-[0.96] ${category === c.id ? "text-primary-foreground" : "text-muted-foreground hover:text-primary-glow"}`}>
               <span className="relative z-10 flex items-center gap-1.5">
                 {c.icon}
                 {c.label}
