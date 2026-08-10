@@ -287,8 +287,14 @@ function HomePage() {
               <User size={14} className="shrink-0" /> <span className="hidden min-[380px]:inline">PERFIL</span>
             </button>
             <div
-              className="absolute top-1 bottom-1 w-[calc(20%_-_4px)] rounded-xl bg-gradient-to-br from-primary to-accent shadow-sm transition-transform duration-300 ease-out"
-              style={{ transform: `translateX(${tab === "games" ? "0%" : tab === "feed" ? "calc(100% + 6px)" : tab === "gallery" ? "calc(200% + 12px)" : tab === "events" ? "calc(300% + 18px)" : "calc(400% + 24px)"})` }}
+              aria-hidden
+              className="absolute top-1 bottom-1 rounded-xl bg-gradient-to-br from-primary to-accent shadow-sm transition-transform duration-300 ease-out will-change-transform"
+              style={{
+                // Ancho exacto de cada botón ((100% - padding 4px) / 5) → la píldora queda perfectamente alineada.
+                width: "calc(20% - 0.8px)",
+                // translateX en % es relativo al ancho de la propia píldora: 100% = un botón. Solo transform → GPU.
+                transform: `translate3d(${tab === "games" ? "0" : tab === "feed" ? "100%" : tab === "gallery" ? "200%" : tab === "events" ? "300%" : "400%"}, 0, 0)`,
+              }}
             />
           </div>
         </div>
@@ -544,8 +550,18 @@ function FeedSubTabs({ value, onChange }: { value: FeedSub; onChange: (v: FeedSu
     { id: "trending", label: "Tendencias", icon: <Flame size={13} /> },
     { id: "forums", label: "Foros", icon: <MessageSquare size={13} /> },
   ];
+  // Píldora deslizante 100% CSS: translateX en % es relativo a su propio ancho
+  // (= ancho de botón), por lo que 100%/200%/300% + 6px por hueco la alinean
+  // sin medir el layout (solo transform → GPU, cero lag en móvil).
+  const idx = Math.max(0, items.findIndex(it => it.id === value));
+  const pillX = idx === 0 ? "0" : idx === 1 ? "calc(100% + 6px)" : idx === 2 ? "calc(200% + 12px)" : "calc(300% + 18px)";
   return (
-    <div className="flex gap-1.5 py-2 overflow-x-auto no-scrollbar -mx-1 px-1">
+    <div className="relative flex gap-1.5 py-2 overflow-x-auto no-scrollbar -mx-1 px-1">
+      <span
+        aria-hidden
+        className="absolute top-2 bottom-2 left-1 pointer-events-none rounded-full bg-gradient-to-br from-primary to-accent shadow-[0_3px_10px_-3px_oklch(0.52_0.19_258/0.4)] transition-transform duration-300 ease-out will-change-transform"
+        style={{ width: "calc(25% - 6.5px)", transform: `translate3d(${pillX}, 0, 0)` }}
+      />
       {items.map(it => {
         const active = value === it.id;
         return (
@@ -559,13 +575,6 @@ function FeedSubTabs({ value, onChange }: { value: FeedSub; onChange: (v: FeedSu
               : "border-border/60 bg-background text-muted-foreground hover:border-primary/25 hover:text-foreground"
             }`}
           >
-            {active && (
-              <motion.span
-                layoutId="feed-sub-pill"
-                className="absolute inset-0 rounded-full bg-gradient-to-br from-primary to-accent shadow-[0_3px_10px_-3px_oklch(0.52_0.19_258/0.4)]"
-                transition={{ type: "spring", stiffness: 320, damping: 30, mass: 0.9 }}
-              />
-            )}
             <span className="relative z-10 flex items-center gap-1.5">
               {it.icon} {it.label.toUpperCase()}
             </span>

@@ -93,8 +93,8 @@ function FeedPage() {
               {category === c.id && (
                 <motion.span
                   layoutId="feed-cat-pill"
-                  className="absolute inset-0 rounded-full bg-gradient-to-r from-primary to-accent shadow-[0_3px_12px_-3px_oklch(0.52_0.19_258/0.55)]"
-                  transition={{ type: "spring", stiffness: 280, damping: 30, mass: 0.85 }}
+                  className="absolute inset-0 rounded-full bg-gradient-to-r from-primary to-accent shadow-[0_3px_12px_-3px_oklch(0.52_0.19_258/0.55)] will-change-transform"
+                  transition={{ type: "tween", duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
                 />
               )}
               <span className="relative z-10 flex items-center gap-1.5">

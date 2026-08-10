@@ -389,33 +389,39 @@ export default function OrionPanel({ onClose }: { onClose: () => void }) {
             </div>
           )}
 
-          {messages.map((m, i) => (
-            <div key={i} className={`flex gap-2 ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-              {m.role === "assistant" && (
-                <div
-                  className="shrink-0 rounded-full grid place-items-center text-primary-foreground"
-                  style={{ width: 28, height: 28, background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))" }}
-                >
-                  <Bot size={14} />
-                </div>
-              )}
-              <div
-                className={`max-w-[82%] rounded-2xl px-3.5 py-2.5 shadow-sm ${
-                  m.role === "user"
-                    ? "bg-gradient-to-br from-primary to-accent text-primary-foreground rounded-br-md shadow-[0_4px_14px_-6px_oklch(0.52_0.19_258/0.45)]"
-                    : "bg-card border border-border rounded-bl-md"
-                }`}
-              >
-                <RichText text={m.content} />
-                {m.model && (
-                  <div className="mt-1.5 flex items-center gap-1 text-[8px] font-mono text-muted-foreground/60">
-                    <Zap size={8} /> {m.model}
-                    {typeof m.cost === "number" && m.cost > 0 && ` · $${m.cost.toFixed(5)}`}
+          {messages.map((m, i) => {
+            // La burbuja vacía es solo el marcador del streaming (se rellena en
+            // vivo con los deltas). No se pinta: evita duplicar el indicador
+            // «Orión está escribiendo…» mientras responde.
+            if (m.role === "assistant" && !m.content) return null;
+            return (
+              <div key={i} className={`flex gap-2 ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                {m.role === "assistant" && (
+                  <div
+                    className="shrink-0 rounded-full grid place-items-center text-primary-foreground"
+                    style={{ width: 28, height: 28, background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))" }}
+                  >
+                    <Bot size={14} />
                   </div>
                 )}
+                <div
+                  className={`max-w-[82%] rounded-2xl px-3.5 py-2.5 shadow-sm ${
+                    m.role === "user"
+                      ? "bg-gradient-to-br from-primary to-accent text-primary-foreground rounded-br-md shadow-[0_4px_14px_-6px_oklch(0.52_0.19_258/0.45)]"
+                      : "bg-card border border-border rounded-bl-md"
+                  }`}
+                >
+                  <RichText text={m.content} />
+                  {m.model && (
+                    <div className="mt-1.5 flex items-center gap-1 text-[8px] font-mono text-muted-foreground/60">
+                      <Zap size={8} /> {m.model}
+                      {typeof m.cost === "number" && m.cost > 0 && ` · $${m.cost.toFixed(5)}`}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {busy && (
             <div className="flex gap-2 justify-start">
