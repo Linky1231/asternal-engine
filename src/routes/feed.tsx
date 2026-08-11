@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useState, useCallback, useRef, useLayoutEffect } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchFeed, getMyProfile, isMod, type PostWithMeta, type Profile } from "@/lib/social/api";
@@ -33,56 +33,9 @@ function FeedPage() {
   const [category, setCategory] = useState<FilterCat>("all");
   const [showFilters, setShowFilters] = useState(false);
 
-  // Píldora de categorías medida (offsetLeft/offsetWidth reales) y animada
-  // solo con transform en px: siempre pegada al botón activo, sin layoutId
-  // (que media el layout en cada cambio y causaba lag) y sin calc().
-  const catIdx = Math.max(0, CATEGORIES.findIndex(c => c.id === category));
-  const catRowRef = useRef<HTMLDivElement | null>(null);
-  const catBtnRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const [catPill, setCatPill] = useState<{ left: number; width: number } | null>(null);
-  const [catScrolling, setCatScrolling] = useState(false);
-  const catRafRef = useRef<number | null>(null);
-  const catIdleRef = useRef<number | null>(null);
-
-  const measureCatPill = useCallback(() => {
-    const row = catRowRef.current;
-    const btn = catBtnRefs.current[catIdx];
-    if (!row || !btn) return;
-    const r = row.getBoundingClientRect();
-    const b = btn.getBoundingClientRect();
-    setCatPill(p =>
-      p && Math.abs(p.left - (b.left - r.left)) < 0.5 && Math.abs(p.width - b.width) < 0.5
-        ? p
-        : { left: b.left - r.left, width: b.width }
-    );
-  }, [catIdx]);
-
-  useLayoutEffect(() => { measureCatPill(); }, [measureCatPill]);
-
-  useEffect(() => {
-    const row = catRowRef.current;
-    const onScroll = () => {
-      // Sin transición mientras se desplaza: la píldora sigue al botón al
-      // instante y nunca se queda "persiguiéndolo" con retraso.
-      setCatScrolling(true);
-      if (catIdleRef.current) window.clearTimeout(catIdleRef.current);
-      catIdleRef.current = window.setTimeout(() => setCatScrolling(false), 120);
-      if (catRafRef.current) cancelAnimationFrame(catRafRef.current);
-      catRafRef.current = requestAnimationFrame(measureCatPill);
-    };
-    const onResize = () => measureCatPill();
-    window.addEventListener("resize", onResize);
-    row?.addEventListener("scroll", onScroll, { passive: true });
-    const t = window.setTimeout(measureCatPill, 150);
-    return () => {
-      window.removeEventListener("resize", onResize);
-      row?.removeEventListener("scroll", onScroll);
-      if (catRafRef.current) cancelAnimationFrame(catRafRef.current);
-      if (catIdleRef.current) window.clearTimeout(catIdleRef.current);
-      window.clearTimeout(t);
-    };
-  }, [measureCatPill]);
-
+  // Categorías estáticas (sin píldora deslizante, sin refs ni medición): el
+  // activo se pinta con el degradado por clases condicionales. Cero trabajo de
+  // layout por frame → imposible que dé lag o se desalinee.
   const reload = useCallback(async () => {
     setLoading(true);
     try {
@@ -136,29 +89,20 @@ function FeedPage() {
 
       {/* Filtros por categoría */}
       <div className="px-3 pt-3 max-w-2xl md:max-w-3xl lg:max-w-4xl mx-auto w-full">
-        <div ref={catRowRef} className="relative flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-          <span
-            aria-hidden
-            className={`pointer-events-none absolute top-0 bottom-0 rounded-full bg-gradient-to-r from-primary to-accent shadow-[0_3px_12px_-3px_oklch(0.52_0.19_258/0.55)] will-change-transform ${
-              catScrolling ? "transition-none" : "transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
-            }`}
-            style={{
-              left: 0,
-              width: catPill?.width ?? 0,
-              transform: `translate3d(${catPill?.left ?? 0}px, 0, 0)`,
-            }}
-          />
-          {CATEGORIES.map((c, i) => (
-            <button key={c.id} ref={el => { catBtnRefs.current[i] = el; }} onClick={() => setCategory(c.id)}
-              className={`relative z-10 shrink-0 h-9 px-4 rounded-full grid grid-flow-col auto-cols-max items-center gap-1.5 text-xs font-medium transition-colors duration-300 ease-out active:scale-[0.96] ${category === c.id ? "text-primary-foreground" : "text-muted-foreground hover:text-primary-glow"}`}>
-              <span className="relative z-10 flex items-center gap-1.5">
-                {c.icon}
-                {c.label}
-              </span>
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+          {CATEGORIES.map((c) => (
+            <button key={c.id} onClick={() => setCategory(c.id)}
+              className={`shrink-0 h-9 px-4 rounded-full grid grid-flow-col auto-cols-max items-center gap-1.5 text-xs font-medium transition-colors duration-200 active:scale-[0.96] border ${
+                category === c.id
+                  ? "border-transparent bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-[0_3px_12px_-3px_oklch(0.52_0.19_258/0.55)]"
+                  : "border-border/40 bg-muted/30 text-muted-foreground hover:text-primary-glow hover:bg-muted/60"
+              }`}>
+              {c.icon}
+              {c.label}
             </button>
           ))}
           <button onClick={() => setShowFilters(s => !s)}
-            className={`relative shrink-0 h-9 px-3 rounded-full grid grid-flow-col auto-cols-max items-center gap-1.5 text-xs font-medium transition-[transform,color,background-color,border-color] duration-300 ease-out active:scale-[0.96] ${showFilters ? "bg-primary/10 text-primary-glow border border-primary/30" : "bg-card border border-border text-muted-foreground hover:text-primary-glow hover:border-primary/30"}`}>
+            className={`shrink-0 h-9 px-3 rounded-full grid grid-flow-col auto-cols-max items-center gap-1.5 text-xs font-medium transition-[transform,color,background-color,border-color] duration-300 ease-out active:scale-[0.96] ${showFilters ? "bg-primary/10 text-primary-glow border border-primary/30" : "bg-card border border-border text-muted-foreground hover:text-primary-glow hover:border-primary/30"}`}>
             <SlidersHorizontal size={13} />
             Filtros
           </button>
@@ -231,20 +175,18 @@ function FeedPage() {
             </button>
           </motion.div>
         ) : (
-          <AnimatePresence mode="popLayout">
+          <>
             {posts.map((p, i) => (
               <motion.div
                 key={p.id}
-                layout
                 initial={{ opacity: 0, y: 24, scale: 0.98 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.18 } }}
                 transition={{ duration: 0.4, delay: Math.min(i * 0.06, 0.6), ease: [0.22, 1, 0.36, 1] }}
               >
                 <PostCard key={p.id} post={p} myId={myId} isMod={mod} onChange={reload} />
               </motion.div>
             ))}
-          </AnimatePresence>
+          </>
         )}
       </main>
     </div>

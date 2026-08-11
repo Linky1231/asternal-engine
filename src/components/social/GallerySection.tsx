@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef, useCallback, useLayoutEffect } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Palette, Sparkles, X, Loader2, ImagePlus, CheckCircle2,
@@ -31,58 +31,10 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
   const [tab, setTab] = useState("recent");
   const [searchQ, setSearchQ] = useState("");
 
-  // Píldora medida (mismo patrón que el feed): posición REAL de cada botón y
-  // animación solo con transform en px → siempre pegada, sin layoutId (que
-  // media el layout en cada cambio y causaba lag).
-  const galleryTabs = [...TABS.map(t => t.id), "all", "misobras"];
-  const tabIdx = Math.max(0, galleryTabs.indexOf(tab));
-  const tabRowRef = useRef<HTMLDivElement | null>(null);
-  const tabBtnRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const [tabPill, setTabPill] = useState<{ left: number; width: number } | null>(null);
-  const [tabScrolling, setTabScrolling] = useState(false);
-  const tabRafRef = useRef<number | null>(null);
-  const tabIdleRef = useRef<number | null>(null);
-
-  const measureTabPill = useCallback(() => {
-    const row = tabRowRef.current;
-    const btn = tabBtnRefs.current[tabIdx];
-    if (!row || !btn) return;
-    const r = row.getBoundingClientRect();
-    const b = btn.getBoundingClientRect();
-    setTabPill(p =>
-      p && Math.abs(p.left - (b.left - r.left)) < 0.5 && Math.abs(p.width - b.width) < 0.5
-        ? p
-        : { left: b.left - r.left, width: b.width }
-    );
-  }, [tabIdx]);
-
-  useLayoutEffect(() => { measureTabPill(); }, [measureTabPill]);
-
-  useEffect(() => {
-    const row = tabRowRef.current;
-    const onScroll = () => {
-      // Sin transición mientras se desplaza: la píldora sigue al botón al
-      // instante y nunca se queda "persiguiéndolo" con retraso.
-      setTabScrolling(true);
-      if (tabIdleRef.current) window.clearTimeout(tabIdleRef.current);
-      tabIdleRef.current = window.setTimeout(() => setTabScrolling(false), 120);
-      if (tabRafRef.current) cancelAnimationFrame(tabRafRef.current);
-      tabRafRef.current = requestAnimationFrame(measureTabPill);
-    };
-    const onResize = () => measureTabPill();
-    window.addEventListener("resize", onResize);
-    row?.addEventListener("scroll", onScroll, { passive: true });
-    const t = window.setTimeout(measureTabPill, 150);
-    return () => {
-      window.removeEventListener("resize", onResize);
-      row?.removeEventListener("scroll", onScroll);
-      if (tabRafRef.current) cancelAnimationFrame(tabRafRef.current);
-      if (tabIdleRef.current) window.clearTimeout(tabIdleRef.current);
-      window.clearTimeout(t);
-    };
-  }, [measureTabPill]);
-
-  // Paint editor overlay state
+  // Tabs estáticas reconstruidas desde cero: botones fijos con estado activo
+  // por clases condicionales. SIN píldora, sin refs, sin medición de layout,
+  // sin listeners de scroll y sin framer-motion: nada que pueda desalinearse,
+  // saltar o dar lag.
   const [canvasOpen, setCanvasOpen] = useState(false);
 
   // Detail modal
@@ -306,68 +258,47 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
         )}
       </div>
 
-      {/* ====== NAVIGATION TABS (píldora deslizante suave, medida) ====== */}
-      <div ref={tabRowRef} className="relative flex gap-1.5 overflow-x-auto no-scrollbar pb-0.5 -mx-1 px-1">
-        <span
-          aria-hidden
-          className={`pointer-events-none absolute top-0 bottom-0.5 rounded-xl bg-gradient-to-r from-primary to-accent shadow-sm shadow-primary/20 will-change-transform ${
-            tabScrolling ? "transition-none" : "transition-transform duration-300 ease-out"
-          }`}
-          style={{
-            left: 0,
-            width: tabPill?.width ?? 0,
-            transform: `translate3d(${tabPill?.left ?? 0}px, 0, 0)`,
-          }}
-        />
-        {TABS.map((t, i) => {
+      {/* ====== NAVIGATION TABS (estáticas, sin píldora ni medición) ====== */}
+      <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+        {TABS.map((t) => {
           const Icon = t.icon;
           const isActive = tab === t.id;
           return (
             <button
               key={t.id}
-              ref={el => { tabBtnRefs.current[i] = el; }}
               onClick={() => setTab(t.id)}
-              className={`relative z-10 shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[10px] font-display tracking-widest transition-colors duration-300 active:scale-95 whitespace-nowrap border ${
+              className={`shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[10px] font-display tracking-widest transition-colors duration-200 active:scale-95 whitespace-nowrap border ${
                 isActive
-                  ? "border-transparent text-primary-foreground"
+                  ? "border-transparent bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-sm shadow-primary/20"
                   : "text-muted-foreground hover:text-foreground bg-muted/30 hover:bg-muted/60 border-border/40"
               }`}
             >
-              <span className="relative z-10 flex items-center gap-1.5">
-                <Icon size={13} />
-                {t.label}
-              </span>
+              <Icon size={13} />
+              {t.label}
             </button>
           );
         })}
-        <div className="flex-1 min-w-2" />
         <button
-          ref={el => { tabBtnRefs.current[4] = el; }}
           onClick={() => setTab("all")}
-          className={`relative z-10 shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[10px] font-display tracking-widest transition-colors duration-300 active:scale-95 border ${
+          className={`shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[10px] font-display tracking-widest transition-colors duration-200 active:scale-95 whitespace-nowrap border ${
             tab === "all"
-              ? "border-transparent text-primary-foreground"
+              ? "border-transparent bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-sm shadow-primary/20"
               : "text-muted-foreground hover:text-foreground bg-muted/30 hover:bg-muted/60 border-border/40"
           }`}
         >
-          <span className="relative z-10 flex items-center gap-1.5">
-            <Eye size={13} />
-            TODO
-          </span>
+          <Eye size={13} />
+          TODO
         </button>
         <button
-          ref={el => { tabBtnRefs.current[5] = el; }}
           onClick={() => setTab("misobras")}
-          className={`relative z-10 shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[10px] font-display tracking-widest transition-colors duration-300 active:scale-95 border ${
+          className={`shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[10px] font-display tracking-widest transition-colors duration-200 active:scale-95 whitespace-nowrap border ${
             tab === "misobras"
-              ? "border-transparent text-primary-foreground"
+              ? "border-transparent bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-sm shadow-primary/20"
               : "text-muted-foreground hover:text-foreground bg-muted/30 hover:bg-muted/60 border-border/40"
           }`}
         >
-          <span className="relative z-10 flex items-center gap-1.5">
-            <Package size={13} />
-            MIS OBRAS
-          </span>
+          <Package size={13} />
+          MIS OBRAS
         </button>
       </div>
 

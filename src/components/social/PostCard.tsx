@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { type PostWithMeta, toggleReaction, toggleRepost, deletePost, updatePost, reportContent, votePoll, isPlusActive } from "@/lib/social/api";
@@ -17,7 +17,7 @@ function timeAgo(iso: string) {
   const d = Math.floor(h / 24); return `${d}d`;
 }
 
-export function PostCard({
+export const PostCard = memo(function PostCard({
   post, myId, isMod, onChange,
 }: {
   post: PostWithMeta; myId: string | null; isMod: boolean; onChange: () => void;
@@ -80,9 +80,9 @@ export function PostCard({
   ) : null;
 
   return (
-    <article className={`group panel rounded-2xl border border-border/60 overflow-hidden transition-[transform,box-shadow,border-color] duration-300 ease-out hover:shadow-lg hover:-translate-y-0.5 hover:border-primary/25 ${entranceClass}`}>
+    <article className={`group panel rounded-2xl border border-border/60 transition-[transform,box-shadow,border-color] duration-300 ease-out sm:hover:shadow-lg sm:hover:-translate-y-0.5 hover:border-primary/25 ${entranceClass}`}>
       {/* Hairline degradado superior */}
-      <div className="h-[3px] w-full bg-gradient-to-r from-primary via-accent to-transparent opacity-70 group-hover:opacity-100 transition-opacity duration-300" />
+      <div className="h-[3px] w-full rounded-t-2xl bg-gradient-to-r from-primary via-accent to-transparent opacity-70 group-hover:opacity-100 transition-opacity duration-300" />
 
       <div className="p-3 space-y-3">
         <header className="flex items-center gap-2.5">
@@ -115,7 +115,7 @@ export function PostCard({
               <MoreHorizontal size={15} />
             </button>
             {menuOpen && (
-              <div className="absolute right-0 top-9 z-20 panel border border-border rounded-xl p-1 min-w-[150px] text-xs shadow-lg anim-scale-in">
+              <div className="absolute right-0 top-9 z-20 panel border border-border rounded-xl p-1 min-w-[150px] text-xs shadow-lg">
                 {mine && <button onClick={() => { setEditing(true); setMenuOpen(false); }} className="flex items-center gap-2 w-full text-left px-2.5 py-2 rounded-lg hover:bg-muted/50 transition-colors duration-200"><Pencil size={13} /> Editar</button>}
                 {canDelete && <button onClick={remove} className="flex items-center gap-2 w-full text-left px-2.5 py-2 rounded-lg text-destructive hover:bg-destructive/10 transition-colors duration-200"><Trash2 size={13} /> Borrar</button>}
                 {!mine && <button onClick={report} className="flex items-center gap-2 w-full text-left px-2.5 py-2 rounded-lg hover:bg-muted/50 transition-colors duration-200"><Flag size={13} /> Reportar</button>}
@@ -314,7 +314,7 @@ export function PostCard({
       {openComments && <div className="border-t border-border/50 bg-muted/10 px-3 py-2.5"><CommentSection postId={post.id} myId={myId} isMod={isMod} onChange={onChange} /></div>}
     </article>
   );
-}
+});
 
 function frameCss(id: string): string {
   switch (id) {

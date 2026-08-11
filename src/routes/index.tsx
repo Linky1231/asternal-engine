@@ -168,6 +168,10 @@ function HomePage() {
     } finally { setLoading(false); }
   }, [search]);
 
+  // Callback estable para PostCard (memoizado): no cambia de identidad en cada
+  // render, así abrir un menú en una tarjeta no fuerza a re-renderizar el resto.
+  const onFeedChange = useCallback(() => reload("feed"), [reload]);
+
   useEffect(() => {
     (async () => {
       try {
@@ -398,7 +402,7 @@ function HomePage() {
                         animate={{ opacity: 1 }}
                         transition={{ duration: 0.15, delay: Math.min(i * 0.02, 0.15), ease: "easeOut" }}
                       >
-                        <PostCard key={p.id} post={p} myId={myId} isMod={mod} onChange={() => reload("feed")} />
+                        <PostCard key={p.id} post={p} myId={myId} isMod={mod} onChange={onFeedChange} />
                       </motion.div>
                     ));
                   })()}

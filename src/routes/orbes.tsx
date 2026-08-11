@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState, useMemo } from "react";
-import { ArrowLeft, Sparkles, TrendingUp, TrendingDown, Gift, Gamepad2, Loader2, Wallet } from "lucide-react";
+import { ArrowLeft, Sparkles, TrendingUp, TrendingDown, Gift, Gamepad2, Loader2, Wallet, BarChart3 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { getMyProfile, fetchOrbeTransactions, type OrbeTx, type Profile } from "@/lib/social/api";
 
@@ -69,6 +69,56 @@ function OrbesPage() {
     return { earned, spent, purchases };
   }, [txs]);
 
+  // Estadísticas por periodo (mismo enfoque que el sistema de historial):
+  // hoy · últimos 7 días · este mes, con ganado / gastado / neto y compras.
+  const periods = useMemo(() => {
+    const now = new Date();
+    const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const startMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    const weekAgo = now.getTime() - 7 * 864e5;
+
+    const mk = () => ({ earned: 0, spent: 0, purchases: 0 });
+    const today = mk(), week = mk(), month = mk();
+    for (const t of txs) {
+      const ts = new Date(t.created_at).getTime();
+      if (t.amount > 0) {
+        if (ts >= startToday) today.earned += t.amount;
+        if (ts >= weekAgo) week.earned += t.amount;
+        if (ts >= startMonth) month.earned += t.amount;
+      } else {
+        if (ts >= startToday) today.spent += -t.amount;
+        if (ts >= weekAgo) week.spent += -t.amount;
+        if (ts >= startMonth) month.spent += -t.amount;
+      }
+      if (t.kind === "game_purchase") {
+        if (ts >= startToday) today.purchases += 1;
+        if (ts >= weekAgo) week.purchases += 1;
+        if (ts >= startMonth) month.purchases += 1;
+      }
+    }
+    return { today, week, month };
+  }, [txs]);
+
+  // Gasto diario de los últimos 7 días para la mini gráfica.
+  const last7 = useMemo(() => {
+    const days: { label: string; spent: number }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      d.setDate(d.getDate() - i);
+      const start = d.getTime();
+      let spent = 0;
+      for (const t of txs) {
+        const ts = new Date(t.created_at).getTime();
+        if (ts >= start && ts < start + 864e5 && t.amount < 0) spent += -t.amount;
+      }
+      days.push({ label: d.toLocaleDateString("es", { weekday: "narrow" }), spent });
+    }
+    return days;
+  }, [txs]);
+  const maxSpent7 = Math.max(1, ...last7.map(d => d.spent));
+  const monthName = new Date().toLocaleDateString("es", { month: "long" }).toUpperCase();
+
   return (
     <div className="min-h-screen w-full flex flex-col bg-background text-foreground">
       <header className="sticky top-0 z-20 panel border-b backdrop-blur-xl">
@@ -107,6 +157,40 @@ function OrbesPage() {
           <StatCard label="Ganados" value={stats.earned} Icon={TrendingUp} tone="text-emerald-500" />
           <StatCard label="Gastados" value={stats.spent} Icon={TrendingDown} tone="text-rose-500" />
           <StatCard label="Juegos" value={stats.purchases} Icon={Gamepad2} tone="text-primary" />
+        </section>
+
+        {/* Estadísticas por periodo (estilo sistema de historial) */}
+        <section className="space-y-2">
+          <div className="flex items-center justify-between px-1">
+            <h2 className="font-display text-sm tracking-widest flex items-center gap-1.5">
+              <BarChart3 size={13} className="text-primary-glow" />
+              ESTADÍSTICAS
+            </h2>
+            <span className="text-[10px] font-mono text-muted-foreground">hoy · 7 días · este mes</span>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <PeriodCard label="HOY" {...periods.today} />
+            <PeriodCard label="7 DÍAS" {...periods.week} />
+            <PeriodCard label={monthName} {...periods.month} />
+          </div>
+          {/* Mini gráfica de gastos de los últimos 7 días */}
+          <div className="panel rounded-2xl border border-border/50 p-3">
+            <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1.5">
+              Gastos últimos 7 días
+            </div>
+            <div className="flex items-end gap-1 h-12">
+              {last7.map((d, i) => (
+                <div key={i} className="flex-1 flex flex-col items-center gap-1 min-w-0">
+                  <div
+                    className="w-full rounded-md bg-gradient-to-t from-rose-500/70 to-accent/70 transition-all hover:from-rose-500 hover:to-accent"
+                    style={{ height: `${Math.max(6, (d.spent / maxSpent7) * 100)}%`, minHeight: 4 }}
+                    title={`${d.label}: ${d.spent} orbes gastados`}
+                  />
+                  <span className="text-[7px] font-mono text-muted-foreground/60 truncate w-full text-center">{d.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </section>
 
         {/* History */}
@@ -166,6 +250,32 @@ function StatCard({ label, value, Icon, tone }: { label: string; value: number; 
       <Icon size={14} className={tone} />
       <div className="text-lg font-display font-semibold tabular-nums leading-none mt-1">{value.toLocaleString()}</div>
       <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">{label}</div>
+    </div>
+  );
+}
+
+function PeriodCard({ label, earned, spent, purchases }: { label: string; earned: number; spent: number; purchases: number }) {
+  const neto = earned - spent;
+  return (
+    <div className="panel rounded-2xl border border-border/50 p-3 space-y-1.5">
+      <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider flex items-center justify-between">
+        <span className="truncate">{label}</span>
+        {purchases > 0 && <span className="text-primary-glow/70 shrink-0">{purchases} juego{purchases !== 1 ? "s" : ""}</span>}
+      </div>
+      <div className="flex items-center justify-between gap-1">
+        <span className="text-[10px] text-muted-foreground flex items-center gap-1 shrink-0"><TrendingUp size={10} className="text-emerald-500" /> Ganado</span>
+        <span className="text-xs font-display font-semibold tabular-nums text-emerald-500">+{earned.toLocaleString()}</span>
+      </div>
+      <div className="flex items-center justify-between gap-1">
+        <span className="text-[10px] text-muted-foreground flex items-center gap-1 shrink-0"><TrendingDown size={10} className="text-rose-500" /> Gastado</span>
+        <span className="text-xs font-display font-semibold tabular-nums text-rose-500">-{spent.toLocaleString()}</span>
+      </div>
+      <div className="flex items-center justify-between gap-1 pt-1.5 border-t border-border/40">
+        <span className="text-[10px] text-muted-foreground shrink-0">Neto</span>
+        <span className={`text-xs font-display font-semibold tabular-nums ${neto >= 0 ? "text-emerald-500" : "text-rose-500"}`}>
+          {neto >= 0 ? "+" : ""}{neto.toLocaleString()}
+        </span>
+      </div>
     </div>
   );
 }

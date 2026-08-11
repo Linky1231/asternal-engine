@@ -167,7 +167,10 @@ export async function fetchFeed(opts: { search?: string; tag?: string; category?
   let q = supabase.from("posts").select("*").is("deleted_at", null).order("created_at", { ascending: false }).limit(100);
   if (opts.search) q = q.ilike("content", `%${opts.search}%`);
   if (opts.category) q = q.eq("category", opts.category);
-  else if (!opts.includeGames) q = q.or("category.is.null,category.neq.game");
+  // El feed normal solo muestra publicaciones: los juegos y las obras de la
+  // galería (category = artwork) viven en sus propias secciones y no deben
+  // colarse aquí.
+  else if (!opts.includeGames) q = q.or("category.is.null,category.neq.game,category.neq.artwork");
   const { data: posts, error } = await q;
   if (error) {
     // Esquema aún sin crear en Supabase: degradar a lista vacía en vez de crashear.
