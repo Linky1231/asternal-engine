@@ -580,6 +580,12 @@ function CategoryHeader({ label }: { label: string }) {
   );
 }
 
+// Barra de pestañas de publicaciones reconstruida desde cero: botones estáticos
+// con estado activo por clases condicionales. SIN píldora deslizante, sin refs,
+// sin medición de layout, sin listeners de scroll y sin framer-motion: nada que
+// pueda desalinearse, saltar o dar lag. Los botones se reparten el ancho con
+// flex-1 y nunca desbordan la fila, así el bug de "la píldora se va al otro
+// extremo" es imposible por construcción.
 function FeedSubTabs({ value, onChange }: { value: FeedSub; onChange: (v: FeedSub) => void }) {
   const items: { id: FeedSub; label: string; icon: React.ReactNode }[] = [
     { id: "forYou", label: "Para ti", icon: <Home size={13} /> },
@@ -587,91 +593,22 @@ function FeedSubTabs({ value, onChange }: { value: FeedSub; onChange: (v: FeedSu
     { id: "trending", label: "Tendencias", icon: <Flame size={13} /> },
     { id: "forums", label: "Foros", icon: <MessageSquare size={13} /> },
   ];
-  const idx = Math.max(0, items.findIndex(it => it.id === value));
-  const rowRef = useRef<HTMLDivElement | null>(null);
-  const btnRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const [pill, setPill] = useState<{ left: number; width: number } | null>(null);
-  // Mientras la fila se desplaza (scroll del usuario o auto-scroll del
-  // navegador al enfocar un botón recortado) la píldora sigue al botón AL
-  // INSTANTE sin transición; el deslizamiento solo se anima entre pestañas.
-  const [scrolling, setScrolling] = useState(false);
-  const rafRef = useRef<number | null>(null);
-  const idleRef = useRef<number | null>(null);
-
-  // Mide la posición REAL de cada botón y anima solo con transform en px: la
-  // píldora queda pegada aunque los botones lleguen a su ancho mínimo y la fila
-  // se desborde con scroll horizontal. Sin calc() (que no interpola y salta),
-  // sin layoutId, sin medir por frame y SIN animar width (animar el ancho
-  // fuerza un recálculo de layout por frame → ese era el lag) → puro GPU.
-  const measure = useCallback(() => {
-    const row = rowRef.current;
-    const btn = btnRefs.current[idx];
-    if (!row || !btn) return;
-    const r = row.getBoundingClientRect();
-    const b = btn.getBoundingClientRect();
-    setPill(p =>
-      p && Math.abs(p.left - (b.left - r.left)) < 0.5 && Math.abs(p.width - b.width) < 0.5
-        ? p
-        : { left: b.left - r.left, width: b.width }
-    );
-  }, [idx]);
-
-  useLayoutEffect(() => { measure(); }, [measure]);
-
-  useEffect(() => {
-    const row = rowRef.current;
-    const onScroll = () => {
-      // Sin transición mientras se desplaza: la píldora sigue al botón al
-      // instante y nunca se queda "persiguiéndolo" con retraso.
-      setScrolling(true);
-      if (idleRef.current) window.clearTimeout(idleRef.current);
-      idleRef.current = window.setTimeout(() => setScrolling(false), 120);
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      rafRef.current = requestAnimationFrame(measure);
-    };
-    const onResize = () => measure();
-    window.addEventListener("resize", onResize);
-    row?.addEventListener("scroll", onScroll, { passive: true });
-    const t = window.setTimeout(measure, 150);
-    return () => {
-      window.removeEventListener("resize", onResize);
-      row?.removeEventListener("scroll", onScroll);
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      if (idleRef.current) window.clearTimeout(idleRef.current);
-      window.clearTimeout(t);
-    };
-  }, [measure]);
-
   return (
-    <div ref={rowRef} className="relative flex gap-1.5 py-2 overflow-x-auto no-scrollbar -mx-1 px-1">
-      <span
-        aria-hidden
-        className={`pointer-events-none absolute top-2 bottom-2 rounded-full bg-gradient-to-br from-primary to-accent shadow-[0_3px_10px_-3px_oklch(0.52_0.19_258/0.4)] will-change-transform ${
-          scrolling ? "transition-none" : "transition-transform duration-300 ease-out"
-        }`}
-        style={{
-          left: 0,
-          width: pill?.width ?? 86,
-          transform: `translate3d(${pill?.left ?? 0}px, 0, 0)`,
-        }}
-      />
-      {items.map((it, i) => {
+    <div className="flex gap-1.5 py-2">
+      {items.map((it) => {
         const active = value === it.id;
         return (
           <button
             key={it.id}
-            ref={el => { btnRefs.current[i] = el; }}
             onClick={() => onChange(it.id)}
             aria-pressed={active}
-            className={`relative z-10 flex-1 min-w-[86px] shrink-0 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-full text-[10px] sm:text-[11px] font-display tracking-wide sm:tracking-widest whitespace-nowrap border transition-colors duration-300 outline-none focus:outline-none ${
+            className={`flex-1 min-w-0 flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-full text-[10px] sm:text-[11px] font-display tracking-wide sm:tracking-widest whitespace-nowrap border transition-colors duration-200 outline-none focus:outline-none ${
               active
-              ? "border-transparent text-primary-foreground"
-              : "border-border/60 bg-background text-muted-foreground hover:border-primary/25 hover:text-foreground"
+                ? "border-transparent bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[0_3px_10px_-3px_oklch(0.52_0.19_258/0.4)]"
+                : "border-border/60 bg-background text-muted-foreground hover:border-primary/25 hover:text-foreground"
             }`}
           >
-            <span className="relative z-10 flex items-center gap-1.5">
-              {it.icon} {it.label.toUpperCase()}
-            </span>
+            {it.icon} {it.label.toUpperCase()}
           </button>
         );
       })}
