@@ -1323,6 +1323,7 @@ export type EventItem = {
   created_at: string;
   submission_count?: number;
   participant_count?: number;
+  my_registered?: boolean;
   my_submission?: { id: string; post_id: string; status: string } | null;
 };
 

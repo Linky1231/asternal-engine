@@ -620,6 +620,75 @@ create policy subs_read on public.event_submissions for select using (true);
 drop policy if exists subs_insert on public.event_submissions;
 create policy subs_insert on public.event_submissions for insert with check (auth.uid() = author_id);
 
+-- ─────────────────────────── EVENT PARTICIPANTS (inscripción real) ───────────
+-- Cada usuario puede inscribirse una sola vez por evento. La lectura directa de
+-- filas queda restringida (solo el propio usuario o staff); el conteo público y
+-- la lista para staff se hacen mediante RPC security definer.
+create table if not exists public.event_participants (
+  id uuid primary key default gen_random_uuid(),
+  event_id uuid not null references public.events(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  unique (event_id, user_id)
+);
+alter table public.event_participants enable row level security;
+drop policy if exists evp_read on public.event_participants;
+create policy evp_read on public.event_participants for select using (auth.uid() = user_id or public.is_mod_or_admin(auth.uid()));
+drop policy if exists evp_insert on public.event_participants;
+create policy evp_insert on public.event_participants for insert with check (auth.uid() = user_id);
+drop policy if exists evp_delete on public.event_participants;
+create policy evp_delete on public.event_participants for delete using (auth.uid() = user_id);
+
+-- Contar inscritos (público): el contador visible para todos.
+create or replace function public.count_event_participants(_event_id uuid)
+returns bigint language sql stable security definer set search_path = public as $$
+  select count(*) from public.event_participants where event_id = _event_id;
+$$;
+
+-- Inscribirse (idempotente): no permite inscribirse a eventos finalizados.
+create or replace function public.join_event(_event_id uuid)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if exists (select 1 from public.events where id = _event_id and status = 'completed') then
+    raise exception 'event_completed';
+  end if;
+  insert into public.event_participants (event_id, user_id)
+  values (_event_id, auth.uid())
+  on conflict (event_id, user_id) do nothing;
+end;
+$$;
+
+-- Desinscribirse.
+create or replace function public.leave_event(_event_id uuid)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  delete from public.event_participants where event_id = _event_id and user_id = auth.uid();
+end;
+$$;
+
+-- Listar quién se inscribió: SOLO staff (admin/mod). Une con profiles para
+-- mostrar avatar, nombre de usuario y fecha de inscripción.
+create or replace function public.list_event_participants(_event_id uuid)
+returns table (
+  user_id uuid,
+  display_name text,
+  username text,
+  avatar_url text,
+  joined_at timestamptz
+) language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_mod_or_admin(auth.uid()) then
+    raise exception 'not_authorized';
+  end if;
+  return query
+    select p.id, p.display_name, p.username, p.avatar_url, ep.created_at
+    from public.event_participants ep
+    join public.profiles p on p.id = ep.user_id
+    where ep.event_id = _event_id
+    order by ep.created_at asc;
+end;
+$$;
+
 -- follows
 drop policy if exists follows_read on public.follows;
 create policy follows_read on public.follows for select using (true);
