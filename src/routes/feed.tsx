@@ -177,14 +177,9 @@ function FeedPage() {
         ) : (
           <>
             {posts.map((p, i) => (
-              <motion.div
-                key={p.id}
-                initial={{ opacity: 0, y: 24, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ duration: 0.4, delay: Math.min(i * 0.06, 0.6), ease: [0.22, 1, 0.36, 1] }}
-              >
-                <PostCard key={p.id} post={p} myId={myId} isMod={mod} onChange={reload} />
-              </motion.div>
+              <div key={p.id} className="card-enter" style={{ animationDelay: `${Math.min(i * 45, 350)}ms` }}>
+                <PostCard post={p} myId={myId} isMod={mod} onChange={reload} />
+              </div>
             ))}
           </>
         )}

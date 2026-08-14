@@ -396,14 +396,9 @@ function HomePage() {
                       );
                     }
                     return filtered.map((p, i) => (
-                      <motion.div
-                        key={p.id}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 0.15, delay: Math.min(i * 0.02, 0.15), ease: "easeOut" }}
-                      >
-                        <PostCard key={p.id} post={p} myId={myId} isMod={mod} onChange={onFeedChange} />
-                      </motion.div>
+                      <div key={p.id} className="card-enter" style={{ animationDelay: `${Math.min(i * 30, 220)}ms` }}>
+                        <PostCard post={p} myId={myId} isMod={mod} onChange={onFeedChange} />
+                      </div>
                     ));
                   })()}
                 </motion.div>

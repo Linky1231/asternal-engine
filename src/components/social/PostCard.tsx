@@ -80,14 +80,14 @@ export const PostCard = memo(function PostCard({
   ) : null;
 
   return (
-    <article className={`group panel rounded-2xl border border-border/60 transition-[transform,box-shadow,border-color] duration-300 ease-out sm:hover:shadow-lg sm:hover:-translate-y-0.5 hover:border-primary/25 ${entranceClass}`}>
+    <article className={`group panel card-cv rounded-2xl border border-border/60 transition-[transform,box-shadow,border-color] duration-300 ease-out sm:pointer-fine:hover:shadow-lg sm:pointer-fine:hover:-translate-y-0.5 pointer-fine:hover:border-primary/25 ${entranceClass}`}>
       {/* Hairline degradado superior */}
-      <div className="h-[3px] w-full rounded-t-2xl bg-gradient-to-r from-primary via-accent to-transparent opacity-70 group-hover:opacity-100 transition-opacity duration-300" />
+      <div className="h-[3px] w-full rounded-t-2xl bg-gradient-to-r from-primary via-accent to-transparent opacity-70 pointer-fine:group-hover:opacity-100 transition-opacity duration-300" />
 
       <div className="p-3 space-y-3">
         <header className="flex items-center gap-2.5">
           <Link to="/profile/$userId" params={{ userId: post.author_id }}
-            className="relative shrink-0 transition-transform duration-300 ease-out active:scale-95 group-hover:scale-[1.06]">
+            className="relative shrink-0 transition-transform duration-150 ease-out active:scale-95 pointer-fine:group-hover:scale-[1.06]">
             {frame ? (
               <div className="w-10 h-10 rounded-full p-[2px] shadow-[0_2px_10px_-2px_oklch(0.62_0.12_220/0.45)]" style={{ background: frameCss(frame) }}>
                 <div className="w-full h-full rounded-full overflow-hidden bg-background font-display text-xs text-primary-glow">
@@ -100,7 +100,7 @@ export const PostCard = memo(function PostCard({
               </div>
             )}
           </Link>
-          <Link to="/profile/$userId" params={{ userId: post.author_id }} className="flex-1 min-w-0 hover:opacity-80 transition-opacity duration-300">
+          <Link to="/profile/$userId" params={{ userId: post.author_id }} className="flex-1 min-w-0 pointer-fine:hover:opacity-80 transition-opacity duration-300">
             <div className="flex items-center gap-1.5">
               <UserName p={author} size="sm" />
               {categoryChip}
@@ -111,15 +111,15 @@ export const PostCard = memo(function PostCard({
           </Link>
           <div className="relative">
             <button onClick={() => setMenuOpen(o => !o)}
-              className="w-8 h-8 rounded-lg border border-border text-muted-foreground grid place-items-center transition-[transform,background-color,color] duration-300 ease-out hover:bg-muted/50 hover:text-foreground active:scale-[0.94]">
+              className="w-8 h-8 rounded-lg border border-border text-muted-foreground grid place-items-center transition-[transform,background-color,color] duration-150 ease-out pointer-fine:hover:bg-muted/50 pointer-fine:hover:text-foreground active:scale-[0.94]">
               <MoreHorizontal size={15} />
             </button>
             {menuOpen && (
               <div className="absolute right-0 top-9 z-20 panel border border-border rounded-xl p-1 min-w-[150px] text-xs shadow-lg">
-                {mine && <button onClick={() => { setEditing(true); setMenuOpen(false); }} className="flex items-center gap-2 w-full text-left px-2.5 py-2 rounded-lg hover:bg-muted/50 transition-colors duration-200"><Pencil size={13} /> Editar</button>}
-                {canDelete && <button onClick={remove} className="flex items-center gap-2 w-full text-left px-2.5 py-2 rounded-lg text-destructive hover:bg-destructive/10 transition-colors duration-200"><Trash2 size={13} /> Borrar</button>}
-                {!mine && <button onClick={report} className="flex items-center gap-2 w-full text-left px-2.5 py-2 rounded-lg hover:bg-muted/50 transition-colors duration-200"><Flag size={13} /> Reportar</button>}
-                <button onClick={share} className="flex items-center gap-2 w-full text-left px-2.5 py-2 rounded-lg hover:bg-muted/50 transition-colors duration-200"><Share2 size={13} /> Compartir</button>
+                {mine && <button onClick={() => { setEditing(true); setMenuOpen(false); }} className="flex items-center gap-2 w-full text-left px-2.5 py-2 rounded-lg pointer-fine:hover:bg-muted/50 transition-colors duration-200"><Pencil size={13} /> Editar</button>}
+                {canDelete && <button onClick={remove} className="flex items-center gap-2 w-full text-left px-2.5 py-2 rounded-lg text-destructive pointer-fine:hover:bg-destructive/10 transition-colors duration-200"><Trash2 size={13} /> Borrar</button>}
+                {!mine && <button onClick={report} className="flex items-center gap-2 w-full text-left px-2.5 py-2 rounded-lg pointer-fine:hover:bg-muted/50 transition-colors duration-200"><Flag size={13} /> Reportar</button>}
+                <button onClick={share} className="flex items-center gap-2 w-full text-left px-2.5 py-2 rounded-lg pointer-fine:hover:bg-muted/50 transition-colors duration-200"><Share2 size={13} /> Compartir</button>
               </div>
             )}
           </div>
@@ -153,7 +153,7 @@ export const PostCard = memo(function PostCard({
               </div>
             ) : (
               <div key={i} className="relative rounded-xl overflow-hidden bg-muted/40 border border-border/60 group/media">
-                <img src={url} alt="" className="w-full max-h-[420px] object-cover transition-transform duration-500 ease-out group-hover/media:scale-[1.02]" loading="lazy" />
+                <img src={url} alt="" className="w-full max-h-[420px] object-cover transition-transform duration-500 ease-out pointer-fine:group-hover/media:scale-[1.02]" loading="lazy" />
               </div>
             ))}
           </div>
@@ -164,12 +164,12 @@ export const PostCard = memo(function PostCard({
           <div className="space-y-1.5">
             {post.signed_documents.map((d, i) => (
               <a key={i} href={d.url} target="_blank" rel="noreferrer" download={d.name}
-                className="flex items-center gap-2.5 bg-muted/30 hover:bg-primary/10 rounded-xl px-3 py-2.5 text-xs border border-border/50 hover:border-primary/30 transition-[background-color,border-color] duration-300 ease-out group/doc">
+                className="flex items-center gap-2.5 bg-muted/30 pointer-fine:hover:bg-primary/10 rounded-xl px-3 py-2.5 text-xs border border-border/50 pointer-fine:hover:border-primary/30 transition-[background-color,border-color] duration-300 ease-out group/doc">
                 <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/20 to-accent/15 grid place-items-center shrink-0">
                   <FileText size={14} className="text-primary" />
                 </span>
                 <span className="flex-1 truncate font-medium">{d.name}</span>
-                <Download size={13} className="text-muted-foreground group-hover/doc:text-primary transition-colors duration-300" />
+                <Download size={13} className="text-muted-foreground pointer-fine:group-hover/doc:text-primary transition-colors duration-300" />
               </a>
             ))}
           </div>
@@ -179,7 +179,7 @@ export const PostCard = memo(function PostCard({
         {post.html_content && (
           <div className="border border-border rounded-xl overflow-hidden">
             <button onClick={() => setShowHtml(s => !s)}
-              className="w-full flex items-center gap-2 px-3 py-2.5 text-xs bg-muted/30 hover:bg-muted/50 transition-colors duration-300">
+              className="w-full flex items-center gap-2 px-3 py-2.5 text-xs bg-muted/30 pointer-fine:hover:bg-muted/50 transition-colors duration-300">
               <Code2 size={13} className="text-primary" />
               <span className="flex-1 text-left font-medium">Contenido HTML {showHtml ? "(ocultar)" : "(mostrar)"}</span>
               <span className="text-muted-foreground transition-transform duration-300 ease-out" style={{ transform: showHtml ? "rotate(180deg)" : "none" }}>▼</span>
@@ -196,7 +196,7 @@ export const PostCard = memo(function PostCard({
         {/* Juego fijado */}
         {post.pinned_game && (
           <Link to="/" search={{ p: post.pinned_game.id } as never}
-            className="group/game flex items-center gap-3 rounded-2xl p-2 pr-3 bg-gradient-to-r from-primary/8 via-accent/8 to-transparent border border-primary/20 hover:border-primary/40 transition-[border-color,box-shadow] duration-300 ease-out hover:shadow-md">
+            className="group/game flex items-center gap-3 rounded-2xl p-2 pr-3 bg-gradient-to-r from-primary/8 via-accent/8 to-transparent border border-primary/20 pointer-fine:hover:border-primary/40 transition-[border-color,box-shadow] duration-300 ease-out pointer-fine:hover:shadow-md">
             {post.pinned_game.cover_url ? (
               <img src={post.pinned_game.cover_url} alt="" className="w-14 h-14 rounded-xl object-cover shrink-0 ring-1 ring-border/50" />
             ) : (
@@ -208,7 +208,7 @@ export const PostCard = memo(function PostCard({
               <div className="text-[9px] font-display tracking-[0.18em] text-primary-glow uppercase">Juego fijado</div>
               <div className="text-sm font-display truncate mt-0.5">{post.pinned_game.title}</div>
             </div>
-            <span className="w-7 h-7 rounded-full bg-primary/10 grid place-items-center text-primary-glow transition-transform duration-300 ease-out group-hover/game:translate-x-0.5">▶</span>
+            <span className="w-7 h-7 rounded-full bg-primary/10 grid place-items-center text-primary-glow transition-transform duration-300 ease-out pointer-fine:group-hover/game:translate-x-0.5">▶</span>
           </Link>
         )}
 
@@ -256,7 +256,7 @@ export const PostCard = memo(function PostCard({
           <div className="flex flex-wrap gap-1.5">
             {post.tags.map(t => (
               <span key={t}
-                className="text-[10px] font-mono px-2 py-1 rounded-full bg-muted/40 text-muted-foreground border border-border/40 transition-[color,border-color] duration-300 ease-out hover:text-primary-glow hover:border-primary/30">
+                className="text-[10px] font-mono px-2 py-1 rounded-full bg-muted/40 text-muted-foreground border border-border/40 transition-[color,border-color] duration-300 ease-out pointer-fine:hover:text-primary-glow pointer-fine:hover:border-primary/30">
                 #{t}
               </span>
             ))}
@@ -266,7 +266,7 @@ export const PostCard = memo(function PostCard({
 
       <footer className="flex items-center border-t border-border/50 bg-muted/15 px-2 py-1 text-[11px] text-muted-foreground">
         <button onClick={() => react("like")}
-          className={`flex-1 flex items-center justify-center gap-1.5 px-1 py-2 rounded-lg transition-[transform,color,background-color] duration-300 ease-out active:scale-[0.93] ${post.my_like ? "text-rose-500" : "hover:bg-rose-500/10 hover:text-rose-500"}`}>
+          className={`flex-1 flex items-center justify-center gap-1.5 px-1 py-2 rounded-lg transition-[transform,color,background-color] duration-150 ease-out active:scale-[0.93] ${post.my_like ? "text-rose-500" : "pointer-fine:hover:bg-rose-500/10 pointer-fine:hover:text-rose-500"}`}>
           <motion.span
             key={post.my_like ? "liked" : "unliked"}
             initial={{ scale: 0.4, rotate: -18 }}
@@ -279,7 +279,7 @@ export const PostCard = memo(function PostCard({
           <span className="tabular-nums font-medium">{post.likes}</span>
         </button>
         <button onClick={() => react("favorite")}
-          className={`flex-1 flex items-center justify-center gap-1.5 px-1 py-2 rounded-lg transition-[transform,color,background-color] duration-300 ease-out active:scale-[0.93] ${post.my_favorite ? "text-amber-500" : "hover:bg-amber-500/10 hover:text-amber-500"}`}>
+          className={`flex-1 flex items-center justify-center gap-1.5 px-1 py-2 rounded-lg transition-[transform,color,background-color] duration-150 ease-out active:scale-[0.93] ${post.my_favorite ? "text-amber-500" : "pointer-fine:hover:bg-amber-500/10 pointer-fine:hover:text-amber-500"}`}>
           <motion.span
             key={post.my_favorite ? "favd" : "unfavd"}
             initial={{ scale: 0.4, rotate: 18 }}
@@ -292,12 +292,12 @@ export const PostCard = memo(function PostCard({
           <span className="tabular-nums font-medium">{post.favorites}</span>
         </button>
         <button onClick={() => setOpenComments(o => !o)}
-          className={`flex-1 flex items-center justify-center gap-1.5 px-1 py-2 rounded-lg transition-[transform,color,background-color] duration-300 ease-out active:scale-[0.93] ${openComments ? "text-primary-glow bg-primary/10" : "hover:bg-primary/10 hover:text-primary-glow"}`}>
+          className={`flex-1 flex items-center justify-center gap-1.5 px-1 py-2 rounded-lg transition-[transform,color,background-color] duration-150 ease-out active:scale-[0.93] ${openComments ? "text-primary-glow bg-primary/10" : "pointer-fine:hover:bg-primary/10 pointer-fine:hover:text-primary-glow"}`}>
           <MessageCircle size={15} className={openComments ? "fill-primary/20" : ""} />
           <span className="tabular-nums font-medium">{post.comments_count}</span>
         </button>
         <button onClick={repost}
-          className={`flex-1 flex items-center justify-center gap-1.5 px-1 py-2 rounded-lg transition-[transform,color,background-color] duration-300 ease-out active:scale-[0.93] ${post.my_repost ? "text-emerald-600" : "hover:bg-emerald-500/10 hover:text-emerald-600"}`}>
+          className={`flex-1 flex items-center justify-center gap-1.5 px-1 py-2 rounded-lg transition-[transform,color,background-color] duration-150 ease-out active:scale-[0.93] ${post.my_repost ? "text-emerald-600" : "pointer-fine:hover:bg-emerald-500/10 pointer-fine:hover:text-emerald-600"}`}>
           <motion.span
             key={post.my_repost ? "reposted" : "unreposted"}
             initial={{ scale: 0.6, rotate: -25 }}
@@ -342,7 +342,7 @@ function PollView({ poll, onVote }: { poll: NonNullable<PostWithMeta["poll"]>; o
         const mine = poll.my_vote === i;
         return (
           <button key={i} onClick={() => onVote(i)}
-            className={`relative w-full text-left rounded-xl overflow-hidden border transition-[transform,border-color,box-shadow] duration-300 ease-out active:scale-[0.98] ${mine ? "border-primary/50 shadow-sm" : "border-border/60 hover:border-primary/30"}`}>
+            className={`relative w-full text-left rounded-xl overflow-hidden border transition-[transform,border-color,box-shadow] duration-300 ease-out active:scale-[0.98] ${mine ? "border-primary/50 shadow-sm" : "border-border/60 pointer-fine:hover:border-primary/30"}`}>
             {voted && (
               <div className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary/20 to-accent/15 transition-[width] duration-700 ease-out"
                 style={{ width: `${pct}%` }} />
