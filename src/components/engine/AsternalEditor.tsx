@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { Settings, Layers, Copy, Star, X, Eye, EyeOff, Lock, Unlock, ArrowUp, ArrowDown, ChevronsUp, ChevronsDown, Trash2, Merge, Plus, Upload, Home, FolderOpen, MousePointer2, Boxes, Square, Flower2, CircleDollarSign, Triangle, Target, PersonStanding, Eraser, SlidersHorizontal, PanelsTopLeft, Image as ImageIcon, Layers3, Play } from "lucide-react";
+import { Settings, Layers, Copy, Star, X, Eye, EyeOff, Lock, Unlock, ArrowUp, ArrowDown, ChevronsUp, ChevronsDown, Trash2, Merge, Plus, Upload, Home, FolderOpen, MousePointer2, Boxes, Square, Flower2, CircleDollarSign, Triangle, Target, PersonStanding, Eraser, SlidersHorizontal, PanelsTopLeft, Image as ImageIcon, Layers3, Play, LibraryBig } from "lucide-react";
 import { schedulePushToCloud } from "@/lib/engine/cloud-sync";
 import { Link } from "@tanstack/react-router";
 import { PublishGameDialog } from "./PublishGameDialog";
@@ -327,8 +327,8 @@ export function AsternalEditor() {
                 onClick={() => setLibraryOpen(true)}
                 className="pointer-events-auto w-11 h-11 rounded-xl bg-card border border-line-strong shadow-md text-ink-2 hover:text-primary hover:border-primary/40 active:scale-90 transition"
                 title={t("library.title")}
-                aria-label="Library"
-              ><Star size={18} /></button>
+                aria-label="Librería de assets"
+              ><LibraryBig size={18} /></button>
             </div>
             {layersOpen && (
               <div className="pointer-events-auto absolute right-3 bottom-3 z-30 w-[300px] max-h-[70vh] overflow-auto rounded-xl surface shadow-lg view-slide-right">
@@ -517,11 +517,12 @@ function LibrarySheet({
           <h2 className="section-label">{t("library.title")}</h2>
           <button onClick={onClose} className="w-8 h-8 rounded-lg border border-line-strong bg-card text-ink-2 grid place-items-center hover:bg-muted/60 active:scale-95 transition"><X size={14} /></button>
         </div>
+        <p className="text-xs text-muted-foreground leading-relaxed">Guarda cualquier entidad seleccionada para reutilizarla en otras escenas. Toca un item para colocarlo en el centro.</p>
         <div className="flex gap-2">
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder={selected ? selected.kind : "—"}
+            placeholder={selected ? `Guardar: ${selected.kind}` : "Selecciona una entidad primero"}
             disabled={!selected}
             className="flex-1 bg-card border border-line-strong rounded-lg px-3 py-2 text-xs font-mono disabled:opacity-50 focus:border-primary/50 focus:ring-2 focus:ring-ring/30 outline-none transition"
           />

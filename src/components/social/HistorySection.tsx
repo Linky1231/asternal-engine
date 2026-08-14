@@ -29,7 +29,7 @@ function StatCard({ icon, label, value, sub, tone }: {
     : tone === "emerald" ? "from-emerald-500/15 to-teal-500/10 text-emerald-600 dark:text-emerald-400"
     : "from-rose-500/15 to-pink-500/10 text-rose-500";
   return (
-    <div className="panel rounded-xl border border-border/50 p-2.5 flex flex-col gap-1 min-w-0">
+    <div className="rounded-lg border border-border/70 bg-surface p-2.5 flex flex-col gap-1 min-w-0">
       <div className={`w-7 h-7 rounded-lg bg-gradient-to-br grid place-items-center ${toneCls}`}>
         {icon}
       </div>
@@ -156,7 +156,7 @@ export function HistorySection() {
           {topGame && (
             <div className="shrink-0 max-w-[38%]">
               <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1.5">Más jugado</div>
-              <div className="panel rounded-xl border border-border/50 px-2.5 py-2 flex items-center gap-2">
+              <div className="rounded-lg border border-border/70 bg-surface px-2.5 py-2 flex items-center gap-2">
                 <Award size={14} className="text-primary shrink-0" />
                 <div className="min-w-0">
                   <div className="text-[11px] font-medium truncate">{topGame.title}</div>
@@ -209,7 +209,7 @@ export function HistorySection() {
                 <span className="text-xs">Cargando historial…</span>
               </div>
             ) : sortedGames.length === 0 ? (
-              <div className="panel rounded-2xl border border-dashed border-border/60 p-8 text-center">
+              <div className="rounded-lg border border-dashed border-border bg-surface p-8 text-center">
                 <Gamepad2 size={24} className="mx-auto mb-2 text-muted-foreground/40" />
                 <div className="text-sm text-muted-foreground">Aún no has jugado ningún juego</div>
                 <div className="text-[11px] text-muted-foreground/60 mt-1">
@@ -283,7 +283,7 @@ export function HistorySection() {
                 <span className="text-xs">Cargando likes…</span>
               </div>
             ) : likedPosts.length === 0 ? (
-              <div className="panel rounded-2xl border border-dashed border-border/60 p-8 text-center">
+              <div className="rounded-lg border border-dashed border-border bg-surface p-8 text-center">
                 <Heart size={24} className="mx-auto mb-2 text-muted-foreground/40" />
                 <div className="text-sm text-muted-foreground">No has dado like a ninguna publicación</div>
                 <div className="text-[11px] text-muted-foreground/60 mt-1">

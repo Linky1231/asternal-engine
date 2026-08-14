@@ -199,7 +199,7 @@ function OrbesPage() {
         </section>
 
         {/* Juegos involucrados: con qué juegos hubo movimientos de orbes */}
-        <section className="panel rounded-2xl border border-border/50 p-3 space-y-2">
+        <section className="rounded-lg border border-border/70 bg-surface p-3 space-y-2">
           <div className="flex items-center justify-between px-0.5 gap-2">
             <h2 className="font-display text-[11px] tracking-widest text-muted-foreground flex items-center gap-1.5">
               <Gamepad2 size={12} className="text-primary-glow" />
@@ -241,7 +241,7 @@ function OrbesPage() {
             <PeriodCard label={monthName} {...periods.month} />
           </div>
           {/* Mini gráfica de gastos de los últimos 7 días */}
-          <div className="panel rounded-2xl border border-border/50 p-3">
+          <div className="rounded-lg border border-border/70 bg-surface p-3">
             <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1.5">
               Gastos últimos 7 días
             </div>
@@ -268,16 +268,16 @@ function OrbesPage() {
           </div>
           {err && <div className="text-xs text-destructive px-1">{err}</div>}
           {loading ? (
-            <div className="p-8 text-center text-xs text-muted-foreground panel rounded-2xl border border-border/50">
+            <div className="p-8 text-center text-xs text-muted-foreground rounded-lg border border-border/70 bg-surface">
               <Loader2 className="inline animate-spin mr-2" size={14} /> Cargando…
             </div>
           ) : txs.length === 0 ? (
-            <div className="p-8 text-center panel rounded-2xl border border-dashed border-border space-y-2">
+            <div className="p-8 text-center rounded-lg border border-dashed border-border bg-surface space-y-2">
               <Sparkles size={22} className="mx-auto text-primary" />
               <div className="text-xs text-muted-foreground">Aún no hay movimientos.</div>
             </div>
           ) : (
-            <ul className="panel rounded-2xl border border-border/50 divide-y divide-border/40 overflow-hidden">
+            <ul className="rounded-lg border border-border/70 bg-surface divide-y divide-border/40 overflow-hidden">
               {recent.map(t => {
                 const m = kindMeta(t.kind);
                 const positive = t.amount > 0;
@@ -322,7 +322,7 @@ function OrbesPage() {
 
 function StatCard({ label, value, Icon, tone, sub }: { label: string; value: number; Icon: React.ComponentType<{ size?: number; className?: string }>; tone: string; sub?: string }) {
   return (
-    <div className="panel rounded-2xl border border-border/50 p-3 flex flex-col items-start gap-1 transition-transform hover:scale-[1.02]">
+    <div className="rounded-lg border border-border/70 bg-surface p-3 flex flex-col items-start gap-1 transition-transform hover:scale-[1.02]">
       <Icon size={14} className={tone} />
       <div className="text-lg font-display font-semibold tabular-nums leading-none mt-1">{value.toLocaleString()}</div>
       <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">{label}</div>
@@ -334,7 +334,7 @@ function StatCard({ label, value, Icon, tone, sub }: { label: string; value: num
 function PeriodCard({ label, earned, spent, purchases }: { label: string; earned: number; spent: number; purchases: number }) {
   const neto = earned - spent;
   return (
-    <div className="panel rounded-2xl border border-border/50 p-3 space-y-1.5">
+    <div className="rounded-lg border border-border/70 bg-surface p-3 space-y-1.5">
       <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider flex items-center justify-between">
         <span className="truncate">{label}</span>
         {purchases > 0 && <span className="text-primary-glow/70 shrink-0">{purchases} compra{purchases !== 1 ? "s" : ""}</span>}

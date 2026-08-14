@@ -80,7 +80,7 @@ export function GamesHome({
 
   if (!sections) {
     return (
-      <div className="panel rounded-2xl border border-dashed border-border p-8 text-center space-y-3">
+      <div className="rounded-lg border border-dashed border-border bg-surface p-8 text-center space-y-3">
         <div className="w-14 h-14 mx-auto rounded-2xl bg-primary/10 border border-primary/15 grid place-items-center">
           <Gamepad2 size={26} className="text-primary" />
         </div>

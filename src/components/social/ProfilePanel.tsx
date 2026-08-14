@@ -12,6 +12,7 @@ import {
   type FollowStats,
   fetchProfileById,
   fetchUserPosts,
+  fetchUserGames,
   updateMyProfile,
   uploadAvatar,
   uploadBanner,
@@ -112,7 +113,7 @@ export function ProfilePanel({
     setContentLoading(true);
     try {
       const [g, ps, arts] = await Promise.all([
-        fetchUserPosts(userId, { games: true }),
+        fetchUserGames(userId),
         fetchUserPosts(userId, { games: false }),
         fetchUserPosts(userId, { artwork: true }),
       ]);

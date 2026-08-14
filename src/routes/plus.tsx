@@ -370,7 +370,7 @@ function FeatureCard({ icon, title, desc, locked, children }: {
   icon: React.ReactNode; title: string; desc: string; locked: boolean; children: React.ReactNode;
 }) {
   return (
-    <section className="panel rounded-2xl border border-border/50 p-4 space-y-3 relative">
+    <section className="rounded-lg border border-border/70 bg-surface p-4 space-y-3 relative">
       <div className="flex items-start gap-3">
         <div className="w-10 h-10 rounded-xl grid place-items-center shrink-0 text-white"
           style={{ background: "var(--gradient-plus)" }}>{icon}</div>

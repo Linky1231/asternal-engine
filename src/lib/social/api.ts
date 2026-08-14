@@ -1114,15 +1114,21 @@ export async function fetchUserPosts(userId: string, opts: { games?: boolean; ar
   const { data: posts, error } = await q;
   if (error) throw error;
   if (!posts?.length) return [];
+  return enrichPosts(posts as PostRow[], userId);
+}
+
+/** Enriquece posts crudos con autor, reacciones, comentarios y media firmada. */
+async function enrichPosts(posts: PostRow[], fallbackAuthorId: string): Promise<PostWithMeta[]> {
   const ids = posts.map(p => p.id);
   const { data: { user } } = await supabase.auth.getUser();
   const me = user?.id ?? null;
-  const [profile, reactions, comments] = await Promise.all([
-    supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
+  const authorIds = Array.from(new Set([fallbackAuthorId, ...posts.map(p => p.author_id)]));
+  const [profiles, reactions, comments] = await Promise.all([
+    supabase.from("profiles").select("*").in("id", authorIds),
     supabase.from("reactions").select("post_id,user_id,type").in("post_id", ids),
     supabase.from("comments").select("post_id").in("post_id", ids).is("deleted_at", null),
   ]);
-  const author = (profile.data as Profile) ?? null;
+  const authorBy = new Map<string, Profile>((profiles.data ?? []).map(p => [p.id, p]));
   const out: PostWithMeta[] = [];
   for (const p of posts) {
     const r = (reactions.data ?? []).filter(x => x.post_id === p.id);
@@ -1131,7 +1137,7 @@ export async function fetchUserPosts(userId: string, opts: { games?: boolean; ar
     const signedScreens = (p as PostRow).screenshots?.length ? await signMediaUrls((p as PostRow).screenshots) : [];
     out.push({
       ...(p as PostRow),
-      author,
+      author: authorBy.get(p.author_id) ?? null,
       tags: [],
       likes: r.filter(x => x.type === "like").length,
       favorites: r.filter(x => x.type === "favorite").length,
@@ -1146,6 +1152,31 @@ export async function fetchUserPosts(userId: string, opts: { games?: boolean; ar
     });
   }
   return out;
+}
+
+/** Juegos del perfil: los publicados como post (category=game) MÁS los juegos
+ *  adjuntados (pinned_game) a las publicaciones del usuario, deduplicados. */
+export async function fetchUserGames(userId: string): Promise<PostWithMeta[]> {
+  const published = await fetchUserPosts(userId, { games: true });
+  const { data: attached } = await supabase
+    .from("posts")
+    .select("pinned_game_id")
+    .eq("author_id", userId)
+    .not("pinned_game_id", "is", null)
+    .is("deleted_at", null);
+  const pinnedIds = Array.from(new Set((attached ?? []).map(p => p.pinned_game_id).filter(Boolean))) as string[];
+  let extra: PostWithMeta[] = [];
+  if (pinnedIds.length) {
+    const { data: rows } = await supabase
+      .from("posts")
+      .select("*")
+      .in("id", pinnedIds)
+      .is("deleted_at", null);
+    if (rows?.length) extra = await enrichPosts(rows as PostRow[], userId);
+  }
+  const byId = new Map<string, PostWithMeta>();
+  for (const g of [...extra, ...published]) byId.set(g.id, g);
+  return Array.from(byId.values()).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 }
 
 // ---------- Banned emails ----------

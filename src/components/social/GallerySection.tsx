@@ -204,7 +204,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
         <div className="flex items-center justify-between gap-3 p-3">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 text-primary grid place-items-center shrink-0">
-              <Palette size={22} className="text-primary-foreground" />
+              <Palette size={22} />
             </div>
             <div className="min-w-0">
               <div className="font-display text-base font-semibold truncate tracking-tight flex items-center gap-2">
@@ -813,7 +813,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-              className="w-full max-w-xs panel rounded-2xl p-6 text-center space-y-2"
+              className="w-full max-w-xs rounded-lg border border-border bg-surface p-6 text-center space-y-2 shadow-md"
             >
               <div className="w-14 h-14 rounded-2xl bg-emerald-500/15 grid place-items-center mx-auto">
                 <CheckCircle2 size={28} className="text-emerald-500" />

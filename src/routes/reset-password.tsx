@@ -41,19 +41,19 @@ function ResetPasswordPage() {
 
   return (
     <div className="min-h-screen grid place-items-center bg-background p-4">
-      <form onSubmit={submit} className="w-full max-w-sm panel rounded-2xl p-4 space-y-3 glow-border">
-        <div className="font-display text-sm text-primary-glow glow-text">RESTABLECER CONTRASEÑA</div>
+      <form onSubmit={submit} className="w-full max-w-sm rounded-lg border border-border bg-surface p-5 space-y-3 shadow-sm">
+        <div className="text-sm font-semibold tracking-wide">Restablecer contraseña</div>
         {!ready && !ok && <div className="text-xs text-muted-foreground">Abre el enlace del email para continuar. Si ya lo hiciste, este formulario se activará solo.</div>}
         <input type="password" value={password} onChange={e => setPassword(e.target.value)}
           placeholder="Nueva contraseña" minLength={6} required disabled={!ready || ok}
-          className="w-full bg-input/60 border border-border rounded px-3 py-2 text-sm disabled:opacity-60" />
+          className="w-full bg-surface-2 border border-line-strong rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring/30 focus:border-primary/50 disabled:opacity-60 transition" />
         {err && <div className="text-xs text-destructive">{err}</div>}
-        {ok && <div className="text-xs text-primary-glow">✅ Contraseña actualizada. Redirigiendo…</div>}
+        {ok && <div className="text-xs text-emerald-600">✅ Contraseña actualizada. Redirigiendo…</div>}
         <button disabled={!ready || busy || ok}
-          className="w-full py-3 rounded-lg bg-gradient-to-r from-primary to-accent text-primary-foreground font-display tracking-widest text-sm disabled:opacity-50">
-          {busy ? "..." : "GUARDAR"}
+          className="w-full h-11 rounded-lg bg-primary text-white text-sm font-semibold active:scale-[0.98] transition disabled:opacity-50">
+          {busy ? "…" : "Guardar"}
         </button>
-        <Link to="/auth" className="block text-center text-[10px] text-muted-foreground">← VOLVER</Link>
+        <Link to="/auth" className="block text-center text-xs text-muted-foreground hover:text-foreground transition">← Volver</Link>
       </form>
     </div>
   );

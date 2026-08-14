@@ -122,11 +122,6 @@ const PX_COLORS: Record<string, string> = {
 function CreatorRobot() {
   return (
     <div className="relative">
-      {/* Antenna */}
-      <div className="absolute left-1/2 -top-7 -translate-x-1/2">
-        <div className="w-[3px] h-5 bg-primary/40 mx-auto" />
-        <div className="w-2.5 h-2.5 rounded-full bg-accent shadow-[0_0_10px_oklch(0.72_0.14_235/0.9)] animate-pulse" />
-      </div>
       {/* Head */}
       <div className="w-12 h-11 rounded-[10px] bg-gradient-to-b from-white to-white/70 border-2 border-primary/25 shadow-lg flex items-center justify-center gap-[3px]">
         <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_6px_oklch(0.52_0.19_258/0.6)]" />
@@ -153,7 +148,7 @@ function CreatorRobot() {
 /* ─── Floating editor panel (sprite) ─── */
 function SpritePanel() {
   return (
-    <div className="w-[122px] rounded-xl p-2.5 border border-white/50 bg-white/65 backdrop-blur-md shadow-lg shadow-primary/10">
+    <div className="w-[122px] rounded-xl p-2.5 border border-border/60 bg-white/90 shadow-sm">
       <div className="flex items-center gap-1.5 mb-2">
         <div className="w-2 h-2 rounded-full bg-primary" />
         <div className="w-2 h-2 rounded-full bg-amber-400" />
@@ -174,7 +169,7 @@ function SpritePanel() {
 /* ─── Floating editor panel (blocks) ─── */
 function BlockPanel() {
   return (
-    <div className="w-[112px] rounded-xl p-2.5 border border-white/50 bg-white/65 backdrop-blur-md shadow-lg shadow-primary/10">
+    <div className="w-[112px] rounded-xl p-2.5 border border-border/60 bg-white/90 shadow-sm">
       <div className="text-[8px] font-mono text-muted-foreground/50 mb-1.5 tracking-wider">LÓGICA</div>
       <div className="space-y-1">
         <div className="h-3.5 rounded-md bg-primary/80 flex items-center px-1.5 shadow-sm">
@@ -194,7 +189,7 @@ function BlockPanel() {
 /* ─── Floating play pill ─── */
 function PlayPanel() {
   return (
-    <div className="flex items-center gap-2 rounded-full pl-2 pr-3.5 py-1.5 border border-white/60 bg-white/75 backdrop-blur-md shadow-lg shadow-primary/15">
+    <div className="flex items-center gap-2 rounded-full pl-2 pr-3.5 py-1.5 border border-border/60 bg-white/90 shadow-sm">
       <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary to-accent grid place-items-center shadow-md shadow-primary/30">
         <Play size={12} className="text-white fill-white" />
       </div>
@@ -219,23 +214,6 @@ function HeroScene() {
           <div className="absolute left-1/2 top-[42%] -translate-x-1/2 -translate-y-1/2 w-[220px] h-[220px] rounded-full animate-mesh-grad-alt"
             style={{ background: "radial-gradient(circle, oklch(0.72 0.14 235 / 0.12), transparent 60%)" }} />
 
-          {/* Orbit rings (tilted 3D) */}
-          <div className="absolute left-1/2 top-[42%] -translate-x-1/2 -translate-y-1/2" style={{ perspective: "700px", willChange: "transform" }}>
-            <div className="relative w-[380px] h-[380px]">
-              <div className="absolute inset-0 rounded-full border border-primary/15" style={{ transform: "rotateX(68deg)" }} />
-              <div className="absolute inset-8 rounded-full border border-accent/10" style={{ transform: "rotateX(68deg)" }} />
-              <div className="absolute inset-0" style={{ transform: "rotateX(68deg)" }}>
-                <div className="absolute inset-0 animate-orbit-slow" style={{ animationDuration: "16s" }}>
-                  <div className="absolute left-1/2 top-0 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-primary/80 shadow-[0_0_12px_oklch(0.52_0.19_258/0.8)]" />
-                </div>
-              </div>
-              <div className="absolute inset-8" style={{ transform: "rotateX(68deg)" }}>
-                <div className="absolute inset-0 animate-orbit-slow-rev" style={{ animationDuration: "22s" }}>
-                  <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-accent/80 shadow-[0_0_12px_oklch(0.72_0.14_235/0.8)]" />
-                </div>
-              </div>
-            </div>
-          </div>
 
           {/* Floating island + robot */}
           <div className="absolute left-1/2 top-[63%] -translate-x-1/2">
@@ -273,21 +251,11 @@ function HeroScene() {
             <PlayPanel />
           </div>
           <div className="absolute left-[8%] bottom-[20%] animate-float-icon" style={{ animationDelay: "2.3s", willChange: "transform" }}>
-            <div className="w-9 h-9 rounded-full bg-white/70 backdrop-blur-md border border-white/60 grid place-items-center shadow-lg shadow-primary/15">
+            <div className="w-9 h-9 rounded-full bg-white/90 border border-border/60 grid place-items-center shadow-sm">
               <Sparkles size={15} className="text-accent" />
             </div>
           </div>
 
-          {/* Tiny stars inside the scene */}
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="absolute rounded-full pointer-events-none"
-              style={{
-                width: 1 + (i % 2), height: 1 + (i % 2),
-                left: `${(i * 41 + 9) % 100}%`, top: `${(i * 29 + 7) % 90}%`,
-                background: "oklch(0.72 0.14 235)",
-                animation: `twinkle ${2.5 + (i % 3)}s ease-in-out ${i * 0.4}s infinite`,
-              }} />
-          ))}
         </div>
       </div>
     </div>
@@ -541,10 +509,6 @@ function AuthPage() {
           style={{ background: "radial-gradient(circle at 30% 50%, oklch(0.52 0.19 258 / 0.07), transparent 60%)" }} />
         <div className="absolute -bottom-[30%] -right-[20%] w-[70%] h-[70%] opacity-50 animate-mesh-grad-alt"
           style={{ background: "radial-gradient(circle at 70% 50%, oklch(0.72 0.14 235 / 0.06), transparent 60%)" }} />
-        {/* Stars */}
-        {Array.from({ length: 16 }).map((_, i) => <Star key={i} index={i} />)}
-        {/* Circuit lines */}
-        <CircuitLines />
         {/* Dot grid */}
         <svg className="absolute inset-0 w-full h-full opacity-[0.02]" xmlns="http://www.w3.org/2000/svg">
           <defs>

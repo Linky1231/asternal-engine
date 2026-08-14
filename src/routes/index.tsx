@@ -459,7 +459,7 @@ function SkeletonList() {
   return (
     <div className="space-y-3">
       {[0, 1, 2].map(i => (
-        <div key={i} className="panel rounded-2xl border border-border/50 overflow-hidden animate-pulse">
+        <div key={i} className="rounded-lg border border-border/70 bg-surface overflow-hidden animate-pulse">
           <div className="aspect-[16/10] bg-muted/40" />
           <div className="p-3 space-y-2">
             <div className="h-3 w-1/2 bg-muted/50 rounded" />

@@ -97,8 +97,8 @@ function FeedPage() {
             <button key={c.id} onClick={() => setCategory(c.id)}
               className={`shrink-0 h-9 px-4 rounded-full grid grid-flow-col auto-cols-max items-center gap-1.5 text-xs font-medium transition-colors duration-200 active:scale-[0.96] border ${
                 category === c.id
-                  ? "border-transparent bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-[0_3px_12px_-3px_oklch(0.52_0.19_258/0.55)]"
-                  : "border-border/40 bg-muted/30 text-muted-foreground hover:text-primary-glow hover:bg-muted/60"
+                  ? "border-transparent bg-primary text-white"
+                  : "border-border/40 bg-muted/30 text-muted-foreground hover:text-primary hover:bg-muted/60"
               }`}>
               {c.icon}
               {c.label}
@@ -116,7 +116,7 @@ function FeedPage() {
             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
               className="overflow-hidden">
-              <div className="mt-2 panel rounded-2xl p-2.5 grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="mt-2 rounded-lg border border-border/70 bg-surface p-2.5 grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <label className="flex items-center gap-2 bg-muted/40 rounded-xl px-3 py-2.5 border border-border/50 focus-within:border-primary/40 transition-colors">
                   <Search size={14} className="text-muted-foreground shrink-0" />
                   <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar en publicaciones…"
@@ -130,7 +130,7 @@ function FeedPage() {
                   {tag && <button onClick={() => setTag("")} className="text-muted-foreground hover:text-foreground active:scale-[0.92] transition-transform duration-200"><X size={13} /></button>}
                 </label>
                 <button onClick={reload}
-                  className="sm:col-span-2 py-2.5 rounded-xl bg-gradient-to-r from-primary to-accent text-primary-foreground text-[10px] font-display tracking-[0.2em] uppercase shadow-[0_3px_12px_-3px_oklch(0.52_0.19_258/0.5)] active:scale-[0.98] transition-transform duration-300 ease-out">
+                  className="sm:col-span-2 h-10 rounded-lg bg-primary text-white text-xs font-semibold active:scale-[0.98] transition">
                   Aplicar filtros
                 </button>
               </div>
@@ -147,7 +147,7 @@ function FeedPage() {
         {loading ? (
           <div className="space-y-3">
             {[0, 1, 2].map(i => (
-              <div key={i} className="panel rounded-2xl p-3 space-y-3">
+              <div key={i} className="rounded-lg border border-border/70 bg-surface p-3 space-y-3">
                 <div className="flex items-center gap-2.5">
                   <div className="w-10 h-10 rounded-full anim-shimmer" />
                   <div className="flex-1 space-y-1.5">
@@ -166,14 +166,14 @@ function FeedPage() {
         ) : posts.length === 0 ? (
           <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            className="panel rounded-2xl p-10 text-center space-y-3 border border-dashed border-border">
-            <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-primary/15 to-accent/15 grid place-items-center">
-              <Inbox size={24} className="text-primary-glow" />
+            className="rounded-lg border border-dashed border-border bg-surface p-10 text-center space-y-3">
+            <div className="w-14 h-14 mx-auto rounded-xl bg-primary/10 border border-primary/20 grid place-items-center">
+              <Inbox size={24} className="text-primary" />
             </div>
             <div className="font-display text-sm">No hay publicaciones aún</div>
             <div className="text-xs text-muted-foreground max-w-xs mx-auto">Sé el primero en compartir algo con la comunidad — un juego, un dibujo o una idea.</div>
             <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-              className="mt-2 h-9 px-5 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground text-xs font-display tracking-widest shadow-sm active:scale-95 transition-transform duration-300 ease-out">
+              className="mt-2 h-10 px-5 rounded-lg bg-primary text-white text-xs font-semibold active:scale-95 transition">
               CREAR PUBLICACIÓN
             </button>
           </motion.div>
