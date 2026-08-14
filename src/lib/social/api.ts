@@ -1114,44 +1114,8 @@ export async function fetchUserPosts(userId: string, opts: { games?: boolean; ar
   const { data: posts, error } = await q;
   if (error) throw error;
   if (!posts?.length) return [];
-  return enrichPosts(posts as PostRow[], userId);
-}
-
-/** Enriquece posts crudos con autor, reacciones, comentarios y media firmada. */
-async function enrichPosts(posts: PostRow[], fallbackAuthorId: string): Promise<PostWithMeta[]> {
-  const ids = posts.map(p => p.id);
   const { data: { user } } = await supabase.auth.getUser();
-  const me = user?.id ?? null;
-  const authorIds = Array.from(new Set([fallbackAuthorId, ...posts.map(p => p.author_id)]));
-  const [profiles, reactions, comments] = await Promise.all([
-    supabase.from("profiles").select("*").in("id", authorIds),
-    supabase.from("reactions").select("post_id,user_id,type").in("post_id", ids),
-    supabase.from("comments").select("post_id").in("post_id", ids).is("deleted_at", null),
-  ]);
-  const authorBy = new Map<string, Profile>((profiles.data ?? []).map(p => [p.id, p]));
-  const out: PostWithMeta[] = [];
-  for (const p of posts) {
-    const r = (reactions.data ?? []).filter(x => x.post_id === p.id);
-    const signed = await signMediaUrls(p.media_urls ?? []);
-    const signedCover = p.cover_url ? (await signMediaUrls([p.cover_url]))[0] ?? null : null;
-    const signedScreens = (p as PostRow).screenshots?.length ? await signMediaUrls((p as PostRow).screenshots) : [];
-    out.push({
-      ...(p as PostRow),
-      author: authorBy.get(p.author_id) ?? null,
-      tags: [],
-      likes: r.filter(x => x.type === "like").length,
-      favorites: r.filter(x => x.type === "favorite").length,
-      comments_count: (comments.data ?? []).filter(x => x.post_id === p.id).length,
-      reposts_count: 0,
-      my_like: !!me && r.some(x => x.user_id === me && x.type === "like"),
-      my_favorite: !!me && r.some(x => x.user_id === me && x.type === "favorite"),
-      my_repost: false,
-      signed_media: signed,
-      signed_cover: signedCover,
-      signed_screenshots: signedScreens,
-    });
-  }
-  return out;
+  return enrichPosts(posts as PostRow[], user?.id ?? null);
 }
 
 /** Juegos del perfil: los publicados como post (category=game) MÁS los juegos
@@ -1172,7 +1136,10 @@ export async function fetchUserGames(userId: string): Promise<PostWithMeta[]> {
       .select("*")
       .in("id", pinnedIds)
       .is("deleted_at", null);
-    if (rows?.length) extra = await enrichPosts(rows as PostRow[], userId);
+    if (rows?.length) {
+      const { data: { user } } = await supabase.auth.getUser();
+      extra = await enrichPosts(rows as PostRow[], user?.id ?? null);
+    }
   }
   const byId = new Map<string, PostWithMeta>();
   for (const g of [...extra, ...published]) byId.set(g.id, g);
