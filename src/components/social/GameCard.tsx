@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Play, Heart, MessageCircle, Share2, Trash2, MoreHorizontal, Pencil, GitFork, Loader2, Sparkles, Lock, X, CheckCircle2, AlertTriangle, ChevronLeft, ChevronRight, Gamepad2, Flag } from "lucide-react";
 import { useNavigate, Link } from "@tanstack/react-router";
 import { type PostWithMeta, toggleReaction, deletePost, loadGameProject, reportContent, remixGame, purchaseGame, getMyOrbes, recordGamePlay } from "@/lib/social/api";
+import { logPlaySession } from "@/lib/social/history";
 import type { Project, Scene } from "@/lib/engine/core";
 import { GameRuntime } from "@/components/engine/GameRuntime";
 import { CommentSection } from "./CommentSection";
@@ -31,6 +32,8 @@ export function GameCard({
 }) {
   const navigate = useNavigate();
   const [playing, setPlaying] = useState<Scene | null>(null);
+  // Marca de inicio de la partida actual (para registrar la sesión en el historial).
+  const sessionRef = useRef<{ startedAt: number } | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [openComments, setOpenComments] = useState(false);
@@ -63,12 +66,40 @@ export function GameCard({
     };
   }, [playing]);
 
+  // Cierra la sesión de juego y la guarda en el historial real (historial panel).
+  // Se ignora si duró menos de 3 segundos (abrir y salir al instante no cuenta).
+  const endSession = () => {
+    const s = sessionRef.current;
+    if (!s) return;
+    sessionRef.current = null;
+    const dur = Math.round((Date.now() - s.startedAt) / 1000);
+    if (dur < 3) return;
+    const endedAt = new Date().toISOString();
+    try {
+      logPlaySession({
+        gameId: post.id,
+        gameTitle: title,
+        coverUrl: post.signed_cover ?? null,
+        startedAt: new Date(s.startedAt).toISOString(),
+        endedAt,
+        durationSeconds: dur,
+      });
+    } catch { /* el historial nunca debe romper la partida */ }
+  };
+
+  const closeGame = () => { endSession(); setPlaying(null); };
+
+  // Si el componente se desmonta con la partida abierta (navegar, cerrar feed),
+  // igualmente se registra la sesión con lo jugado hasta ese momento.
+  useEffect(() => () => { endSession(); }, []);
+
   const launchScene = async () => {
     if (!post.signed_media[0]) { setErr("Sin datos"); return; }
     const proj = (await loadGameProject(post.signed_media[0])) as Project;
     const scene = proj.scenes.find(s => s.id === proj.activeSceneId) ?? proj.scenes[0];
     if (!scene) throw new Error("Escena inválida");
     setPlaying(scene);
+    sessionRef.current = { startedAt: Date.now() };
     // Registra la jugada para el ranking de «más jugados (24h)».
     void recordGamePlay(post.id);
   };
@@ -159,10 +190,10 @@ export function GameCard({
           scene={playing}
           fpsCap={60}
           showHUD={true}
-          onExit={() => setPlaying(null)}
+          onExit={closeGame}
         />
         <button
-          onClick={() => setPlaying(null)}
+          onClick={closeGame}
           className="fixed top-3 right-3 z-[110] px-3 py-2 rounded-xl glass text-xs font-display tracking-widest active:scale-95"
         >SALIR</button>
       </div>

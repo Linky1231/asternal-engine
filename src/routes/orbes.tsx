@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState, useMemo } from "react";
-import { ArrowLeft, Sparkles, TrendingUp, TrendingDown, Gift, Gamepad2, Loader2, Wallet, BarChart3 } from "lucide-react";
+import { ArrowLeft, Sparkles, TrendingUp, TrendingDown, Gift, Gamepad2, Loader2, Wallet, BarChart3, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { getMyProfile, fetchAllOrbeTransactions, type OrbeTx, type Profile } from "@/lib/social/api";
 
@@ -21,8 +21,9 @@ function timeAgo(iso: string) {
 function kindMeta(k: OrbeTx["kind"]) {
   switch (k) {
     case "welcome_bonus": return { label: "Bienvenida", Icon: Gift, tone: "text-emerald-500" };
-    case "game_purchase": return { label: "Compra de juego", Icon: Gamepad2, tone: "text-primary" };
+    case "game_purchase": return { label: "Juego", Icon: Gamepad2, tone: "text-primary" };
     case "adjustment":    return { label: "Ajuste", Icon: Wallet, tone: "text-muted-foreground" };
+    case "refund":        return { label: "Reembolso", Icon: Wallet, tone: "text-emerald-500" };
     default:              return { label: "Movimiento", Icon: Wallet, tone: "text-muted-foreground" };
   }
 }
@@ -43,6 +44,7 @@ function OrbesPage() {
 
   const [me, setMe] = useState<Profile | null>(null);
   const [txs, setTxs] = useState<OrbeTx[]>([]);
+  const [gameTitles, setGameTitles] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
@@ -56,21 +58,42 @@ function OrbesPage() {
         // calculan sobre el total real, no sobre una muestra de 200.
         const [p, t] = await Promise.all([getMyProfile(), fetchAllOrbeTransactions()]);
         setMe(p); setTxs(t);
+        // Títulos reales de los juegos involucrados: las transacciones solo
+        // guardan el post_id, aquí se resuelve el nombre de cada juego.
+        const ids = [...new Set(
+          t.filter(x => x.kind === "game_purchase" && x.post_id).map(x => x.post_id as string)
+        )];
+        if (ids.length) {
+          const { data: posts } = await supabase
+            .from("posts" as never)
+            .select("id,content" as never)
+            .in("id" as never, ids as never);
+          const map = new Map<string, string>();
+          for (const pst of (posts ?? []) as { id: string; content: string }[]) {
+            map.set(pst.id, (pst.content.split("\n")[0] || "Juego").replace(/^[🎮🎨]\s*/, "").trim() || "Juego");
+          }
+          setGameTitles(map);
+        }
       } catch (e) { setErr((e as Error).message); }
       finally { setLoading(false); }
     })();
   }, [navigate]);
 
   const stats = useMemo(() => {
-    let earned = 0, spent = 0, purchases = 0;
+    let earned = 0, spent = 0, purchases = 0, sales = 0;
+    const involved = new Set<string>();
     for (const t of txs) {
       if (t.amount > 0) earned += t.amount;
       else spent += -t.amount;
       // Solo cuentan como compras los gastos (la venta de un juego genera un
       // ingreso con kind game_purchase y no debe sumarse como compra).
-      if (t.kind === "game_purchase" && t.amount < 0) purchases += 1;
+      if (t.kind === "game_purchase") {
+        if (t.amount < 0) purchases += 1;
+        else if (t.amount > 0) sales += 1;
+        if (t.post_id) involved.add(t.post_id);
+      }
     }
-    return { earned, spent, purchases };
+    return { earned, spent, purchases, sales, games: involved.size };
   }, [txs]);
 
   // Estadísticas por periodo (mismo enfoque que el sistema de historial):
@@ -164,7 +187,41 @@ function OrbesPage() {
         <section className="grid grid-cols-3 gap-2">
           <StatCard label="Ganados" value={stats.earned} Icon={TrendingUp} tone="text-emerald-500" />
           <StatCard label="Gastados" value={stats.spent} Icon={TrendingDown} tone="text-rose-500" />
-          <StatCard label="Juegos" value={stats.purchases} Icon={Gamepad2} tone="text-primary" />
+          <StatCard
+            label="Juegos involucrados"
+            value={stats.games}
+            Icon={Gamepad2}
+            tone="text-primary"
+            sub={`${stats.purchases} comprado${stats.purchases !== 1 ? "s" : ""} · ${stats.sales} vendido${stats.sales !== 1 ? "s" : ""}`}
+          />
+        </section>
+
+        {/* Juegos involucrados: con qué juegos hubo movimientos de orbes */}
+        <section className="panel rounded-2xl border border-border/50 p-3 space-y-2">
+          <div className="flex items-center justify-between px-0.5 gap-2">
+            <h2 className="font-display text-[11px] tracking-widest text-muted-foreground flex items-center gap-1.5">
+              <Gamepad2 size={12} className="text-primary-glow" />
+              JUEGOS INVOLUCRADOS
+            </h2>
+            <span className="text-[9px] font-mono text-muted-foreground/60 shrink-0">{stats.games} juego{stats.games !== 1 ? "s" : ""} con movimientos de orbes</span>
+          </div>
+          {stats.games === 0 ? (
+            <div className="text-[11px] text-muted-foreground/60 px-0.5 pb-1">
+              Aún no hay juegos con movimientos de orbes en tu cuenta. Compra o vende juegos y aparecerán aquí.
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {[...gameTitles.entries()].map(([id, t]) => (
+                <a
+                  key={id}
+                  href={`/?g=${id}`}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-r from-primary/12 to-accent/12 border border-primary/20 text-[10px] font-display tracking-wide text-primary-glow hover:border-primary/50 hover:from-primary/20 transition"
+                >
+                  <Gamepad2 size={10} /> {t} <ExternalLink size={9} className="opacity-60" />
+                </a>
+              ))}
+            </div>
+          )}
         </section>
 
         {/* Estadísticas por periodo (estilo sistema de historial) */}
@@ -222,14 +279,23 @@ function OrbesPage() {
               {recent.map(t => {
                 const m = kindMeta(t.kind);
                 const positive = t.amount > 0;
+                const isGame = t.kind === "game_purchase";
+                const gameTitle = t.post_id ? gameTitles.get(t.post_id) : undefined;
+                const subLabel = isGame ? (positive ? "Venta" : "Compra") : m.label;
                 return (
                   <li key={t.id} className="flex items-center gap-3 px-3 py-3 hover:bg-muted/30 transition-colors">
                     <div className={`w-9 h-9 rounded-xl grid place-items-center shrink-0 ${positive ? "bg-emerald-500/10" : "bg-rose-500/10"}`}>
                       <m.Icon size={16} className={m.tone} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm truncate">{t.description || m.label}</div>
-                      <div className="text-[10px] font-mono text-muted-foreground">{m.label} · {timeAgo(t.created_at)}</div>
+                      {isGame && gameTitle ? (
+                        <a href={`/?g=${t.post_id}`} className="text-sm truncate block hover:text-primary-glow hover:underline">
+                          {positive ? "Vendiste" : "Compraste"} «{gameTitle}»
+                        </a>
+                      ) : (
+                        <div className="text-sm truncate">{t.description || m.label}</div>
+                      )}
+                      <div className="text-[10px] font-mono text-muted-foreground">{subLabel} · {timeAgo(t.created_at)}</div>
                     </div>
                     <div className={`font-display font-semibold tabular-nums text-sm flex items-center gap-1 ${positive ? "text-emerald-500" : "text-rose-500"}`}>
                       {positive ? "+" : ""}{t.amount}
@@ -252,12 +318,13 @@ function OrbesPage() {
   );
 }
 
-function StatCard({ label, value, Icon, tone }: { label: string; value: number; Icon: React.ComponentType<{ size?: number; className?: string }>; tone: string }) {
+function StatCard({ label, value, Icon, tone, sub }: { label: string; value: number; Icon: React.ComponentType<{ size?: number; className?: string }>; tone: string; sub?: string }) {
   return (
     <div className="panel rounded-2xl border border-border/50 p-3 flex flex-col items-start gap-1 transition-transform hover:scale-[1.02]">
       <Icon size={14} className={tone} />
       <div className="text-lg font-display font-semibold tabular-nums leading-none mt-1">{value.toLocaleString()}</div>
       <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">{label}</div>
+      {sub && <div className="text-[9px] text-muted-foreground/60 truncate">{sub}</div>}
     </div>
   );
 }
@@ -268,7 +335,7 @@ function PeriodCard({ label, earned, spent, purchases }: { label: string; earned
     <div className="panel rounded-2xl border border-border/50 p-3 space-y-1.5">
       <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider flex items-center justify-between">
         <span className="truncate">{label}</span>
-        {purchases > 0 && <span className="text-primary-glow/70 shrink-0">{purchases} juego{purchases !== 1 ? "s" : ""}</span>}
+        {purchases > 0 && <span className="text-primary-glow/70 shrink-0">{purchases} compra{purchases !== 1 ? "s" : ""}</span>}
       </div>
       <div className="flex items-center justify-between gap-1">
         <span className="text-[10px] text-muted-foreground flex items-center gap-1 shrink-0"><TrendingUp size={10} className="text-emerald-500" /> Ganado</span>

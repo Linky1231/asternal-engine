@@ -751,7 +751,7 @@ export type OrbeTx = {
   id: string;
   user_id: string;
   amount: number;
-  kind: "welcome_bonus" | "game_purchase" | "adjustment";
+  kind: "welcome_bonus" | "game_purchase" | "adjustment" | "refund";
   post_id: string | null;
   description: string | null;
   created_at: string;

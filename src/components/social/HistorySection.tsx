@@ -57,8 +57,10 @@ export function HistorySection() {
     return () => clearTimeout(t);
   }, []);
 
+  // Se cargan los likes al abrir el panel: el contador del encabezado
+  // («N likes») es real desde el primer momento, no solo al entrar a la pestaña.
+  // Se re-consultan al cambiar de pestaña para mantener el dato fresco.
   useEffect(() => {
-    if (tab !== "likes") return;
     setLikesLoading(true);
     getMyLikedPosts()
       .then(setLikedPosts)
