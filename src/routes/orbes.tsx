@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState, useMemo } from "react";
 import { ArrowLeft, Sparkles, TrendingUp, TrendingDown, Gift, Gamepad2, Loader2, Wallet, BarChart3 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { getMyProfile, fetchOrbeTransactions, type OrbeTx, type Profile } from "@/lib/social/api";
+import { getMyProfile, fetchAllOrbeTransactions, type OrbeTx, type Profile } from "@/lib/social/api";
 
 export const Route = createFileRoute("/orbes")({
   head: () => ({ meta: [{ title: "Mis Orbes · Asternal" }] }),
@@ -52,7 +52,9 @@ function OrbesPage() {
       if (!session) { navigate({ to: "/auth" }); return; }
       setLoading(true);
       try {
-        const [p, t] = await Promise.all([getMyProfile(), fetchOrbeTransactions(200)]);
+        // Se cargan TODAS las transacciones de la cuenta: las estadísticas se
+        // calculan sobre el total real, no sobre una muestra de 200.
+        const [p, t] = await Promise.all([getMyProfile(), fetchAllOrbeTransactions()]);
         setMe(p); setTxs(t);
       } catch (e) { setErr((e as Error).message); }
       finally { setLoading(false); }
@@ -64,7 +66,9 @@ function OrbesPage() {
     for (const t of txs) {
       if (t.amount > 0) earned += t.amount;
       else spent += -t.amount;
-      if (t.kind === "game_purchase") purchases += 1;
+      // Solo cuentan como compras los gastos (la venta de un juego genera un
+      // ingreso con kind game_purchase y no debe sumarse como compra).
+      if (t.kind === "game_purchase" && t.amount < 0) purchases += 1;
     }
     return { earned, spent, purchases };
   }, [txs]);
@@ -90,7 +94,7 @@ function OrbesPage() {
         if (ts >= weekAgo) week.spent += -t.amount;
         if (ts >= startMonth) month.spent += -t.amount;
       }
-      if (t.kind === "game_purchase") {
+      if (t.kind === "game_purchase" && t.amount < 0) {
         if (ts >= startToday) today.purchases += 1;
         if (ts >= weekAgo) week.purchases += 1;
         if (ts >= startMonth) month.purchases += 1;
@@ -118,6 +122,10 @@ function OrbesPage() {
   }, [txs]);
   const maxSpent7 = Math.max(1, ...last7.map(d => d.spent));
   const monthName = new Date().toLocaleDateString("es", { month: "long" }).toUpperCase();
+
+  // Historial visible: los 200 movimientos más recientes (el total real se
+  // muestra en la cabecera).
+  const recent = useMemo(() => txs.slice(0, 200), [txs]);
 
   return (
     <div className="min-h-screen w-full flex flex-col bg-background text-foreground">
@@ -211,7 +219,7 @@ function OrbesPage() {
             </div>
           ) : (
             <ul className="panel rounded-2xl border border-border/50 divide-y divide-border/40 overflow-hidden">
-              {txs.map(t => {
+              {recent.map(t => {
                 const m = kindMeta(t.kind);
                 const positive = t.amount > 0;
                 return (

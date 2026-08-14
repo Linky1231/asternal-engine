@@ -78,6 +78,7 @@ export type PostRow = {
   media_type: MediaType;
   link_url: string | null;
   category: string | null;
+  game_genre?: string | null;
   cover_url: string | null;
   screenshots?: string[] | null;
   allow_remix?: boolean;
@@ -627,6 +628,11 @@ async function upsertTagsFor(postId: string, tags?: string[]) {
   }
 }
 
+export const GAME_GENRES = [
+  "Acción", "Aventura", "Arcade", "Carreras", "Deportes",
+  "Estrategia", "Plataformas", "Puzzle", "RPG", "Terror", "Educativo", "Otro",
+] as const;
+
 export async function publishGame(input: {
   project: unknown;
   title: string;
@@ -636,6 +642,7 @@ export async function publishGame(input: {
   screenshotFiles?: File[];
   allowRemix?: boolean;
   priceOrbes?: number;
+  gameGenre?: string | null;
 }): Promise<PostRow> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
@@ -656,6 +663,7 @@ export async function publishGame(input: {
     media_type: "none",
     link_url: null,
     category: "game",
+    game_genre: input.gameGenre?.trim() || null,
     cover_url: coverPath,
     screenshots,
     allow_remix: input.allowRemix ?? true,
@@ -689,6 +697,7 @@ export async function updateGame(postId: string, input: {
   keepScreenshots?: string[];
   allowRemix?: boolean;
   priceOrbes?: number;
+  gameGenre?: string | null;
 }): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
@@ -716,6 +725,7 @@ export async function updateGame(postId: string, input: {
   }
   if (typeof input.allowRemix === "boolean") patch.allow_remix = input.allowRemix;
   if (typeof input.priceOrbes === "number") patch.price_orbes = Math.max(0, Math.floor(input.priceOrbes));
+  if (input.gameGenre !== undefined) patch.game_genre = input.gameGenre.trim() || null;
   const { error } = await supabase.from("posts").update(patch as never).eq("id", postId);
   if (error) throw error;
   if (input.tags) {
@@ -758,6 +768,30 @@ export async function fetchOrbeTransactions(limit = 100): Promise<OrbeTx[]> {
     .limit(limit);
   if (error) throw error;
   return (data ?? []) as OrbeTx[];
+}
+
+/**
+ * TODAS las transacciones de orbes de la cuenta (paginadas hasta 50k): las
+ * estadísticas del panel se calculan sobre el total real, no sobre una muestra.
+ */
+export async function fetchAllOrbeTransactions(): Promise<OrbeTx[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+  const all: OrbeTx[] = [];
+  const PAGE = 1000;
+  for (let i = 0; i < 50; i++) {
+    const { data, error } = await supabase
+      .from("orbe_transactions" as never)
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .range(i * PAGE, (i + 1) * PAGE - 1);
+    if (error) throw error;
+    const rows = (data ?? []) as OrbeTx[];
+    all.push(...rows);
+    if (rows.length < PAGE) break;
+  }
+  return all;
 }
 
 

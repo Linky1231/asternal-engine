@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { type PostWithMeta, toggleReaction, toggleRepost, deletePost, updatePost, reportContent, votePoll, isPlusActive } from "@/lib/social/api";
 import { CommentSection } from "./CommentSection";
 import { UserName } from "./UserName";
+import { CardMenu, CardMenuItem, useCardMenuAnchor } from "./CardMenu";
 import {
   Heart, Star, MessageCircle, Repeat2, MoreHorizontal, Pencil, Trash2, Flag, Share2,
   FileText, Download, Lock, Gamepad2, Code2, Link2,
@@ -25,8 +26,8 @@ export const PostCard = memo(function PostCard({
   const [openComments, setOpenComments] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState(post.content);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [showHtml, setShowHtml] = useState(false);
+  const menu = useCardMenuAnchor<HTMLButtonElement>();
 
   const mine = myId === post.author_id;
   const canDelete = mine || isMod;
@@ -48,7 +49,7 @@ export const PostCard = memo(function PostCard({
     if (!reason) return;
     await reportContent({ postId: post.id, reason });
     alert("Reporte enviado");
-    setMenuOpen(false);
+    menu.close();
   };
   const share = async () => {
     const url = window.location.origin + "/feed?p=" + post.id;
@@ -109,20 +110,17 @@ export const PostCard = memo(function PostCard({
               @{author?.username ?? "?"} · <span className="text-primary-glow/80 font-medium">{timeAgo(post.created_at)}</span>
             </div>
           </Link>
-          <div className="relative">
-            <button onClick={() => setMenuOpen(o => !o)}
-              className="w-8 h-8 rounded-lg border border-border text-muted-foreground grid place-items-center transition-[transform,background-color,color] duration-150 ease-out pointer-fine:hover:bg-muted/50 pointer-fine:hover:text-foreground active:scale-[0.94]">
-              <MoreHorizontal size={15} />
-            </button>
-            {menuOpen && (
-              <div className="absolute right-0 top-9 z-20 panel border border-border rounded-xl p-1 min-w-[150px] text-xs shadow-lg">
-                {mine && <button onClick={() => { setEditing(true); setMenuOpen(false); }} className="flex items-center gap-2 w-full text-left px-2.5 py-2 rounded-lg pointer-fine:hover:bg-muted/50 transition-colors duration-200"><Pencil size={13} /> Editar</button>}
-                {canDelete && <button onClick={remove} className="flex items-center gap-2 w-full text-left px-2.5 py-2 rounded-lg text-destructive pointer-fine:hover:bg-destructive/10 transition-colors duration-200"><Trash2 size={13} /> Borrar</button>}
-                {!mine && <button onClick={report} className="flex items-center gap-2 w-full text-left px-2.5 py-2 rounded-lg pointer-fine:hover:bg-muted/50 transition-colors duration-200"><Flag size={13} /> Reportar</button>}
-                <button onClick={share} className="flex items-center gap-2 w-full text-left px-2.5 py-2 rounded-lg pointer-fine:hover:bg-muted/50 transition-colors duration-200"><Share2 size={13} /> Compartir</button>
-              </div>
-            )}
-          </div>
+          <button ref={menu.anchorRef} onClick={menu.toggle}
+            className="w-8 h-8 rounded-lg border border-border text-muted-foreground grid place-items-center transition-[transform,background-color,color] duration-150 ease-out pointer-fine:hover:bg-muted/50 pointer-fine:hover:text-foreground active:scale-[0.94]"
+            aria-label="Menú de la publicación">
+            <MoreHorizontal size={15} />
+          </button>
+          <CardMenu rect={menu.rect} onClose={menu.close} width={164}>
+            {mine && <CardMenuItem onClick={() => { setEditing(true); menu.close(); }} icon={<Pencil size={13} />}>Editar</CardMenuItem>}
+            {canDelete && <CardMenuItem onClick={remove} danger icon={<Trash2 size={13} />}>Borrar</CardMenuItem>}
+            {!mine && <CardMenuItem onClick={report} icon={<Flag size={13} />}>Reportar</CardMenuItem>}
+            <CardMenuItem onClick={share} icon={<Share2 size={13} />}>Compartir</CardMenuItem>
+          </CardMenu>
         </header>
 
         {editing ? (

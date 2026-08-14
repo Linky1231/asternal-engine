@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { Play, Heart, MessageCircle, Share2, Trash2, MoreHorizontal, Pencil, GitFork, Loader2, Sparkles, Lock, X, CheckCircle2, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
+import { Play, Heart, MessageCircle, Share2, Trash2, MoreHorizontal, Pencil, GitFork, Loader2, Sparkles, Lock, X, CheckCircle2, AlertTriangle, ChevronLeft, ChevronRight, Gamepad2, Flag } from "lucide-react";
 import { useNavigate, Link } from "@tanstack/react-router";
 import { type PostWithMeta, toggleReaction, deletePost, loadGameProject, reportContent, remixGame, purchaseGame, getMyOrbes, recordGamePlay } from "@/lib/social/api";
 import type { Project, Scene } from "@/lib/engine/core";
 import { GameRuntime } from "@/components/engine/GameRuntime";
 import { CommentSection } from "./CommentSection";
+import { CardMenu, CardMenuItem, useCardMenuAnchor } from "./CardMenu";
 import { PublishGameDialog } from "@/components/engine/PublishGameDialog";
 import { createProject, saveProjectById, setProjectCloudId, setCurrentProjectId } from "@/lib/engine/storage";
 
@@ -33,7 +34,7 @@ export function GameCard({
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [openComments, setOpenComments] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const menu = useCardMenuAnchor<HTMLButtonElement>();
   const [editOpen, setEditOpen] = useState(false);
   const [viewer, setViewer] = useState<number | null>(null);
   const [remixing, setRemixing] = useState(false);
@@ -131,7 +132,7 @@ export function GameCard({
   const report = async () => {
     const reason = prompt("Motivo:"); if (!reason) return;
     await reportContent({ postId: post.id, reason });
-    setMenuOpen(false);
+    menu.close();
   };
   const doRemix = async () => {
     if (!canRemix) { setErr("El autor no permite remixes"); return; }
@@ -145,7 +146,7 @@ export function GameCard({
       saveProjectById(localId, project);
       setProjectCloudId(localId, cloudId);
       setCurrentProjectId(localId);
-      setMenuOpen(false);
+      menu.close();
       navigate({ to: "/editor" });
     } catch (e) { setErr((e as Error).message); }
     finally { setRemixing(false); }
@@ -262,6 +263,14 @@ export function GameCard({
         </div>
       )}
 
+      {post.game_genre && (
+        <div className="px-3 pt-2.5">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-r from-primary/12 to-accent/12 border border-primary/20 text-[10px] font-display tracking-wide text-primary-glow">
+            <Gamepad2 size={11} /> {post.game_genre}
+          </span>
+        </div>
+      )}
+
       <footer className="flex items-center gap-1 px-2 py-1.5 text-[11px] text-muted-foreground">
         <button onClick={like} className={`flex items-center gap-1 px-2 py-1.5 rounded-lg active:scale-95 transition ${post.my_like ? "text-primary-glow" : ""}`}>
           <Heart size={15} fill={post.my_like ? "currentColor" : "none"} /> {post.likes}
@@ -279,28 +288,14 @@ export function GameCard({
         <button onClick={share} className={`flex items-center gap-1 px-2 py-1.5 rounded-lg active:scale-95 transition ${canRemix && !mine ? "" : "ml-auto"}`}>
           <Share2 size={15} />
         </button>
-        <div className="relative">
-          <button onClick={() => setMenuOpen(o => !o)} className="w-8 h-8 grid place-items-center rounded-lg active:scale-95">
-            <MoreHorizontal size={16} />
-          </button>
-          {menuOpen && (
-            <div className="absolute right-0 bottom-9 z-10 panel border border-border rounded-lg p-1 min-w-[140px] text-xs shadow-lg">
-              {mine && (
-                <button onClick={() => { setEditOpen(true); setMenuOpen(false); }} className="flex items-center gap-2 w-full text-left px-2 py-1.5 hover:bg-muted/40 rounded">
-                  <Pencil size={13} /> Editar
-                </button>
-              )}
-              {(mine || isMod) && (
-                <button onClick={remove} className="flex items-center gap-2 w-full text-left px-2 py-1.5 text-destructive hover:bg-muted/40 rounded">
-                  <Trash2 size={13} /> Borrar
-                </button>
-              )}
-              {!mine && (
-                <button onClick={report} className="block w-full text-left px-2 py-1.5 hover:bg-muted/40 rounded">Reportar</button>
-              )}
-            </div>
-          )}
-        </div>
+        <button ref={menu.anchorRef} onClick={menu.toggle} className="w-8 h-8 grid place-items-center rounded-lg active:scale-95" aria-label="Menú del juego">
+          <MoreHorizontal size={16} />
+        </button>
+        <CardMenu rect={menu.rect} onClose={menu.close} width={150}>
+          {mine && <CardMenuItem onClick={() => { setEditOpen(true); menu.close(); }} icon={<Pencil size={13} />}>Editar</CardMenuItem>}
+          {(mine || isMod) && <CardMenuItem onClick={remove} danger icon={<Trash2 size={13} />}>Borrar</CardMenuItem>}
+          {!mine && <CardMenuItem onClick={report} icon={<Flag size={13} />}>Reportar</CardMenuItem>}
+        </CardMenu>
       </footer>
 
       {openComments && (
@@ -323,6 +318,7 @@ export function GameCard({
           initialScreenshots={(post.screenshots ?? []).map((path, i) => ({ path, url: post.signed_screenshots[i] ?? "" }))}
           initialAllowRemix={post.allow_remix !== false}
           initialPriceOrbes={post.price_orbes ?? 0}
+          initialGenre={post.game_genre ?? null}
           onSaved={onChange}
         />
       )}

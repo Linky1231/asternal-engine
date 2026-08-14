@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { publishGame, updateGame } from "@/lib/social/api";
+import { publishGame, updateGame, GAME_GENRES } from "@/lib/social/api";
 import { Upload, Loader2, CheckCircle2, ImagePlus, Images, X, GitFork, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "@tanstack/react-router";
@@ -17,6 +17,7 @@ export function PublishGameDialog({
   initialScreenshots,
   initialAllowRemix,
   initialPriceOrbes,
+  initialGenre,
   onSaved,
 }: {
   open: boolean;
@@ -33,6 +34,7 @@ export function PublishGameDialog({
   initialScreenshots?: { path: string; url: string }[];
   initialAllowRemix?: boolean;
   initialPriceOrbes?: number;
+  initialGenre?: string | null;
   onSaved?: () => void;
 }) {
   const navigate = useNavigate();
@@ -45,6 +47,7 @@ export function PublishGameDialog({
   const [screens, setScreens] = useState<{ id: string; file?: File; url: string; path?: string; existing?: boolean }[]>([]);
   const [allowRemix, setAllowRemix] = useState<boolean>(initialAllowRemix ?? true);
   const [priceOrbes, setPriceOrbes] = useState<number>(initialPriceOrbes ?? 0);
+  const [genre, setGenre] = useState<string>(initialGenre ?? "");
   const fileRef = useRef<HTMLInputElement>(null);
   const shotsRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -62,9 +65,10 @@ export function PublishGameDialog({
       setScreens((initialScreenshots ?? []).map((s, i) => ({ id: `existing-${i}`, url: s.url, path: s.path, existing: true })));
       setAllowRemix(initialAllowRemix ?? true);
       setPriceOrbes(initialPriceOrbes ?? 0);
+      setGenre(initialGenre ?? "");
       setErr(null); setDone(false);
     }
-  }, [open, initialTitle, defaultTitle, initialDescription, initialTags, initialCoverUrl, initialScreenshots, initialAllowRemix, initialPriceOrbes]);
+  }, [open, initialTitle, defaultTitle, initialDescription, initialTags, initialCoverUrl, initialScreenshots, initialAllowRemix, initialPriceOrbes, initialGenre]);
 
   const pickCover = (f: File | null) => {
     if (!f) return;
@@ -120,9 +124,10 @@ export function PublishGameDialog({
           keepScreenshots: keptShotPaths(),
           allowRemix,
           priceOrbes,
+          gameGenre: genre.trim() || null,
         });
       } else if (project) {
-        await publishGame({ project, title: title.trim(), description: description.trim(), tags, coverFile, screenshotFiles: newShots, allowRemix, priceOrbes });
+        await publishGame({ project, title: title.trim(), description: description.trim(), tags, coverFile, screenshotFiles: newShots, allowRemix, priceOrbes, gameGenre: genre.trim() || null });
       }
       setDone(true);
       setTimeout(() => {
@@ -237,6 +242,24 @@ export function PublishGameDialog({
             <input value={tagInput} onChange={e => setTagInput(e.target.value)} placeholder="plataformas, retro, aventura"
               className="w-full mt-1 bg-input/50 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40" />
           </label>
+          <div>
+            <span className="text-[10px] font-display tracking-widest text-muted-foreground">CATEGORÍA DEL JUEGO</span>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {GAME_GENRES.map(g => (
+                <button key={g} type="button" onClick={() => setGenre(genre === g ? "" : g)}
+                  className={`px-2.5 h-7 rounded-full text-[10px] font-display tracking-wide transition active:scale-95 border ${
+                    genre === g
+                      ? "border-transparent bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-sm"
+                      : "border-border/60 bg-muted/30 text-muted-foreground hover:text-primary-glow hover:border-primary/30"
+                  }`}>
+                  {g}
+                </button>
+              ))}
+            </div>
+            <input value={genre} onChange={e => setGenre(e.target.value)} maxLength={24}
+              placeholder={genre ? "" : "o escribe otra categoría…"}
+              className="w-full mt-1.5 bg-input/50 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40" />
+          </div>
           <label className="flex items-center gap-3 p-2.5 rounded-xl border border-border bg-input/30 cursor-pointer active:scale-[0.99] transition">
             <div className={`w-10 h-6 rounded-full relative transition-colors ${allowRemix ? "bg-primary" : "bg-muted"}`}>
               <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${allowRemix ? "left-[18px]" : "left-0.5"}`} />

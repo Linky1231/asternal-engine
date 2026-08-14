@@ -128,6 +128,9 @@ create table if not exists public.posts (
 alter table public.posts enable row level security;
 -- Columna de capturas de juego (añadida después del primer despliegue: idempotente)
 alter table public.posts add column if not exists screenshots text[] not null default '{}';
+-- Género/categoría del juego (p. ej. Acción, Puzzle) que aparece en la ficha
+-- (idempotente, añadida después del primer despliegue)
+alter table public.posts add column if not exists game_genre text;
 -- Reventa de obras de la galería: vendedor actual, precio de reventa y dueño actual
 -- (author_id siempre es el creador original; current_owner_id es quien la posee hoy)
 alter table public.posts add column if not exists seller_id uuid references auth.users(id) on delete set null;
