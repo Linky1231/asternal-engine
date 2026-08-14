@@ -475,13 +475,11 @@
   animation: card-enter 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-/* Tarjetas del feed: el navegador salta el render y pintado de las tarjetas
-   fuera de pantalla → el scroll y los repintados son mucho más baratos en
-   móvil (especialmente al abrir menús en tarjetas visibles). */
-@utility card-cv {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 420px;
-}
+/* NOTA: se eliminó content-visibility de las tarjetas del feed. Con
+   contain-intrinsic-size: auto 420px, las tarjetas fuera de pantalla tenían un
+   alto de reserva falso; al abrir un menú (⋮) el navegador repintaba el
+   viewport, las renderizaba a su alto real y TODO el feed saltaba de posición
+   de golpe (layout shift + reflow → lag). Las tarjetas miden su alto real. */
 
 /* ============ Auth page: confetti ============ */
 @keyframes confetti-fall {

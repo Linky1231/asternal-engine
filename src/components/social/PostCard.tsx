@@ -81,7 +81,7 @@ export const PostCard = memo(function PostCard({
   ) : null;
 
   return (
-    <article className={`group panel card-cv rounded-2xl border border-border/60 transition-[transform,box-shadow,border-color] duration-300 ease-out sm:pointer-fine:hover:shadow-lg sm:pointer-fine:hover:-translate-y-0.5 pointer-fine:hover:border-primary/25 ${entranceClass}`}>
+    <article className={`group panel rounded-2xl border border-border/60 transition-[transform,box-shadow,border-color] duration-300 ease-out sm:pointer-fine:hover:shadow-lg sm:pointer-fine:hover:-translate-y-0.5 pointer-fine:hover:border-primary/25 ${entranceClass}`}>
       {/* Hairline degradado superior */}
       <div className="h-[3px] w-full rounded-t-2xl bg-gradient-to-r from-primary via-accent to-transparent opacity-70 pointer-fine:group-hover:opacity-100 transition-opacity duration-300" />
 

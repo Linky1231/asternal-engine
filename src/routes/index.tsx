@@ -663,9 +663,24 @@ function computeForYouScore(
   let score = engagement * recencyFactor * freshBoost * mediaBonus * rateBonus * diversityPenalty;
 
   // --- Small chaotic jitter (±8%) for natural variety in ties ---
-  score *= 0.92 + Math.random() * 0.16;
+  // Determinista por post: antes era Math.random() y cada re-render del feed
+  // re-ordenaba ligeramente las publicaciones (cambio brusco de posición).
+  score *= seededJitter(p.id);
 
   return score;
+}
+
+// Hash FNV-1a estable por id: mismo post → mismo jitter en todos los renders,
+// así el orden del feed nunca cambia por re-renderizaciones ajenas (abrir un
+// menú, actualizar el perfil, etc.).
+function seededJitter(id: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < id.length; i++) {
+    h ^= id.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  const u = (h >>> 0) / 4294967295; // [0, 1)
+  return 0.92 + u * 0.16; // ±8%
 }
 
 function filterFeed(posts: PostWithMeta[], sub: FeedSub, myId: string | null): PostWithMeta[] {
