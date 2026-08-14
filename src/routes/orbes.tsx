@@ -150,6 +150,13 @@ function OrbesPage() {
   // muestra en la cabecera).
   const recent = useMemo(() => txs.slice(0, 200), [txs]);
 
+  // IDs de todos los juegos involucrados (comprados o vendidos), para la
+  // lista de chips aunque el post ya no exista (se muestra un título genérico).
+  const involvedIds = useMemo(
+    () => [...new Set(txs.filter(t => t.kind === "game_purchase" && t.post_id).map(t => t.post_id as string))],
+    [txs]
+  );
+
   return (
     <div className="min-h-screen w-full flex flex-col bg-background text-foreground">
       <header className="sticky top-0 z-20 panel border-b backdrop-blur-xl">
@@ -205,19 +212,19 @@ function OrbesPage() {
             </h2>
             <span className="text-[9px] font-mono text-muted-foreground/60 shrink-0">{stats.games} juego{stats.games !== 1 ? "s" : ""} con movimientos de orbes</span>
           </div>
-          {stats.games === 0 ? (
+          {involvedIds.length === 0 ? (
             <div className="text-[11px] text-muted-foreground/60 px-0.5 pb-1">
               Aún no hay juegos con movimientos de orbes en tu cuenta. Compra o vende juegos y aparecerán aquí.
             </div>
           ) : (
             <div className="flex flex-wrap gap-1.5">
-              {[...gameTitles.entries()].map(([id, t]) => (
+              {involvedIds.map(id => (
                 <a
                   key={id}
                   href={`/?g=${id}`}
                   className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-r from-primary/12 to-accent/12 border border-primary/20 text-[10px] font-display tracking-wide text-primary-glow hover:border-primary/50 hover:from-primary/20 transition"
                 >
-                  <Gamepad2 size={10} /> {t} <ExternalLink size={9} className="opacity-60" />
+                  <Gamepad2 size={10} /> {gameTitles.get(id) ?? "Juego"} <ExternalLink size={9} className="opacity-60" />
                 </a>
               ))}
             </div>
