@@ -1,9 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { fetchEvents, deleteEvent, type EventItem } from "@/lib/social/api";
+import {
+  fetchEvents, deleteEvent, joinEvent, leaveEvent, listEventParticipants,
+  type EventItem, type EventParticipant,
+} from "@/lib/social/api";
 import {
   Calendar, Trophy, Clock, Users, FileText,
-  ChevronRight, ExternalLink, Sparkles, Trash2, AlertCircle,
+  ChevronRight, Sparkles, Trash2, AlertCircle, Loader2,
+  UserPlus, UserCheck, PartyPopper,
 } from "lucide-react";
 
 function timeUntil(dateStr: string): string {
@@ -22,6 +26,12 @@ function formatDate(dateStr: string): string {
   });
 }
 
+function formatJoined(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString("es-ES", {
+    day: "numeric", month: "short",
+  });
+}
+
 const STATUS_STYLES: Record<string, { label: string; class: string }> = {
   upcoming: { label: "PRÓXIMO", class: "text-amber-600 bg-amber-50 border-amber-200" },
   active: { label: "ACTIVO", class: "text-emerald-600 bg-emerald-50 border-emerald-200" },
@@ -34,6 +44,15 @@ export function EventsSection({ isAdmin }: { isAdmin: boolean }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  // Inscripción: estado por evento (sin re-renderizar todo el feed).
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  // Panel de inscritos (solo admin): lista cargada bajo demanda por evento.
+  const [showParts, setShowParts] = useState<Record<string, boolean>>({});
+  const [partsList, setPartsList] = useState<Record<string, EventParticipant[]>>({});
+  const [partsLoadingId, setPartsLoadingId] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -50,6 +69,10 @@ export function EventsSection({ isAdmin }: { isAdmin: boolean }) {
     return (order[a.status] ?? 3) - (order[b.status] ?? 3);
   });
 
+  const patchEvent = useCallback((id: string, patch: Partial<EventItem>) => {
+    setEvents(prev => prev.map(e => e.id === id ? { ...e, ...patch } : e));
+  }, []);
+
   const removeEvent = async (ev: EventItem) => {
     setDeleteError(null);
     try {
@@ -64,14 +87,70 @@ export function EventsSection({ isAdmin }: { isAdmin: boolean }) {
     }
   };
 
+  // Inscribirse / desinscribirse: RPC real, luego estado local optimista.
+  const toggleRegistration = async (ev: EventItem) => {
+    if (busyId) return;
+    setBusyId(ev.id);
+    setActionError(null);
+    const nowRegistered = !!ev.my_registered;
+    try {
+      if (nowRegistered) {
+        await leaveEvent(ev.id);
+      } else {
+        await joinEvent(ev.id);
+      }
+      const delta = nowRegistered ? -1 : 1;
+      patchEvent(ev.id, {
+        my_registered: !nowRegistered,
+        participant_count: Math.max(0, (ev.participant_count ?? 0) + delta),
+      });
+      // Si el admin tiene la lista abierta, refrescarla.
+      if (isAdmin && showParts[ev.id]) {
+        await loadParticipants(ev.id);
+      }
+    } catch (e) {
+      console.error("[events] error al cambiar inscripción:", e);
+      const msg = String((e as Error)?.message ?? "");
+      setActionError(
+        msg.includes("event_completed")
+          ? "Este evento ya finalizó y no admite inscripciones."
+          : msg || "No se pudo cambiar tu inscripción. Inténtalo de nuevo."
+      );
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const loadParticipants = async (eventId: string) => {
+    if (partsLoadingId) return;
+    setPartsLoadingId(eventId);
+    try {
+      const list = await listEventParticipants(eventId);
+      setPartsList(prev => ({ ...prev, [eventId]: list }));
+    } catch {
+      setPartsList(prev => ({ ...prev, [eventId]: [] }));
+    } finally {
+      setPartsLoadingId(null);
+    }
+  };
+
+  const toggleParts = (ev: EventItem) => {
+    const next = !showParts[ev.id];
+    setShowParts(prev => ({ ...prev, [ev.id]: next }));
+    if (next && !partsList[ev.id]) void loadParticipants(ev.id);
+  };
+
   const activeCount = events.filter(e => e.status === "active").length;
   const upcomingCount = events.filter(e => e.status === "upcoming").length;
 
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary to-accent grid place-items-center shadow-[0_4px_14px_-6px_oklch(0.52_0.19_258/0.5)] shrink-0">
+          <Trophy size={18} className="text-primary-foreground" />
+        </div>
+        <div className="flex-1 min-w-0">
           <h2 className="text-base font-display font-semibold text-foreground">Eventos</h2>
           <p className="text-xs text-muted-foreground mt-0.5">
             {activeCount > 0
@@ -82,7 +161,7 @@ export function EventsSection({ isAdmin }: { isAdmin: boolean }) {
           </p>
         </div>
         {activeCount > 0 && (
-          <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium border border-emerald-200 bg-emerald-50 text-emerald-700">
+          <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium border border-emerald-200 bg-emerald-50 text-emerald-700 shrink-0">
             <Sparkles size={12} />
             {activeCount} activo{activeCount > 1 ? "s" : ""}
           </span>
@@ -120,6 +199,10 @@ export function EventsSection({ isAdmin }: { isAdmin: boolean }) {
               const endsAt = new Date(ev.ends_at).getTime();
               const isLive = startsAt <= now && endsAt > now;
               const isPast = endsAt < now;
+              const registered = !!ev.my_registered;
+              const partsOpen = !!showParts[ev.id];
+              const parts = partsList[ev.id] ?? null;
+              const count = ev.participant_count ?? 0;
 
               return (
                 <motion.div
@@ -128,37 +211,36 @@ export function EventsSection({ isAdmin }: { isAdmin: boolean }) {
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: i * 0.05, ease: [0.22, 1, 0.36, 1] }}
-                  className="panel rounded-xl overflow-hidden border border-border/80"
+                  className="panel rounded-2xl overflow-hidden border border-border/80"
                 >
                   {/* Banner */}
                   <div
-                    className="relative h-32 bg-gradient-to-br from-slate-100 to-slate-200 cursor-pointer"
+                    className="relative h-36 cursor-pointer group"
                     onClick={() => setSelected(isOpen ? null : ev.id)}
                   >
                     {ev.banner_url ? (
-                      <img src={ev.banner_url} alt={ev.title} className="w-full h-full object-cover" />
+                      <img src={ev.banner_url} alt={ev.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
                     ) : (
-                      <div className="w-full h-full grid place-items-center">
-                        <Trophy size={36} className="text-slate-400" />
+                      <div className="w-full h-full bg-gradient-to-br from-primary/20 via-primary/10 to-accent/20 grid place-items-center">
+                        <Trophy size={40} className="text-primary/40" />
                       </div>
                     )}
-                    <div className="absolute top-3 left-3">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wider border ${s.class}`}>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent pointer-events-none" />
+                    <div className="absolute top-3 left-3 flex items-center gap-2">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wider border shadow-sm ${s.class}`}>
                         {s.label}
                       </span>
-                    </div>
-                    {isLive && (
-                      <div className="absolute top-3 right-3">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wider border border-emerald-200 bg-emerald-50 text-emerald-700">
+                      {isLive && (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wider border border-emerald-200 bg-emerald-50 text-emerald-700 shadow-sm">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                           EN VIVO
                         </span>
-                      </div>
-                    )}
+                      )}
+                    </div>
                     {ev.prize_pool && ev.prize_pool > 0 && (
                       <div className="absolute bottom-3 right-3">
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wider border border-amber-200 bg-amber-50 text-amber-700">
-                          <Trophy size={10} /> {ev.prize_pool} Orbes
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wider border border-amber-200 bg-amber-50/95 text-amber-700 shadow-sm">
+                          <Trophy size={10} /> {ev.prize_pool.toLocaleString()} Orbes
                         </span>
                       </div>
                     )}
@@ -196,7 +278,7 @@ export function EventsSection({ isAdmin }: { isAdmin: boolean }) {
                       </span>
                       <span className="inline-flex items-center gap-1">
                         <Users size={11} />
-                        {ev.participant_count ?? 0} participantes
+                        {count.toLocaleString()} inscrito{count === 1 ? "" : "s"}
                       </span>
                       {ev.submission_count !== undefined && (
                         <span className="inline-flex items-center gap-1">
@@ -216,10 +298,12 @@ export function EventsSection({ isAdmin }: { isAdmin: boolean }) {
                           transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
                           className="overflow-hidden"
                         >
-                          <div className="pt-2 border-t border-border/60 space-y-3">
+                          <div className="pt-3 border-t border-border/60 space-y-3">
                             {ev.prize_description && (
                               <div>
-                                <div className="text-[10px] font-display tracking-widest text-muted-foreground mb-1">PREMIOS</div>
+                                <div className="text-[10px] font-display tracking-widest text-muted-foreground mb-1 flex items-center gap-1">
+                                  <Trophy size={10} className="text-amber-500" /> PREMIOS
+                                </div>
                                 <p className="text-xs text-foreground/80">{ev.prize_description}</p>
                               </div>
                             )}
@@ -229,53 +313,143 @@ export function EventsSection({ isAdmin }: { isAdmin: boolean }) {
                                 <p className="text-xs text-foreground/80 whitespace-pre-wrap">{ev.rules}</p>
                               </div>
                             )}
-                            <div className="flex flex-wrap items-center gap-2 pt-1">
-                              {!isPast && (
+
+                            {/* Acciones: inscribirse + contador de inscritos */}
+                            {!isPast && (
+                              <div className="space-y-2 pt-1">
                                 <button
-                                  className="h-8 px-4 rounded-lg bg-gradient-to-r from-primary to-accent text-primary-foreground text-[11px] font-medium hover:brightness-110 active:scale-[0.98] transition shadow-sm shadow-primary/20"
-                                  onClick={() => {/* Participar */ }}
+                                  onClick={() => void toggleRegistration(ev)}
+                                  disabled={!!busyId}
+                                  className={`w-full h-10 rounded-xl text-[11px] font-display tracking-widest transition active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50 ${
+                                    registered
+                                      ? "bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100"
+                                      : "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-sm shadow-primary/20 hover:brightness-110"
+                                  }`}
                                 >
-                                  Participar
+                                  {busyId === ev.id ? (
+                                    <Loader2 size={14} className="animate-spin" />
+                                  ) : registered ? (
+                                    <UserCheck size={14} />
+                                  ) : (
+                                    <UserPlus size={14} />
+                                  )}
+                                  {busyId === ev.id
+                                    ? "GUARDANDO…"
+                                    : registered
+                                    ? "INSCRITO · TOCA PARA CANCELAR"
+                                    : "INSCRIBIRSE"}
                                 </button>
-                              )}
-                              {ev.my_submission && (
-                                <span className="text-[11px] text-emerald-600 font-medium">
-                                  ✓ Participando
-                                </span>
-                              )}
-                              {deleteError && (
-                                <div className="w-full flex items-start gap-1.5 text-[11px] text-rose-600 dark:text-rose-400 bg-rose-50/70 dark:bg-rose-950/20 border border-rose-200/60 dark:border-rose-800/40 rounded-lg px-3 py-2">
-                                  <AlertCircle size={12} className="shrink-0 mt-0.5" />
-                                  <span className="break-words">{deleteError}</span>
-                                </div>
-                              )}
-                              {isAdmin && confirmDeleteId === ev.id ? (
-                                <div className="ml-auto flex items-center gap-2">
-                                  <span className="text-[11px] text-rose-600 dark:text-rose-400 font-medium">
-                                    ¿Seguro?
+                                {/* Contador de inscritos, justo debajo del botón */}
+                                <div className="flex items-center justify-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+                                  <Users size={12} className="text-primary" />
+                                  <span>
+                                    {count.toLocaleString()} {count === 1 ? "persona inscrita" : "personas inscritas"}
                                   </span>
+                                  {registered && (
+                                    <span className="inline-flex items-center gap-1 text-emerald-600">
+                                      · <UserCheck size={11} /> Tú
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {actionError && (
+                              <div className="w-full flex items-start gap-1.5 text-[11px] text-rose-600 dark:text-rose-400 bg-rose-50/70 dark:bg-rose-950/20 border border-rose-200/60 dark:border-rose-800/40 rounded-lg px-3 py-2">
+                                <AlertCircle size={12} className="shrink-0 mt-0.5" />
+                                <span className="break-words">{actionError}</span>
+                              </div>
+                            )}
+
+                            {/* Panel de inscritos — SOLO administradores */}
+                            {isAdmin && (
+                              <div className="rounded-xl border border-primary/20 bg-primary/[0.04] p-3">
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-1.5 text-[10px] font-display tracking-widest text-primary">
+                                    <PartyPopper size={12} />
+                                    INSCRITOS · {count.toLocaleString()}
+                                  </div>
                                   <button
-                                    onClick={() => removeEvent(ev)}
-                                    className="h-8 px-3 rounded-lg bg-rose-500 text-white text-[11px] font-semibold hover:bg-rose-600 active:scale-[0.98] transition shadow-sm shadow-rose-500/25 flex items-center gap-1.5"
+                                    onClick={() => toggleParts(ev)}
+                                    className="text-[10px] font-display tracking-widest px-2.5 py-1 rounded-lg border border-primary/25 bg-background text-primary hover:bg-primary/10 transition active:scale-95"
                                   >
-                                    <Trash2 size={12} /> Sí, eliminar
-                                  </button>
-                                  <button
-                                    onClick={() => { setConfirmDeleteId(null); setDeleteError(null); }}
-                                    className="h-8 px-3 rounded-lg border border-border/70 text-muted-foreground text-[11px] font-medium hover:bg-muted/40 transition active:scale-[0.98]"
-                                  >
-                                    Cancelar
+                                    {partsOpen ? "OCULTAR" : "VER QUIÉN"}
                                   </button>
                                 </div>
-                              ) : isAdmin ? (
+                                {partsOpen && (
+                                  <div className="mt-2.5">
+                                    {partsLoadingId === ev.id ? (
+                                      <div className="flex items-center justify-center gap-2 py-4 text-[11px] text-muted-foreground">
+                                        <Loader2 size={13} className="animate-spin" /> Cargando inscritos…
+                                      </div>
+                                    ) : parts && parts.length === 0 ? (
+                                      <div className="text-center text-[11px] text-muted-foreground py-3">
+                                        Aún no hay nadie inscrito en este evento.
+                                      </div>
+                                    ) : (
+                                      <ul className="space-y-1.5 max-h-64 overflow-y-auto pr-0.5">
+                                        {parts?.map(p => (
+                                          <li
+                                            key={p.user_id}
+                                            className="flex items-center gap-2.5 rounded-lg bg-background/80 border border-border/60 px-2.5 py-2"
+                                          >
+                                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-accent grid place-items-center overflow-hidden shrink-0 ring-1 ring-primary/20">
+                                              {p.avatar_url ? (
+                                                <img src={p.avatar_url} alt={p.username} className="w-full h-full object-cover" />
+                                              ) : (
+                                                <span className="text-[10px] font-display text-primary-foreground">
+                                                  {(p.display_name ?? p.username)[0]?.toUpperCase()}
+                                                </span>
+                                              )}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                              <div className="text-xs font-medium truncate">{p.display_name || p.username}</div>
+                                              <div className="text-[10px] font-mono text-muted-foreground truncate">@{p.username}</div>
+                                            </div>
+                                            <span className="text-[10px] text-muted-foreground shrink-0">
+                                              {formatJoined(p.joined_at)}
+                                            </span>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {deleteError && (
+                              <div className="w-full flex items-start gap-1.5 text-[11px] text-rose-600 dark:text-rose-400 bg-rose-50/70 dark:bg-rose-950/20 border border-rose-200/60 dark:border-rose-800/40 rounded-lg px-3 py-2">
+                                <AlertCircle size={12} className="shrink-0 mt-0.5" />
+                                <span className="break-words">{deleteError}</span>
+                              </div>
+                            )}
+                            {isAdmin && confirmDeleteId === ev.id ? (
+                              <div className="flex items-center gap-2">
+                                <span className="text-[11px] text-rose-600 dark:text-rose-400 font-medium">
+                                  ¿Seguro?
+                                </span>
                                 <button
-                                  onClick={() => { setConfirmDeleteId(ev.id); setDeleteError(null); }}
-                                  className="h-8 px-3 ml-auto rounded-lg border border-rose-200/70 text-rose-500 text-[11px] font-medium hover:bg-rose-50 dark:border-rose-800/40 dark:hover:bg-rose-950/20 transition active:scale-[0.98] flex items-center gap-1.5"
+                                  onClick={() => removeEvent(ev)}
+                                  className="h-8 px-3 rounded-lg bg-rose-500 text-white text-[11px] font-semibold hover:bg-rose-600 active:scale-[0.98] transition shadow-sm shadow-rose-500/25 flex items-center gap-1.5"
                                 >
-                                  <Trash2 size={12} /> Eliminar evento
+                                  <Trash2 size={12} /> Sí, eliminar
                                 </button>
-                              ) : null}
-                            </div>
+                                <button
+                                  onClick={() => { setConfirmDeleteId(null); setDeleteError(null); }}
+                                  className="h-8 px-3 rounded-lg border border-border/70 text-muted-foreground text-[11px] font-medium hover:bg-muted/40 transition active:scale-[0.98]"
+                                >
+                                  Cancelar
+                                </button>
+                              </div>
+                            ) : isAdmin ? (
+                              <button
+                                onClick={() => { setConfirmDeleteId(ev.id); setDeleteError(null); }}
+                                className="h-8 px-3 rounded-lg border border-rose-200/70 text-rose-500 text-[11px] font-medium hover:bg-rose-50 dark:border-rose-800/40 dark:hover:bg-rose-950/20 transition active:scale-[0.98] flex items-center gap-1.5"
+                              >
+                                <Trash2 size={12} /> Eliminar evento
+                              </button>
+                            ) : null}
                           </div>
                         </motion.div>
                       )}

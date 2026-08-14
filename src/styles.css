@@ -671,10 +671,13 @@
   }
 }
 
-/* El header sticky nunca debe desbordar: sus hijos que no caben se ocultan. */
+/* El header sticky nunca debe desbordar: .header-name usa flex-1 + min-w-0 y
+   truncate en sus hijos, así el nombre se corta solo sin empujar los botones.
+   (Antes un max-width dejaba un hueco que separaba la píldora de orbes y el ☰
+   del borde derecho en móvil.) */
 @media (max-width: 639px) {
   .app-header .header-name {
-    max-width: 34vw;
+    min-width: 0;
   }
 }
 

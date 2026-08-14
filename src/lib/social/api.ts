@@ -1344,11 +1344,10 @@ export async function fetchEvents(): Promise<EventItem[]> {
       .from("event_submissions" as never)
       .select("*", { count: "exact", head: true })
       .eq("event_id", ev.id);
-    const { count: parts } = await supabase
-      .from("event_submissions" as never)
-      .select("author_id", { count: "exact", head: true })
-      .eq("event_id", ev.id);
+    const { data: parts } = await supabase
+      .rpc("count_event_participants" as never, { _event_id: ev.id } as never);
     let mySub = null;
+    let myRegistered = false;
     if (me) {
       const { data: subData } = await supabase
         .from("event_submissions" as never)
@@ -1357,11 +1356,19 @@ export async function fetchEvents(): Promise<EventItem[]> {
         .eq("author_id", me)
         .maybeSingle();
       mySub = subData as { id: string; post_id: string; status: string } | null;
+      const { data: regRow } = await supabase
+        .from("event_participants" as never)
+        .select("id")
+        .eq("event_id", ev.id)
+        .eq("user_id", me)
+        .maybeSingle();
+      myRegistered = !!regRow;
     }
     enriched.push({
       ...ev,
       submission_count: subs ?? 0,
-      participant_count: parts ?? 0,
+      participant_count: Number(parts ?? 0),
+      my_registered: myRegistered,
       my_submission: mySub,
     });
   }
@@ -1429,6 +1436,34 @@ export async function deleteEvent(eventId: string): Promise<void> {
     .delete()
     .eq("id", eventId);
   if (error) throw error;
+}
+
+export type EventParticipant = {
+  user_id: string;
+  display_name: string | null;
+  username: string;
+  avatar_url: string | null;
+  joined_at: string;
+};
+
+// Inscribirse a un evento (idempotente; el RPC rechaza eventos finalizados).
+export async function joinEvent(eventId: string): Promise<void> {
+  const { error } = await supabase.rpc("join_event" as never, { _event_id: eventId } as never);
+  if (error) throw error;
+}
+
+// Desinscribirse de un evento.
+export async function leaveEvent(eventId: string): Promise<void> {
+  const { error } = await supabase.rpc("leave_event" as never, { _event_id: eventId } as never);
+  if (error) throw error;
+}
+
+// Lista de inscritos (avatar, nombre, fecha): SOLO staff — el RPC lanza
+// not_authorized para el resto.
+export async function listEventParticipants(eventId: string): Promise<EventParticipant[]> {
+  const { data, error } = await supabase.rpc("list_event_participants" as never, { _event_id: eventId } as never);
+  if (error) throw error;
+  return (data ?? []) as EventParticipant[];
 }
 
 // ============ FOLLOWS ============
