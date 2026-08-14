@@ -77,10 +77,10 @@ export function HistorySection() {
       className="space-y-4"
     >
       {/* Header */}
-      <div className="panel rounded-2xl border border-border/50 p-4">
+      <div className="rounded-lg border border-border/70 bg-surface p-4">
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent grid place-items-center">
-            <BarChart3 size={18} className="text-primary-foreground" />
+          <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 text-primary grid place-items-center">
+            <BarChart3 size={18} />
           </div>
           <div>
             <div className="font-display text-sm font-semibold">Historial</div>
@@ -256,7 +256,7 @@ export function HistorySection() {
                       </div>
                       <div className="h-1.5 rounded-full bg-muted/50 overflow-hidden">
                         <div
-                          className="h-full rounded-full bg-gradient-to-r from-primary to-accent"
+                          className="h-full rounded-full bg-primary"
                           style={{
                             width: `${Math.min(100, (data.totalSeconds / 3600) * 50)}%`,
                           }}

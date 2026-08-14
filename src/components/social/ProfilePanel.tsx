@@ -150,17 +150,17 @@ export function ProfilePanel({
   const shareMenu = (
     <div className="relative">
       <button onClick={() => setShareOpen(s => !s)}
-        className="px-3 py-1.5 rounded-xl border border-border text-[10px] font-display tracking-widest flex items-center gap-1 active:scale-95 transition">
-        <Share2 size={12} /> COMPARTIR
+        className="h-9 px-3 rounded-lg border border-border bg-surface text-xs font-medium flex items-center gap-1.5 active:scale-95 transition">
+        <Share2 size={13} /> Compartir
       </button>
       {shareOpen && (
-        <div className="absolute right-0 top-full mt-1.5 z-30 panel border border-border rounded-xl p-1 min-w-[210px] shadow-xl">
+        <div className="absolute right-0 top-full mt-1.5 z-30 rounded-lg border border-border bg-surface p-1 min-w-[210px] shadow-md">
           <button onClick={shareToChat}
-            className="flex w-full items-center gap-2 px-3 py-2 rounded-lg text-xs hover:bg-muted/40 transition-colors text-left">
+            className="flex w-full items-center gap-2 px-3 py-2 rounded-md text-xs hover:bg-muted/60 transition-colors text-left">
             <MessageCircle size={14} className="text-primary shrink-0" /> Compartir en el chat grupal
           </button>
           <button onClick={() => void copyLink()}
-            className="flex w-full items-center gap-2 px-3 py-2 rounded-lg text-xs hover:bg-muted/40 transition-colors text-left">
+            className="flex w-full items-center gap-2 px-3 py-2 rounded-md text-xs hover:bg-muted/60 transition-colors text-left">
             {copiedLink ? <Check size={14} className="text-emerald-500 shrink-0" /> : <Link2 size={14} className="text-primary shrink-0" />}
             {copiedLink ? "¡Enlace copiado!" : "Copiar enlace al perfil"}
           </button>
@@ -231,13 +231,13 @@ export function ProfilePanel({
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
       {/* Header card with banner */}
-      <section className="panel rounded-2xl border border-border/50 overflow-hidden">
+      <section className="rounded-lg border border-border/70 bg-surface overflow-hidden">
         <div className="relative h-28 bg-gradient-to-br from-primary/25 to-accent/25">
           {bannerPreview && <img src={bannerPreview} alt="banner" className="absolute inset-0 w-full h-full object-cover" />}
           {viewingOwn && editing && (
             <button onClick={() => bannerRef.current?.click()}
-              className="absolute right-2 top-2 h-8 px-3 rounded-lg bg-black/50 text-white text-[10px] font-display tracking-widest flex items-center gap-1 active:scale-95">
-              <ImagePlus size={12}/> BANNER
+              className="absolute right-2 top-2 h-8 px-3 rounded-md bg-black/50 text-white text-[11px] font-medium flex items-center gap-1.5 active:scale-95">
+              <ImagePlus size={12}/> Banner
             </button>
           )}
           <input ref={bannerRef} type="file" accept="image/*" className="hidden"
@@ -271,11 +271,11 @@ export function ProfilePanel({
                 <button
                   type="button"
                   onClick={e => { e.stopPropagation(); setAvatarBuilderOpen(true); }}
-                  className="absolute -bottom-1 -right-1 w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-accent grid place-items-center shadow-lg border-2 border-background active:scale-90 transition"
+                  className="absolute -bottom-1 -right-1 w-7 h-7 rounded-lg bg-primary text-white grid place-items-center shadow-sm border-2 border-background active:scale-90 transition"
                   title="Dibujar avatar"
                   aria-label="Dibujar avatar"
                 >
-                  <Palette size={13} className="text-primary-foreground" />
+                  <Palette size={13} />
                 </button>
               )}
             </div>
@@ -294,7 +294,7 @@ export function ProfilePanel({
                   <div className="flex items-center gap-2 flex-wrap min-w-0">
                     <UserName p={profile} size="lg" showBadge={false} />
                     {isPlusActive(profile) && profile.show_plus_badge !== false && (
-                      <span className="px-1.5 py-0.5 rounded-md text-[9px] font-display tracking-widest text-white shrink-0"
+                      <span className="px-1.5 py-0.5 rounded-md text-[9px] font-display font-bold text-white shrink-0"
                         style={{ background: "var(--gradient-plus)" }}>PLUS</span>
                     )}
                   </div>
@@ -303,7 +303,7 @@ export function ProfilePanel({
                   </div>
                   {!editing && (
                     <button onClick={() => void copyCode()}
-                      className="mt-1 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/40 border border-border/50 text-[9px] font-mono tracking-wider text-muted-foreground hover:text-primary-glow hover:border-primary/40 active:scale-95 transition"
+                      className="mt-1 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/40 border border-border/50 text-[9px] font-mono text-muted-foreground hover:text-primary-glow hover:border-primary/40 active:scale-95 transition"
                       title="ID de usuario · toca para copiar">
                       <Fingerprint size={10} className="text-primary-glow" />
                       {userCode}
@@ -322,21 +322,21 @@ export function ProfilePanel({
             {viewingOwn ? (
               editing ? (
                 <button onClick={save} disabled={saving}
-                  className="mt-12 px-3 py-1.5 rounded-xl bg-gradient-to-r from-primary to-accent text-primary-foreground text-[10px] font-display tracking-widest flex items-center gap-1 active:scale-95 disabled:opacity-60">
-                  {saving ? <Loader2 size={12} className="animate-spin" /> : saved ? <CheckCircle2 size={12}/> : <Save size={12} />} GUARDAR
+                  className="mt-12 h-9 px-3.5 rounded-lg bg-primary text-white text-xs font-semibold flex items-center gap-1.5 active:scale-95 disabled:opacity-60">
+                  {saving ? <Loader2 size={12} className="animate-spin" /> : saved ? <CheckCircle2 size={12}/> : <Save size={12} />} Guardar
                 </button>
               ) : (
                 <div className="mt-12 flex items-center gap-2">
                   <button onClick={() => setEditing(true)}
-                    className="px-3 py-1.5 rounded-xl border border-border text-[10px] font-display tracking-widest active:scale-95">EDITAR</button>
+                    className="h-9 px-3 rounded-lg border border-border bg-surface text-xs font-medium active:scale-95">Editar</button>
                   {shareMenu}
                 </div>
               )
             ) : (
               <div className="mt-12 flex items-center gap-2">
                 <button onClick={toggleFollow} disabled={followBusy}
-                  className={`px-3 py-1.5 rounded-xl text-[10px] font-display tracking-widest flex items-center gap-1 active:scale-95 disabled:opacity-60 ${follow.i_follow ? "border border-border text-muted-foreground" : "bg-gradient-to-r from-primary to-accent text-primary-foreground"}`}>
-                  {followBusy ? <Loader2 size={12} className="animate-spin"/> : follow.i_follow ? <><UserCheck size={12}/> SIGUIENDO</> : <><UserPlus size={12}/> SEGUIR</>}
+                  className={`h-9 px-3 rounded-lg text-xs font-semibold flex items-center gap-1.5 active:scale-95 disabled:opacity-60 ${follow.i_follow ? "border border-border bg-surface text-foreground" : "bg-primary text-white"}`}>
+                  {followBusy ? <Loader2 size={12} className="animate-spin"/> : follow.i_follow ? <><UserCheck size={12}/> Siguiendo</> : <><UserPlus size={12}/> Seguir</>}
                 </button>
                 {shareMenu}
               </div>
@@ -382,7 +382,7 @@ export function ProfilePanel({
           ) : profile.bio ? (
             <p className="text-sm whitespace-pre-wrap break-words">{profile.bio}</p>
           ) : viewingOwn ? (
-            <p className="text-xs text-muted-foreground italic">Añade una descripción tocando EDITAR.</p>
+            <p className="text-xs text-muted-foreground italic">Añade una descripción tocando Editar.</p>
           ) : null}
 
           {/* Meta chips */}
@@ -410,8 +410,8 @@ export function ProfilePanel({
           {editing && (
             <div className="space-y-2 pt-2 border-t border-border/40">
               <button onClick={() => setShowMore(v => !v)}
-                className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-[11px] font-display tracking-widest text-muted-foreground hover:text-foreground">
-                <span>PERSONALIZACIÓN</span>
+                className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground">
+                <span>Personalización</span>
                 {showMore ? <ChevronUp size={14}/> : <ChevronDown size={14}/>}
               </button>
               {showMore && (
@@ -426,12 +426,12 @@ export function ProfilePanel({
                     <LabeledInput label="Estado" value={statusText} onChange={setStatusText} placeholder="Jugando ahora" max={60}/>
                   </div>
                   <div>
-                    <div className="text-[10px] font-display tracking-widest text-muted-foreground mb-1 flex items-center gap-1"><Cake size={10}/>CUMPLEAÑOS</div>
+                    <div className="text-[11px] font-medium text-muted-foreground mb-1 flex items-center gap-1"><Cake size={10}/>Cumpleaños</div>
                     <input type="date" value={birthday} onChange={e => setBirthday(e.target.value)}
                       className="w-full bg-input/50 rounded-lg px-2.5 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary/40"/>
                   </div>
                   <div>
-                    <div className="text-[10px] font-display tracking-widest text-muted-foreground mb-1 flex items-center gap-1"><Palette size={10}/>COLOR DE ACENTO</div>
+                    <div className="text-[11px] font-medium text-muted-foreground mb-1 flex items-center gap-1"><Palette size={10}/>Color de acento</div>
                     <div className="flex items-center gap-2">
                       <input type="color" value={accentColor} onChange={e => setAccentColor(e.target.value)}
                         className="w-10 h-10 rounded-lg border border-border cursor-pointer bg-transparent"/>
@@ -440,11 +440,11 @@ export function ProfilePanel({
                     </div>
                   </div>
                   <div>
-                    <div className="text-[10px] font-display tracking-widest text-muted-foreground mb-1 flex items-center gap-1"><Gamepad2 size={10}/>GÉNERO FAVORITO</div>
+                    <div className="text-[11px] font-medium text-muted-foreground mb-1 flex items-center gap-1"><Gamepad2 size={10}/>Género favorito</div>
                     <div className="flex flex-wrap gap-1">
                       {GENRES.map(g => (
                         <button key={g} onClick={() => setFavoriteGenre(g === favoriteGenre ? "" : g)}
-                          className={`px-2.5 py-1 rounded-full text-[11px] border transition ${favoriteGenre === g ? "bg-gradient-to-r from-primary to-accent text-primary-foreground border-primary/0" : "border-border text-muted-foreground"}`}>
+                          className={`px-2.5 py-1 rounded-full text-[11px] border transition ${favoriteGenre === g ? "bg-primary text-white border-primary" : "border-border bg-surface text-muted-foreground hover:text-foreground"}`}>
                           {g}
                         </button>
                       ))}
@@ -487,7 +487,7 @@ export function ProfilePanel({
       {viewingOwn && (
         <Link
           to="/plus"
-          className="block relative overflow-hidden rounded-2xl border p-4 active:scale-[0.99] transition"
+          className="block relative overflow-hidden rounded-lg border p-4 active:scale-[0.99] transition"
           style={{
             borderColor: "color-mix(in oklab, var(--plus) 40%, transparent)",
             background: "linear-gradient(135deg, color-mix(in oklab, var(--plus) 15%, transparent), transparent)",
@@ -524,11 +524,11 @@ export function ProfilePanel({
           <div className="p-8 text-center text-xs text-muted-foreground"><Loader2 className="animate-spin inline mr-2" size={14} /></div>
         ) : tab === "games" ? (
           games.length === 0 ? (
-            <div className="p-6 text-center text-xs text-muted-foreground panel rounded-2xl border border-dashed border-border">Sin juegos publicados</div>
+            <div className="px-4 py-8 text-center text-xs text-muted-foreground rounded-lg border border-dashed border-border bg-surface">Sin juegos publicados</div>
           ) : games.map(g => <GameCard key={g.id} post={g} myId={myId} isMod={isMod} onChange={loadContent} />)
         ) : tab === "gallery" ? (
           artworks.length === 0 ? (
-            <div className="p-6 text-center text-xs text-muted-foreground panel rounded-2xl border border-dashed border-border">
+            <div className="px-4 py-8 text-center text-xs text-muted-foreground rounded-lg border border-dashed border-border bg-surface">
               {viewingOwn ? "Aún no has publicado obras en la galería" : "Este artista aún no ha publicado obras"}
             </div>
           ) : (
@@ -538,7 +538,7 @@ export function ProfilePanel({
                 const price = a.price_orbes ?? 0;
                 const title = a.content.replace(/^🎨\s*/, "");
                 return (
-                  <div key={a.id} className="panel rounded-2xl overflow-hidden border border-border/40 group">
+                  <div key={a.id} className="rounded-lg border border-border/70 bg-surface overflow-hidden group">
                     <div className="aspect-square bg-muted/20 relative overflow-hidden">
                       {imgUrl ? (
                         <img src={imgUrl} alt={title} className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-500 ease-out" />
@@ -546,11 +546,11 @@ export function ProfilePanel({
                         <div className="w-full h-full grid place-items-center"><Palette size={32} className="text-muted-foreground/15" /></div>
                       )}
                       {price > 0 ? (
-                        <span className="absolute bottom-2 left-2 px-2.5 py-1 rounded-full text-[9px] font-display tracking-widest bg-gradient-to-r from-primary to-accent text-white flex items-center gap-1 shadow-lg">
+                        <span className="absolute bottom-2 left-2 px-2.5 py-1 rounded-full text-[9px] font-semibold bg-primary text-white flex items-center gap-1 shadow-sm">
                           <SparklesIcon size={9} /> {price}
                         </span>
                       ) : (
-                        <span className="absolute bottom-2 left-2 px-2.5 py-1 rounded-full text-[9px] font-display tracking-widest bg-emerald-500/30 text-emerald-300 border border-emerald-400/30 backdrop-blur-md">
+                        <span className="absolute bottom-2 left-2 px-2.5 py-1 rounded-full text-[9px] font-semibold bg-emerald-500/15 text-emerald-600 border border-emerald-500/30">
                           GRATIS
                         </span>
                       )}
@@ -576,7 +576,7 @@ export function ProfilePanel({
           )
         ) : (
           posts.length === 0 ? (
-            <div className="p-6 text-center text-xs text-muted-foreground panel rounded-2xl border border-dashed border-border">Sin publicaciones</div>
+            <div className="px-4 py-8 text-center text-xs text-muted-foreground rounded-lg border border-dashed border-border bg-surface">Sin publicaciones</div>
           ) : posts.map(p => <PostCard key={p.id} post={p} myId={myId} isMod={isMod} onChange={loadContent} />)
         )}
       </div>
@@ -627,12 +627,12 @@ function FollowListModal({ list, myId, onClose, onChanged }: {
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
       <button aria-label="Cerrar" onClick={onClose}
         className="absolute inset-0 bg-black/60 backdrop-blur-[2px] animate-in fade-in duration-200" />
-      <div className="relative w-full sm:max-w-sm panel rounded-t-2xl sm:rounded-2xl border border-border shadow-2xl animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-2 duration-300 max-h-[80vh] flex flex-col">
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-border/40">
-          <div className="flex-1 font-display text-xs tracking-widest text-primary-glow">
-            {list.kind === "followers" ? "SEGUIDORES" : "SIGUIENDO"} · {items.length}
+      <div className="relative w-full sm:max-w-sm rounded-t-2xl sm:rounded-lg border border-border bg-surface shadow-md animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-2 duration-300 max-h-[80vh] flex flex-col">
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-border/60">
+          <div className="flex-1 text-sm font-semibold">
+            {list.kind === "followers" ? "Seguidores" : "Siguiendo"} · {items.length}
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-lg border border-border grid place-items-center active:scale-95 transition">
+          <button onClick={onClose} className="w-8 h-8 rounded-md border border-border grid place-items-center text-muted-foreground hover:text-foreground active:scale-95 transition">
             <X size={14} />
           </button>
         </div>
@@ -647,7 +647,7 @@ function FollowListModal({ list, myId, onClose, onChanged }: {
             </div>
           ) : (
             items.map(p => (
-              <div key={p.id} className="flex items-center gap-2.5 px-2 py-2 rounded-xl hover:bg-muted/30 transition">
+              <div key={p.id} className="flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-muted/40 transition">
                 <Link to="/profile/$userId" params={{ userId: p.id }} onClick={onClose}
                   className="flex items-center gap-2.5 min-w-0 flex-1">
                   <Avatar p={p} size={36} rounded="xl" className="border border-border/50" />
@@ -658,8 +658,8 @@ function FollowListModal({ list, myId, onClose, onChanged }: {
                 </Link>
                 {myId && myId !== p.id && (
                   <button onClick={() => void toggle(p)} disabled={busyId === p.id}
-                    className={`shrink-0 px-2.5 py-1.5 rounded-lg text-[10px] font-display tracking-widest flex items-center gap-1 active:scale-95 transition disabled:opacity-60 ${iFollow.has(p.id) ? "border border-border text-muted-foreground" : "bg-gradient-to-r from-primary to-accent text-primary-foreground"}`}>
-                    {busyId === p.id ? <Loader2 size={11} className="animate-spin" /> : iFollow.has(p.id) ? <><UserCheck size={11} /> SIGUIENDO</> : <><UserPlus size={11} /> SEGUIR</>}
+                    className={`shrink-0 h-8 px-2.5 rounded-md text-[11px] font-medium flex items-center gap-1 active:scale-95 transition disabled:opacity-60 ${iFollow.has(p.id) ? "border border-border text-muted-foreground" : "bg-primary text-white"}`}>
+                    {busyId === p.id ? <Loader2 size={11} className="animate-spin" /> : iFollow.has(p.id) ? <><UserCheck size={11} /> Siguiendo</> : <><UserPlus size={11} /> Seguir</>}
                   </button>
                 )}
               </div>
@@ -676,7 +676,7 @@ function LabeledInput({ label, value, onChange, placeholder, max, icon }: {
 }) {
   return (
     <div>
-      <div className="text-[10px] font-display tracking-widest text-muted-foreground mb-1 flex items-center gap-1">{icon}{label}</div>
+      <div className="text-[11px] font-medium text-muted-foreground mb-1 flex items-center gap-1">{icon}{label}</div>
       <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} maxLength={max}
         className="w-full bg-input/50 rounded-lg px-2.5 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary/40"/>
     </div>

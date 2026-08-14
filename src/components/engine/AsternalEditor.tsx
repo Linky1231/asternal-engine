@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { Settings, Layers, Copy, Star, X, Eye, EyeOff, Lock, Unlock, ArrowUp, ArrowDown, ChevronsUp, ChevronsDown, Trash2, Merge, Plus, Upload, Home, FolderOpen } from "lucide-react";
+import { Settings, Layers, Copy, Star, X, Eye, EyeOff, Lock, Unlock, ArrowUp, ArrowDown, ChevronsUp, ChevronsDown, Trash2, Merge, Plus, Upload, Home, FolderOpen, MousePointer2, Boxes, Square, Flower2, CircleDollarSign, Triangle, Target, PersonStanding, Eraser, SlidersHorizontal, PanelsTopLeft, Image as ImageIcon, Layers3, Play } from "lucide-react";
 import { schedulePushToCloud } from "@/lib/engine/cloud-sync";
 import { Link } from "@tanstack/react-router";
 import { PublishGameDialog } from "./PublishGameDialog";
@@ -25,15 +25,15 @@ import { useT, setLang } from "@/lib/i18n";
 type Tool = EntityKind | "select" | "erase";
 type Tab = "build" | "inspect" | "ui" | "scenes" | "assets" | "settings";
 
-const TOOL_LIST: { id: Tool; tKey: string; icon: string }[] = [
-  { id: "select", tKey: "tool.select", icon: "⌖" },
-  { id: "platform", tKey: "tool.platform", icon: "▣" },
-  { id: "decor", tKey: "tool.decor", icon: "❀" },
-  { id: "coin", tKey: "tool.coin", icon: "◉" },
-  { id: "enemy", tKey: "tool.enemy", icon: "▲" },
-  { id: "goal", tKey: "tool.goal", icon: "▮" },
-  { id: "player", tKey: "tool.player", icon: "☻" },
-  { id: "erase", tKey: "tool.erase", icon: "✕" },
+const TOOL_LIST: { id: Tool; tKey: string; icon: ReactNode }[] = [
+  { id: "select", tKey: "tool.select", icon: <MousePointer2 size={15} strokeWidth={1.9} /> },
+  { id: "platform", tKey: "tool.platform", icon: <Square size={15} strokeWidth={1.9} /> },
+  { id: "decor", tKey: "tool.decor", icon: <Flower2 size={15} strokeWidth={1.9} /> },
+  { id: "coin", tKey: "tool.coin", icon: <CircleDollarSign size={15} strokeWidth={1.9} /> },
+  { id: "enemy", tKey: "tool.enemy", icon: <Triangle size={15} strokeWidth={1.9} /> },
+  { id: "goal", tKey: "tool.goal", icon: <Target size={15} strokeWidth={1.9} /> },
+  { id: "player", tKey: "tool.player", icon: <PersonStanding size={15} strokeWidth={1.9} /> },
+  { id: "erase", tKey: "tool.erase", icon: <Eraser size={15} strokeWidth={1.9} /> },
 ];
 
 // ---- Asset library (saved presets) ----
@@ -145,7 +145,12 @@ export function AsternalEditor() {
   }
 
   if (!project || !activeScene) {
-    return <div className="flex h-screen items-center justify-center text-muted-foreground">Booting engine…</div>;
+    return (
+      <div className="flex h-screen items-center justify-center gap-2 text-sm text-ink-2">
+        <span className="w-4 h-4 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+        Cargando el motor…
+      </div>
+    );
   }
 
   const updateScene = (s: typeof activeScene) =>
@@ -179,34 +184,35 @@ export function AsternalEditor() {
 
 
   const TABS: [Tab, string, ReactNode][] = [
-    ["build", t("tab.build"), "▦"],
-    ["inspect", t("tab.inspect"), "◈"],
-    ["ui", t("tab.ui"), "▢"],
-    ["assets", t("tab.assets"), "◆"],
-    ["scenes", t("tab.scenes"), "▤"],
-    ["settings", t("tab.settings"), <Settings size={20} key="settings-icon" />],
+    ["build", t("tab.build"), <Boxes size={18} strokeWidth={1.75} key="build" />],
+    ["inspect", t("tab.inspect"), <SlidersHorizontal size={18} strokeWidth={1.75} key="inspect" />],
+    ["ui", t("tab.ui"), <PanelsTopLeft size={18} strokeWidth={1.75} key="ui" />],
+    ["assets", t("tab.assets"), <ImageIcon size={18} strokeWidth={1.75} key="assets" />],
+    ["scenes", t("tab.scenes"), <Layers3 size={18} strokeWidth={1.75} key="scenes" />],
+    ["settings", t("tab.settings"), <Settings size={18} strokeWidth={1.75} key="settings" />],
   ];
 
   return (
     <div className={`flex h-screen w-full overflow-hidden ${isTablet ? "flex-row" : "flex-col"}`}>
       {/* Left rail (tablet/desktop) */}
       {isTablet && (
-        <nav className="w-[88px] panel border-r flex flex-col items-stretch py-3 gap-1 px-2 shrink-0">
-          <div className="grid place-items-center pb-2 mb-1 border-b border-border/40">
+        <nav className="w-[88px] border-r border-border/70 bg-card flex flex-col items-stretch py-3 gap-1 px-2 shrink-0">
+          <div className="grid place-items-center pb-2.5 mb-1.5 border-b border-border/50">
             <Logo />
           </div>
           {TABS.map(([id, label, icon]) => (
             <button
               key={id}
               onClick={() => setTab(id)}
-              className={`relative flex flex-col items-center gap-1 py-3 rounded-xl transition-all duration-300 active:scale-[0.93] ${
+              title={label}
+              className={`relative flex flex-col items-center gap-1.5 py-3 rounded-lg transition-colors duration-150 active:scale-[0.96] ${
                 tab === id
-                  ? "text-primary-glow bg-primary/15 border border-primary/40 shadow-[0_4px_18px_-6px_oklch(0.7_0.16_240/0.6)]"
-                  : "text-muted-foreground border border-transparent hover:bg-white/[0.04] hover:text-primary-glow/80"
+                  ? "text-primary bg-primary/10"
+                  : "text-ink-3 hover:bg-muted/60 hover:text-foreground"
               }`}
             >
-              <span className="text-xl leading-none">{icon}</span>
-              <span className="text-[9px] font-display tracking-wider">{label}</span>
+              <span className="leading-none">{icon}</span>
+              <span className="text-[9px] font-display tracking-wide">{label}</span>
             </button>
           ))}
         </nav>
@@ -214,13 +220,13 @@ export function AsternalEditor() {
 
     <div className="flex h-full flex-1 flex-col overflow-hidden min-w-0">
       {/* Top bar */}
-      <header className="flex items-center justify-between px-3 py-2 panel border-b">
-        <div className="flex items-center gap-2">
+      <header className="flex items-center justify-between px-3 py-2 border-b border-border/70 bg-card/80">
+        <div className="flex items-center gap-2.5">
           {!isTablet && <Logo />}
           <div>
-            <div className="font-display text-sm text-primary-glow glow-text leading-none">ASTERNAL</div>
-            <div className="text-[10px] font-mono text-muted-foreground -mt-0.5">
-              {savedAt ? `saved ${timeAgo(savedAt)}` : "ENGINE · v2"}
+            <div className="font-display text-sm font-semibold text-foreground leading-none tracking-wide">ASTERNAL</div>
+            <div className="text-[10px] font-mono text-ink-3 mt-0.5">
+              {savedAt ? `guardado ${timeAgo(savedAt)}` : "ENGINE · v2"}
             </div>
           </div>
         </div>
@@ -230,30 +236,31 @@ export function AsternalEditor() {
             to="/"
             aria-label="Ir al inicio"
             title="Inicio"
-            className="w-9 h-9 rounded-md border border-border text-muted-foreground grid place-items-center active:scale-95 transition"
+            className="w-9 h-9 rounded-lg border border-line-strong bg-card text-ink-2 grid place-items-center hover:bg-muted/60 hover:text-foreground active:scale-95 transition"
           ><Home size={16} /></Link>
           <button
             onClick={exitToManager}
             aria-label="Salir al gestor de proyectos"
             title="Proyectos"
-            className="w-9 h-9 rounded-md border border-border text-muted-foreground grid place-items-center active:scale-95 transition"
+            className="w-9 h-9 rounded-lg border border-line-strong bg-card text-ink-2 grid place-items-center hover:bg-muted/60 hover:text-foreground active:scale-95 transition"
           ><FolderOpen size={16} /></button>
           <button
             onClick={() => setHelpOpen(true)}
-            aria-label="Help"
-            className="w-9 h-9 rounded-md border border-border text-muted-foreground font-display"
+            aria-label="Ayuda"
+            title="Ayuda"
+            className="w-9 h-9 rounded-lg border border-line-strong bg-card text-ink-2 grid place-items-center hover:bg-muted/60 hover:text-foreground active:scale-95 transition font-display"
           >?</button>
           <button
             onClick={() => setPublishOpen(true)}
             aria-label="Publicar juego"
             title="Publicar"
-            className="hidden sm:flex items-center gap-1.5 font-display text-xs tracking-widest px-3 py-1.5 rounded-md border border-primary/40 text-primary-glow bg-primary/10 active:scale-95 transition"
+            className="hidden sm:flex items-center gap-1.5 font-display text-[11px] font-semibold tracking-widest h-9 px-3.5 rounded-lg border border-primary/30 text-primary bg-primary/10 hover:bg-primary/15 active:scale-95 transition"
           ><Upload size={14} /> PUBLICAR</button>
           <button
             onClick={() => setPublishOpen(true)}
             aria-label="Publicar juego"
             title="Publicar"
-            className="sm:hidden w-9 h-9 rounded-md border border-primary/40 text-primary-glow bg-primary/10 grid place-items-center active:scale-95 transition"
+            className="sm:hidden w-9 h-9 rounded-lg border border-primary/30 text-primary bg-primary/10 grid place-items-center active:scale-95 transition"
           ><Upload size={15} /></button>
           <button
             onClick={() => {
@@ -264,9 +271,9 @@ export function AsternalEditor() {
               }
               setPlaying(true);
             }}
-            className="font-display text-sm px-4 py-1.5 rounded-md bg-gradient-to-r from-primary to-accent text-primary-foreground glow-border active:scale-95 transition"
+            className="flex items-center gap-1.5 font-display text-[13px] font-semibold h-9 px-4 rounded-lg btn-grad active:scale-95"
           >
-            ▶ PLAY
+            <Play size={14} fill="currentColor" /> PLAY
           </button>
         </div>
       </header>
@@ -301,29 +308,33 @@ export function AsternalEditor() {
                     updateScene({ ...activeScene, entities: [...activeScene.entities, copy] });
                     setSelectedId(copy.id);
                   }}
-                  className="pointer-events-auto w-11 h-11 rounded-full panel glow-border text-primary-glow grid place-items-center active:scale-90 transition shadow-[0_4px_16px_rgba(0,0,0,0.4)]"
+                  className="pointer-events-auto w-11 h-11 rounded-xl bg-card border border-line-strong shadow-md text-ink-2 hover:text-primary hover:border-primary/40 active:scale-90 transition"
                   title="Duplicar asset (Ctrl+D)"
                   aria-label="Duplicar"
                 ><Copy size={18} /></button>
               )}
               <button
                 onClick={() => setLayersOpen(o => !o)}
-                className={`pointer-events-auto w-11 h-11 rounded-full panel glow-border grid place-items-center active:scale-90 transition shadow-[0_4px_16px_rgba(0,0,0,0.4)] ${layersOpen ? "text-primary-foreground bg-primary" : "text-primary-glow"}`}
+                className={`pointer-events-auto w-11 h-11 rounded-xl grid place-items-center active:scale-90 transition shadow-md ${
+                  layersOpen
+                    ? "bg-primary text-primary-foreground border border-primary"
+                    : "bg-card border border-line-strong text-ink-2 hover:text-primary hover:border-primary/40"
+                }`}
                 title="Capas de la escena"
                 aria-label="Capas"
               ><Layers size={18} /></button>
               <button
                 onClick={() => setLibraryOpen(true)}
-                className="pointer-events-auto w-11 h-11 rounded-full panel glow-border text-primary-glow grid place-items-center active:scale-90 transition shadow-[0_4px_16px_rgba(0,0,0,0.4)]"
+                className="pointer-events-auto w-11 h-11 rounded-xl bg-card border border-line-strong shadow-md text-ink-2 hover:text-primary hover:border-primary/40 active:scale-90 transition"
                 title={t("library.title")}
                 aria-label="Library"
               ><Star size={18} /></button>
             </div>
             {layersOpen && (
-              <div className="pointer-events-auto absolute right-3 bottom-3 z-30 w-[300px] max-h-[70vh] overflow-auto rounded-xl panel border border-primary/30 view-slide-right">
-                <div className="flex items-center justify-between px-3 py-2 border-b border-border/50">
-                  <span className="text-[10px] font-display tracking-widest text-primary-glow">CAPAS DE LA ESCENA</span>
-                  <button onClick={() => setLayersOpen(false)} className="text-muted-foreground hover:text-foreground grid place-items-center w-6 h-6 rounded"><X size={14} /></button>
+              <div className="pointer-events-auto absolute right-3 bottom-3 z-30 w-[300px] max-h-[70vh] overflow-auto rounded-xl surface shadow-lg view-slide-right">
+                <div className="flex items-center justify-between px-3 py-2 border-b border-border/60">
+                  <span className="font-display text-[10px] font-semibold tracking-[0.15em] text-ink-2">CAPAS DE LA ESCENA</span>
+                  <button onClick={() => setLayersOpen(false)} className="text-muted-foreground hover:text-foreground grid place-items-center w-7 h-7 rounded-lg hover:bg-muted/60 transition"><X size={14} /></button>
                 </div>
                 <div className="p-2">
                   <SceneLayersPanel scene={activeScene} onChangeScene={updateScene} />
@@ -413,20 +424,21 @@ export function AsternalEditor() {
 
       {/* Tool strip — only on build */}
       {tab === "build" && (
-        <div className="px-2 pt-3 panel border-t">
-          <div className="flex gap-1.5 overflow-x-auto pb-3 no-scrollbar">
+        <div className="px-2 py-2 border-t border-border/70 bg-card">
+          <div className="flex gap-1 overflow-x-auto no-scrollbar">
             {TOOL_LIST.map(toolItem => (
               <button
                 key={toolItem.id}
                 onClick={() => setTool(toolItem.id)}
-                className={`shrink-0 flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl min-w-[64px] border transition-colors duration-200 active:scale-[0.94] ${
+                title={t(toolItem.tKey)}
+                className={`shrink-0 flex items-center gap-1.5 h-9 px-3 rounded-lg border text-[10px] font-display font-medium transition-colors duration-150 active:scale-95 ${
                   tool === toolItem.id
-                    ? "bg-primary/20 border-primary text-primary-glow shadow-[0_0_12px_oklch(0.66_0.19_246/0.45)]"
-                    : "bg-white/[0.03] border-white/[0.06] text-muted-foreground hover:border-primary/40 hover:text-primary-glow"
+                    ? "border-primary/40 bg-primary/10 text-primary"
+                    : "border-transparent text-ink-2 hover:bg-muted/60 hover:text-foreground"
                 }`}
               >
-                <span className="text-lg leading-none">{toolItem.icon}</span>
-                <span className="text-[9px] font-display tracking-wider">{t(toolItem.tKey).toUpperCase()}</span>
+                {toolItem.icon}
+                <span className="truncate">{t(toolItem.tKey).toUpperCase()}</span>
               </button>
             ))}
           </div>
@@ -435,26 +447,16 @@ export function AsternalEditor() {
 
       {/* Bottom tabs (mobile only) */}
       {!isTablet && (
-      <nav className="grid grid-cols-6 panel border-t pb-[env(safe-area-inset-bottom)]">
-
-        {([
-          ["build", t("tab.build"), "▦"],
-          ["inspect", t("tab.inspect"), "◈"],
-          ["ui", t("tab.ui"), "▢"],
-          ["assets", t("tab.assets"), "◆"],
-          ["scenes", t("tab.scenes"), "▤"],
-          ["settings", t("tab.settings"), <Settings size={20} key="settings-icon" />],
-        ] as [Tab, string, ReactNode][]).map(([id, label, icon]) => (
+      <nav className="grid grid-cols-6 border-t border-border/70 bg-card pb-[env(safe-area-inset-bottom)]">
+        {TABS.map(([id, label, icon]) => (
           <button
             key={id}
             onClick={() => setTab(id)}
-            className={`min-w-0 flex flex-col items-center gap-0.5 py-2.5 px-0.5 transition-all duration-200 active:scale-90 ${
-              tab === id
-                ? "text-primary-glow scale-110"
-                : "text-muted-foreground hover:text-primary-glow/80"
+            className={`min-w-0 flex flex-col items-center gap-1 py-2.5 px-0.5 transition-colors duration-150 active:scale-95 ${
+              tab === id ? "text-primary" : "text-ink-3 hover:text-foreground"
             }`}
           >
-            <span className={`text-lg leading-none transition-all ${tab === id ? "glow-text" : ""}`}>{icon}</span>
+            <span className="leading-none">{icon}</span>
             <span className="w-full text-center text-[8px] font-display tracking-wide truncate">{label}</span>
           </button>
         ))}
@@ -512,8 +514,8 @@ function LibrarySheet({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h2 className="font-display text-sm tracking-[0.25em] text-primary-glow glow-text">{t("library.title")}</h2>
-          <button onClick={onClose} className="text-muted-foreground text-sm">✕</button>
+          <h2 className="section-label">{t("library.title")}</h2>
+          <button onClick={onClose} className="w-8 h-8 rounded-lg border border-line-strong bg-card text-ink-2 grid place-items-center hover:bg-muted/60 active:scale-95 transition"><X size={14} /></button>
         </div>
         <div className="flex gap-2">
           <input
@@ -521,12 +523,12 @@ function LibrarySheet({
             onChange={(e) => setName(e.target.value)}
             placeholder={selected ? selected.kind : "—"}
             disabled={!selected}
-            className="flex-1 bg-input/60 border border-border rounded-md px-3 py-2 text-xs font-mono disabled:opacity-50"
+            className="flex-1 bg-card border border-line-strong rounded-lg px-3 py-2 text-xs font-mono disabled:opacity-50 focus:border-primary/50 focus:ring-2 focus:ring-ring/30 outline-none transition"
           />
           <button
             disabled={!selected}
             onClick={() => { onSave(name); setName(""); }}
-            className="px-3 py-2 rounded-md bg-primary/20 border border-primary/50 text-primary-glow font-display text-[10px] tracking-widest disabled:opacity-40"
+            className="px-3 py-2 rounded-lg bg-primary/10 border border-primary/30 text-primary font-display font-semibold text-[10px] tracking-widest disabled:opacity-40 hover:bg-primary/15 active:scale-95 transition"
           >{t("library.save")}</button>
         </div>
         {library.length === 0 ? (
@@ -559,7 +561,7 @@ function LibrarySheet({
 
 function Logo() {
   return (
-    <a href="/" title="Volver al menú principal" className="relative w-9 h-9 rounded-md bg-gradient-to-br from-primary to-accent grid place-items-center shadow-[0_0_16px_oklch(0.66_0.19_246/0.7)] active:scale-95 transition">
+    <a href="/" title="Volver al menú principal" className="relative w-9 h-9 rounded-lg bg-gradient-to-br from-primary to-accent grid place-items-center shadow-sm ring-1 ring-white/25 ring-inset active:scale-95 transition">
       <span className="font-display text-lg text-primary-foreground">A</span>
     </a>
   );
@@ -613,7 +615,7 @@ function InspectorPanel({
             {[0.5, 0.75, 1.5, 2].map(k => (
               <button key={k}
                 onClick={() => onChangeScene(scaleScene(scene, k))}
-                className="py-2 rounded-md panel border border-border text-xs font-display tracking-widest text-primary-glow glow-border"
+                className="py-2 rounded-lg border border-line-strong bg-card text-xs font-display font-semibold tracking-widest text-ink-2 hover:border-primary/40 hover:text-primary active:scale-95 transition"
               >×{k}</button>
             ))}
           </div>
@@ -755,9 +757,8 @@ function InspectorPanel({
       )}
 
       <button
-        onClick={() => update({ x: scene.width / 2 - ent.w / 2, y: scene.height / 2 - ent.h / 2 })}
-        className="w-full py-2 rounded-md border border-border text-muted-foreground font-display text-[10px] tracking-widest"
-      >{t("inspector.center")}</button>
+        onClick={() => update({ x: scene.width / 2 - ent.w / 2, y: scene.height / 2 - ent.h / 2 })}          className="w-full py-2 rounded-lg border border-line-strong bg-card text-ink-2 font-display text-[10px] tracking-widest hover:border-primary/30 hover:text-primary active:scale-[0.98] transition"
+        >{t("inspector.center")}</button>
       <div className="grid grid-cols-3 gap-2 pt-1">
         <button
           onClick={() => {
@@ -767,7 +768,7 @@ function InspectorPanel({
             [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
             onChangeScene({ ...scene, entities: next });
           }}
-          className="py-2 rounded-md border border-border text-muted-foreground font-display text-[10px] tracking-widest"
+          className="py-2 rounded-lg border border-line-strong bg-card text-ink-2 font-display text-[10px] tracking-widest hover:border-primary/30 hover:text-primary active:scale-[0.98] transition"
         >{t("inspector.back")}</button>
         <button
           onClick={() => {
@@ -777,7 +778,7 @@ function InspectorPanel({
             [next[idx + 1], next[idx]] = [next[idx], next[idx + 1]];
             onChangeScene({ ...scene, entities: next });
           }}
-          className="py-2 rounded-md border border-border text-muted-foreground font-display text-[10px] tracking-widest"
+          className="py-2 rounded-lg border border-line-strong bg-card text-ink-2 font-display text-[10px] tracking-widest hover:border-primary/30 hover:text-primary active:scale-[0.98] transition"
         >{t("inspector.front")}</button>
         <button
           onClick={() => {
@@ -785,7 +786,7 @@ function InspectorPanel({
             onChangeScene({ ...scene, entities: [...scene.entities, copy] });
             onSelect(copy.id);
           }}
-          className="py-2 rounded-md bg-primary/15 border border-primary/40 text-primary-glow font-display text-[10px] tracking-widest"
+          className="py-2 rounded-lg bg-primary/10 border border-primary/30 text-primary font-display text-[10px] tracking-widest hover:bg-primary/15 active:scale-[0.98] transition"
         >{t("inspector.clone")}</button>
       </div>
 
@@ -795,7 +796,7 @@ function InspectorPanel({
             onChangeScene({ ...scene, entities: scene.entities.filter(e => e.id !== ent.id) });
             onSelect(null);
           }}
-          className="w-full mt-2 py-2 rounded-md bg-destructive/20 border border-destructive/50 text-destructive font-display text-xs tracking-widest"
+          className="w-full mt-2 py-2 rounded-lg bg-destructive/10 border border-destructive/40 text-destructive font-display font-semibold text-xs tracking-widest hover:bg-destructive/15 active:scale-[0.98] transition"
         >
           {t("inspector.delete")}
         </button>
@@ -818,12 +819,12 @@ function ScenesPanel({
       <SectionTitle>ESCENAS</SectionTitle>
       <div className="space-y-2">
         {project.scenes.map(s => (
-          <div key={s.id} className="panel rounded-lg p-3 flex items-center gap-2 glow-border animate-fade-in transition-all hover:border-primary/60">
+          <div key={s.id} className="surface rounded-xl p-3 flex items-center gap-3 transition-colors hover:border-primary/35">
             <div
-              className="w-12 h-12 rounded-md bg-gradient-to-br from-primary/40 to-accent/30 grid place-items-center text-primary-glow shrink-0"
+              className="w-12 h-12 rounded-lg bg-primary/10 border border-primary/15 grid place-items-center text-primary shrink-0"
               title={`${s.entities.length} elementos`}
             >
-              <Layers size={22} />
+              <Layers size={20} />
             </div>
             <div className="flex-1 min-w-0">
               <input
@@ -835,7 +836,7 @@ function ScenesPanel({
             </div>
             <button
               onClick={() => onOpen(s.id)}
-              className="text-[10px] font-display px-2 py-1.5 rounded-md bg-primary/20 border border-primary/50 text-primary-glow active:scale-[0.96] transition"
+              className="text-[10px] font-display font-semibold px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/30 text-primary hover:bg-primary/15 active:scale-[0.96] transition"
             >ABRIR</button>
             <button
               onClick={() => {
@@ -845,7 +846,7 @@ function ScenesPanel({
                 copy.entities = copy.entities.map(e => ({ ...e, id: uid() }));
                 onChange({ ...project, scenes: [...project.scenes, copy], activeSceneId: copy.id });
               }}
-              className="text-[10px] font-display px-2 py-1.5 rounded-md border border-border text-muted-foreground active:scale-[0.96] transition"
+              className="text-[10px] font-display px-2 py-1.5 rounded-lg border border-line-strong bg-card text-ink-2 hover:text-primary hover:border-primary/30 active:scale-[0.96] transition"
               title="Duplicar"
             >⧉</button>
             <button
@@ -853,7 +854,7 @@ function ScenesPanel({
                 if (!confirm(`¿Vaciar todas las entidades de "${s.name}"?`)) return;
                 onChange({ ...project, scenes: project.scenes.map(x => x.id === s.id ? { ...x, entities: [] } : x) });
               }}
-              className="text-[10px] font-display px-2 py-1.5 rounded-md border border-border text-muted-foreground active:scale-[0.96] transition"
+              className="text-[10px] font-display px-2 py-1.5 rounded-lg border border-line-strong bg-card text-ink-2 hover:text-destructive hover:border-destructive/40 active:scale-[0.96] transition"
               title="Vaciar entidades"
             >⌫</button>
             {project.scenes.length > 1 && (
@@ -867,7 +868,7 @@ function ScenesPanel({
                     activeSceneId: project.activeSceneId === s.id ? remaining[0].id : project.activeSceneId,
                   });
                 }}
-                className="text-destructive text-lg px-1"
+                className="text-ink-3 hover:text-destructive text-lg px-1.5 active:scale-90 transition"
               >✕</button>
             )}
           </div>
@@ -879,7 +880,7 @@ function ScenesPanel({
           s.id = uid();
           onChange({ ...project, scenes: [...project.scenes, s], activeSceneId: s.id });
         }}
-        className="w-full py-3 rounded-xl border-2 border-dashed border-primary/40 text-primary-glow font-display tracking-widest text-sm hover:bg-primary/5 active:scale-[0.98] transition"
+        className="w-full py-3 rounded-xl border-2 border-dashed border-primary/30 text-primary font-display font-semibold tracking-widest text-sm hover:bg-primary/5 active:scale-[0.98] transition"
       >
         + NUEVA ESCENA
       </button>
@@ -908,10 +909,10 @@ function SettingsPanel({ project, onChange }: { project: Project; onChange: (p: 
           {[30, 60].map(f => (
             <button key={f}
               onClick={() => set({ fpsCap: f as 30 | 60 })}
-              className={`flex-1 py-2 rounded-xl font-display border transition active:scale-[0.96] ${
+              className={`flex-1 py-2 rounded-lg font-display font-semibold border transition active:scale-[0.96] ${
                 project.settings.fpsCap === f
-                  ? "bg-primary/25 border-primary text-primary-glow shadow-[0_0_14px_oklch(0.7_0.16_240/0.4)]"
-                  : "border-white/10 bg-white/[0.04] text-muted-foreground hover:bg-white/[0.07]"
+                  ? "bg-primary/10 border-primary/50 text-primary"
+                  : "border-line-strong bg-card text-ink-2 hover:border-primary/25 hover:text-primary"
               }`}
             >{f}</button>
           ))}
@@ -946,7 +947,7 @@ function SettingsPanel({ project, onChange }: { project: Project; onChange: (p: 
             </span>
             <button
               onClick={() => set({ musicUrl: null, musicName: null, music: false })}
-              className="text-[10px] font-display tracking-widest text-muted-foreground hover:text-primary-glow px-2 py-1 rounded-lg border border-white/10 bg-white/[0.04] active:scale-[0.96] transition"
+              className="text-[10px] font-display font-semibold tracking-widest text-ink-2 hover:text-primary px-2 py-1.5 rounded-lg border border-line-strong bg-card active:scale-[0.96] transition"
             >QUITAR</button>
           </div>
         ) : (
@@ -967,7 +968,7 @@ function SettingsPanel({ project, onChange }: { project: Project; onChange: (p: 
                 e.target.value = "";
               }}
             />
-            <span className="block text-center py-2.5 rounded-xl bg-primary/15 border border-primary/50 text-primary-glow font-display text-xs tracking-widest cursor-pointer active:scale-[0.98] transition">
+            <span className="block text-center py-2.5 rounded-lg bg-primary/10 border border-primary/30 text-primary font-display font-semibold text-xs tracking-widest cursor-pointer hover:bg-primary/15 active:scale-[0.98] transition">
               ⤒ SUBIR MÚSICA
             </span>
           </label>
@@ -989,17 +990,17 @@ function SettingsPanel({ project, onChange }: { project: Project; onChange: (p: 
 
 // --- shared bits ---
 function SectionTitle({ children }: { children: React.ReactNode }) {
-  return <h2 className="font-display text-xs tracking-[0.25em] text-primary-glow glow-text">{children}</h2>;
+  return <h2 className="font-display text-[11px] font-semibold tracking-[0.18em] uppercase text-ink-2">{children}</h2>;
 }
 
 function Field({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
     <div>
-      <label className="text-[10px] font-display tracking-widest text-muted-foreground">{label.toUpperCase()}</label>
+      <label className="text-[10px] font-display font-medium tracking-widest text-ink-2">{label.toUpperCase()}</label>
       <input
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="w-full mt-1 bg-input/60 border border-border rounded-md px-3 py-2 text-sm font-mono focus:outline-none focus:border-primary focus:shadow-[0_0_0_3px_oklch(0.66_0.19_246/0.2)]"
+        className="w-full mt-1 bg-card border border-line-strong rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-ring/30 transition-[border-color,box-shadow]"
       />
     </div>
   );
@@ -1009,13 +1010,13 @@ function Slider({ label, value, min, max, step, onChange }: { label: string; val
   return (
     <div>
       <div className="flex justify-between items-baseline">
-        <label className="text-[10px] font-display tracking-widest text-muted-foreground">{label.toUpperCase()}</label>
-        <span className="text-[10px] font-mono text-primary-glow">{Math.round(value)}</span>
+        <label className="text-[10px] font-display font-medium tracking-widest text-ink-2">{label.toUpperCase()}</label>
+        <span className="text-[10px] font-mono text-primary tabular-nums">{Math.round(value)}</span>
       </div>
       <input
         type="range" min={min} max={max} step={step} value={value}
         onChange={e => onChange(Number(e.target.value))}
-        className="w-full accent-[oklch(0.66_0.19_246)]"
+        className="w-full accent-primary"
       />
     </div>
   );
@@ -1025,13 +1026,13 @@ function Toggle({ label, on, onChange }: { label: string; on: boolean; onChange:
   return (
     <button
       onClick={() => onChange(!on)}
-      className={`flex items-center justify-between px-3 py-2 rounded-md border ${
-        on ? "border-primary/60 bg-primary/15 text-primary-glow" : "border-border text-muted-foreground"
+      className={`flex items-center justify-between px-3 py-2 rounded-lg border transition-colors duration-150 active:scale-[0.98] ${
+        on ? "border-primary/40 bg-primary/10 text-primary" : "border-line-strong bg-card text-ink-2 hover:border-primary/25"
       }`}
     >
-      <span className="text-xs font-display tracking-widest">{label.toUpperCase()}</span>
+      <span className="text-xs font-display font-medium tracking-wide">{label.toUpperCase()}</span>
       <span className={`w-8 h-4 rounded-full p-0.5 transition ${on ? "bg-primary" : "bg-muted"}`}>
-        <span className={`block w-3 h-3 rounded-full bg-background transition ${on ? "translate-x-4" : ""}`} />
+        <span className={`block w-3 h-3 rounded-full bg-white shadow-sm transition ${on ? "translate-x-4" : ""}`} />
       </span>
     </button>
   );
@@ -1049,11 +1050,10 @@ function TexturePicker({ texture, fit = "stretch", onPick, onClear, onFit }: {
   const t = useT();
   return (
     <div>
-      <label className="text-[10px] font-display tracking-widest text-muted-foreground">{t("inspector.texture")}</label>
-      <div className="mt-1 flex items-center gap-2">
+      <label className="text-[10px] font-display tracking-widest text-muted-foreground">{t("inspector.texture")}</label>        <div className="mt-1 flex items-center gap-2">
         <button
           onClick={() => inputRef.current?.click()}
-          className="relative w-16 h-16 rounded-md border border-border bg-input/40 grid place-items-center overflow-hidden glow-border"
+          className="relative w-16 h-16 rounded-lg border border-line-strong bg-input/40 grid place-items-center overflow-hidden shadow-xs"
           style={{ backgroundColor: "#e5e7eb", backgroundImage: "linear-gradient(45deg,#9ca3af 25%,transparent 25%),linear-gradient(-45deg,#9ca3af 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#9ca3af 75%),linear-gradient(-45deg,transparent 75%,#9ca3af 75%)", backgroundSize: "12px 12px", backgroundPosition: "0 0,0 6px,6px -6px,-6px 0" }}
         >
           {texture ? (
@@ -1066,13 +1066,13 @@ function TexturePicker({ texture, fit = "stretch", onPick, onClear, onFit }: {
           <div className="grid grid-cols-2 gap-1.5">
             <button
               onClick={() => inputRef.current?.click()}
-              className="text-[10px] font-display tracking-widest px-2 py-2 rounded-md bg-primary/15 border border-primary/50 text-primary-glow"
+              className="text-[10px] font-display font-semibold tracking-widest px-2 py-2 rounded-lg bg-primary/10 border border-primary/30 text-primary hover:bg-primary/15 transition"
             >
               {t("texture.gallery")}
             </button>
             <button
               onClick={() => setDrawOpen(true)}
-              className="text-[10px] font-display tracking-widest px-2 py-2 rounded-md bg-accent/20 border border-accent/50 text-primary-glow"
+              className="text-[10px] font-display font-semibold tracking-widest px-2 py-2 rounded-lg bg-accent/10 border border-accent/30 text-accent-foreground hover:bg-accent/15 transition"
             >
               {t("texture.draw")}
             </button>
@@ -1080,7 +1080,7 @@ function TexturePicker({ texture, fit = "stretch", onPick, onClear, onFit }: {
           {texture && (
             <button
               onClick={onClear}
-              className="text-[10px] font-display tracking-widest px-3 py-1.5 rounded-md border border-border text-muted-foreground"
+              className="text-[10px] font-display font-semibold tracking-widest px-3 py-1.5 rounded-lg border border-line-strong bg-card text-ink-2 hover:text-primary hover:border-primary/30 transition"
             >
               {t("texture.clear")}
             </button>
@@ -1102,8 +1102,8 @@ function TexturePicker({ texture, fit = "stretch", onPick, onClear, onFit }: {
           {(["stretch","contain","cover"] as const).map(m => (
             <button key={m}
               onClick={() => onFit(m)}
-              className={`py-1 rounded text-[9px] font-display tracking-widest border ${
-                fit === m ? "bg-primary/20 border-primary text-primary-glow" : "border-border text-muted-foreground"
+              className={`py-1 rounded text-[9px] font-display font-semibold tracking-widest border transition ${
+                fit === m ? "bg-primary/10 border-primary/50 text-primary" : "border-line-strong bg-card text-ink-2 hover:border-primary/30 hover:text-primary"
               }`}
             >{m.toUpperCase()}</button>
           ))}
@@ -1135,7 +1135,7 @@ function AnimationsButton({ entity, onUpdate }: { entity: import("@/lib/engine/c
     <>
       <button
         onClick={() => setOpen(true)}
-        className="w-full mt-1 px-3 py-2.5 rounded-md bg-gradient-to-r from-primary/20 to-accent/20 border border-primary/50 text-primary-glow font-display text-xs tracking-widest flex items-center justify-between glow-border"
+        className="w-full mt-1 px-3 py-2.5 rounded-lg bg-primary/10 border border-primary/30 text-primary font-display font-semibold text-xs tracking-widest flex items-center justify-between hover:bg-primary/15 active:scale-[0.99] transition"
       >
         <span>◈ ANIMATIONS</span>
         <span className="font-mono text-[10px] opacity-80">{count} CLIPS</span>

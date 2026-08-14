@@ -163,7 +163,7 @@ export function NotificationBell() {
                   <button key={c.id} onClick={() => setCat(c.id)}
                     className={`flex items-center gap-1.5 px-2.5 h-7 rounded-lg text-[10px] font-display tracking-wide whitespace-nowrap transition active:scale-95 border ${
                       cat === c.id
-                        ? "bg-gradient-to-br from-primary to-accent text-primary-foreground border-transparent shadow-sm"
+                        ? "bg-primary text-white border-transparent"
                         : "text-muted-foreground border-border/60 hover:border-primary/30 hover:text-primary"
                     }`}>
                     {c.label}

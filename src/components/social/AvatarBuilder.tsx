@@ -119,7 +119,7 @@ export function AvatarBuilder({
             onClick={() => onChange(k)}
             className={`px-2.5 py-1 rounded-full text-[10px] font-display tracking-wide border transition active:scale-95 ${
               active === k
-                ? "bg-gradient-to-r from-primary to-accent text-primary-foreground border-transparent"
+                ? "bg-primary text-white border-transparent"
                 : "border-border/60 text-muted-foreground hover:border-primary/50 hover:text-foreground"
             }`}
           >
@@ -214,7 +214,7 @@ export function AvatarBuilder({
               <button key={sec.key} onClick={() => setSection(sec.key)}
                 className={`px-2.5 py-1.5 rounded-lg text-[9px] font-display tracking-widest transition active:scale-95 ${
                   section === sec.key
-                    ? "bg-gradient-to-r from-primary to-accent text-primary-foreground"
+                    ? "bg-primary text-white"
                     : "text-muted-foreground hover:bg-muted/40"
                 }`}>
                 {sec.label}
@@ -239,7 +239,7 @@ export function AvatarBuilder({
             <span className="text-[10px] font-display tracking-widest text-emerald-500">¡GUARDADO!</span>
           ) : null}
           <button onClick={() => void save()} disabled={saving}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-primary to-accent text-primary-foreground text-[10px] font-display tracking-widest active:scale-95 disabled:opacity-60 transition shrink-0">
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-white text-[11px] font-semibold active:scale-95 disabled:opacity-60 transition shrink-0">
             {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} GUARDAR
           </button>
         </div>

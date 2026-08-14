@@ -16,7 +16,7 @@ import type { Project } from "@/lib/engine/core";
 import { supabase, hasSupabaseConfig } from "@/integrations/supabase/client";
 import { cloudSaveProject, cloudListProjects, cloudDeleteProject, type CloudProject } from "@/lib/social/api";
 import { syncAllProjects } from "@/lib/engine/cloud-sync";
-import { Cloud, CloudDownload, CloudUpload, Loader2, RefreshCw } from "lucide-react";
+import { ArrowLeft, Cloud, CloudDownload, CloudUpload, FolderOpen, Loader2, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 
 
 function timeAgo(t: number) {
@@ -172,178 +172,204 @@ export function ProjectManager({
 
   return (
     <div className="h-screen w-full flex flex-col overflow-hidden bg-background">
-      <header className="flex items-center justify-between px-3 py-2 panel border-b">
-        <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-md bg-gradient-to-br from-primary to-accent grid place-items-center shadow-[0_0_16px_oklch(0.63_0.17_250/0.6)]">
-            <span className="font-display text-lg text-primary-foreground">A</span>
-          </div>
-          <div>
-            <div className="font-display text-sm text-primary-glow glow-text leading-none">PROYECTOS</div>
-            <div className="text-[10px] font-mono text-muted-foreground -mt-0.5">
-              {items.length} {items.length === 1 ? "proyecto" : "proyectos"}
-            </div>
+      <header className="flex items-center justify-between gap-3 px-4 h-14 shrink-0 border-b border-border">
+        <div className="flex items-center gap-3 min-w-0">
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="grid place-items-center w-9 h-9 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+              aria-label="Volver"
+            >
+              <ArrowLeft size={18} />
+            </button>
+          )}
+          <div className="min-w-0">
+            <h1 className="font-display text-sm font-semibold tracking-wide leading-none">Proyectos</h1>
+            <p className="text-xs text-muted-foreground mt-1">
+              {items.length} {items.length === 1 ? "proyecto" : "proyectos"} en este dispositivo
+            </p>
           </div>
         </div>
-        {onClose && (
-          <button
-            onClick={onClose}
-            className="text-[10px] font-display tracking-widest px-3 py-2 rounded-md border border-border text-muted-foreground"
-          >
-            ← VOLVER
-          </button>
+        {syncing && (
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
+            <Loader2 size={13} className="animate-spin" />
+            Sincronizando…
+          </div>
         )}
       </header>
 
-      <div className="flex-1 overflow-auto p-3 space-y-2">
-        {items.map((m) => (
-          <div
-            key={m.id}
-            className="panel rounded-lg p-3 flex items-center gap-2 glow-border"
-          >
-            <button
-              onClick={() => handleOpen(m.id)}
-              className="w-12 h-12 rounded-md bg-gradient-to-br from-primary/40 to-accent/30 grid place-items-center font-display text-primary-glow shrink-0 active:scale-95"
-              aria-label="Abrir"
-            >
-              ▶
-            </button>
-            <div className="flex-1 min-w-0">
-              {renamingId === m.id ? (
-                <input
-                  autoFocus
-                  value={renameValue}
-                  onChange={(e) => setRenameValue(e.target.value)}
-                  onBlur={() => commitRename(m.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") commitRename(m.id);
-                    if (e.key === "Escape") setRenamingId(null);
-                  }}
-                  className="w-full bg-input/60 border border-border rounded px-2 py-1 text-sm font-display"
-                />
-              ) : (
-                <button
-                  onClick={() => handleOpen(m.id)}
-                  className="block w-full text-left font-display text-sm truncate"
-                >
-                  {m.name}
-                </button>
-              )}
-              <div className="text-[10px] font-mono text-muted-foreground truncate">
-                editado hace {timeAgo(m.updatedAt)}
-              </div>
-            </div>
-            <div className="flex items-center gap-1 shrink-0">
-              <button
-                onClick={() => { setRenamingId(m.id); setRenameValue(m.name); }}
-                className="text-[10px] font-display px-2 py-1.5 rounded-md border border-border text-muted-foreground"
-                title="Renombrar"
-              >✎</button>
-              <button
-                onClick={() => handleDuplicate(m.id)}
-                className="text-[10px] font-display px-2 py-1.5 rounded-md border border-border text-muted-foreground"
-                title="Duplicar"
-              >⧉</button>
-              <button
-                onClick={() => handleExport(m)}
-                className="text-[10px] font-display px-2 py-1.5 rounded-md border border-border text-muted-foreground"
-                title="Exportar"
-              >⤓</button>
-              {signedIn && (
-                <button
-                  onClick={() => pushLocalToCloud(m)}
-                  disabled={cloudBusy === m.id}
-                  className="text-[10px] font-display px-2 py-1.5 rounded-md border border-primary/40 text-primary-glow bg-primary/10 grid place-items-center disabled:opacity-50"
-                  title={getProjectCloudId(m.id) ? "Actualizar en la nube" : "Guardar en la nube"}
-                >{cloudBusy === m.id ? <Loader2 size={12} className="animate-spin"/> : <CloudUpload size={12}/>}</button>
-              )}
-              <button
-                onClick={() => handleDelete(m)}
-                className="text-[10px] font-display px-2 py-1.5 rounded-md border border-destructive/50 text-destructive"
-                title="Borrar"
-              >✕</button>
-            </div>
-          </div>
-        ))}
-
-        {signedIn && (
-          <section className="pt-4 mt-4 border-t border-border/50 space-y-2">
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-2xl mx-auto px-4 py-5 space-y-5">
+          {/* Proyectos locales */}
+          <section className="space-y-2">
             <div className="flex items-center gap-2 px-1">
-              <Cloud size={14} className="text-primary-glow" />
-              <div className="font-display text-[11px] tracking-widest text-primary-glow">EN LA NUBE</div>
-              <div className="text-[10px] font-mono text-muted-foreground ml-auto">
-                {syncing ? <Loader2 size={12} className="animate-spin inline"/> : null}
-                {cloudList.length}
-              </div>
+              <FolderOpen size={14} className="text-primary" />
+              <span className="section-label">Este dispositivo</span>
             </div>
-            {(syncNote || syncing) && (
-              <div className="flex items-center gap-1.5 text-[10px] text-primary-glow px-1">
-                {syncing ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} />}
-                {syncing ? "Sincronizando con la nube…" : syncNote}
+            {items.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center">
+                <p className="text-sm text-muted-foreground">Aún no tienes proyectos.</p>
+                <p className="text-xs text-muted-foreground/70 mt-1">Crea tu primer juego con «Nuevo proyecto».</p>
               </div>
+            ) : (
+              items.map((m) => (
+                <div
+                  key={m.id}
+                  className="group flex items-center gap-3 rounded-lg border border-border/70 bg-surface px-3 py-2.5 transition-colors hover:border-border-strong"
+                >
+                  <button
+                    onClick={() => handleOpen(m.id)}
+                    className="w-11 h-11 rounded-lg bg-primary/10 border border-primary/20 grid place-items-center shrink-0 transition-colors hover:bg-primary/15"
+                    aria-label="Abrir"
+                  >
+                    <FolderOpen size={18} className="text-primary" />
+                  </button>
+                  <div className="flex-1 min-w-0">
+                    {renamingId === m.id ? (
+                      <input
+                        autoFocus
+                        value={renameValue}
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        onBlur={() => commitRename(m.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") commitRename(m.id);
+                          if (e.key === "Escape") setRenamingId(null);
+                        }}
+                        className="w-full bg-background border border-border rounded-md px-2 py-1 text-sm font-medium outline-none focus:border-primary/50"
+                      />
+                    ) : (
+                      <button
+                        onClick={() => handleOpen(m.id)}
+                        className="block w-full text-left text-sm font-medium truncate hover:text-primary transition-colors"
+                      >
+                        {m.name}
+                      </button>
+                    )}
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      editado hace {timeAgo(m.updatedAt)}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => { setRenamingId(m.id); setRenameValue(m.name); }}
+                      className="grid place-items-center w-8 h-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors"
+                      title="Renombrar"
+                      aria-label="Renombrar"
+                    ><Pencil size={14} /></button>
+                    <button
+                      onClick={() => handleDuplicate(m.id)}
+                      className="grid place-items-center w-8 h-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors"
+                      title="Duplicar"
+                      aria-label="Duplicar"
+                    >⧉</button>
+                    <button
+                      onClick={() => handleExport(m)}
+                      className="grid place-items-center w-8 h-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors"
+                      title="Exportar JSON"
+                      aria-label="Exportar"
+                    >⤓</button>
+                    {signedIn && (
+                      <button
+                        onClick={() => pushLocalToCloud(m)}
+                        disabled={cloudBusy === m.id}
+                        className="grid place-items-center w-8 h-8 rounded-md text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+                        title={getProjectCloudId(m.id) ? "Actualizar en la nube" : "Guardar en la nube"}
+                        aria-label="Guardar en la nube"
+                      >{cloudBusy === m.id ? <Loader2 size={14} className="animate-spin" /> : <CloudUpload size={14} />}</button>
+                    )}
+                    <button
+                      onClick={() => handleDelete(m)}
+                      className="grid place-items-center w-8 h-8 rounded-md text-destructive/70 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                      title="Borrar"
+                      aria-label="Borrar"
+                    ><Trash2 size={14} /></button>
+                  </div>
+                </div>
+              ))
             )}
-            {cloudErr && <div className="text-[10px] text-destructive px-1">{cloudErr}</div>}
-            {!hasSupabaseConfig() && (
-              <div className="px-1">
-                <div className="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-md px-2 py-1.5">
+          </section>
+
+          {/* Nube */}
+          {signedIn && (
+            <section className="space-y-2 pt-5 border-t border-border/70">
+              <div className="flex items-center gap-2 px-1">
+                <Cloud size={14} className="text-primary" />
+                <span className="section-label">Asternal Sync · nube</span>
+                <span className="ml-auto text-xs font-mono text-muted-foreground tabular-nums">{cloudList.length}</span>
+              </div>
+              {(syncNote || syncing) && (
+                <div className="flex items-center gap-1.5 text-xs text-primary px-1">
+                  {syncing ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+                  {syncing ? "Sincronizando con la nube…" : syncNote}
+                </div>
+              )}
+              {cloudErr && <div className="text-xs text-destructive px-1">{cloudErr}</div>}
+              {!hasSupabaseConfig() && (
+                <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-700">
                   ⚠ Modo local: tus juegos se guardan solo en este navegador. Para verlos en otro dispositivo,
                   conecta la nube con el icono ☁ del inicio (o el tab Keys) y entra con la misma cuenta.
                 </div>
-              </div>
-            )}
-            {cloudList.length === 0 ? (
-              <div className="text-[10px] text-muted-foreground px-1">Nada guardado en la nube todavía. Usa el botón <CloudUpload size={10} className="inline"/> para respaldar un proyecto y acceder a él desde cualquier dispositivo.</div>
-            ) : (
-              cloudList.map(c => {
-                const inLocal = items.some(m => getProjectCloudId(m.id) === c.id);
-                return (
-                  <div key={c.id} className="panel rounded-lg p-3 flex items-center gap-2 border border-primary/20">
-                    <div className="w-9 h-9 rounded-md bg-primary/15 grid place-items-center shrink-0">
-                      <Cloud size={16} className="text-primary-glow" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-display text-sm truncate">{c.name}</div>
-                      <div className="text-[10px] font-mono text-muted-foreground truncate">
-                        {inLocal ? "sincronizado · " : "no descargado · "}actualizado hace {timeAgo(new Date(c.updated_at).getTime())}
+              )}
+              {cloudList.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-border px-4 py-5 text-center text-xs text-muted-foreground">
+                  Nada guardado en la nube todavía. Usa el icono <CloudUpload size={12} className="inline" /> para respaldar un proyecto y acceder a él desde cualquier dispositivo.
+                </div>
+              ) : (
+                cloudList.map(c => {
+                  const inLocal = items.some(m => getProjectCloudId(m.id) === c.id);
+                  return (
+                    <div key={c.id} className="flex items-center gap-3 rounded-lg border border-border/70 bg-surface px-3 py-2.5">
+                      <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 grid place-items-center shrink-0">
+                        <Cloud size={16} className="text-primary" />
                       </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium truncate">{c.name}</div>
+                        <div className="text-xs text-muted-foreground truncate">
+                          {inLocal ? "sincronizado · " : "no descargado · "}actualizado hace {timeAgo(new Date(c.updated_at).getTime())}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => pullCloudToLocal(c)}
+                        disabled={cloudBusy === c.id}
+                        className="grid place-items-center w-8 h-8 rounded-md text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+                        title={inLocal ? "Actualizar copia local" : "Descargar"}
+                        aria-label="Descargar"
+                      >{cloudBusy === c.id ? <Loader2 size={14} className="animate-spin" /> : <CloudDownload size={14} />}</button>
+                      <button
+                        onClick={() => removeCloud(c)}
+                        className="grid place-items-center w-8 h-8 rounded-md text-destructive/70 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                        title="Borrar de la nube"
+                        aria-label="Borrar de la nube"
+                      ><Trash2 size={14} /></button>
                     </div>
-                    <button
-                      onClick={() => pullCloudToLocal(c)}
-                      disabled={cloudBusy === c.id}
-                      className="text-[10px] font-display px-2 py-1.5 rounded-md border border-primary/40 text-primary-glow bg-primary/10 grid place-items-center disabled:opacity-50"
-                      title={inLocal ? "Actualizar copia local" : "Descargar"}
-                    >{cloudBusy === c.id ? <Loader2 size={12} className="animate-spin"/> : <CloudDownload size={12}/>}</button>
-                    <button
-                      onClick={() => removeCloud(c)}
-                      className="text-[10px] font-display px-2 py-1.5 rounded-md border border-destructive/40 text-destructive"
-                      title="Borrar de la nube"
-                    >✕</button>
-                  </div>
-                );
-              })
-            )}
-          </section>
-        )}
-        {!signedIn && (
-          <div className="mt-4 p-3 rounded-lg border border-dashed border-border text-[11px] text-muted-foreground text-center">
-            Inicia sesión para sincronizar tus juegos en la nube y no perderlos al cambiar de dispositivo.
-          </div>
-        )}
+                  );
+                })
+              )}
+            </section>
+          )}
+          {!signedIn && (
+            <div className="rounded-lg border border-dashed border-border px-4 py-5 text-center text-xs text-muted-foreground">
+              Inicia sesión para sincronizar tus juegos en la nube y no perderlos al cambiar de dispositivo.
+            </div>
+          )}
+        </div>
       </div>
 
-
-      <div className="p-3 panel border-t grid grid-cols-2 gap-2 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
-        <button
-          onClick={handleNew}
-          className="py-3 rounded-lg bg-gradient-to-r from-primary to-accent text-primary-foreground font-display tracking-widest text-sm glow-border active:scale-95 transition"
-        >
-          + NUEVO
-        </button>
-        <button
-          onClick={handleImport}
-          className="py-3 rounded-lg border border-accent/50 bg-accent/15 text-primary-glow font-display tracking-widest text-sm"
-        >
-          ⤒ IMPORTAR
-        </button>
+      <div className="shrink-0 border-t border-border bg-background px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
+        <div className="max-w-2xl mx-auto grid grid-cols-2 gap-2">
+          <button
+            onClick={handleNew}
+            className="btn-grad inline-flex items-center justify-center gap-1.5 rounded-lg h-11 text-sm font-semibold text-white active:scale-[0.98] transition-transform"
+          >
+            <Plus size={16} /> Nuevo proyecto
+          </button>
+          <button
+            onClick={handleImport}
+            className="rounded-lg h-11 border border-border bg-surface text-sm font-medium text-foreground hover:bg-muted/60 active:scale-[0.98] transition"
+          >
+            ⤒ Importar JSON
+          </button>
+        </div>
       </div>
     </div>
   );

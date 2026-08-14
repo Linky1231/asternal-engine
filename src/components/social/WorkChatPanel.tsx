@@ -94,7 +94,7 @@ function Overlay({
         className="w-full max-w-sm bg-card border border-border rounded-2xl p-4 shadow-xl max-h-[85vh] overflow-y-auto"
       >
         <div className="flex items-center gap-2 mb-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 text-primary grid place-items-center shrink-0">
             {icon}
           </div>
           <div className="text-sm font-semibold flex-1">{title}</div>
@@ -368,7 +368,7 @@ export function TaskManager({
             <button
               onClick={submit}
               disabled={creating}
-              className="flex-1 py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-[10px] font-display tracking-widest active:scale-[0.98] transition disabled:opacity-40 flex items-center justify-center gap-1.5"
+              className="flex-1 py-2 rounded-lg bg-primary text-white text-[10px] font-semibold active:scale-[0.98] transition disabled:opacity-40 flex items-center justify-center gap-1.5"
             >
               {creating ? <Loader2 size={11} className="animate-spin" /> : <Plus size={11} />}
               {creating ? "CREANDO…" : "CREAR TAREA"}
@@ -589,7 +589,7 @@ export function ThreadsManager({
             <button
               onClick={submit}
               disabled={creating}
-              className="flex-1 py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-[10px] font-display tracking-widest active:scale-[0.98] transition disabled:opacity-40 flex items-center justify-center gap-1.5"
+              className="flex-1 py-2 rounded-lg bg-primary text-white text-[10px] font-semibold active:scale-[0.98] transition disabled:opacity-40 flex items-center justify-center gap-1.5"
             >
               {creating ? <Loader2 size={11} className="animate-spin" /> : <Plus size={11} />}
               {creating ? "CREANDO…" : "CREAR HILO"}
@@ -615,7 +615,7 @@ export function ThreadsManager({
                 onClick={() => onOpen(t)}
                 className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl bg-background border border-border/60 hover:border-primary/40 hover:bg-primary/5 transition text-left active:scale-[0.99]"
               >
-                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center shrink-0">
+                <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 text-primary grid place-items-center shrink-0">
                   <MessagesSquare size={14} />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -747,7 +747,7 @@ export function ThreadView({
                   <div
                     className={
                       mine
-                        ? "bg-gradient-to-br from-primary to-accent text-primary-foreground rounded-2xl rounded-br-md px-3 py-2 shadow-sm max-w-[85%]"
+                        ? "bg-primary text-primary-foreground rounded-2xl rounded-br-md px-3 py-2 shadow-sm shadow-primary/25 max-w-[85%]"
                         : "bg-background border border-border rounded-2xl rounded-bl-md px-3 py-2 shadow-sm max-w-[85%]"
                     }
                   >
@@ -780,7 +780,7 @@ export function ThreadView({
             <button
               onClick={send}
               disabled={!draft.trim()}
-              className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center active:scale-95 transition shrink-0 disabled:opacity-40"
+              className="w-9 h-9 rounded-lg bg-primary text-white grid place-items-center active:scale-95 transition shrink-0 disabled:opacity-40"
             >
               <Send size={14} />
             </button>
@@ -1048,7 +1048,7 @@ export function ProjectsManager({
               <button
                 onClick={addTaskToProject}
                 disabled={tBusy}
-                className="px-3 py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-[10px] font-display tracking-widest active:scale-[0.98] transition disabled:opacity-40 flex items-center gap-1.5"
+                className="px-3 py-2 rounded-lg bg-primary text-white text-[10px] font-semibold active:scale-[0.98] transition disabled:opacity-40 flex items-center gap-1.5"
               >
                 {tBusy ? <Loader2 size={11} className="animate-spin" /> : <Plus size={11} />}
                 AÑADIR
@@ -1136,7 +1136,7 @@ export function ProjectsManager({
             <button
               onClick={submit}
               disabled={creating}
-              className="flex-1 py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-[10px] font-display tracking-widest active:scale-[0.98] transition disabled:opacity-40 flex items-center justify-center gap-1.5"
+              className="flex-1 py-2 rounded-lg bg-primary text-white text-[10px] font-semibold active:scale-[0.98] transition disabled:opacity-40 flex items-center justify-center gap-1.5"
             >
               {creating ? <Loader2 size={11} className="animate-spin" /> : <Plus size={11} />}
               {creating ? "CREANDO…" : "CREAR PROYECTO"}
@@ -1160,7 +1160,7 @@ export function ProjectsManager({
                 onClick={() => openProject(p)}
                 className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl bg-background border border-border/60 hover:border-primary/40 hover:bg-primary/5 transition text-left active:scale-[0.99]"
               >
-                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center shrink-0">
+                <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 text-primary grid place-items-center shrink-0">
                   <Layers size={14} />
                 </div>
                 <div className="min-w-0 flex-1">

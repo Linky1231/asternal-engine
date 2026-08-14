@@ -356,7 +356,7 @@ export function Avatar({
   const dims = size !== undefined ? { width: size, height: size, fontSize: Math.max(10, size * 0.42) } : {};
   return (
     <div
-      className={`relative overflow-hidden shrink-0 grid place-items-center font-display font-semibold text-primary-foreground bg-gradient-to-br from-primary to-accent ${roundCls} ${className}`}
+      className={`relative overflow-hidden shrink-0 grid place-items-center font-display font-semibold text-primary-foreground bg-primary ${roundCls} ${className}`}
       style={{ ...dims, ...style }}
     >
       {p?.avatar_url && !spec ? (

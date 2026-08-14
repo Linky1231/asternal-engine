@@ -427,8 +427,8 @@ function MessageBubble({
         <div
           className={
             mine
-              ? "bg-gradient-to-br from-primary to-accent text-primary-foreground rounded-2xl rounded-br-md px-3 py-2 shadow-[0_4px_14px_-6px_oklch(0.52_0.19_258/0.45)]"
-              : "bg-card border border-border rounded-2xl rounded-bl-md px-3 py-2 shadow-sm"
+              ? "bg-primary text-primary-foreground rounded-2xl rounded-br-md px-3 py-2 shadow-sm shadow-primary/25"
+              : "bg-surface border border-border/70 rounded-2xl rounded-bl-md px-3 py-2"
           }
         >
           {reply && (

@@ -148,8 +148,8 @@ export function EventsSection({ isAdmin }: { isAdmin: boolean }) {
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary to-accent grid place-items-center shadow-[0_4px_14px_-6px_oklch(0.52_0.19_258/0.5)] shrink-0">
-          <Trophy size={18} className="text-primary-foreground" />
+        <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 text-primary grid place-items-center shrink-0">
+          <Trophy size={18} />
         </div>
         <div className="flex-1 min-w-0">
           <h2 className="text-base font-display font-semibold text-foreground">Eventos</h2>
@@ -172,7 +172,7 @@ export function EventsSection({ isAdmin }: { isAdmin: boolean }) {
       {loading ? (
         <div className="space-y-3">
           {[0, 1].map(i => (
-            <div key={i} className="panel rounded-xl overflow-hidden animate-pulse">
+            <div key={i} className="rounded-lg border border-border/70 bg-surface overflow-hidden animate-pulse">
               <div className="h-32 bg-muted/50" />
               <div className="p-4 space-y-2">
                 <div className="h-4 w-2/3 bg-muted/60 rounded" />
@@ -182,7 +182,7 @@ export function EventsSection({ isAdmin }: { isAdmin: boolean }) {
           ))}
         </div>
       ) : sorted.length === 0 ? (
-        <div className="panel rounded-xl p-8 text-center">
+        <div className="rounded-lg border border-dashed border-border bg-surface p-8 text-center">
           <div className="w-12 h-12 rounded-full bg-muted/60 grid place-items-center mx-auto mb-3">
             <Calendar size={20} className="text-muted-foreground" />
           </div>
@@ -212,7 +212,7 @@ export function EventsSection({ isAdmin }: { isAdmin: boolean }) {
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: i * 0.05, ease: [0.22, 1, 0.36, 1] }}
-                  className="panel rounded-2xl overflow-hidden border border-border/80"
+                  className="rounded-lg overflow-hidden border border-border/70 bg-surface"
                 >
                   {/* Banner */}
                   <div
@@ -302,7 +302,7 @@ export function EventsSection({ isAdmin }: { isAdmin: boolean }) {
                           <div className="pt-3 border-t border-border/60 space-y-3">
                             {ev.prize_description && (
                               <div>
-                                <div className="text-[10px] font-display tracking-widest text-muted-foreground mb-1 flex items-center gap-1">
+                                <div className="text-[11px] font-medium text-muted-foreground mb-1 flex items-center gap-1">
                                   <Trophy size={10} className="text-amber-500" /> PREMIOS
                                 </div>
                                 <p className="text-xs text-foreground/80">{ev.prize_description}</p>
@@ -310,7 +310,7 @@ export function EventsSection({ isAdmin }: { isAdmin: boolean }) {
                             )}
                             {ev.rules && (
                               <div>
-                                <div className="text-[10px] font-display tracking-widest text-muted-foreground mb-1">REGLAS</div>
+                                <div className="text-[11px] font-medium text-muted-foreground mb-1">Reglas</div>
                                 <p className="text-xs text-foreground/80 whitespace-pre-wrap">{ev.rules}</p>
                               </div>
                             )}
@@ -321,7 +321,7 @@ export function EventsSection({ isAdmin }: { isAdmin: boolean }) {
                                 <button
                                   onClick={() => void toggleRegistration(ev)}
                                   disabled={!!busyId}
-                                  className={`w-full h-10 rounded-xl text-[11px] font-display tracking-widest transition active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50 ${
+                                  className={`w-full h-10 rounded-lg text-xs font-semibold transition active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50 ${
                                     registered
                                       ? "bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100"
                                       : "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-sm shadow-primary/20 hover:brightness-110"
@@ -366,13 +366,13 @@ export function EventsSection({ isAdmin }: { isAdmin: boolean }) {
                             {isAdmin && (
                               <div className="rounded-xl border border-primary/20 bg-primary/[0.04] p-3">
                                 <div className="flex items-center justify-between gap-2">
-                                  <div className="flex items-center gap-1.5 text-[10px] font-display tracking-widest text-primary">
+                                  <div className="flex items-center gap-1.5 text-[11px] font-semibold text-primary">
                                     <PartyPopper size={12} />
-                                    INSCRITOS · {count.toLocaleString()}
+                                    Inscritos · {count.toLocaleString()}
                                   </div>
                                   <button
                                     onClick={() => toggleParts(ev)}
-                                    className="text-[10px] font-display tracking-widest px-2.5 py-1 rounded-lg border border-primary/25 bg-background text-primary hover:bg-primary/10 transition active:scale-95"
+                                    className="text-[11px] font-medium px-2.5 py-1 rounded-md border border-primary/30 bg-surface text-primary hover:bg-primary/10 transition active:scale-95"
                                   >
                                     {partsOpen ? "OCULTAR" : "VER QUIÉN"}
                                   </button>

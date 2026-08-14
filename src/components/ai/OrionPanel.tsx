@@ -407,7 +407,7 @@ export default function OrionPanel({ onClose }: { onClose: () => void }) {
                 <div
                   className={`max-w-[82%] rounded-2xl px-3.5 py-2.5 shadow-sm ${
                     m.role === "user"
-                      ? "bg-gradient-to-br from-primary to-accent text-primary-foreground rounded-br-md shadow-[0_4px_14px_-6px_oklch(0.52_0.19_258/0.45)]"
+                      ? "bg-primary text-primary-foreground rounded-br-md shadow-sm shadow-primary/25"
                       : "bg-card border border-border rounded-bl-md"
                   }`}
                 >
@@ -478,7 +478,7 @@ export default function OrionPanel({ onClose }: { onClose: () => void }) {
             <button
               onClick={() => void send(input)}
               disabled={busy || !input.trim()}
-              className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center active:scale-95 transition shrink-0 disabled:opacity-40 disabled:active:scale-100 shadow-[0_4px_12px_-5px_oklch(0.52_0.19_258/0.5)]"
+              className="w-9 h-9 rounded-lg bg-primary text-white grid place-items-center active:scale-95 transition shrink-0 disabled:opacity-40 disabled:active:scale-100"
             >
               <Send size={15} />
             </button>

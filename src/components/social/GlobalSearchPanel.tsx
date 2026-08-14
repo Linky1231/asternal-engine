@@ -165,7 +165,7 @@ export function GlobalSearchPanel({
       onClick={onClick}
       className={`shrink-0 px-3 py-1.5 rounded-full text-[10px] font-display tracking-wider transition active:scale-95 ${
         active
-          ? "bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[0_4px_10px_-5px_oklch(0.52_0.19_258/0.5)]"
+          ? "bg-primary text-white"
           : "bg-card border border-border text-muted-foreground hover:text-foreground"
       }`}
     >
@@ -243,7 +243,7 @@ export function GlobalSearchPanel({
       onClick={() => openProject(p.id)}
       className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-background border border-border/60 hover:border-primary/40 hover:bg-primary/5 transition text-left active:scale-[0.99]"
     >
-      <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center shrink-0">
+      <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 text-primary grid place-items-center shrink-0">
         <Gamepad2 size={15} />
       </div>
       <div className="min-w-0 flex-1">

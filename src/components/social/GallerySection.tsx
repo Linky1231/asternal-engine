@@ -198,12 +198,12 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
   return (
     <div className="space-y-5">
       {/* ====== HEADER ====== */}
-      <div className="panel rounded-2xl border border-border/40 overflow-hidden">
+      <div className="rounded-lg border border-border/70 bg-surface overflow-hidden">
         {/* Hairline degradado superior */}
         <div className="h-[3px] w-full bg-gradient-to-r from-primary via-accent to-transparent opacity-80" />
         <div className="flex items-center justify-between gap-3 p-3">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-accent grid place-items-center shadow-md shrink-0">
+            <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 text-primary grid place-items-center shrink-0">
               <Palette size={22} className="text-primary-foreground" />
             </div>
             <div className="min-w-0">
@@ -236,7 +236,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
           </div>
           <button
             onClick={() => setCanvasOpen(true)}
-            className="h-10 pl-4 pr-5 rounded-xl bg-gradient-to-r from-primary to-accent text-primary-foreground text-[10px] font-display tracking-widest flex items-center gap-1.5 active:scale-95 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/25 transition-all duration-300 shrink-0 font-semibold"
+            className="h-10 pl-4 pr-5 rounded-lg bg-gradient-to-r from-primary to-accent text-white text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition shrink-0"
           >
             <ImagePlus size={16} /> NUEVA OBRA
           </button>
@@ -244,7 +244,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
       </div>
 
       {/* ====== SEARCH BAR ====== */}
-      <div className="flex items-center gap-2 bg-card/80 border border-border/60 rounded-2xl px-3.5 py-2.5 shadow-sm focus-within:ring-2 focus-within:ring-primary/25 focus-within:border-primary/40 transition-all duration-300">
+      <div className="flex items-center gap-2 bg-surface border border-border/70 rounded-lg px-3.5 py-2.5 focus-within:ring-2 focus-within:ring-primary/25 focus-within:border-primary/40 transition-all duration-300">
         <Search size={15} className="text-muted-foreground shrink-0" />
         <input
           value={searchQ}
@@ -268,9 +268,9 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[10px] font-display tracking-widest transition-colors duration-200 active:scale-95 whitespace-nowrap border ${
+              className={`shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[11px] font-display font-semibold transition-colors duration-200 active:scale-95 whitespace-nowrap border ${
                 isActive
-                  ? "border-transparent bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-sm shadow-primary/20"
+                  ? "border-transparent bg-primary text-white"
                   : "text-muted-foreground hover:text-foreground bg-muted/30 hover:bg-muted/60 border-border/40"
               }`}
             >
@@ -281,9 +281,9 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
         })}
         <button
           onClick={() => setTab("all")}
-          className={`shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[10px] font-display tracking-widest transition-colors duration-200 active:scale-95 whitespace-nowrap border ${
+          className={`shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[11px] font-display font-semibold transition-colors duration-200 active:scale-95 whitespace-nowrap border ${
             tab === "all"
-              ? "border-transparent bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-sm shadow-primary/20"
+              ? "border-transparent bg-primary text-white"
               : "text-muted-foreground hover:text-foreground bg-muted/30 hover:bg-muted/60 border-border/40"
           }`}
         >
@@ -292,9 +292,9 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
         </button>
         <button
           onClick={() => setTab("misobras")}
-          className={`shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[10px] font-display tracking-widest transition-colors duration-200 active:scale-95 whitespace-nowrap border ${
+          className={`shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[11px] font-display font-semibold transition-colors duration-200 active:scale-95 whitespace-nowrap border ${
             tab === "misobras"
-              ? "border-transparent bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-sm shadow-primary/20"
+              ? "border-transparent bg-primary text-white"
               : "text-muted-foreground hover:text-foreground bg-muted/30 hover:bg-muted/60 border-border/40"
           }`}
         >
@@ -318,9 +318,9 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center py-20 panel rounded-3xl border border-dashed border-border/60"
+          className="text-center py-16 rounded-lg border border-dashed border-border bg-surface"
         >
-          <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-primary/10 to-accent/10 grid place-items-center mx-auto mb-4">
+          <div className="w-16 h-16 rounded-xl bg-primary/10 grid place-items-center mx-auto mb-4">
             <Palette size={32} className="text-muted-foreground/40" />
           </div>
           <div className="text-base font-display text-muted-foreground">
@@ -341,7 +341,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
           </div>
           <button
             onClick={() => setCanvasOpen(true)}
-            className="mt-5 h-10 px-5 rounded-xl bg-gradient-to-r from-primary to-accent text-primary-foreground text-[10px] font-display tracking-widest active:scale-95 transition shadow-sm"
+            className="mt-5 h-10 px-5 rounded-lg bg-primary text-white text-xs font-semibold active:scale-95 transition"
           >
             <ImagePlus size={14} className="inline mr-1.5" />CREAR OBRA
           </button>
@@ -361,11 +361,11 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
                 key={art.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35, delay: Math.min(i * 0.04, 0.3), ease: [0.22, 1, 0.36, 1] }}
+                transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
                 onClick={() => setDetailPost(art)}
                 className="group text-left w-full"
               >
-                <div className="relative panel rounded-2xl overflow-hidden border border-border/40 hover:border-primary/40 hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 active:scale-[0.97]">
+                <div className="relative rounded-lg overflow-hidden border border-border/70 bg-surface hover:border-border-strong transition-colors duration-200 active:scale-[0.97]">
                   {/* Hairline degradado superior */}
                   <div className="h-[2px] w-full bg-gradient-to-r from-primary via-accent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   {/* Image area with decorative gradient border */}
@@ -387,7 +387,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
 
                     {/* Premium hover overlay with glass effect */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/0 via-black/0 to-black/0 group-hover:from-black/30 group-hover:via-black/10 group-hover:to-transparent transition-all duration-300 flex items-center justify-center">
-                      <div className="opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center gap-1.5 px-4 py-2 rounded-full bg-white/15 backdrop-blur-md text-white text-[10px] font-display tracking-widest shadow-lg translate-y-3 group-hover:translate-y-0 border border-white/20">
+                      <div className="opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center gap-1.5 px-4 py-2 rounded-full bg-black/50 backdrop-blur-sm text-white text-[10px] font-semibold translate-y-3 group-hover:translate-y-0">
                         <Eye size={12} /> VER DETALLE
                       </div>
                     </div>
@@ -395,19 +395,19 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
                     {/* Badge row */}
                     <div className="absolute top-2.5 right-2.5 flex gap-1.5">
                       {forSale ? (
-                        <span className="px-2.5 py-0.5 rounded-full text-[8px] font-display tracking-widest bg-amber-500/30 text-amber-300 border border-amber-400/40 backdrop-blur-md shadow-sm">
+                        <span className="px-2.5 py-0.5 rounded-full text-[9px] font-semibold bg-amber-500/15 text-amber-600 border border-amber-500/30">
                           {sellingMe ? "EN VENTA" : "REVENTA"}
                         </span>
                       ) : mine ? (
-                        <span className="px-2.5 py-0.5 rounded-full text-[8px] font-display tracking-widest bg-primary/30 text-white border border-white/20 backdrop-blur-md shadow-sm">
+                        <span className="px-2.5 py-0.5 rounded-full text-[9px] font-semibold bg-primary text-white">
                           TUYA
                         </span>
                       ) : owned ? (
-                        <span className="px-2.5 py-0.5 rounded-full text-[8px] font-display tracking-widest bg-emerald-500/30 text-emerald-300 border border-emerald-400/30 backdrop-blur-md shadow-sm">
+                        <span className="px-2.5 py-0.5 rounded-full text-[9px] font-semibold bg-emerald-500/15 text-emerald-600 border border-emerald-500/30">
                           COLECTADA
                         </span>
                       ) : price > 0 ? null : (
-                        <span className="px-2.5 py-0.5 rounded-full text-[8px] font-display tracking-widest bg-emerald-500/30 text-emerald-300 border border-emerald-400/30 backdrop-blur-md shadow-sm">
+                        <span className="px-2.5 py-0.5 rounded-full text-[9px] font-semibold bg-emerald-500/15 text-emerald-600 border border-emerald-500/30">
                           GRATIS
                         </span>
                       )}
@@ -416,7 +416,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
                     {/* Price pill - floating at bottom */}
                     {price > 0 && !mine && !owned && (
                       <div className="absolute bottom-2.5 left-2.5">
-                        <span className="px-3 py-1 rounded-full text-[10px] font-display tracking-widest bg-gradient-to-r from-primary to-accent text-white backdrop-blur-md flex items-center gap-1.5 shadow-lg shadow-primary/20">
+                        <span className="px-3 py-1 rounded-full text-[10px] font-semibold bg-primary text-white flex items-center gap-1.5 shadow-sm">
                           <Sparkles size={10} /> {price}
                         </span>
                       </div>
@@ -488,7 +488,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
                         {!owned && price > 0 && (
                           <span
                             onClick={e => { e.stopPropagation(); openBuy(art.id); }}
-                            className="flex-1 py-1.5 rounded-lg bg-gradient-to-r from-primary to-accent text-primary-foreground text-[9px] font-display tracking-widest active:scale-95 transition text-center cursor-pointer shadow-sm"
+                            className="flex-1 py-1.5 rounded-md bg-primary text-white text-[10px] font-semibold active:scale-95 transition text-center cursor-pointer"
                           >
                             COMPRAR CON <Sparkles size={8} className="inline" /> {price}
                           </span>
@@ -496,20 +496,20 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
                         {!owned && price === 0 && (
                           <span
                             onClick={e => { e.stopPropagation(); openBuy(art.id); }}
-                            className="flex-1 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-400 text-[9px] font-display tracking-widest border border-emerald-500/20 active:scale-95 transition text-center cursor-pointer"
+                            className="flex-1 py-1.5 rounded-md bg-emerald-500/15 text-emerald-600 text-[10px] font-semibold border border-emerald-500/30 active:scale-95 transition text-center cursor-pointer"
                           >
                             OBTENER GRATIS
                           </span>
                         )}
                         {owned && (
                           <>
-                            <span className="flex-1 py-1.5 rounded-lg bg-muted/30 text-muted-foreground/50 text-[9px] font-display tracking-widest text-center border border-border/30 cursor-default">
+                            <span className="flex-1 py-1.5 rounded-md bg-muted/40 text-muted-foreground text-[10px] font-medium text-center border border-border/30 cursor-default">
                               ✔ COLECTADA
                             </span>
                             {myId && (
                               <button
                                 onClick={e => { e.stopPropagation(); openResell(art); }}
-                                className="px-3 py-1.5 rounded-lg border border-primary/40 text-primary-glow text-[9px] font-display tracking-widest hover:bg-primary/10 active:scale-95 transition"
+                                className="px-3 py-1.5 rounded-md border border-primary/30 text-primary text-[10px] font-semibold hover:bg-primary/10 active:scale-95 transition"
                               >
                                 <DollarSign size={9} className="inline mr-0.5" /> REVENDER
                               </button>
@@ -523,18 +523,18 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
                         {sellingMe ? (
                           <button
                             onClick={e => { e.stopPropagation(); setResellPost(art); setResellPrice(0); setResellErr(null); }}
-                            className="flex-1 py-1.5 rounded-lg border border-amber-400/30 text-amber-400 text-[9px] font-display tracking-widest hover:bg-amber-400/10 active:scale-95 transition"
+                            className="flex-1 py-1.5 rounded-md border border-amber-500/40 text-amber-600 text-[10px] font-semibold hover:bg-amber-500/10 active:scale-95 transition"
                           >
                             EN VENTA · {art.resale_price_orbes} · RETIRAR
                           </button>
                         ) : owned ? (
-                          <span className="flex-1 py-1.5 rounded-lg bg-muted/30 text-muted-foreground/50 text-[9px] font-display tracking-widest text-center border border-border/30 cursor-default">
+                          <span className="flex-1 py-1.5 rounded-md bg-muted/40 text-muted-foreground text-[10px] font-medium text-center border border-border/30 cursor-default">
                             ✔ COLECTADA
                           </span>
                         ) : (
                           <span
                             onClick={e => { e.stopPropagation(); openBuy(art.id); }}
-                            className="flex-1 py-1.5 rounded-lg bg-gradient-to-r from-primary to-accent text-primary-foreground text-[9px] font-display tracking-widest active:scale-95 transition text-center cursor-pointer shadow-sm"
+                            className="flex-1 py-1.5 rounded-md bg-primary text-white text-[10px] font-semibold active:scale-95 transition text-center cursor-pointer"
                           >
                             COMPRAR CON <Sparkles size={8} className="inline" /> {price}
                           </span>
@@ -564,7 +564,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.92, y: 20 }}
               transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-              className="w-full max-w-lg max-h-[90vh] overflow-y-auto panel border border-border/60 rounded-3xl shadow-2xl"
+              className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-lg border border-border bg-surface shadow-md"
               onClick={e => e.stopPropagation()}
             >
               {/* Image */}
@@ -630,12 +630,12 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
                     <button
                       onClick={e => { e.stopPropagation(); setDetailPost(null); openBuy(detailPost.id); }}
                       disabled={detailPost.owned}
-                      className={`shrink-0 px-4 py-2 rounded-xl text-[10px] font-display tracking-widest transition active:scale-95 ${
+                      className={`shrink-0 px-4 py-2 rounded-lg text-[11px] font-semibold transition active:scale-95 ${
                         detailPost.owned
-                          ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20"
+                          ? "bg-emerald-500/15 text-emerald-600 border border-emerald-500/30"
                           : effPrice(detailPost) > 0
-                            ? "bg-gradient-to-r from-primary to-accent text-primary-foreground hover:shadow-lg hover:shadow-primary/20"
-                            : "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/25"
+                            ? "bg-gradient-to-r from-primary to-accent text-white"
+                            : "bg-emerald-500/15 text-emerald-600 border border-emerald-500/30 hover:bg-emerald-500/25"
                       }`}
                     >
                       {detailPost.owned
@@ -651,7 +651,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
                 {(detailPost.owned && detailPost.author_id !== myId && !detailPost.seller_id) && (
                   <button
                     onClick={e => { e.stopPropagation(); openResell(detailPost); }}
-                    className="w-full h-10 rounded-xl border border-primary/40 text-primary-glow text-[10px] font-display tracking-widest hover:bg-primary/10 active:scale-[0.98] transition flex items-center justify-center gap-1.5"
+                    className="w-full h-10 rounded-lg border border-primary/30 text-primary text-[10px] font-semibold hover:bg-primary/10 active:scale-[0.98] transition flex items-center justify-center gap-1.5"
                   >
                     <DollarSign size={12} /> REVENDER ESTA OBRA
                   </button>
@@ -659,7 +659,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
                 {detailPost.seller_id === myId && (
                   <button
                     onClick={e => { e.stopPropagation(); setResellPost(detailPost); setResellPrice(0); setResellErr(null); }}
-                    className="w-full h-10 rounded-xl border border-amber-400/40 text-amber-400 text-[10px] font-display tracking-widest hover:bg-amber-400/10 active:scale-[0.98] transition flex items-center justify-center gap-1.5"
+                    className="w-full h-10 rounded-lg border border-amber-500/40 text-amber-600 text-[10px] font-semibold hover:bg-amber-500/10 active:scale-[0.98] transition flex items-center justify-center gap-1.5"
                   >
                     <DollarSign size={12} /> RETIRAR DE LA VENTA
                   </button>
@@ -673,8 +673,8 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
                     title={myId ? (detailPost.my_like ? "Quitar like" : "Me gusta") : "Inicia sesión para dar like"}
                     className={`flex items-center gap-1 rounded-lg px-2 py-1.5 border transition active:scale-95 disabled:opacity-50 ${
                       detailPost.my_like
-                        ? "border-rose-400/40 bg-rose-500/10 text-rose-400"
-                        : "border-border hover:border-rose-400/40 hover:text-rose-400"
+                        ? "border-rose-500/40 bg-rose-500/10 text-rose-600"
+                        : "border-border hover:border-rose-500/40 hover:text-rose-600"
                     }`}
                   >
                     {likingId === detailPost.id
@@ -743,12 +743,12 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 30, scale: 0.96 }}
               transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-              className="w-full max-w-sm panel border border-border/60 rounded-2xl p-5 space-y-4 shadow-2xl"
+              className="w-full max-w-sm rounded-lg border border-border bg-surface p-5 space-y-4 shadow-md"
               onClick={e => e.stopPropagation()}
             >
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-accent grid place-items-center">
-                  <ImagePlus size={14} className="text-primary-foreground" />
+                <div className="w-8 h-8 rounded-lg bg-primary text-white grid place-items-center">
+                  <ImagePlus size={14} />
                 </div>
                 <div className="font-display text-sm">Publicar obra</div>
                 <button onClick={() => setSavedSprite(null)} className="ml-auto w-8 h-8 grid place-items-center rounded-xl border border-border hover:bg-muted/40 transition">
@@ -771,7 +771,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
               />
 
               <div>
-                <div className="text-[10px] font-display tracking-widest text-muted-foreground mb-1.5 flex items-center gap-1">
+                <div className="text-[11px] font-medium text-muted-foreground mb-1.5 flex items-center gap-1">
                   <Sparkles size={10} /> PRECIO EN ORBES
                 </div>
                 <div className="flex items-center gap-2">
@@ -792,12 +792,12 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
                 <button
                   onClick={() => setSavedSprite(null)}
                   disabled={publishing}
-                  className="flex-1 h-10 rounded-xl border border-border text-xs font-display tracking-widest active:scale-95 disabled:opacity-50 transition"
+                  className="flex-1 h-10 rounded-lg border border-border text-xs font-medium active:scale-95 disabled:opacity-50 transition"
                 >CANCELAR</button>
                 <button
                   onClick={doPublish}
                   disabled={publishing || !pubTitle.trim()}
-                  className="flex-1 h-10 rounded-xl bg-gradient-to-r from-primary to-accent text-primary-foreground text-xs font-display tracking-widest active:scale-95 disabled:opacity-50 transition shadow-sm"
+                  className="flex-1 h-10 rounded-lg bg-gradient-to-r from-primary to-accent text-white text-xs font-semibold active:scale-95 disabled:opacity-50 transition"
                 >
                   {publishing ? <Loader2 size={14} className="animate-spin mx-auto" /> : "PUBLICAR"}
                 </button>
@@ -838,12 +838,12 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 30, scale: 0.96 }}
               transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-              className="w-full max-w-sm panel border border-border/60 rounded-2xl p-5 space-y-4 shadow-2xl"
+              className="w-full max-w-sm rounded-lg border border-border bg-surface p-5 space-y-4 shadow-md"
               onClick={e => e.stopPropagation()}
             >
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-500 to-primary grid place-items-center">
-                  <DollarSign size={14} className="text-primary-foreground" />
+                <div className="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-600 grid place-items-center">
+                  <DollarSign size={14} />
                 </div>
                 <div className="font-display text-sm">Revender obra</div>
                 <button onClick={() => setResellPost(null)} disabled={reselling} className="ml-auto w-8 h-8 grid place-items-center rounded-xl border border-border hover:bg-muted/40 transition disabled:opacity-50">
@@ -867,7 +867,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
               </div>
 
               <div>
-                <div className="text-[10px] font-display tracking-widest text-muted-foreground mb-1.5 flex items-center gap-1">
+                <div className="text-[11px] font-medium text-muted-foreground mb-1.5 flex items-center gap-1">
                   <Sparkles size={10} /> PRECIO EN ORBES
                 </div>
                 <div className="flex items-center gap-2">
@@ -888,12 +888,12 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
                 <button
                   onClick={() => setResellPost(null)}
                   disabled={reselling}
-                  className="flex-1 h-10 rounded-xl border border-border text-xs font-display tracking-widest active:scale-95 disabled:opacity-50 transition"
+                  className="flex-1 h-10 rounded-lg border border-border text-xs font-medium active:scale-95 disabled:opacity-50 transition"
                 >CANCELAR</button>
                 <button
                   onClick={doResell}
                   disabled={reselling}
-                  className="flex-1 h-10 rounded-xl bg-gradient-to-r from-amber-500 to-primary text-primary-foreground text-xs font-display tracking-widest active:scale-95 disabled:opacity-50 transition shadow-sm"
+                  className="flex-1 h-10 rounded-lg bg-amber-500 text-white text-xs font-semibold active:scale-95 disabled:opacity-50 transition"
                 >
                   {reselling ? <Loader2 size={14} className="animate-spin mx-auto" /> : resellPrice > 0 ? "PONER EN VENTA" : "RETIRAR DE VENTA"}
                 </button>
@@ -916,12 +916,12 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 30, scale: 0.96 }}
               transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-              className="w-full max-w-sm panel border border-border/60 rounded-2xl p-5 space-y-3 shadow-2xl"
+              className="w-full max-w-sm rounded-lg border border-border bg-surface p-5 space-y-3 shadow-md"
               onClick={e => e.stopPropagation()}
             >
               {(buyState === "idle" || buyState === "loading") && (
                 <>
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/25 to-accent/20 grid place-items-center mx-auto">
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 grid place-items-center mx-auto">
                     {buyState === "loading"
                       ? <Loader2 size={22} className="animate-spin text-primary" />
                       : <Sparkles size={22} className="text-primary" />}
@@ -959,7 +959,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
                   <button
                     onClick={confirmBuy}
                     disabled={buyState === "loading" || (balance !== null && (balance - (artworks.find(a => a.id === buyPostId) ? effPrice(artworks.find(a => a.id === buyPostId)!) : 0) < 0))}
-                    className="w-full h-10 rounded-xl bg-gradient-to-r from-primary to-accent text-primary-foreground text-xs font-display tracking-widest disabled:opacity-50 active:scale-[0.98] transition shadow-sm"
+                    className="w-full h-10 rounded-lg bg-gradient-to-r from-primary to-accent text-white text-xs font-semibold disabled:opacity-50 active:scale-[0.98] transition"
                   >
                     {buyState === "loading" ? <Loader2 size={14} className="animate-spin mx-auto" /> : "CONFIRMAR"}
                   </button>
@@ -985,7 +985,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
               {buyState !== "loading" && (
                 <button
                   onClick={() => setBuyPostId(null)}
-                  className="w-full h-9 rounded-xl border border-border text-[10px] font-display tracking-widest active:scale-95 transition"
+                  className="w-full h-9 rounded-lg border border-border text-[11px] font-medium active:scale-95 transition"
                 >{buyState === "success" ? "ENTENDIDO" : "CANCELAR"}</button>
               )}
             </motion.div>

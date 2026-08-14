@@ -122,7 +122,7 @@ export const PostCard = memo(function PostCard({
               <button onClick={() => setEditing(false)}
                 className="text-xs px-3.5 py-1.5 rounded-full border border-border hover:bg-muted/40 transition-colors duration-200">Cancelar</button>
               <button onClick={saveEdit}
-                className="text-xs px-3.5 py-1.5 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-sm active:scale-[0.96] transition-transform duration-300 ease-out">Guardar</button>
+                className="text-xs px-3.5 py-1.5 rounded-full bg-primary text-white active:scale-[0.96] transition-transform duration-300 ease-out">Guardar</button>
             </div>
           </div>
         ) : (
@@ -189,8 +189,8 @@ export const PostCard = memo(function PostCard({
             {post.pinned_game.cover_url ? (
               <img src={post.pinned_game.cover_url} alt="" className="w-14 h-14 rounded-xl object-cover shrink-0 ring-1 ring-border/50" />
             ) : (
-              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary to-accent grid place-items-center shrink-0 shadow-[0_4px_12px_-4px_oklch(0.52_0.19_258/0.5)]">
-                <Gamepad2 size={22} className="text-primary-foreground" />
+              <div className="w-14 h-14 rounded-xl bg-primary/10 border border-primary/20 grid place-items-center shrink-0">
+                <Gamepad2 size={22} className="text-primary" />
               </div>
             )}
             <div className="min-w-0 flex-1">
@@ -220,7 +220,7 @@ export const PostCard = memo(function PostCard({
                 {post.unlock_reactions_goal && (
                   <div className="flex items-center gap-2">
                     <span className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
-                      <span className="block h-full bg-gradient-to-r from-primary to-accent rounded-full transition-[width] duration-700 ease-out"
+                      <span className="block h-full bg-primary rounded-full transition-[width] duration-700 ease-out"
                         style={{ width: `${Math.min(100, Math.round(((post.likes + post.favorites) / post.unlock_reactions_goal) * 100))}%` }} />
                     </span>
                     <span className="tabular-nums">{post.likes + post.favorites} / {post.unlock_reactions_goal}</span>
@@ -320,7 +320,7 @@ function PollView({ poll, onVote }: { poll: NonNullable<PostWithMeta["poll"]>; o
   return (
     <div className="rounded-2xl border border-border bg-muted/20 p-3.5 space-y-2.5">
       <div className="flex items-start gap-2">
-        <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-accent grid place-items-center shrink-0 mt-0.5">
+        <span className="w-7 h-7 rounded-lg bg-primary/10 grid place-items-center shrink-0 mt-0.5">
           <span className="text-primary-foreground text-[11px]">📊</span>
         </span>
         <div className="text-sm font-display leading-snug">{poll.question}</div>
@@ -333,12 +333,12 @@ function PollView({ poll, onVote }: { poll: NonNullable<PostWithMeta["poll"]>; o
           <button key={i} onClick={() => onVote(i)}
             className={`relative w-full text-left rounded-xl overflow-hidden border transition-[transform,border-color,box-shadow] duration-300 ease-out active:scale-[0.98] ${mine ? "border-primary/50 shadow-sm" : "border-border/60 pointer-fine:hover:border-primary/30"}`}>
             {voted && (
-              <div className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary/20 to-accent/15 transition-[width] duration-700 ease-out"
+              <div className="absolute inset-y-0 left-0 bg-primary/15 transition-[width] duration-700 ease-out"
                 style={{ width: `${pct}%` }} />
             )}
             <div className="relative flex items-center justify-between px-3 py-2.5 text-xs gap-2">
               <span className={`flex items-center gap-2 ${mine ? "font-semibold text-primary-glow" : ""}`}>
-                {mine && <span className="w-4 h-4 rounded-full bg-gradient-to-br from-primary to-accent grid place-items-center"><span className="w-1.5 h-1.5 rounded-full bg-white" /></span>}
+                {mine && <span className="w-4 h-4 rounded-full bg-primary grid place-items-center"><span className="w-1.5 h-1.5 rounded-full bg-white" /></span>}
                 {opt}
               </span>
               {voted && <span className="tabular-nums text-muted-foreground font-medium">{pct}% · {count}</span>}

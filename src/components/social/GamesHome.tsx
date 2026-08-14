@@ -179,7 +179,7 @@ function TrendChip({ active, onClick, icon, label }: { active: boolean; onClick:
       onClick={onClick}
       className={`shrink-0 flex items-center gap-1.5 px-3 h-8 rounded-full text-[11px] font-medium transition-colors duration-200 active:scale-[0.96] ${
         active
-          ? "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-sm"
+          ? "bg-primary text-white"
           : "bg-card border border-line-strong text-ink-2 hover:border-primary/30 hover:text-primary"
       }`}
     >
