@@ -66,13 +66,13 @@ export const PostCard = memo(function PostCard({
   const avatarInner = <Avatar p={author} className="w-full h-full" />;
 
   const categoryChip = post.category ? (
-    <span className="inline-flex items-center gap-1 text-[10px] font-display tracking-wide uppercase px-2 py-0.5 rounded-full bg-gradient-to-r from-primary/12 to-accent/12 text-primary-glow border border-primary/15">
+    <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
       {post.category}
     </span>
   ) : null;
 
   return (
-    <article className={`group panel rounded-2xl border border-border/60 transition-[transform,box-shadow,border-color] duration-300 ease-out sm:pointer-fine:hover:shadow-lg sm:pointer-fine:hover:-translate-y-0.5 pointer-fine:hover:border-primary/25 ${entranceClass}`}>
+    <article className={`group panel rounded-2xl border border-border/60 transition-[border-color,box-shadow] duration-200 ease-out pointer-fine:hover:border-primary/30 pointer-fine:hover:shadow-sm ${entranceClass}`}>
       {/* Hairline degradado superior */}
       <div className="h-[3px] w-full rounded-t-2xl bg-gradient-to-r from-primary via-accent to-transparent opacity-70 pointer-fine:group-hover:opacity-100 transition-opacity duration-300" />
 
@@ -87,7 +87,7 @@ export const PostCard = memo(function PostCard({
                 </div>
               </div>
             ) : (
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/40 to-accent/30 grid place-items-center font-display text-xs text-primary-glow overflow-hidden ring-1 ring-border/60">
+              <div className="w-10 h-10 rounded-full overflow-hidden ring-1 ring-line-strong shadow-xs">
                 {avatarInner}
               </div>
             )}
@@ -97,8 +97,8 @@ export const PostCard = memo(function PostCard({
               <UserName p={author} size="sm" />
               {categoryChip}
             </div>
-            <div className="text-[10px] font-mono text-muted-foreground mt-0.5">
-              @{author?.username ?? "?"} · <span className="text-primary-glow/80 font-medium">{timeAgo(post.created_at)}</span>
+            <div className="text-[10px] font-mono text-ink-3 mt-0.5">
+              @{author?.username ?? "?"} · <span className="text-primary font-medium">{timeAgo(post.created_at)}</span>
             </div>
           </Link>
           <button ref={menu.anchorRef} onClick={menu.toggle}

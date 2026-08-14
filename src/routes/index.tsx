@@ -1,8 +1,8 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { Avatar } from "@/components/social/Avatar";
-import { Component, useEffect, useState, useCallback, useRef, useLayoutEffect } from "react";
+import { Component, useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Gamepad2, Newspaper, Search, LogOut, Wrench, Plus, ShieldCheck, User, Sparkles, Star, Menu, MessageCircle, Bell, X, Home, Users, Flame, MessageSquare, Palette, Trophy, History, Clock, BarChart3, ChevronDown, ChevronRight, Globe, Heart, Megaphone, Bot } from "lucide-react";
+import { Gamepad2, Newspaper, Search, LogOut, Wrench, Plus, ShieldCheck, User, Sparkles, Star, Menu, MessageCircle, Bell, X, Home, Users, Flame, MessageSquare, Palette, Trophy, BarChart3, ChevronRight, Megaphone, Bot } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { fetchFeed, fetchGames, getMyProfile, isMod, isAdmin, type PostWithMeta, type Profile } from "@/lib/social/api";
@@ -18,6 +18,7 @@ import OrionPanel from "@/components/ai/OrionPanel";
 import { ForumSection } from "@/components/social/ForumSection";
 import { GallerySection } from "@/components/social/GallerySection";
 import { EventsSection } from "@/components/social/EventsSection";
+import { SegmentedControl } from "@/components/ui/segmented";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -55,8 +56,8 @@ class ChatBoundary extends Component<
       return (
         <div className="fixed inset-0 z-[90] bg-background/97 backdrop-blur-xl grid place-items-center p-6">
           <div className="text-center max-w-xs">
-            <div className="w-12 h-12 mx-auto mb-3 rounded-2xl bg-rose-500/10 grid place-items-center">
-              <MessageCircle size={20} className="text-rose-500" />
+            <div className="w-12 h-12 mx-auto mb-3 rounded-2xl bg-destructive/10 grid place-items-center">
+              <MessageCircle size={20} className="text-destructive" />
             </div>
             <p className="text-sm font-semibold mb-1">El chat tuvo un problema</p>
             <p className="text-xs text-muted-foreground mb-4 leading-relaxed">
@@ -65,13 +66,13 @@ class ChatBoundary extends Component<
             <div className="flex items-center justify-center gap-2">
               <button
                 onClick={this.props.onRetry}
-                className="px-4 py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-xs font-display tracking-widest active:scale-95 transition"
+                className="px-4 py-2 rounded-xl btn-grad text-xs font-display tracking-widest"
               >
                 REINTENTAR
               </button>
               <button
                 onClick={this.props.onClose}
-                className="px-4 py-2 rounded-xl border border-border bg-background text-foreground text-xs font-display tracking-widest active:scale-95 transition"
+                className="px-4 py-2 rounded-xl border border-line-strong bg-card text-foreground text-xs font-display tracking-widest hover:bg-muted/60 transition"
               >
                 VOLVER
               </button>
@@ -104,39 +105,6 @@ function HomePage() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [chatShareText, setChatShareText] = useState<string | null>(null);
   const [inPreview, setInPreview] = useState(false);
-
-  // Píldora de las pestañas del encabezado: se mide la posición REAL de cada
-  // botón (offsetLeft/offsetWidth) y se anima solo con transform en px → queda
-  // siempre pegada, sin calc() que falle al interpolar ni desalineación por
-  // ancho mínimo / desbordamiento. Cero medición por frame → sin lag.
-  const tabIdx = tab === "games" ? 0 : tab === "feed" ? 1 : tab === "gallery" ? 2 : tab === "events" ? 3 : 4;
-  const tabRowRef = useRef<HTMLDivElement | null>(null);
-  const tabBtnRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const [tabPill, setTabPill] = useState<{ left: number; width: number } | null>(null);
-
-  const measureTabPill = useCallback(() => {
-    const row = tabRowRef.current;
-    const btn = tabBtnRefs.current[tabIdx];
-    if (!row || !btn) return;
-    const r = row.getBoundingClientRect();
-    const b = btn.getBoundingClientRect();
-    setTabPill(p =>
-      p && Math.abs(p.left - (b.left - r.left)) < 0.5 && Math.abs(p.width - b.width) < 0.5
-        ? p
-        : { left: b.left - r.left, width: b.width }
-    );
-  }, [tabIdx]);
-
-  useLayoutEffect(() => { measureTabPill(); }, [measureTabPill]);
-
-  useEffect(() => {
-    window.addEventListener("resize", measureTabPill);
-    const t = window.setTimeout(measureTabPill, 150);
-    return () => {
-      window.removeEventListener("resize", measureTabPill);
-      window.clearTimeout(t);
-    };
-  }, [measureTabPill]);
 
   // When the app runs embedded in the Freebuff preview (inside an iframe), the
   // platform's floating button overlaps the top-right of the app. Push the
@@ -245,94 +213,56 @@ function HomePage() {
   return (
     <div className="min-h-screen w-full flex flex-col bg-background text-foreground">
       {/* Header */}
-      <header className="app-header sticky top-0 z-20 bg-background/92 backdrop-blur-xl border-b border-border/60">
-        <div className={`max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto flex items-center gap-1.5 sm:gap-2.5 px-3 sm:px-4 ${inPreview ? "pt-14 pb-3" : "py-3"}`}>
+      <header className="app-header sticky top-0 z-20 bg-background/90 backdrop-blur-xl border-b border-border/70">
+        <div className={`max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto flex items-center gap-2 sm:gap-2.5 px-3 sm:px-4 ${inPreview ? "pt-14 pb-3" : "py-2.5"}`}>
           <button onClick={() => navigate({ to: "/profile" })} title="Mi perfil"
-            className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-gradient-to-br from-primary to-accent grid place-items-center shadow-[0_2px_10px_-3px_oklch(0.52_0.19_258/0.45)] active:scale-95 transition overflow-hidden shrink-0">
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl overflow-hidden ring-1 ring-line-strong shadow-sm active:scale-95 transition shrink-0">
             <Avatar p={me} className="w-full h-full" />
           </button>
           <div className="flex-1 min-w-0 header-name">
             <div className="font-display text-[13px] sm:text-sm font-semibold text-foreground leading-none truncate">Asternal</div>
-            <div className="text-[10px] sm:text-[11px] text-muted-foreground/70 truncate mt-1">@{me?.username ?? "…"}</div>
+            <div className="text-[10px] sm:text-[11px] text-ink-3 truncate mt-1">@{me?.username ?? "…"}</div>
           </div>
           {typeof me?.orbes === "number" && me?.show_orbes !== false && (
             <Link
               to="/orbes"
               title={`${me.orbes} orbes · Ver panel`}
-              className="flex items-center gap-1 px-1.5 sm:px-2 h-8 sm:h-9 rounded-lg sm:rounded-xl bg-primary/10 border border-primary/20 shadow-sm active:scale-95 shrink-0"
+              className="flex items-center gap-1.5 h-8 sm:h-9 px-2 sm:px-2.5 rounded-lg bg-primary/10 text-primary border border-primary/15 hover:bg-primary/15 active:scale-95 transition shrink-0"
             >
               <Sparkles size={12} className="text-primary shrink-0" fill="currentColor" />
               <span className="text-[11px] sm:text-xs font-display font-semibold tabular-nums">{me.orbes}</span>
             </Link>
           )}
           <button onClick={() => setMenuOpen(true)} title="Menú"
-            className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl border border-border/70 hover:bg-muted/60 bg-background grid place-items-center active:scale-95 transition shrink-0">
-            <Menu size={15} className="sm:hidden" />
-            <Menu size={16} className="hidden sm:block" />
+            className="w-9 h-9 rounded-lg border border-line-strong bg-card text-ink-2 grid place-items-center hover:bg-muted/60 hover:text-foreground active:scale-95 transition shrink-0">
+            <Menu size={16} />
           </button>
         </div>
-
-
-
 
         {showSearch && (
           <div className="max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto px-3 pb-2 flex gap-2 animate-in fade-in slide-in-from-top-2">
             <input value={search} onChange={e => setSearch(e.target.value)}
               onKeyDown={e => e.key === "Enter" && reload(tab)}
               placeholder={tab === "games" ? "Buscar juegos…" : "Buscar publicaciones…"}
-              className="flex-1 bg-input/50 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40" />
-            <button onClick={() => reload(tab)} className="px-3 py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-xs font-display tracking-widest shadow-[0_2px_8px_-3px_oklch(0.52_0.19_258/0.4)] active:scale-95 transition">IR</button>
+              className="flex-1 bg-card border border-line-strong rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40 placeholder:text-muted-foreground" />
+            <button onClick={() => reload(tab)}
+              className="px-4 py-2 rounded-lg btn-grad text-xs font-display tracking-widest shrink-0">IR</button>
           </div>
         )}
 
-        {/* Tabs */}
-        <div className="max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto px-3 pb-2">
-          <div ref={tabRowRef} className="relative flex bg-muted/50 rounded-2xl p-0.5">
-            <button
-              ref={el => { tabBtnRefs.current[0] = el; }}
-              onClick={() => setTab("games")}
-              className={`relative z-10 flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-2 rounded-xl text-[10px] sm:text-[11px] font-display tracking-wider sm:tracking-widest transition-colors duration-200 ${tab === "games" ? "text-primary-foreground" : "text-muted-foreground"}`}
-            >
-              <Gamepad2 size={14} className="shrink-0" /> <span className="hidden min-[380px]:inline">JUEGOS</span>
-            </button>
-            <button
-              ref={el => { tabBtnRefs.current[1] = el; }}
-              onClick={() => setTab("feed")}
-              className={`relative z-10 flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-2 rounded-xl text-[10px] sm:text-[11px] font-display tracking-wider sm:tracking-widest transition-colors duration-200 ${tab === "feed" ? "text-primary-foreground" : "text-muted-foreground"}`}
-            >
-              <Newspaper size={14} className="shrink-0" /> <span className="hidden min-[380px]:inline">FEED</span>
-            </button>
-            <button
-              ref={el => { tabBtnRefs.current[2] = el; }}
-              onClick={() => setTab("gallery")}
-              className={`relative z-10 flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-2 rounded-xl text-[10px] sm:text-[11px] font-display tracking-wider sm:tracking-widest transition-colors duration-200 ${tab === "gallery" ? "text-primary-foreground" : "text-muted-foreground"}`}
-            >
-              <Palette size={14} className="shrink-0" /> <span className="hidden min-[380px]:inline">GALERÍA</span>
-            </button>
-            <button
-              ref={el => { tabBtnRefs.current[3] = el; }}
-              onClick={() => setTab("events")}
-              className={`relative z-10 flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-2 rounded-xl text-[10px] sm:text-[11px] font-display tracking-wider sm:tracking-widest transition-colors duration-200 ${tab === "events" ? "text-primary-foreground" : "text-muted-foreground"}`}
-            >
-              <Trophy size={14} className="shrink-0" /> <span className="hidden min-[380px]:inline">EVENTOS</span>
-            </button>
-            <button
-              ref={el => { tabBtnRefs.current[4] = el; }}
-              onClick={() => setTab("profile")}
-              className={`relative z-10 flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-2 rounded-xl text-[10px] sm:text-[11px] font-display tracking-wider sm:tracking-widest transition-colors duration-200 ${tab === "profile" ? "text-primary-foreground" : "text-muted-foreground"}`}
-            >
-              <User size={14} className="shrink-0" /> <span className="hidden min-[380px]:inline">PERFIL</span>
-            </button>
-            <div
-              aria-hidden
-              className="absolute top-1 bottom-1 rounded-xl bg-gradient-to-br from-primary to-accent shadow-sm transition-transform duration-300 ease-out will-change-transform"
-              style={{
-                left: 0,
-                width: tabPill?.width ?? 0,
-                transform: `translate3d(${tabPill?.left ?? 0}px, 0, 0)`,
-              }}
-            />
-          </div>
+        {/* Tabs principales */}
+        <div className="max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto px-3 pb-2.5">
+          <SegmentedControl
+            items={[
+              { id: "games", label: <span className="hidden min-[380px]:inline">JUEGOS</span>, icon: <Gamepad2 size={14} className="shrink-0" />, title: "Juegos" },
+              { id: "feed", label: <span className="hidden min-[380px]:inline">FEED</span>, icon: <Newspaper size={14} className="shrink-0" />, title: "Feed" },
+              { id: "gallery", label: <span className="hidden min-[380px]:inline">GALERÍA</span>, icon: <Palette size={14} className="shrink-0" />, title: "Galería" },
+              { id: "events", label: <span className="hidden min-[380px]:inline">EVENTOS</span>, icon: <Trophy size={14} className="shrink-0" />, title: "Eventos" },
+              { id: "profile", label: <span className="hidden min-[380px]:inline">PERFIL</span>, icon: <User size={14} className="shrink-0" />, title: "Perfil" },
+            ]}
+            value={tab}
+            onChange={setTab}
+          />
         </div>
       </header>
 
@@ -422,7 +352,7 @@ function HomePage() {
       {/* Floating CTA to editor */}
       <Link
         to="/editor"
-        className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-[max(1.25rem,env(safe-area-inset-right))] z-30 h-14 pl-4 pr-5 rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[0_3px_10px_-4px_oklch(0.52_0.19_258/0.5)] ring-1 ring-white/25 ring-inset flex items-center gap-2 active:scale-95 hover:shadow-[0_6px_16px_-6px_oklch(0.52_0.19_258/0.5)] transition-all duration-300 ease-out font-display tracking-widest text-xs"
+        className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-[max(1.25rem,env(safe-area-inset-right))] z-30 h-14 pl-4 pr-5 rounded-full btn-grad shadow-[0_3px_10px_-4px_oklch(0.52_0.19_258/0.5)] ring-1 ring-white/25 ring-inset flex items-center gap-2 active:scale-95 font-display tracking-widest text-xs"
       >
         <Plus size={18} strokeWidth={2} /> CREAR
       </Link>
@@ -446,27 +376,30 @@ function HomePage() {
           <motion.div
             key="menu-drawer"
             onClick={e => e.stopPropagation()}
-            className="fixed right-0 top-0 z-[101] h-full w-[86vw] max-w-xs bg-background border-l border-border shadow-xl p-4 flex flex-col gap-2 overflow-y-auto"
+            className="fixed right-0 top-0 z-[101] h-full w-[86vw] max-w-xs bg-card border-l border-border shadow-xl p-4 flex flex-col gap-0.5 overflow-y-auto"
             initial={{ x: "100%", opacity: 0.4 }}
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: "100%", opacity: 0 }}
             transition={{ type: "spring", stiffness: 340, damping: 34 }}
           >
-            <div className="flex items-center justify-between mb-2">
-              <div className="font-display text-xs tracking-widest text-primary-glow">MENÚ</div>
-              <button onClick={closeMenu} className="w-8 h-8 rounded-lg border border-border grid place-items-center active:scale-95 bg-background"><X size={14}/></button>
+            <div className="flex items-center justify-between mb-1">
+              <div className="section-label">MENÚ</div>
+              <button onClick={closeMenu}
+                className="w-8 h-8 rounded-lg border border-line-strong bg-card text-ink-2 grid place-items-center hover:bg-muted/60 hover:text-foreground active:scale-95 transition">
+                <X size={14}/>
+              </button>
             </div>
             {/* Acceso directo al perfil: al tocar la foto sales del menú y vas a tu perfil */}
             <button
               onClick={() => { closeMenu(); navigate({ to: "/profile" }); }}
-              className="flex items-center gap-3 p-2.5 rounded-xl border border-border/70 bg-background hover:bg-muted/60 active:scale-[0.98] transition mb-2 text-left"
+              className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-muted/50 active:scale-[0.98] transition mb-2 text-left group"
             >
-              <Avatar p={me} size={44} className="ring-2 ring-primary/20" />
+              <Avatar p={me} size={44} className="ring-2 ring-primary/15" />
               <div className="min-w-0 flex-1">
-                <div className="font-display text-sm truncate">{me?.display_name ?? me?.username ?? "Mi perfil"}</div>
+                <div className="font-display text-sm truncate group-hover:text-primary transition-colors">{me?.display_name ?? me?.username ?? "Mi perfil"}</div>
                 <div className="text-[11px] font-mono text-muted-foreground truncate">@{me?.username ?? "…"} · Ver perfil</div>
               </div>
-              <ChevronRight size={16} className="text-muted-foreground/60 shrink-0" />
+              <ChevronRight size={16} className="text-muted-foreground/50 shrink-0 group-hover:translate-x-0.5 transition-transform" />
             </button>
             {/* Categoría: SOCIAL */}
             <CategoryHeader label="SOCIAL" />
@@ -491,7 +424,7 @@ function HomePage() {
 
             <div className="flex-1 min-h-4" />
             <button onClick={() => { logout(); closeMenu(); }}
-              className="flex items-center gap-3 px-3 h-11 rounded-xl border border-border bg-background text-destructive active:scale-[0.98] transition">
+              className="flex items-center gap-3 px-3 h-11 rounded-lg text-destructive hover:bg-destructive/10 active:scale-[0.98] transition">
               <LogOut size={16} /> <span className="text-sm font-medium">Cerrar sesión</span>
             </button>
           </motion.div>
@@ -541,7 +474,7 @@ function SkeletonList() {
 function MenuLink({ icon, label, to, onClick }: { icon: React.ReactNode; label: string; to: string; onClick?: () => void }) {
   return (
     <Link to={to} onClick={onClick}
-      className="flex items-center gap-3 px-3 h-11 rounded-xl border border-border bg-background hover:bg-muted/60 active:scale-[0.98] transition">
+      className="flex items-center gap-3 px-3 h-10 rounded-lg text-ink hover:bg-muted/60 active:scale-[0.98] transition">
       {icon} <span className="text-sm font-medium">{label}</span>
     </Link>
   );
@@ -550,7 +483,7 @@ function MenuLink({ icon, label, to, onClick }: { icon: React.ReactNode; label: 
 function MenuItem({ icon, label, onClick, children }: { icon: React.ReactNode; label: string; onClick?: () => void; children?: React.ReactNode }) {
   return (
     <button onClick={onClick}
-      className="flex items-center gap-3 px-3 h-11 rounded-xl border border-border bg-background hover:bg-muted/60 active:scale-[0.98] transition w-full text-left">
+      className="flex items-center gap-3 px-3 h-10 rounded-lg text-ink hover:bg-muted/60 active:scale-[0.98] transition w-full text-left">
       {icon} <span className="text-sm font-medium flex-1">{label}</span>
       {children}
     </button>
@@ -559,9 +492,9 @@ function MenuItem({ icon, label, onClick, children }: { icon: React.ReactNode; l
 
 function CategoryHeader({ label }: { label: string }) {
   return (
-    <div className="flex items-center gap-2 pt-1 pb-0.5">
-      <div className="text-[10px] font-display tracking-[0.15em] text-muted-foreground/60">{label}</div>
-      <div className="flex-1 h-px bg-border/40" />
+    <div className="flex items-center gap-2 pt-2 pb-1">
+      <div className="section-label">{label}</div>
+      <div className="flex-1 h-px bg-border/60" />
     </div>
   );
 }
@@ -580,7 +513,7 @@ function FeedSubTabs({ value, onChange }: { value: FeedSub; onChange: (v: FeedSu
     { id: "forums", label: "Foros", icon: <MessageSquare size={13} /> },
   ];
   return (
-    <div className="flex gap-1.5 py-2">
+    <div className="flex gap-1.5 pt-1 pb-2">
       {items.map((it) => {
         const active = value === it.id;
         return (
@@ -588,10 +521,10 @@ function FeedSubTabs({ value, onChange }: { value: FeedSub; onChange: (v: FeedSu
             key={it.id}
             onClick={() => onChange(it.id)}
             aria-pressed={active}
-            className={`flex-1 min-w-0 flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-full text-[10px] sm:text-[11px] font-display tracking-wide sm:tracking-widest whitespace-nowrap border transition-colors duration-200 outline-none focus:outline-none ${
+            className={`flex-1 min-w-0 flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-full text-[10px] sm:text-[11px] font-display font-semibold tracking-wide whitespace-nowrap border transition-colors duration-200 outline-none focus:outline-none active:scale-[0.97] ${
               active
-                ? "border-transparent bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[0_3px_10px_-3px_oklch(0.52_0.19_258/0.4)]"
-                : "border-border/60 bg-background text-muted-foreground hover:border-primary/25 hover:text-foreground"
+                ? "border-transparent bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-sm"
+                : "border-line-strong bg-card text-muted-foreground hover:border-primary/25 hover:text-foreground"
             }`}
           >
             {it.icon} {it.label.toUpperCase()}
@@ -715,5 +648,3 @@ function filterFeed(posts: PostWithMeta[], sub: FeedSub, myId: string | null): P
 
   return posts;
 }
-
-

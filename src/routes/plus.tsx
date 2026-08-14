@@ -1,11 +1,12 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
-  ArrowLeft, Star, Palette, Rocket, Link2, Check, Loader2,
+  Star, Palette, Rocket, Link2, Check, Loader2,
   Youtube, Instagram, Music2, Globe, Gift, Sparkles as SparklesIcon,
   Wand2, IdCard,
 } from "lucide-react";
 
+import { SubPageHeader } from "@/components/social/SubPageHeader";
 import { supabase } from "@/integrations/supabase/client";
 import {
   getMyProfile, claimPlusOrbes, updatePlusSettings,
@@ -154,21 +155,17 @@ function PlusPage() {
 
   return (
     <div className="min-h-screen w-full flex flex-col bg-background text-foreground">
-      <header className="sticky top-0 z-20 panel border-b backdrop-blur-xl">
-        <div className="max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto flex items-center gap-2 px-3 py-2.5">
-          <button onClick={() => navigate({ to: "/" })}
-            className="w-9 h-9 rounded-xl border border-border grid place-items-center active:scale-95 transition">
-            <ArrowLeft size={16} />
-          </button>
-          <div className="flex-1 font-display text-sm flex items-center gap-2" style={{ color: "var(--plus)" }}>
-            <Star size={14} fill="currentColor" /> CENTRO PLUS
-          </div>
-          {isPlus && (
-            <span className="text-[10px] font-display tracking-widest px-2 py-1 rounded-full text-white"
+      <SubPageHeader
+        title="CENTRO PLUS"
+        icon={<Star size={14} fill="currentColor" style={{ color: "var(--plus)" }} />}
+        subtitle={me ? `@${me.username ?? "…"} · Beneficios de Asternal Plus` : undefined}
+        right={
+          isPlus ? (
+            <span className="text-[10px] font-display tracking-widest px-2.5 py-1 rounded-full text-white shadow-sm"
               style={{ background: "var(--gradient-plus)" }}>ACTIVO</span>
-          )}
-        </div>
-      </header>
+          ) : undefined
+        }
+      />
 
       <main className="flex-1 max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto w-full px-3 py-5 pb-24 space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
         {/* Hero */}

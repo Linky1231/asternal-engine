@@ -116,7 +116,7 @@ export function NotificationBell() {
   return (
     <div className="relative" ref={panelRef}>
       <button onClick={toggle} title="Notificaciones"
-        className="relative w-9 h-9 rounded-xl border border-border grid place-items-center active:scale-95 transition text-muted-foreground hover:text-primary">
+        className="relative w-10 h-10 rounded-lg border border-line-strong bg-card grid place-items-center active:scale-95 transition text-ink-2 hover:bg-muted/60 hover:text-foreground shrink-0">
         <Bell size={16} />
         {unread > 0 && (
           <span className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground text-[9px] font-mono rounded-full min-w-4 h-4 px-0.5 grid place-items-center animate-in zoom-in">{unread > 99 ? "99+" : unread}</span>

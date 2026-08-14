@@ -20,6 +20,7 @@ import {
   type EventItem,
 } from "@/lib/social/api";
 import { fetchChatProfiles } from "@/lib/social/chat";
+import { SegmentedControl } from "@/components/ui/segmented";
 import type { Profile } from "@/lib/social/api";
 
 export const Route = createFileRoute("/admin")({
@@ -150,41 +151,43 @@ function AdminPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-10 panel border-b">
-        <div className="max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto flex items-center gap-2 px-3 py-2.5">
-          <Link to="/" className="w-9 h-9 rounded-xl border border-border grid place-items-center active:scale-95"><ArrowLeft size={16} /></Link>
-          <div className="flex-1 min-w-0">
-            <div className="font-display text-sm text-primary-glow glow-text leading-none flex items-center gap-1.5"><ShieldCheck size={14}/> MODERACIÓN</div>
-            <div className="text-[10px] font-mono text-muted-foreground">{admin ? "Administrador" : "Moderador"}</div>
+      <header className="sticky top-0 z-10 bg-background/90 backdrop-blur-xl border-b border-border/70">
+        <div className="max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto px-3 pt-2.5 pb-2.5">
+          <div className="flex items-center gap-2.5">
+            <Link to="/" aria-label="Volver al menú principal"
+              className="w-9 h-9 rounded-lg border border-line-strong bg-card text-ink-2 grid place-items-center hover:bg-muted/60 hover:text-foreground active:scale-95 transition shrink-0">
+              <ArrowLeft size={16} />
+            </Link>
+            <div className="flex-1 min-w-0">
+              <div className="font-display text-sm font-semibold text-foreground leading-none flex items-center gap-2 truncate">
+                <ShieldCheck size={14} className="text-primary shrink-0" /> MODERACIÓN
+              </div>
+              <div className="text-[10px] font-mono text-muted-foreground mt-0.5">{admin ? "Administrador" : "Moderador"}</div>
+            </div>
           </div>
-        </div>
-        <div className="max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto px-3 pb-2">
-          <div className="relative flex bg-muted/50 rounded-2xl p-0.5">
-            {(["mods", "bans", "foros", "eventos"] as const).map(t => (
-              <button key={t} onClick={() => setTab(t)}
-                className={`relative z-10 flex-1 py-2 rounded-xl text-[10px] sm:text-[11px] font-display tracking-wide sm:tracking-widest whitespace-nowrap transition-colors ${
-                  tab === t ? "text-primary-foreground" : "text-muted-foreground"
-                }`}>
-                {t === "mods" ? "MODS" : t === "bans" ? "BANEOS" : t === "foros" ? "FOROS" : "EVENTOS"}
-              </button>
-            ))}
-            <div className="absolute top-0.5 bottom-0.5 w-[calc(25%-3px)] rounded-xl bg-gradient-to-r from-primary to-accent shadow-sm transition-transform duration-300"
-              style={{
-                transform: `translateX(${tab === "mods" ? "0%" : tab === "bans" ? "calc(100% + 4px)" : tab === "foros" ? "calc(200% + 8px)" : "calc(300% + 12px)"})`,
-              }}
+          <div className="mt-2.5">
+            <SegmentedControl
+              items={[
+                { id: "mods", label: "MODS" },
+                { id: "bans", label: "BANEOS" },
+                { id: "foros", label: "FOROS" },
+                { id: "eventos", label: "EVENTOS" },
+              ]}
+              value={tab}
+              onChange={setTab}
             />
           </div>
-        </div>
-        {tab === "mods" && admin && (
-          <div className="max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto px-3 pb-3 flex gap-2">
-            <div className="flex-1 flex items-center gap-2 bg-input/50 rounded-xl px-3">
-              <Search size={14} className="text-muted-foreground" />
-              <input value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === "Enter" && load(q)}
-                placeholder="Buscar por usuario…" className="flex-1 bg-transparent py-2 text-sm outline-none" />
+          {tab === "mods" && admin && (
+            <div className="flex gap-2 pt-2.5">
+              <div className="flex-1 flex items-center gap-2 bg-card border border-line-strong rounded-lg px-3">
+                <Search size={14} className="text-muted-foreground" />
+                <input value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === "Enter" && load(q)}
+                  placeholder="Buscar por usuario…" className="flex-1 bg-transparent py-2 text-sm outline-none" />
+              </div>
+              <button onClick={() => load(q)} className="px-4 py-2 rounded-lg btn-grad text-xs font-display tracking-widest active:scale-95 shrink-0">IR</button>
             </div>
-            <button onClick={() => load(q)} className="px-3 py-2 rounded-xl bg-gradient-to-r from-primary to-accent text-primary-foreground text-xs font-display tracking-widest active:scale-95 shadow-sm shadow-primary/25">IR</button>
-          </div>
-        )}
+          )}
+        </div>
       </header>
 
       <main className="max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto px-3 py-3 space-y-2">

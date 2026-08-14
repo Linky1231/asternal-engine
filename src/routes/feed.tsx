@@ -67,24 +67,27 @@ function FeedPage() {
 
   return (
     <div className="min-h-screen w-full flex flex-col bg-background">
-      <header className="sticky top-0 z-20 app-header flex items-center gap-2 px-3 py-2.5 panel border-b backdrop-blur-sm bg-card/90">
-        <Link to="/" className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent grid place-items-center shadow-[0_4px_14px_-4px_oklch(0.52_0.19_258/0.6)] active:scale-95 transition-transform duration-300 ease-out">
-          <span className="font-display text-base font-bold text-primary-foreground">A</span>
-        </Link>
-        <div className="flex-1 min-w-0">
-          <div className="font-display text-sm text-primary-glow glow-text leading-none tracking-wide">FEED</div>
-          <div className="text-[10px] font-mono text-muted-foreground -mt-0.5 truncate">@{me?.username ?? "..."}</div>
+      <header className="app-header sticky top-0 z-20 bg-background/90 backdrop-blur-xl border-b border-border/70">
+        <div className="max-w-2xl md:max-w-3xl lg:max-w-4xl mx-auto flex items-center gap-2 px-3 py-2.5">
+          <Link to="/" aria-label="Volver al inicio"
+            className="w-10 h-10 rounded-xl overflow-hidden ring-1 ring-line-strong shadow-sm active:scale-95 transition grid place-items-center bg-gradient-to-br from-primary to-accent shrink-0">
+            <span className="font-display text-base font-bold text-primary-foreground">A</span>
+          </Link>
+          <div className="flex-1 min-w-0">
+            <div className="font-display text-sm font-semibold text-foreground leading-none tracking-wide">FEED</div>
+            <div className="text-[10px] font-mono text-muted-foreground mt-0.5 truncate">@{me?.username ?? "..."}</div>
+          </div>
+          <button onClick={() => setShowFilters(s => !s)}
+            className={`w-10 h-10 rounded-lg border grid place-items-center transition-colors duration-200 active:scale-95 shrink-0 ${showFilters ? "border-primary/40 bg-primary/10 text-primary" : "border-line-strong bg-card text-ink-2 hover:bg-muted/60 hover:text-foreground"}`}
+            title="Búsqueda y filtros">
+            <Search size={16} />
+          </button>
+          <NotificationBell />
+          <button onClick={logout} title="Cerrar sesión"
+            className="w-10 h-10 rounded-lg border border-line-strong bg-card text-ink-2 grid place-items-center hover:bg-destructive/10 hover:text-destructive active:scale-95 transition shrink-0">
+            <LogOut size={15} />
+          </button>
         </div>
-        <button onClick={() => setShowFilters(s => !s)}
-          className={`w-10 h-10 rounded-xl border grid place-items-center transition-[transform,background-color,border-color,color] duration-300 ease-out active:scale-[0.94] ${showFilters ? "border-primary/50 bg-primary/10 text-primary-glow" : "border-border text-muted-foreground hover:bg-muted/50"}`}
-          title="Búsqueda y filtros">
-          <Search size={16} />
-        </button>
-        <NotificationBell />
-        <button onClick={logout} title="Cerrar sesión"
-          className="w-10 h-10 rounded-xl border border-border text-muted-foreground grid place-items-center hover:bg-destructive/10 hover:text-destructive active:scale-[0.94] transition-[transform,background-color,color] duration-300 ease-out">
-          <LogOut size={15} />
-        </button>
       </header>
 
       {/* Filtros por categoría */}

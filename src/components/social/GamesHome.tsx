@@ -81,8 +81,8 @@ export function GamesHome({
   if (!sections) {
     return (
       <div className="panel rounded-2xl border border-dashed border-border p-8 text-center space-y-3">
-        <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-primary/30 to-accent/30 grid place-items-center">
-          <Gamepad2 size={26} className="text-primary-glow" />
+        <div className="w-14 h-14 mx-auto rounded-2xl bg-primary/10 border border-primary/15 grid place-items-center">
+          <Gamepad2 size={26} className="text-primary" />
         </div>
         <div className="font-display text-sm">Aún no hay juegos publicados</div>
         <div className="text-xs text-muted-foreground max-w-xs mx-auto">
@@ -177,10 +177,10 @@ function TrendChip({ active, onClick, icon, label }: { active: boolean; onClick:
   return (
     <button
       onClick={onClick}
-      className={`shrink-0 flex items-center gap-1.5 px-3 h-8 rounded-full text-[11px] font-medium tracking-wide transition ${
+      className={`shrink-0 flex items-center gap-1.5 px-3 h-8 rounded-full text-[11px] font-medium transition-colors duration-200 active:scale-[0.96] ${
         active
           ? "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-sm"
-          : "bg-muted/50 text-muted-foreground hover:bg-muted"
+          : "bg-card border border-line-strong text-ink-2 hover:border-primary/30 hover:text-primary"
       }`}
     >
       {icon} {label}

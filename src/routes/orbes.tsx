@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState, useMemo } from "react";
-import { ArrowLeft, Sparkles, TrendingUp, TrendingDown, Gift, Gamepad2, Loader2, Wallet, BarChart3, ExternalLink } from "lucide-react";
+import { Sparkles, TrendingUp, TrendingDown, Gift, Gamepad2, Loader2, Wallet, BarChart3, ExternalLink } from "lucide-react";
+import { SubPageHeader } from "@/components/social/SubPageHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { getMyProfile, fetchAllOrbeTransactions, type OrbeTx, type Profile } from "@/lib/social/api";
 
@@ -159,17 +160,11 @@ function OrbesPage() {
 
   return (
     <div className="min-h-screen w-full flex flex-col bg-background text-foreground">
-      <header className="sticky top-0 z-20 panel border-b backdrop-blur-xl">
-        <div className="max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto flex items-center gap-2 px-3 py-2.5">
-          <button onClick={() => navigate({ to: "/" })}
-            className="w-9 h-9 rounded-xl border border-border grid place-items-center active:scale-95 transition">
-            <ArrowLeft size={16} />
-          </button>
-          <div className="flex-1 font-display text-sm text-primary-glow glow-text flex items-center gap-2">
-            <Sparkles size={14} fill="currentColor" /> MIS ORBES
-          </div>
-        </div>
-      </header>
+      <SubPageHeader
+        title="MIS ORBES"
+        icon={<Sparkles size={14} fill="currentColor" />}
+        subtitle={me ? `@${me.username ?? "…"}` : undefined}
+      />
 
       <main className="flex-1 max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto w-full px-3 py-4 pb-24 space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
         {/* Balance card */}

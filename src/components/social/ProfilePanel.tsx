@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback, useLayoutEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   Loader2, Camera, Save, Gamepad2, Newspaper, CheckCircle2, Star, ChevronRight,
@@ -28,6 +28,7 @@ import { PostCard } from "./PostCard";
 import { UserName } from "./UserName";
 import { Avatar } from "./Avatar";
 import { AvatarBuilder } from "./AvatarBuilder";
+import { SegmentedControl } from "@/components/ui/segmented";
 import { getUserCode } from "@/lib/social/avatar";
 
 const GENRES = ["Acción", "Aventura", "Puzzle", "RPG", "Estrategia", "Plataformas", "Casual", "Terror", "Simulación", "Deportes"];
@@ -72,37 +73,6 @@ export function ProfilePanel({
   const bannerRef = useRef<HTMLInputElement>(null);
   const [tab, setTab] = useState<"games" | "posts" | "gallery">("games");
 
-  // Píldora medida (mismo patrón que el feed): posición REAL de cada botón y
-  // animación solo con transform en px. El cálculo anterior (calc(100% + 6px))
-  // asumía un hueco que no existe y no interpolaba → saltaba y se desalineaba.
-  const tabIdx = tab === "games" ? 0 : tab === "posts" ? 1 : 2;
-  const tabRowRef = useRef<HTMLDivElement | null>(null);
-  const tabBtnRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const [tabPill, setTabPill] = useState<{ left: number; width: number } | null>(null);
-
-  const measureTabPill = useCallback(() => {
-    const row = tabRowRef.current;
-    const btn = tabBtnRefs.current[tabIdx];
-    if (!row || !btn) return;
-    const r = row.getBoundingClientRect();
-    const b = btn.getBoundingClientRect();
-    setTabPill(p =>
-      p && Math.abs(p.left - (b.left - r.left)) < 0.5 && Math.abs(p.width - b.width) < 0.5
-        ? p
-        : { left: b.left - r.left, width: b.width }
-    );
-  }, [tabIdx]);
-
-  useLayoutEffect(() => { measureTabPill(); }, [measureTabPill]);
-
-  useEffect(() => {
-    window.addEventListener("resize", measureTabPill);
-    const t = window.setTimeout(measureTabPill, 150);
-    return () => {
-      window.removeEventListener("resize", measureTabPill);
-      window.clearTimeout(t);
-    };
-  }, [measureTabPill]);
   const [games, setGames] = useState<PostWithMeta[]>([]);
   const [posts, setPosts] = useState<PostWithMeta[]>([]);
   const [artworks, setArtworks] = useState<PostWithMeta[]>([]);
@@ -539,29 +509,15 @@ export function ProfilePanel({
         </Link>
       )}
 
-      <div ref={tabRowRef} className="relative flex bg-muted/40 rounded-2xl p-1">
-        <div
-          aria-hidden
-          className="absolute top-1 bottom-1 rounded-xl bg-gradient-to-r from-primary to-accent shadow-[0_4px_14px_-4px_oklch(0.63_0.17_250/0.55)] transition-transform duration-300 ease-out will-change-transform"
-          style={{
-            left: 0,
-            width: tabPill?.width ?? 0,
-            transform: `translate3d(${tabPill?.left ?? 0}px, 0, 0)`,
-          }}
-        />
-        <button ref={el => { tabBtnRefs.current[0] = el; }} onClick={() => setTab("games")}
-          className={`relative z-10 flex-1 flex items-center justify-center gap-1 sm:gap-2 py-2 rounded-xl text-[10px] sm:text-xs font-display tracking-wide sm:tracking-widest whitespace-nowrap transition-colors ${tab === "games" ? "text-primary-foreground" : "text-muted-foreground"}`}>
-          <Gamepad2 size={13} className="hidden sm:block shrink-0" /> <span className="truncate">JUEGOS · {games.length}</span>
-        </button>
-        <button ref={el => { tabBtnRefs.current[1] = el; }} onClick={() => setTab("posts")}
-          className={`relative z-10 flex-1 flex items-center justify-center gap-1 sm:gap-2 py-2 rounded-xl text-[10px] sm:text-xs font-display tracking-wide sm:tracking-widest whitespace-nowrap transition-colors ${tab === "posts" ? "text-primary-foreground" : "text-muted-foreground"}`}>
-          <Newspaper size={13} className="hidden sm:block shrink-0" /> <span className="truncate">POSTS · {posts.length}</span>
-        </button>
-        <button ref={el => { tabBtnRefs.current[2] = el; }} onClick={() => setTab("gallery")}
-          className={`relative z-10 flex-1 flex items-center justify-center gap-1 sm:gap-2 py-2 rounded-xl text-[10px] sm:text-xs font-display tracking-wide sm:tracking-widest whitespace-nowrap transition-colors ${tab === "gallery" ? "text-primary-foreground" : "text-muted-foreground"}`}>
-          <Palette size={13} className="hidden sm:block shrink-0" /> <span className="truncate">GALERÍA · {artworks.length}</span>
-        </button>
-      </div>
+      <SegmentedControl
+        items={[
+          { id: "games", label: <>JUEGOS · {games.length}</>, icon: <Gamepad2 size={13} className="hidden sm:block shrink-0" /> },
+          { id: "posts", label: <>POSTS · {posts.length}</>, icon: <Newspaper size={13} className="hidden sm:block shrink-0" /> },
+          { id: "gallery", label: <>GALERÍA · {artworks.length}</>, icon: <Palette size={13} className="hidden sm:block shrink-0" /> },
+        ]}
+        value={tab}
+        onChange={setTab}
+      />
 
       <div className="space-y-3">
         {contentLoading ? (
