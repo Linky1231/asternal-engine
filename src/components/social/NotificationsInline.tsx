@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Avatar } from "./Avatar";
 import { Link } from "@tanstack/react-router";
 import {
   MessageSquare, Reply, Heart, Star, Repeat, AtSign, UserPlus, Gamepad2, Inbox,
@@ -92,13 +93,7 @@ export function NotificationsInline() {
             <Link to="/profile/$userId" params={{ userId: n.actor_id ?? "" }}
               onClick={e => { if (!n.actor_id) e.preventDefault(); }}
               className="relative shrink-0">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/40 to-accent/30 grid place-items-center overflow-hidden text-[10px] font-display text-primary-glow">
-                {n.actor?.avatar_url ? (
-                  <img src={n.actor.avatar_url} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  who(n)[0]?.toUpperCase()
-                )}
-              </div>
+              <Avatar p={n.actor} size={32} />
               <span className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full grid place-items-center border-2 border-background ${meta.tone}`}>
                 <Icon size={8} />
               </span>

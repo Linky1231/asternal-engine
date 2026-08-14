@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Avatar } from "./Avatar";
 import { Link } from "@tanstack/react-router";
 import {
   Bell, MessageSquare, Reply, Heart, Star, Repeat, AtSign, UserPlus,
@@ -198,13 +199,7 @@ export function NotificationBell() {
                       <Link to="/profile/$userId" params={{ userId: n.actor_id ?? "" }}
                         onClick={e => { if (!n.actor_id) e.preventDefault(); }}
                         className="relative shrink-0">
-                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary/40 to-accent/30 grid place-items-center overflow-hidden text-[10px] font-display text-primary-glow">
-                          {n.actor?.avatar_url ? (
-                            <img src={n.actor.avatar_url} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            who(n)[0]?.toUpperCase()
-                          )}
-                        </div>
+                        <Avatar p={n.actor} size={36} />
                         <span className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full grid place-items-center border-2 border-background ${meta.tone}`}>
                           <Icon size={9} />
                         </span>

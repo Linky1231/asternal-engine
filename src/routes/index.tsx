@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { Avatar } from "@/components/social/Avatar";
 import { Component, useEffect, useState, useCallback, useRef, useLayoutEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Gamepad2, Newspaper, Search, LogOut, Wrench, Plus, ShieldCheck, User, Sparkles, Star, Menu, MessageCircle, Bell, X, Home, Users, Flame, MessageSquare, Palette, Trophy, History, Clock, BarChart3, ChevronDown, ChevronRight, Globe, Heart, Megaphone, Bot } from "lucide-react";
@@ -248,13 +249,7 @@ function HomePage() {
         <div className={`max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto flex items-center gap-1.5 sm:gap-2.5 px-3 sm:px-4 ${inPreview ? "pt-14 pb-3" : "py-3"}`}>
           <button onClick={() => navigate({ to: "/profile" })} title="Mi perfil"
             className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-gradient-to-br from-primary to-accent grid place-items-center shadow-[0_2px_10px_-3px_oklch(0.52_0.19_258/0.45)] active:scale-95 transition overflow-hidden shrink-0">
-            {me?.avatar_url ? (
-              <img src={me.avatar_url} alt="avatar" className="w-full h-full object-cover" />
-            ) : (
-              <span className="font-display text-sm text-primary-foreground">
-                {(me?.display_name ?? me?.username ?? "A")[0]?.toUpperCase()}
-              </span>
-            )}
+            <Avatar p={me} className="w-full h-full" />
           </button>
           <div className="flex-1 min-w-0 header-name">
             <div className="font-display text-[13px] sm:text-sm font-semibold text-foreground leading-none truncate">Asternal</div>
@@ -466,15 +461,7 @@ function HomePage() {
               onClick={() => { closeMenu(); navigate({ to: "/profile" }); }}
               className="flex items-center gap-3 p-2.5 rounded-xl border border-border/70 bg-background hover:bg-muted/60 active:scale-[0.98] transition mb-2 text-left"
             >
-              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-primary to-accent grid place-items-center overflow-hidden shrink-0 ring-2 ring-primary/20">
-                {me?.avatar_url ? (
-                  <img src={me.avatar_url} alt="avatar" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="font-display text-sm text-primary-foreground">
-                    {(me?.display_name ?? me?.username ?? "A")[0]?.toUpperCase()}
-                  </span>
-                )}
-              </div>
+              <Avatar p={me} size={44} className="ring-2 ring-primary/20" />
               <div className="min-w-0 flex-1">
                 <div className="font-display text-sm truncate">{me?.display_name ?? me?.username ?? "Mi perfil"}</div>
                 <div className="text-[11px] font-mono text-muted-foreground truncate">@{me?.username ?? "…"} · Ver perfil</div>

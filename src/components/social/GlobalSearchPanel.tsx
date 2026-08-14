@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Avatar } from "./Avatar";
 import type { ReactNode } from "react";
 import { motion } from "framer-motion";
 import { Link, useRouter } from "@tanstack/react-router";
@@ -196,16 +197,7 @@ export function GlobalSearchPanel({
         onClick={() => onOpenMessage(m.chat_id)}
         className="w-full flex items-start gap-2.5 px-3 py-2.5 rounded-xl bg-background border border-border/60 hover:border-primary/40 hover:bg-primary/5 transition text-left active:scale-[0.99]"
       >
-        <div
-          className="w-9 h-9 rounded-full grid place-items-center shrink-0 font-display font-semibold text-primary-foreground overflow-hidden"
-          style={{ background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))", fontSize: 13 }}
-        >
-          {p?.avatar_url ? (
-            <img src={p.avatar_url} alt="" className="w-full h-full object-cover" />
-          ) : (
-            (p?.display_name || p?.username || m.sender_id || "?")[0]?.toUpperCase()
-          )}
-        </div>
+        <Avatar p={p} size={36} label={(m.sender_id || "?")[0]?.toUpperCase()} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-[12px] font-semibold">
@@ -235,16 +227,7 @@ export function GlobalSearchPanel({
       params={{ userId: p.id }}
       className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-background border border-border/60 hover:border-primary/40 hover:bg-primary/5 transition group active:scale-[0.99]"
     >
-      <div
-        className="w-9 h-9 rounded-full grid place-items-center shrink-0 font-display font-semibold text-primary-foreground overflow-hidden"
-        style={{ background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))", fontSize: 13 }}
-      >
-        {p.avatar_url ? (
-          <img src={p.avatar_url} alt="" className="w-full h-full object-cover" />
-        ) : (
-          (p.display_name || p.username || "?")[0]?.toUpperCase()
-        )}
-      </div>
+      <Avatar p={p} size={36} />
       <div className="min-w-0 flex-1">
         <div className="text-[12px] font-semibold truncate">{p.display_name || p.username}</div>
         <div className="text-[10px] font-mono text-muted-foreground truncate">@{p.username}</div>

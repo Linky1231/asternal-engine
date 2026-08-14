@@ -61,6 +61,8 @@ create table if not exists public.profiles (
   username text not null,
   display_name text,
   avatar_url text,
+  avatar_spec jsonb,
+  user_code text,
   bio text,
   banner_url text,
   pronouns text,
@@ -90,6 +92,12 @@ create table if not exists public.profiles (
   updated_at timestamptz not null default now()
 );
 alter table public.profiles enable row level security;
+
+-- ID público de usuario: único por cuenta (AST-XXXXXX). El frontend también
+-- deriva un ID determinista del UUID como respaldo hasta que este backfill
+-- o el trigger asignen el código persistido.
+create unique index if not exists profiles_user_code_key
+  on public.profiles (user_code) where user_code is not null;
 
 -- ─────────────────────────── TAGS ───────────────────────────
 create table if not exists public.tags (
@@ -953,12 +961,20 @@ end $$;
 -- ─────────────────────────── TRIGGER PERFIL + ADMIN ───────────────────────────
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $$
+declare
+  v_code text;
 begin
-  insert into public.profiles (id, username, display_name)
+  -- Genera el ID público único del usuario (AST-XXXXXX)
+  loop
+    v_code := 'AST-' || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 6));
+    exit when not exists (select 1 from public.profiles where user_code = v_code);
+  end loop;
+  insert into public.profiles (id, username, display_name, user_code)
   values (
     new.id,
     coalesce(new.raw_user_meta_data->>'username', split_part(new.email, '@', 1)),
-    new.raw_user_meta_data->>'display_name'
+    new.raw_user_meta_data->>'display_name',
+    v_code
   )
   on conflict (id) do nothing;
   -- Auto-asignar rol admin a la cuenta propietaria
@@ -979,6 +995,22 @@ insert into public.profiles (id, username)
 select u.id, coalesce(u.raw_user_meta_data->>'username', split_part(u.email, '@', 1))
 from auth.users u
 on conflict (id) do nothing;
+
+-- Backfill: asigna ID público a los usuarios antiguos que no tienen uno
+-- (idempotente: los que ya tienen código se ignoran).
+do $$
+declare
+  v_row record;
+  v_code text;
+begin
+  for v_row in select id from public.profiles where user_code is null loop
+    loop
+      v_code := 'AST-' || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 6));
+      exit when not exists (select 1 from public.profiles where user_code = v_code);
+    end loop;
+    update public.profiles set user_code = v_code, updated_at = now() where id = v_row.id;
+  end loop;
+end $$;
 
 insert into public.user_roles (user_id, role)
 select u.id, 'admin'::public.app_role

@@ -1,5 +1,7 @@
 // @ts-nocheck — Local DB adapter (types differ from Supabase generics)
 import { supabase, isSchemaMissing } from "@/integrations/supabase/client";
+import type { AvatarSpec } from "./avatar";
+import { saveAvatarSpecLocal, clearAvatarSpecLocal } from "./avatar";
 
 export type SocialLinks = {
   youtube?: string;
@@ -20,6 +22,8 @@ export type Profile = {
   username: string;
   display_name: string | null;
   avatar_url: string | null;
+  avatar_spec?: AvatarSpec | null;
+  user_code?: string | null;
   bio: string | null;
   orbes?: number;
   is_plus?: boolean;
@@ -1055,6 +1059,35 @@ async function resizeImage(file: File, maxDim: number = 384): Promise<Blob> {
   ctx.drawImage(img, 0, 0, w, h);
   URL.revokeObjectURL(img.src);
   return new Promise(resolve => canvas.toBlob(blob => resolve(blob ?? file), "image/webp", 0.92));
+}
+
+/**
+ * Guarda el spec del avatar dibujado. Intenta persistirlo en la nube (columna
+ * avatar_spec) y, si la columna aún no existe en el esquema, cae a localStorage
+ * para que el avatar funcione igualmente en este dispositivo.
+ */
+export async function saveAvatarSpec(userId: string, spec: AvatarSpec | null): Promise<void> {
+  if (spec === null) clearAvatarSpecLocal(userId);
+  else saveAvatarSpecLocal(userId, spec);
+  try {
+    const { error } = await supabase.from("profiles").update({ avatar_spec: spec } as never).eq("id", userId);
+    if (error && !isSchemaMissing(error)) {
+      // Columnas que sí existen pero el update falló (RLS) → el local ya está guardado.
+      console.warn("[avatar] No se pudo guardar en la nube:", error.message);
+    }
+  } catch {
+    /* columna sin crear → respaldo local activo */
+  }
+}
+
+/** Quita el avatar dibujado (vuelve a foto subida / inicial). */
+export async function clearAvatarSpec(userId: string): Promise<void> {
+  clearAvatarSpecLocal(userId);
+  try {
+    await supabase.from("profiles").update({ avatar_spec: null } as never).eq("id", userId);
+  } catch {
+    /* noop */
+  }
 }
 
 export async function uploadAvatar(file: File): Promise<string> {

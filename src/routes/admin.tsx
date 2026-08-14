@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { Avatar } from "@/components/social/Avatar";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -201,13 +202,7 @@ function AdminPage() {
                 className="flex items-center gap-3 flex-1 min-w-0 group"
                 title={`Ver perfil de ${u.display_name || u.username}`}
               >
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/40 to-accent/30 grid place-items-center text-primary-foreground font-display overflow-hidden shrink-0 ring-2 ring-primary/15">
-                  {u.avatar_url ? (
-                    <img src={u.avatar_url} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    (u.display_name?.[0] ?? u.username[0] ?? "?").toUpperCase()
-                  )}
-                </div>
+                <Avatar p={u} size={40} className="ring-2 ring-primary/15" />
                 <div className="min-w-0 flex-1">
                   <div className="font-display text-sm truncate group-hover:text-primary transition-colors">{u.display_name || u.username}</div>
                   <div className="text-[10px] font-mono text-muted-foreground truncate group-hover:text-foreground/70 transition-colors">@{u.username}</div>
@@ -426,12 +421,8 @@ function AdminPage() {
               return (
               <div key={t.id} className="panel border border-border/50 rounded-xl px-3 py-2.5 flex items-center gap-3">
                 <Link to="/profile/$userId" params={{ userId: t.authorId }} title={`Ver perfil de ${t.authorUsername}`}
-                  className="w-9 h-9 rounded-full bg-gradient-to-br from-primary/40 to-accent/30 border border-border/30 grid place-items-center overflow-hidden shrink-0 text-muted-foreground/60 font-display text-[10px] text-primary-glow">
-                  {author?.avatar_url ? (
-                    <img src={author.avatar_url} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    t.authorUsername[0]?.toUpperCase() ?? "?"
-                  )}
+                  className="w-9 h-9 rounded-full overflow-hidden shrink-0 block">
+                  <Avatar p={author} size={36} />
                 </Link>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-display truncate flex items-center gap-1.5">

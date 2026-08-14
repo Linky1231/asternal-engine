@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { Avatar } from "./Avatar";
 import { Play, Heart, MessageCircle, Share2, Trash2, MoreHorizontal, Pencil, GitFork, Loader2, Sparkles, Lock, X, CheckCircle2, AlertTriangle, ChevronLeft, ChevronRight, Gamepad2, Flag } from "lucide-react";
 import { useNavigate, Link } from "@tanstack/react-router";
 import { type PostWithMeta, toggleReaction, deletePost, loadGameProject, reportContent, remixGame, purchaseGame, getMyOrbes, recordGamePlay } from "@/lib/social/api";
@@ -244,15 +245,9 @@ export function GameCard({
             <Link
               to="/profile/$userId" params={{ userId: post.author_id }}
               onClick={e => e.stopPropagation()}
-              className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/50 to-accent/40 grid place-items-center overflow-hidden shrink-0 border border-white/30"
+              className="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-white/30 block"
             >
-              {post.author?.avatar_url ? (
-                <img src={post.author.avatar_url} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-[10px] font-display text-primary-foreground">
-                  {(post.author?.display_name ?? post.author?.username ?? "?")[0]?.toUpperCase()}
-                </span>
-              )}
+              <Avatar p={post.author} className="w-full h-full" />
             </Link>
             <div className="min-w-0">
               <div className={`font-display text-base truncate drop-shadow ${post.signed_cover ? "text-white" : "text-foreground"}`}>{title}</div>

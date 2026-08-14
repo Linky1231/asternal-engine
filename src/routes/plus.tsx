@@ -13,6 +13,7 @@ import {
   type Profile, type SocialLinks, type CreatorCardStyle,
 } from "@/lib/social/api";
 import { UserName } from "@/components/social/UserName";
+import { Avatar } from "@/components/social/Avatar";
 
 export const Route = createFileRoute("/plus")({
   head: () => ({
@@ -352,11 +353,7 @@ function CreatorCardPreview({ profile }: { profile: Profile | null }) {
   return (
     <div className="relative rounded-2xl overflow-hidden p-4 flex items-center gap-3"
       style={{ background: themeCfg.bg, color: themeCfg.fg, minHeight: 110 }}>
-      <div className="w-16 h-16 rounded-2xl bg-white/20 grid place-items-center shrink-0 overflow-hidden">
-        {profile?.avatar_url
-          ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
-          : <span className="font-display text-2xl">{(profile?.display_name ?? profile?.username ?? "?")[0]?.toUpperCase()}</span>}
-      </div>
+      <Avatar p={profile} size={64} rounded="xl" className="ring-2 ring-white/30" />
       <div className="min-w-0 flex-1">
         <div className="text-base font-display font-semibold truncate">
           <UserName p={profile} size="md" showBadge={false} />

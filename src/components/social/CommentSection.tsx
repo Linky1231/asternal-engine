@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { addComment, deleteComment, fetchComments, toggleReaction, reportContent, type CommentRow } from "@/lib/social/api";
+import { Avatar } from "./Avatar";
 
 export function CommentSection({ postId, myId, isMod, onChange }: {
   postId: string; myId: string | null; isMod: boolean; onChange: () => void;
@@ -64,9 +65,7 @@ function CommentItem({ c, myId, isMod, onReply, onChanged }: {
   return (
     <li className="text-xs">
       <div className="flex gap-1.5">
-        <div className="w-6 h-6 rounded-full bg-muted/50 grid place-items-center text-[10px] shrink-0">
-          {(c.author?.username ?? "?")[0]?.toUpperCase()}
-        </div>
+        <Avatar p={c.author} size={24} />
         <div className="flex-1 min-w-0">
           <div className="bg-muted/20 rounded-md px-2 py-1.5">
             <div className="text-[10px] font-mono text-muted-foreground">@{c.author?.username ?? "?"}</div>

@@ -1,4 +1,5 @@
 import { memo, useState } from "react";
+import { Avatar } from "./Avatar";
 import { Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { type PostWithMeta, toggleReaction, toggleRepost, deletePost, updatePost, reportContent, votePoll, isPlusActive } from "@/lib/social/api";
@@ -62,17 +63,7 @@ export const PostCard = memo(function PostCard({
     onChange();
   };
 
-  const avatarInner = (
-    <>
-      {author?.avatar_url ? (
-        <img src={author.avatar_url} alt="" className="w-full h-full object-cover" />
-      ) : (
-        <span className="grid place-items-center w-full h-full">
-          {(author?.display_name ?? author?.username ?? "?")[0]?.toUpperCase()}
-        </span>
-      )}
-    </>
-  );
+  const avatarInner = <Avatar p={author} className="w-full h-full" />;
 
   const categoryChip = post.category ? (
     <span className="inline-flex items-center gap-1 text-[10px] font-display tracking-wide uppercase px-2 py-0.5 rounded-full bg-gradient-to-r from-primary/12 to-accent/12 text-primary-glow border border-primary/15">

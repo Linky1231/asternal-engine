@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Avatar } from "./Avatar";
 import { createPost, fetchMyGamesLite, getMyProfile, type MediaType, type Profile } from "@/lib/social/api";
 import {
   Image as ImageIcon, Film, Link as LinkIcon, X, Send, Loader2, Tag,
@@ -101,13 +102,7 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
     </button>
   );
 
-  const avatarEl = me?.avatar_url ? (
-    <img src={me.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover ring-1 ring-border/60" />
-  ) : (
-    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/40 to-accent/30 grid place-items-center font-display text-sm text-primary-glow ring-1 ring-border/60">
-      {(me?.display_name ?? me?.username ?? "?")[0]?.toUpperCase()}
-    </div>
-  );
+  const avatarEl = <Avatar p={me} size={40} className="ring-1 ring-border/60" />;
 
   return (
     <div className={`panel rounded-2xl border bg-gradient-to-b from-card to-muted/20 transition-all duration-300 ${expanded ? "border-primary/35 shadow-lg" : "border-border/60 shadow-sm hover:border-primary/25 hover:shadow-md"}`}>

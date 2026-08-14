@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { Avatar } from "./Avatar";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Palette, Sparkles, X, Loader2, ImagePlus, CheckCircle2,
@@ -433,15 +434,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
                         onClick={e => e.stopPropagation()}
                         className="flex items-center gap-1.5 group/author min-w-0 flex-1"
                       >
-                        <div className="w-5 h-5 rounded-full bg-gradient-to-br from-primary/50 to-accent/30 grid place-items-center overflow-hidden shrink-0 ring-2 ring-border/40 group-hover/author:ring-primary/40 transition-all">
-                          {art.author?.avatar_url ? (
-                            <img src={art.author.avatar_url} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            <span className="text-[7px] font-display text-white font-bold">
-                              {(art.author?.username ?? "?")[0]?.toUpperCase()}
-                            </span>
-                          )}
-                        </div>
+                        <Avatar p={art.author} size={20} className="ring-2 ring-border/40 group-hover/author:ring-primary/40 transition-all" />
                         <span className="text-[10px] font-mono text-muted-foreground truncate group-hover/author:text-foreground transition">
                           @{art.author?.username ?? "jugador"}
                         </span>
@@ -607,15 +600,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
                       onClick={e => e.stopPropagation()}
                       className="flex items-center gap-1.5 mt-1 group/author"
                     >
-                      <div className="w-5 h-5 rounded-full bg-gradient-to-br from-primary/40 to-accent/30 grid place-items-center overflow-hidden shrink-0 ring-1 ring-border/50">
-                        {detailPost.author?.avatar_url ? (
-                          <img src={detailPost.author.avatar_url} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <span className="text-[7px] font-display text-primary-glow">
-                            {(detailPost.author?.username ?? "?")[0]?.toUpperCase()}
-                          </span>
-                        )}
-                      </div>
+                      <Avatar p={detailPost.author} size={20} className="ring-1 ring-border/50" />
                       <span className="text-xs font-mono text-muted-foreground group-hover/author:text-foreground transition">
                         @{detailPost.author?.username ?? "anon"}
                       </span>

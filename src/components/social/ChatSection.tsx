@@ -73,6 +73,7 @@ import { supabase, hasSupabaseConfig, saveSupabaseCredentials } from "@/integrat
 import { UserName } from "./UserName";
 import { getMyProfile, getMyOrbes, isAdmin, pushNotification, uploadAvatar } from "@/lib/social/api";
 import type { Profile } from "@/lib/social/api";
+import { Avatar as SharedAvatar } from "./Avatar";
 
 function fmtTime(iso: string): string {
   const d = new Date(iso);
@@ -143,18 +144,7 @@ function sendErrorDetail(err: unknown): { title: string; desc: string; action?: 
 
 function Avatar({ p, name, size = 40 }: { p?: Profile | null; name?: string; size?: number }) {
   const label = (p?.display_name || p?.username || name || "?").trim().charAt(0).toUpperCase();
-  return (
-    <div
-      className="rounded-full overflow-hidden shrink-0 grid place-items-center font-display font-semibold text-primary-foreground"
-      style={{ width: size, height: size, fontSize: size * 0.42, background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))" }}
-    >
-      {p?.avatar_url ? (
-        <img src={p.avatar_url} alt="" className="w-full h-full object-cover" />
-      ) : (
-        label
-      )}
-    </div>
-  );
+  return <SharedAvatar p={p} size={size} label={label} />;
 }
 
 function BubbleActions({ mine, copied, onCopy, onReply }: { mine: boolean; copied: boolean; onCopy: () => void; onReply: () => void }) {
@@ -337,15 +327,7 @@ function ProfileLinkCard({ userId }: { userId: string }) {
         <ExternalLink size={10} /> Perfil compartido
       </div>
       <div className="flex items-center gap-2.5 p-2.5 pt-1.5">
-        <div className="w-11 h-11 rounded-full bg-gradient-to-br from-primary to-accent p-[2px] shrink-0">
-          <div className="w-full h-full rounded-full overflow-hidden grid place-items-center bg-card text-[13px] font-display font-bold text-primary">
-            {profile.avatar_url ? (
-              <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
-            ) : (
-              (profile.display_name ?? profile.username ?? "?")[0]?.toUpperCase()
-            )}
-          </div>
-        </div>
+        <Avatar p={profile} size={44} />
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-1.5 min-w-0">
             <span className="text-[13px] font-display font-bold truncate text-foreground">
@@ -2350,16 +2332,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
               >
                 <ArrowLeft size={16} />
               </button>
-              <div
-                className="rounded-full grid place-items-center shrink-0 font-display font-semibold text-primary-foreground overflow-hidden"
-                style={{ width: 36, height: 36, fontSize: 15, background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))" }}
-              >
-                {activeGroup.avatar_url ? (
-                  <img src={activeGroup.avatar_url} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  (activeGroup.name || "?")[0]?.toUpperCase()
-                )}
-              </div>
+              <Avatar p={null} name={activeGroup.name} size={36} />
               <div className="min-w-0 flex-1">
                 <div className="text-sm font-semibold truncate">{activeGroup.name}</div>
                 <div className="text-[10px] text-muted-foreground truncate">
@@ -2388,16 +2361,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
               >
                 <ArrowLeft size={16} />
               </button>
-              <div
-                className="rounded-full grid place-items-center shrink-0 font-display font-semibold text-primary-foreground overflow-hidden"
-                style={{ width: 36, height: 36, fontSize: 15, background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))" }}
-              >
-                {activeDm.other?.avatar_url ? (
-                  <img src={activeDm.other.avatar_url} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  (activeDm.other?.display_name || activeDm.other?.username || "?")[0]?.toUpperCase()
-                )}
-              </div>
+              <Avatar p={activeDm.other} size={36} />
               <div className="min-w-0 flex-1">
                 <div className="text-sm font-semibold truncate">
                   {activeDm.other?.display_name || activeDm.other?.username || "Chat individual"}
@@ -2689,16 +2653,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                 onClick={() => void openGroup(g)}
                 className="w-full flex items-center gap-2.5 p-2.5 rounded-xl border border-border bg-card hover:border-primary/40 hover:bg-primary/5 transition text-left group active:scale-[0.99]"
               >
-                <div
-                  className="rounded-full grid place-items-center shrink-0 font-display font-semibold text-primary-foreground overflow-hidden"
-                  style={{ width: 42, height: 42, fontSize: 16, background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))" }}
-                >
-                  {g.avatar_url ? (
-                    <img src={g.avatar_url} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    (g.name || "?")[0]?.toUpperCase()
-                  )}
-                </div>
+                <Avatar p={null} name={g.name} size={42} />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5 min-w-0">
@@ -2755,16 +2710,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                 onClick={() => void openDm(dm)}
                 className="w-full flex items-center gap-2.5 p-2.5 rounded-xl border border-border bg-card hover:border-primary/40 hover:bg-primary/5 transition text-left group active:scale-[0.99]"
               >
-                <div
-                  className="rounded-full grid place-items-center shrink-0 font-display font-semibold text-primary-foreground overflow-hidden"
-                  style={{ width: 40, height: 40, fontSize: 15, background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))" }}
-                >
-                  {dm.other?.avatar_url ? (
-                    <img src={dm.other.avatar_url} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    (dm.other?.display_name || dm.other?.username || "?")[0]?.toUpperCase()
-                  )}
-                </div>
+                <Avatar p={dm.other} size={40} />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-[13px] font-semibold truncate">{dm.other?.display_name || dm.other?.username}</span>
@@ -3138,16 +3084,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                     onMouseEnter={() => setMentionIndex(i)}
                     className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-xl text-left transition ${i === mentionIndex ? "bg-primary/10" : "hover:bg-muted/60"}`}
                   >
-                    <div
-                      className="rounded-full grid place-items-center shrink-0 font-display font-semibold text-primary-foreground overflow-hidden"
-                      style={{ width: 26, height: 26, fontSize: 11, background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))" }}
-                    >
-                      {p.avatar_url ? (
-                        <img src={p.avatar_url} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        (p.display_name || p.username || "?")[0]?.toUpperCase()
-                      )}
-                    </div>
+                    <Avatar p={p} size={26} />
                     <div className="min-w-0 flex-1">
                       <div className="text-[12px] font-semibold truncate">{p.display_name || p.username}</div>
                       <div className="text-[10px] font-mono text-muted-foreground truncate">@{p.username ?? "?"}</div>
@@ -3390,16 +3327,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                         }}
                         className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-xl border transition text-left ${on ? "border-primary/50 bg-primary/10" : "border-border/50 bg-background hover:bg-muted/40"}`}
                       >
-                        <div
-                          className="rounded-full grid place-items-center shrink-0 font-display font-semibold text-primary-foreground overflow-hidden"
-                          style={{ width: 28, height: 28, fontSize: 12, background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))" }}
-                        >
-                          {p.avatar_url ? (
-                            <img src={p.avatar_url} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            (p.display_name || p.username || "?")[0]?.toUpperCase()
-                          )}
-                        </div>
+                        <Avatar p={p} size={28} />
                         <div className="min-w-0 flex-1">
                           <div className="text-[12px] font-medium truncate">{p.display_name || p.username}</div>
                           <div className="text-[10px] font-mono text-muted-foreground truncate">@{p.username ?? "?"}</div>
@@ -3460,16 +3388,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
               className="w-full max-w-sm bg-card border border-border rounded-2xl p-4 shadow-xl max-h-[85vh] overflow-y-auto"
             >
               <div className="flex items-start gap-3 mb-3">
-                <div
-                  className="rounded-full grid place-items-center shrink-0 font-display font-semibold text-primary-foreground overflow-hidden"
-                  style={{ width: 52, height: 52, fontSize: 20, background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))" }}
-                >
-                  {activeGroup.avatar_url ? (
-                    <img src={activeGroup.avatar_url} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    (activeGroup.name || "?")[0]?.toUpperCase()
-                  )}
-                </div>
+                <Avatar p={null} name={activeGroup.name} size={52} />
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-semibold truncate">{activeGroup.name}</div>
                   <div className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">
@@ -3618,16 +3537,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                 <div className="space-y-1 max-h-44 overflow-y-auto no-scrollbar mb-2">
                   {groupMembers.map((m) => (
                     <div key={m.profile.id} className="flex items-center gap-2 px-2 py-1.5 rounded-xl bg-background border border-border/50">
-                      <div
-                        className="rounded-full grid place-items-center shrink-0 font-display font-semibold text-primary-foreground overflow-hidden"
-                        style={{ width: 30, height: 30, fontSize: 13, background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))" }}
-                      >
-                        {m.profile.avatar_url ? (
-                          <img src={m.profile.avatar_url} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          (m.profile.display_name || m.profile.username || "?")[0]?.toUpperCase()
-                        )}
-                      </div>
+                      <Avatar p={m.profile} size={30} />
                       <div className="min-w-0 flex-1">
                         <div className="text-[12px] font-medium truncate">{m.profile.display_name || m.profile.username}</div>
                         <div className="text-[10px] font-mono text-muted-foreground truncate">@{m.profile.username ?? "?"}</div>
@@ -3660,16 +3570,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                         onClick={() => void handleAddMember(p.id)}
                         className="w-full flex items-center gap-2 px-2 py-1.5 rounded-xl border border-border/50 bg-background hover:bg-primary/5 hover:border-primary/30 transition text-left active:scale-[0.99]"
                       >
-                        <div
-                          className="rounded-full grid place-items-center shrink-0 font-display font-semibold text-primary-foreground overflow-hidden"
-                          style={{ width: 26, height: 26, fontSize: 11, background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))" }}
-                        >
-                          {p.avatar_url ? (
-                            <img src={p.avatar_url} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            (p.display_name || p.username || "?")[0]?.toUpperCase()
-                          )}
-                        </div>
+                        <Avatar p={p} size={26} />
                         <span className="min-w-0 flex-1 text-[12px] font-medium truncate">{p.display_name || p.username}</span>
                         <UserPlus size={13} className="text-primary shrink-0" />
                       </button>

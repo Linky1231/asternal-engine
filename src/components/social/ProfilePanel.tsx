@@ -4,7 +4,7 @@ import {
   Loader2, Camera, Save, Gamepad2, Newspaper, CheckCircle2, Star, ChevronRight,
   ImagePlus, MapPin, Cake, Palette, Tag, Sparkles as SparklesIcon, Eye, EyeOff,
   Heart, MessageCircle, ChevronDown, ChevronUp, Share2, Link2, Check,
-  Youtube, Instagram, Globe, UserPlus, UserCheck, X,
+  Youtube, Instagram, Globe, UserPlus, UserCheck, X, Fingerprint, Copy,
 } from "lucide-react";
 import {
   type Profile,
@@ -26,6 +26,9 @@ import {
 import { GameCard } from "./GameCard";
 import { PostCard } from "./PostCard";
 import { UserName } from "./UserName";
+import { Avatar } from "./Avatar";
+import { AvatarBuilder } from "./AvatarBuilder";
+import { getUserCode } from "@/lib/social/avatar";
 
 const GENRES = ["Acción", "Aventura", "Puzzle", "RPG", "Estrategia", "Plataformas", "Casual", "Terror", "Simulación", "Deportes"];
 
@@ -43,6 +46,8 @@ export function ProfilePanel({
   const [err, setErr] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [showMore, setShowMore] = useState(false);
+  const [avatarBuilderOpen, setAvatarBuilderOpen] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
 
   // form state
   const [username, setUsername] = useState("");
@@ -246,6 +251,12 @@ export function ProfilePanel({
   if (!profile) return <div className="p-8 text-center text-xs text-muted-foreground">Perfil no encontrado</div>;
 
   const interestsList = (profile.interests ?? []).filter(Boolean);
+  const userCode = profile.user_code || getUserCode(profile.id);
+  const copyCode = async () => {
+    try { await navigator.clipboard.writeText(userCode); } catch { /* noop */ }
+    setCodeCopied(true);
+    setTimeout(() => setCodeCopied(false), 1600);
+  };
 
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -270,15 +281,14 @@ export function ProfilePanel({
               <button
                 type="button"
                 onClick={() => viewingOwn && editing && fileRef.current?.click()}
-                className={`relative w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/40 to-accent/30 grid place-items-center overflow-hidden border-4 border-background ${viewingOwn && editing ? "cursor-pointer active:scale-95" : ""}`}
+                className={`relative w-20 h-20 rounded-2xl overflow-hidden border-4 border-background block ${viewingOwn && editing ? "cursor-pointer active:scale-95" : ""}`}
+                aria-label="Avatar"
               >
-                {avatarPreview ? (
-                  <img src={avatarPreview} alt="avatar" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="font-display text-2xl text-primary-glow">
-                    {(profile.display_name ?? profile.username ?? "?")[0]?.toUpperCase()}
-                  </span>
-                )}
+                <Avatar
+                  p={avatarPreview ? { ...profile, avatar_url: avatarPreview } : profile}
+                  size={72}
+                  rounded="xl"
+                />
                 {viewingOwn && editing && (
                   <div className="absolute inset-0 bg-black/40 grid place-items-center">
                     <Camera size={20} className="text-white" />
@@ -287,6 +297,17 @@ export function ProfilePanel({
                 <input ref={fileRef} type="file" accept="image/*" className="hidden"
                   onChange={e => pickAvatar(e.target.files?.[0] ?? null)} />
               </button>
+              {viewingOwn && editing && (
+                <button
+                  type="button"
+                  onClick={e => { e.stopPropagation(); setAvatarBuilderOpen(true); }}
+                  className="absolute -bottom-1 -right-1 w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-accent grid place-items-center shadow-lg border-2 border-background active:scale-90 transition"
+                  title="Dibujar avatar"
+                  aria-label="Dibujar avatar"
+                >
+                  <Palette size={13} className="text-primary-foreground" />
+                </button>
+              )}
             </div>
 
 
@@ -310,6 +331,15 @@ export function ProfilePanel({
                   <div className="text-[11px] font-mono text-muted-foreground truncate">
                     @{profile.username}{profile.pronouns ? ` · ${profile.pronouns}` : ""}
                   </div>
+                  {!editing && (
+                    <button onClick={() => void copyCode()}
+                      className="mt-1 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/40 border border-border/50 text-[9px] font-mono tracking-wider text-muted-foreground hover:text-primary-glow hover:border-primary/40 active:scale-95 transition"
+                      title="ID de usuario · toca para copiar">
+                      <Fingerprint size={10} className="text-primary-glow" />
+                      {userCode}
+                      {codeCopied ? <Check size={9} className="text-emerald-500" /> : <Copy size={9} className="opacity-60" />}
+                    </button>
+                  )}
                   {profile.custom_title && (
                     <div className="text-[11px] mt-0.5" style={{ color: profile.accent_color ?? "var(--primary)" }}>
                       {profile.custom_title}
@@ -469,6 +499,19 @@ export function ProfilePanel({
           {err && <div className="text-xs text-destructive">{err}</div>}
         </div>
       </section>
+
+      {avatarBuilderOpen && (
+        <AvatarBuilder
+          open={avatarBuilderOpen}
+          onClose={() => setAvatarBuilderOpen(false)}
+          profile={profile}
+          onSaved={spec => {
+            setProfile(prev => prev ? { ...prev, avatar_spec: spec } : prev);
+            onProfileChange?.({ ...profile, avatar_spec: spec });
+            setAvatarBuilderOpen(false);
+          }}
+        />
+      )}
 
       {/* Centro Plus card (unified — appears here for own profile) */}
       {viewingOwn && (
@@ -651,15 +694,7 @@ function FollowListModal({ list, myId, onClose, onChanged }: {
               <div key={p.id} className="flex items-center gap-2.5 px-2 py-2 rounded-xl hover:bg-muted/30 transition">
                 <Link to="/profile/$userId" params={{ userId: p.id }} onClick={onClose}
                   className="flex items-center gap-2.5 min-w-0 flex-1">
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary/40 to-accent/30 grid place-items-center overflow-hidden shrink-0 border border-border/50">
-                    {p.avatar_url ? (
-                      <img src={p.avatar_url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="font-display text-sm text-primary-glow">
-                        {(p.display_name ?? p.username ?? "?")[0]?.toUpperCase()}
-                      </span>
-                    )}
-                  </div>
+                  <Avatar p={p} size={36} rounded="xl" className="border border-border/50" />
                   <div className="min-w-0">
                     <UserName p={p} size="sm" />
                     <div className="text-[10px] font-mono text-muted-foreground truncate">@{p.username}</div>

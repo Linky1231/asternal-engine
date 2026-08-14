@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Avatar } from "./Avatar";
 import { motion, AnimatePresence } from "framer-motion";
 import { Heart, Gamepad2, Clock, BarChart3, Loader2, Flame, CalendarDays, TrendingUp, Award } from "lucide-react";
 import { Link } from "@tanstack/react-router";
@@ -305,13 +306,7 @@ export function HistorySection() {
                       params={{ userId: p.author_id }}
                       className="w-9 h-9 rounded-full bg-gradient-to-br from-primary/40 to-accent/30 grid place-items-center overflow-hidden shrink-0"
                     >
-                      {p.author?.avatar_url ? (
-                        <img src={p.author.avatar_url} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="text-[10px] font-display text-primary-glow">
-                          {(p.author?.username ?? "?")[0]?.toUpperCase()}
-                        </span>
-                      )}
+                      <Avatar p={p.author} size={36} />
                     </Link>
                     {/* Content preview */}
                     <div className="flex-1 min-w-0">
