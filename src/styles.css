@@ -34,6 +34,7 @@
 
   /* ── Asternal design system tokens (DESIGN.md) ── */
   --color-canvas: var(--canvas);
+  --color-surface: var(--card);
   --color-surface-2: var(--surface-2);
   --color-ink: var(--ink);
   --color-ink-2: var(--ink-2);
