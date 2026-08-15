@@ -272,6 +272,7 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
         </div>
 
         <div className="flex items-center justify-end gap-2 pt-1 border-t border-border/40">
+          <span className="text-[8px] font-mono text-muted-foreground/30 mr-auto" title="marcador compositor">ast-composer-v1</span>
           <span className={`text-[10px] font-mono text-muted-foreground ${content.length > 1900 ? "text-destructive" : ""}`}>{content.length}/2000</span>
           <button onClick={submit} disabled={!canSubmit}
             className="h-10 pl-4 pr-5 rounded-xl bg-gradient-to-r from-primary to-accent text-primary-foreground font-display tracking-[0.15em] text-xs flex items-center gap-1.5 active:scale-[0.97] transition-[transform,box-shadow,opacity] duration-300 ease-out shadow-[0_4px_14px_-4px_oklch(0.52_0.19_258/0.5)] disabled:opacity-40 disabled:pointer-events-none hover:-translate-y-0.5 hover:shadow-[0_8px_20px_-5px_oklch(0.52_0.19_258/0.65)]">

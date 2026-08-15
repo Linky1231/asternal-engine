@@ -2331,6 +2331,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
       {/* ───── Header ───── */}
       <div className="h-[3px] w-full bg-gradient-to-r from-primary via-accent to-transparent shrink-0" />
       <header className="shrink-0 border-b border-border/60 bg-background/80 backdrop-blur-md">
+        <span className="absolute top-1 right-2 text-[8px] font-mono text-muted-foreground/30" title="marcador chat">ast-chat-v1</span>
         <div className="max-w-2xl md:max-w-full mx-auto flex items-center gap-2 px-4 py-3">
           {view === "groups" && activeGroup ? (
             <>

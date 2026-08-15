@@ -82,6 +82,7 @@ function FeedPage() {
             title="Búsqueda y filtros">
             <Search size={16} />
           </button>
+          <span className="hidden text-[8px] font-mono text-muted-foreground/40 shrink-0" title="marcador feed">ast-feed-v1</span>
           <NotificationBell />
           <button onClick={logout} title="Cerrar sesión"
             className="w-10 h-10 rounded-lg border border-line-strong bg-card text-ink-2 grid place-items-center hover:bg-destructive/10 hover:text-destructive active:scale-95 transition shrink-0">
