@@ -12,7 +12,7 @@ import { PostCard } from "@/components/social/PostCard";
 import { GamesHome } from "@/components/social/GamesHome";
 import { NotificationBell } from "@/components/social/NotificationBell";
 import { ProfilePanel } from "@/components/social/ProfilePanel";
-import { NotificationsInline } from "@/components/social/NotificationsInline";
+import { NotificationsPanel } from "@/components/social/NotificationsPanel";
 import ChatSection from "@/components/social/ChatSection";
 import OrionPanel from "@/components/ai/OrionPanel";
 import { ForumSection } from "@/components/social/ForumSection";
@@ -406,8 +406,7 @@ function HomePage() {
             <MenuItem icon={<MessageCircle size={16} className="text-primary-glow"/>} label="Chats" onClick={() => { setChatOpen(true); closeMenu(); }} />
             <MenuItem icon={<Bot size={16} className="text-primary-glow"/>} label="Asistencia · Orión" onClick={() => { setOrionOpen(true); closeMenu(); }} />
             <MenuItem icon={<Search size={16}/>} label="Buscar" onClick={() => { setShowSearch(s => !s); closeMenu(); }} />
-            <MenuItem icon={<Bell size={16}/>} label="Notificaciones" onClick={() => setNotifOpen(o => !o)} />
-            {notifOpen && <NotificationsInline />}
+            <MenuItem icon={<Bell size={16}/>} label="Notificaciones" onClick={() => { setNotifOpen(true); closeMenu(); }} />
 
             {/* Categoría: COMUNIDAD */}
             <CategoryHeader label="COMUNIDAD" />
@@ -450,6 +449,9 @@ function HomePage() {
       <AnimatePresence>
         {orionOpen && <OrionPanel onClose={() => setOrionOpen(false)} />}
       </AnimatePresence>
+
+      {/* Full-screen panel de notificaciones */}
+      {notifOpen && <NotificationsPanel onClose={() => setNotifOpen(false)} />}
 
     </div>
   );

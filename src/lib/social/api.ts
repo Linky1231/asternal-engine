@@ -601,6 +601,40 @@ export async function markNotificationsRead() {
   await supabase.from("notifications").update({ read: true }).eq("user_id", user.id).eq("read", false);
 }
 
+/** Número total de notificaciones sin leer (para la campana). */
+export async function countUnreadNotifications(): Promise<number> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return 0;
+  const { data, error } = await supabase
+    .from("notifications")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("read", false);
+  if (error) throw error;
+  return (data ?? []).length;
+}
+
+/**
+ * TODAS las notificaciones de la cuenta (sin límite), con el perfil del actor.
+ * El panel de estadísticas calcula los totales reales sobre esta lista, igual
+ * que el panel de orbes lo hace con todas las transacciones.
+ */
+export async function fetchAllNotifications() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+  const { data, error } = await supabase
+    .from("notifications")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  const rows = data ?? [];
+  const actorIds = Array.from(new Set(rows.map(r => r.actor_id).filter(Boolean))) as string[];
+  const { data: profiles } = await supabase.from("profiles").select("*").in("id", actorIds);
+  const pmap = new Map((profiles ?? []).map(p => [p.id, p as Profile]));
+  return rows.map(r => ({ ...r, actor: r.actor_id ? pmap.get(r.actor_id) ?? null : null }));
+}
+
 export async function getMyProfile(): Promise<Profile | null> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
