@@ -249,7 +249,7 @@ export default function OrionPanel({ onClose }: { onClose: () => void }) {
               height: 42,
               padding: 2,
               background: "var(--color-primary)",
-              boxShadow: "0 4px 16px -6px oklch(0.52 0.19 258/0.5)",
+              boxShadow: "0 4px 16px -6px oklch(0.55 0.15 262/0.5)",
             }}
           >
             <div
@@ -366,7 +366,7 @@ export default function OrionPanel({ onClose }: { onClose: () => void }) {
             <div className="flex flex-col items-center justify-center pt-10 pb-4 text-center">
               <div
                 className="w-16 h-16 rounded-full grid place-items-center text-primary-foreground mb-3"
-                style={{ background: "var(--gradient-asternal)", boxShadow: "0 8px 30px -8px oklch(0.52 0.19 258/0.5)" }}
+                style={{ background: "var(--gradient-asternal)", boxShadow: "0 8px 30px -8px oklch(0.55 0.15 262/0.5)" }}
               >
                 <Bot size={28} />
               </div>

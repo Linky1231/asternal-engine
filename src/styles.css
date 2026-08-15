@@ -93,7 +93,7 @@
   --line-strong: oklch(0.83 0.016 252 / 0.75);
   --border: var(--line);
   --input: oklch(0.92 0.008 252 / 0.7);
-  --ring: oklch(0.55 0.13 258 / 0.35);
+  --ring: oklch(0.55 0.13 262 / 0.35);
   --grid: oklch(0.87 0.01 252 / 0.4);
   --destructive: oklch(0.577 0.215 25);
   --destructive-foreground: oklch(0.99 0 0);
@@ -161,7 +161,7 @@
   --line-strong: oklch(0.83 0.016 252 / 0.75);
   --border: var(--line);
   --input: oklch(0.92 0.008 252 / 0.7);
-  --ring: oklch(0.55 0.13 258 / 0.35);
+  --ring: oklch(0.55 0.13 262 / 0.35);
   --grid: oklch(0.87 0.01 252 / 0.4);
   --destructive: oklch(0.577 0.215 25);
   --destructive-foreground: oklch(0.99 0 0);
@@ -533,14 +533,14 @@
   animation: name-rainbow-anim 6s linear infinite;
 }
 .name-fx-gradient {
-  background: linear-gradient(90deg, oklch(0.55 0.16 258), oklch(0.72 0.15 320), oklch(0.64 0.12 220));
+  background: linear-gradient(90deg, oklch(0.55 0.16 262), oklch(0.72 0.15 320), oklch(0.64 0.12 220));
   background-size: 200% 100%;
   -webkit-background-clip: text; background-clip: text;
   color: transparent;
   animation: name-rainbow-anim 5s linear infinite;
 }
 .name-fx-pulse {
-  color: oklch(0.55 0.16 258);
+  color: oklch(0.55 0.16 262);
   animation: name-pulse-anim 2.2s ease-in-out infinite;
 }
 .name-fx-shadow {

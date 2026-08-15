@@ -48,7 +48,7 @@ function ConfettiBurst({ active }: { active: boolean }) {
           style={{
             left: `${45 + (i % 5) * 3}%`, top: `${30 + (i % 7) * 4}%`,
             width: 3 + (i % 4), height: 3 + (i % 4),
-            background: ["oklch(0.52 0.19 258)","oklch(0.72 0.14 235)","oklch(0.65 0.2 150)","oklch(0.85 0.2 85)"][i % 4],
+            background: ["oklch(0.55 0.15 262)","oklch(0.72 0.14 235)","oklch(0.65 0.2 150)","oklch(0.85 0.2 85)"][i % 4],
             animation: `confetti-fall ${1 + (i % 4) * 0.3}s ease-out ${(i % 8) * 0.05}s both`,
             opacity: 0,
           }}
@@ -78,7 +78,7 @@ function Star({ index }: { index: number }) {
 function CircuitLines() {
   return (
     <svg className="absolute inset-0 w-full h-full opacity-[0.05]" xmlns="http://www.w3.org/2000/svg" fill="none" preserveAspectRatio="none">
-      <g stroke="oklch(0.52 0.19 258)" strokeWidth="0.7">
+      <g stroke="oklch(0.55 0.15 262)" strokeWidth="0.7">
         <path d="M0 12% H 35% V 7% H 65%" />
         <path d="M0 24% H 20% V 18% H 55%" />
         <path d="M100% 10% H 68% V 5% H 45%" />
@@ -86,7 +86,7 @@ function CircuitLines() {
         <path d="M35% 100% V 60% H 60%" />
         <path d="M70% 100% V 50% H 88%" />
       </g>
-      <g fill="oklch(0.52 0.19 258)">
+      <g fill="oklch(0.55 0.15 262)">
         <circle cx="35%" cy="7%" r="2.2" />
         <circle cx="65%" cy="7%" r="2.2" />
         <circle cx="20%" cy="18%" r="2.2" />
@@ -112,7 +112,7 @@ const SPRITE_PX = [
   "·","b","b","b","b","b","b","·",
 ];
 const PX_COLORS: Record<string, string> = {
-  c: "oklch(0.52 0.19 258)",
+  c: "oklch(0.55 0.15 262)",
   s: "oklch(0.84 0.12 85)",
   e: "oklch(0.25 0.02 250)",
   b: "oklch(0.62 0.14 252)",
@@ -210,7 +210,7 @@ function HeroScene() {
 
           {/* Ambient glows */}
           <div className="absolute left-1/2 top-[42%] -translate-x-1/2 -translate-y-1/2 w-[360px] h-[360px] rounded-full"
-            style={{ background: "oklch(0.52 0.19 258 / 0.10)" }} />
+            style={{ background: "oklch(0.55 0.15 262 / 0.10)" }} />
           <div className="absolute left-1/2 top-[42%] -translate-x-1/2 -translate-y-1/2 w-[220px] h-[220px] rounded-full"
             style={{ background: "oklch(0.72 0.14 235 / 0.08)" }} />
 
@@ -231,7 +231,7 @@ function HeroScene() {
               <div className="absolute inset-0 rounded-[50%] overflow-hidden opacity-40"
                 style={{
                   background:
-                    "repeating-linear-gradient(90deg, transparent 0 13px, oklch(0.52 0.19 258 / 0.1) 13px 14px), repeating-linear-gradient(0deg, transparent 0 13px, oklch(0.52 0.19 258 / 0.1) 13px 14px)",
+                    "repeating-linear-gradient(90deg, transparent 0 13px, oklch(0.55 0.15 262 / 0.1) 13px 14px), repeating-linear-gradient(0deg, transparent 0 13px, oklch(0.55 0.15 262 / 0.1) 13px 14px)",
                 }} />
               <div className="absolute left-1/2 top-0 -translate-x-1/2 w-3/4 h-[3px] rounded-full bg-white/80 blur-[1px]" />
             </div>
@@ -506,7 +506,7 @@ function AuthPage() {
         <svg className="absolute inset-0 w-full h-full opacity-[0.02]" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <pattern id="dot-grid-auth" x="0" y="0" width="28" height="28" patternUnits="userSpaceOnUse">
-              <circle cx="1" cy="1" r="0.5" fill="oklch(0.52 0.19 258)" />
+              <circle cx="1" cy="1" r="0.5" fill="oklch(0.55 0.15 262)" />
             </pattern>
           </defs>
           <rect width="100%" height="100%" fill="url(#dot-grid-auth)" />

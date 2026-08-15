@@ -2510,7 +2510,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                 setView("group");
                 setActiveDm(null);
               }}
-              className={`flex-1 py-1.5 rounded-xl text-[10px] font-display tracking-[0.14em] flex items-center justify-center gap-1.5 transition active:scale-[0.98] ${view === "group" ? "grad-brand text-primary-foreground shadow-[0_4px_12px_-5px_oklch(0.55_0.22_258/0.5)]" : "bg-card border border-border text-muted-foreground hover:text-foreground"}`}
+              className={`flex-1 py-1.5 rounded-xl text-[10px] font-display tracking-[0.14em] flex items-center justify-center gap-1.5 transition active:scale-[0.98] ${view === "group" ? "grad-brand text-primary-foreground shadow-[0_4px_12px_-5px_oklch(0.55_0.15_262/0.5)]" : "bg-card border border-border text-muted-foreground hover:text-foreground"}`}
             >
               <Users size={12} /> GRUPO
             </button>
@@ -2521,7 +2521,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                 setActiveDm(null);
                 void loadGroupList();
               }}
-              className={`relative flex-1 py-1.5 rounded-xl text-[10px] font-display tracking-[0.14em] flex items-center justify-center gap-1.5 transition active:scale-[0.98] ${view === "groups" ? "grad-brand text-primary-foreground shadow-[0_4px_12px_-5px_oklch(0.55_0.22_258/0.5)]" : "bg-card border border-border text-muted-foreground hover:text-foreground"}`}
+              className={`relative flex-1 py-1.5 rounded-xl text-[10px] font-display tracking-[0.14em] flex items-center justify-center gap-1.5 transition active:scale-[0.98] ${view === "groups" ? "grad-brand text-primary-foreground shadow-[0_4px_12px_-5px_oklch(0.55_0.15_262/0.5)]" : "bg-card border border-border text-muted-foreground hover:text-foreground"}`}
             >
               <Users2 size={12} /> GRUPOS
               {totalGroupUnread > 0 && (
@@ -2537,7 +2537,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                 void loadDmList();
               }}
 
-              className={`relative flex-1 py-1.5 rounded-xl text-[10px] font-display tracking-[0.14em] flex items-center justify-center gap-1.5 transition active:scale-[0.98] ${view === "dms" ? "grad-brand text-primary-foreground shadow-[0_4px_12px_-5px_oklch(0.55_0.22_258/0.5)]" : "bg-card border border-border text-muted-foreground hover:text-foreground"}`}
+              className={`relative flex-1 py-1.5 rounded-xl text-[10px] font-display tracking-[0.14em] flex items-center justify-center gap-1.5 transition active:scale-[0.98] ${view === "dms" ? "grad-brand text-primary-foreground shadow-[0_4px_12px_-5px_oklch(0.55_0.15_262/0.5)]" : "bg-card border border-border text-muted-foreground hover:text-foreground"}`}
             >
               <MessageCircle size={12} /> DIRECTOS
               {totalDmUnread > 0 && (
@@ -3094,7 +3094,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
           <button
             onClick={() => void (pendingMedia ? sendPendingMedia() : handleSend())}
             disabled={!draft.trim() && !pendingMedia}
-            className="w-9 h-9 rounded-xl grad-brand text-primary-foreground grid place-items-center active:scale-95 transition shrink-0 disabled:opacity-40 disabled:active:scale-100 shadow-[0_4px_12px_-5px_oklch(0.55_0.22_258/0.5)]"
+            className="w-9 h-9 rounded-xl grad-brand text-primary-foreground grid place-items-center active:scale-95 transition shrink-0 disabled:opacity-40 disabled:active:scale-100 shadow-[0_4px_12px_-5px_oklch(0.55_0.15_262/0.5)]"
           >
             <Send size={15} />
           </button>
