@@ -422,6 +422,7 @@ function HomePage() {
             <MenuLink icon={<Star size={16} fill="currentColor" style={{ color: "var(--plus)" }}/>} label="Centro Plus" to="/plus" onClick={closeMenu} />
 
             <div className="flex-1 min-h-4" />
+            <div className="text-[9px] font-mono text-muted-foreground/40 px-3 pb-1" title="Marcador de build para diagnóstico">build · ast-panel-v1</div>
             <button onClick={() => { logout(); closeMenu(); }}
               className="flex items-center gap-3 px-3 h-11 rounded-lg text-destructive hover:bg-destructive/10 active:scale-[0.98] transition">
               <LogOut size={16} /> <span className="text-sm font-medium">Cerrar sesión</span>
