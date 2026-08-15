@@ -296,8 +296,15 @@ function FeaturedBanner({ post, plays24, onPlay }: { post: PostWithMeta; plays24
             </div>
           </>
         )}
-        {/* Overlay azul de marca (nunca negro): la portada o el mesh se leen azules, no gris */}
-        <div className="absolute inset-0 banner-overlay-deep" />
+        {/* Overlay azul de marca SOLO sobre portadas (nunca negro): da contraste
+            al título sin desaturar a gris. Sin portada NO se aplica: el degradado
+            oficial de la página se ve completo, con solo un scrim sutil abajo
+            para que el texto blanco siga legible. */}
+        {post.signed_cover ? (
+          <div className="absolute inset-0 banner-overlay-deep" />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-t from-ink/30 via-ink/5 to-transparent" />
+        )}
         {/* Barrido de luz: animación que subraya «este es el mejor juego» */}
         <div className="banner-shine" />
         {/* Textura de grano sutil sobre el degradado: nunca plano, nunca “de algoritmo”. */}
