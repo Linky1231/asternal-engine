@@ -102,7 +102,7 @@ export const PostCard = memo(function PostCard({
             </div>
           </Link>
           <button ref={menu.anchorRef} onClick={menu.toggle}
-            className="w-8 h-8 rounded-lg border border-border text-muted-foreground grid place-items-center transition-[transform,background-color,color] duration-150 ease-out pointer-fine:hover:bg-muted/50 pointer-fine:hover:text-foreground active:scale-[0.94]"
+            className="w-8 h-8 rounded-lg border border-border text-primary-glow grid place-items-center transition-[transform,background-color,color] duration-150 ease-out pointer-fine:hover:bg-primary/10 pointer-fine:hover:text-primary active:scale-[0.94]"
             aria-label="Menú de la publicación">
             <MoreHorizontal size={15} />
           </button>

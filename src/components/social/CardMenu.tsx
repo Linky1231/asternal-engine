@@ -114,7 +114,8 @@ export function CardMenuItem({
           : "text-foreground/90 pointer-fine:hover:bg-muted/50"
       }`}
     >
-      {icon && <span className="shrink-0 text-muted-foreground">{icon}</span>}
+      {/* Iconos del menú con el azul de la app; rojo solo para acciones destructivas. */}
+      {icon && <span className={`shrink-0 ${danger ? "text-destructive" : "text-primary-glow"}`}>{icon}</span>}
       <span className="truncate">{children}</span>
     </button>
   );

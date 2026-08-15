@@ -312,7 +312,9 @@ export function GameCard({
         <button onClick={share} className={`flex items-center gap-1 px-2 py-1.5 rounded-lg active:scale-95 transition ${canRemix && !mine ? "" : "ml-auto"}`}>
           <Share2 size={15} />
         </button>
-        <button ref={menu.anchorRef} onClick={menu.toggle} className="w-8 h-8 grid place-items-center rounded-lg active:scale-95" aria-label="Menú del juego">
+        <button ref={menu.anchorRef} onClick={menu.toggle}
+          className="w-8 h-8 grid place-items-center rounded-lg border border-border text-primary-glow transition-[transform,background-color,color] duration-150 ease-out pointer-fine:hover:bg-primary/10 pointer-fine:hover:text-primary active:scale-95"
+          aria-label="Menú del juego">
           <MoreHorizontal size={16} />
         </button>
         <CardMenu rect={menu.rect} onClose={menu.close} width={150}>
