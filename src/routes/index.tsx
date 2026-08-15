@@ -218,7 +218,7 @@ function HomePage() {
       <header className="app-header sticky top-0 z-20 bg-background/95 backdrop-blur-md border-b border-border/70">
         <div className={`max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto flex items-center gap-2 sm:gap-2.5 px-3 sm:px-4 ${inPreview ? "pt-14 pb-3" : "py-2.5"}`}>
           <button onClick={() => navigate({ to: "/profile" })} title="Mi perfil"
-            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl overflow-hidden border border-slate-900/5 shadow-[0_8px_20px_-10px_oklch(0.5_0.15_268/0.35)] active:scale-95 transition shrink-0">
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl overflow-hidden border border-slate-900/5 shadow-[0_8px_20px_-10px_oklch(0.5_0.13_266/0.35)] active:scale-95 transition shrink-0">
             <Avatar p={me} className="w-full h-full" />
           </button>
           <div className="flex-1 min-w-0 header-name">
@@ -327,7 +327,7 @@ function HomePage() {
                       );
                     }
                     return filtered.map((p, i) => (
-                      <div key={p.id} className="card-enter" style={{ animationDelay: `${Math.min(i * 30, 220)}ms` }}>
+                      <div key={p.id} className="card-enter" style={{ animationDelay: `${Math.min(i * 25, 180)}ms` }}>
                         <PostCard post={p} myId={myId} isMod={mod} onChange={onFeedChange} />
                       </div>
                     ));
@@ -358,7 +358,7 @@ function HomePage() {
       {/* Floating CTA to editor */}
       <Link
         to="/editor"
-        className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-[max(1.25rem,env(safe-area-inset-right))] z-30 h-14 pl-4 pr-5 rounded-xl btn-grad shadow-[0_16px_40px_-14px_oklch(0.5_0.16_262/0.45)] flex items-center gap-2 active:scale-95 font-display tracking-widest text-xs"
+        className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-[max(1.25rem,env(safe-area-inset-right))] z-30 h-14 pl-4 pr-5 rounded-xl btn-grad shadow-[0_16px_40px_-14px_oklch(0.55_0.14_262/0.42)] flex items-center gap-2 active:scale-95 font-display tracking-widest text-xs"
       >
         <Plus size={18} strokeWidth={2} /> CREAR
       </Link>
@@ -428,7 +428,6 @@ function HomePage() {
             <MenuLink icon={<Star size={16} fill="currentColor" style={{ color: "var(--plus)" }}/>} label="Centro Plus" to="/plus" onClick={closeMenu} />
 
             <div className="flex-1 min-h-4" />
-            <div className="text-[9px] font-mono text-muted-foreground/40 px-3 pb-1" title="Marcador de build para diagnóstico">build · ast-white-v3</div>
             <button onClick={() => { logout(); closeMenu(); }}
               className="flex items-center gap-3 px-3 h-11 rounded-lg text-destructive hover:bg-destructive/10 active:scale-[0.98] transition">
               <LogOut size={16} /> <span className="text-sm font-medium">Cerrar sesión</span>

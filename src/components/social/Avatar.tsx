@@ -10,15 +10,16 @@ export type AvatarLike = {
 };
 
 /**
- * Degradados suaves (cobalto/cian/violeta) para el monograma de respaldo.
- * Deterministas por usuario: mismo perfil → mismo degradado en toda la app.
+ * Degradados suaves (cobalto/azur/cielo, misma familia que el degradado de
+ * marca) para el monograma de respaldo. Deterministas por usuario: mismo
+ * perfil → mismo degradado en toda la app.
  */
 const FALLBACK_GRADIENTS = [
-  "linear-gradient(135deg, oklch(0.58 0.14 262) 0%, oklch(0.66 0.09 218) 100%)",
-  "linear-gradient(135deg, oklch(0.55 0.14 288) 0%, oklch(0.64 0.1 242) 100%)",
-  "linear-gradient(135deg, oklch(0.64 0.08 218) 0%, oklch(0.72 0.07 192) 100%)",
-  "linear-gradient(135deg, oklch(0.57 0.13 275) 0%, oklch(0.66 0.09 230) 100%)",
-  "linear-gradient(135deg, oklch(0.61 0.11 252) 0%, oklch(0.69 0.08 208) 100%)",
+  "linear-gradient(135deg, oklch(0.52 0.15 266) 0%, oklch(0.64 0.11 244) 100%)",
+  "linear-gradient(135deg, oklch(0.5 0.14 276) 0%, oklch(0.62 0.11 250) 100%)",
+  "linear-gradient(135deg, oklch(0.6 0.09 230) 0%, oklch(0.7 0.07 210) 100%)",
+  "linear-gradient(135deg, oklch(0.53 0.13 270) 0%, oklch(0.64 0.1 238) 100%)",
+  "linear-gradient(135deg, oklch(0.57 0.11 256) 0%, oklch(0.67 0.08 228) 100%)",
 ];
 
 /** Hash FNV-1a estable por id/usuario → degradado fijo (nunca cambia entre renders). */
@@ -34,10 +35,10 @@ function hashKey(s: string): number {
 /**
  * Avatar universal: foto subida → monograma con degradado suave determinista.
  *
- * El monograma siempre se renderiza POR DEBAJO de la foto: mientras la imagen
- * carga (o si la URL está rota/expirada) se ve la inicial con color de acento,
- * nunca un hueco, un «?» ni un cuadro gris genérico. Si la imagen falla, se
- * elimina y queda el monograma.
+ * Mientras la foto carga se muestra un fondo NEUTRO (nada de degradados
+ * cambiando por milisegundos) y la imagen aparece al instante cuando se
+ * decodifica. El degradado determinista solo se ve cuando no hay foto o la
+ * URL falló — entonces sí, la inicial con color de marca, nunca un «?».
  */
 export function Avatar({
   p,
@@ -62,25 +63,34 @@ export function Avatar({
   const seed = p?.id ?? p?.username ?? name ?? "user";
   const gradient = FALLBACK_GRADIENTS[hashKey(seed) % FALLBACK_GRADIENTS.length];
 
-  // Al cambiar la URL (o aparecer) se reintenta la imagen y se vuelve al monograma.
+  // Al cambiar la URL (o aparecer) se reintenta la imagen: el fondo vuelve al
+  // estado neutro mientras carga y el degradado solo reaparece si falla.
   useEffect(() => {
     setImgFailed(false);
   }, [url]);
 
   const roundCls = rounded === "full" ? "rounded-full" : rounded === "xl" ? "rounded-xl" : rounded === "lg" ? "rounded-lg" : "rounded-md";
   const dims = size !== undefined ? { width: size, height: size, fontSize: Math.max(10, size * 0.42) } : {};
+  const showPhoto = !!url && !imgFailed;
+  const showMonogram = !showPhoto; // sin foto o URL rota → inicial con degradado
   return (
     <div
       className={`relative overflow-hidden shrink-0 grid place-items-center font-display font-semibold text-white ${roundCls} ${className}`}
-      style={{ ...dims, backgroundImage: gradient, ...style }}
+      style={{
+        ...dims,
+        // Foto presente pero aún cargando: fondo neutro quieto (sin degradados
+        // parpadeando). El degradado solo pinta cuando no hay foto que mostrar.
+        ...(showPhoto ? { background: "var(--surface-2)" } : { backgroundImage: gradient }),
+        ...style,
+      }}
     >
-      <span className="relative">{initial}</span>
-      {url && !imgFailed && (
+      {showMonogram && <span className="relative">{initial}</span>}
+      {showPhoto && (
         <img
           key={url}
           src={url}
           alt=""
-          loading="lazy"
+          loading="eager"
           onError={() => setImgFailed(true)}
           className="absolute inset-0 w-full h-full object-cover"
         />

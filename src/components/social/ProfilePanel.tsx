@@ -61,7 +61,7 @@ export function ProfilePanel({
   const [location, setLocation] = useState("");
   const [statusEmoji, setStatusEmoji] = useState("");
   const [statusText, setStatusText] = useState("");
-  const [accentColor, setAccentColor] = useState("#1AA6D6");
+  const [accentColor, setAccentColor] = useState("#6B83D1");
   const [favoriteGenre, setFavoriteGenre] = useState("");
   const [customTitle, setCustomTitle] = useState("");
   const [birthday, setBirthday] = useState("");
@@ -97,7 +97,7 @@ export function ProfilePanel({
         setLocation(p.location ?? "");
         setStatusEmoji(p.status_emoji ?? "");
         setStatusText(p.status_text ?? "");
-        setAccentColor(p.accent_color ?? "#1AA6D6");
+        setAccentColor(p.accent_color ?? "#6B83D1");
         setFavoriteGenre(p.favorite_genre ?? "");
         setCustomTitle(p.custom_title ?? "");
         setBirthday(p.birthday ?? "");
@@ -233,7 +233,7 @@ export function ProfilePanel({
     <button
       type="button"
       onClick={() => viewingOwn && editing && fileRef.current?.click()}
-      className={`relative w-20 h-20 rounded-2xl overflow-hidden border-[3px] border-white block shadow-[0_12px_28px_-12px_oklch(0.5_0.15_268/0.35)] ${viewingOwn && editing ? "cursor-pointer active:scale-95" : ""}`}
+      className={`relative w-20 h-20 rounded-2xl overflow-hidden border-[3px] border-white block shadow-[0_12px_28px_-12px_oklch(0.5_0.13_266/0.35)] ${viewingOwn && editing ? "cursor-pointer active:scale-95" : ""}`}
       aria-label="Avatar"
     >
       {/* w-full h-full sin size fijo: la foto rellena exactamente la caja
@@ -408,7 +408,9 @@ export function ProfilePanel({
             </div>
           )}
 
-          {/* Extended edit fields */}
+          {/* Extended edit fields — agrupados por sección con etiqueta y
+              descripción: cada bloque dice para qué sirve (IDENTIDAD / ESTILO /
+              CONTENIDO / PRIVACIDAD) en vez de aparecer todo junto. */}
           {editing && (
             <div className="space-y-2 pt-2 border-t border-border/40">
               <button onClick={() => setShowMore(v => !v)}
@@ -417,52 +419,63 @@ export function ProfilePanel({
                 {showMore ? <ChevronUp size={14}/> : <ChevronDown size={14}/>}
               </button>
               {showMore && (
-                <div className="space-y-2">
-                  <div className="grid grid-cols-2 gap-2">
-                    <LabeledInput label="Pronombres" value={pronouns} onChange={setPronouns} placeholder="el/ella" max={20}/>
-                    <LabeledInput label="Ubicación" value={location} onChange={setLocation} placeholder="Ciudad" max={40}/>
-                  </div>
-                  <LabeledInput label="Título personalizado" value={customTitle} onChange={setCustomTitle} placeholder="Desarrolladora indie" max={40}/>
-                  <div className="grid grid-cols-[64px_1fr] gap-2">
-                    <LabeledInput label="Emoji" value={statusEmoji} onChange={setStatusEmoji} placeholder="🎮" max={4}/>
-                    <LabeledInput label="Estado" value={statusText} onChange={setStatusText} placeholder="Jugando ahora" max={60}/>
-                  </div>
-                  <div>
-                    <div className="text-[11px] font-medium text-muted-foreground mb-1 flex items-center gap-1"><Cake size={10}/>Cumpleaños</div>
-                    <input type="date" value={birthday} onChange={e => setBirthday(e.target.value)}
-                      className="w-full bg-input/50 rounded-lg px-2.5 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary/40"/>
-                  </div>
-                  <div>
-                    <div className="text-[11px] font-medium text-muted-foreground mb-1 flex items-center gap-1"><Palette size={10}/>Color de acento</div>
-                    <div className="flex items-center gap-2">
-                      <input type="color" value={accentColor} onChange={e => setAccentColor(e.target.value)}
-                        className="w-10 h-10 rounded-lg border border-border cursor-pointer bg-transparent"/>
-                      <input value={accentColor} onChange={e => setAccentColor(e.target.value)}
-                        className="flex-1 bg-input/50 rounded-lg px-2.5 py-1.5 text-xs font-mono outline-none"/>
+                <div className="space-y-2.5">
+                  <EditSection label="Identidad" hint="Cómo te presentas ante la comunidad">
+                    <div className="grid grid-cols-2 gap-2">
+                      <LabeledInput label="Pronombres" value={pronouns} onChange={setPronouns} placeholder="el/ella" max={20}/>
+                      <LabeledInput label="Ubicación" value={location} onChange={setLocation} placeholder="Ciudad" max={40}/>
                     </div>
-                  </div>
-                  <div>
-                    <div className="text-[11px] font-medium text-muted-foreground mb-1 flex items-center gap-1"><Gamepad2 size={10}/>Género favorito</div>
-                    <div className="flex flex-wrap gap-1">
-                      {GENRES.map(g => (
-                        <button key={g} onClick={() => setFavoriteGenre(g === favoriteGenre ? "" : g)}
-                          className={`px-2.5 py-1 rounded-lg text-[11px] border transition ${favoriteGenre === g ? "bg-primary text-white border-primary" : "border-border bg-surface text-muted-foreground hover:text-foreground"}`}>
-                          {g}
-                        </button>
-                      ))}
+                    <LabeledInput label="Título personalizado" value={customTitle} onChange={setCustomTitle} placeholder="Desarrolladora indie" max={40}/>
+                    <div className="grid grid-cols-[64px_1fr] gap-2">
+                      <LabeledInput label="Emoji" value={statusEmoji} onChange={setStatusEmoji} placeholder="🎮" max={4}/>
+                      <LabeledInput label="Estado" value={statusText} onChange={setStatusText} placeholder="Jugando ahora" max={60}/>
                     </div>
-                  </div>
-                  <LabeledInput label="Intereses (separados por coma, máx 10)" value={interestsRaw} onChange={setInterestsRaw} placeholder="pixel art, roguelike, coop" max={200} icon={<Tag size={10}/>}/>
-                  <label className="flex items-center gap-2 px-2 py-2 rounded-lg border border-border cursor-pointer">
-                    <button type="button" onClick={() => setShowOrbes(v => !v)}
-                      className={`w-9 h-5 rounded-full transition relative ${showOrbes ? "bg-primary" : "bg-muted"}`}>
-                      <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition ${showOrbes ? "left-4" : "left-0.5"}`}/>
-                    </button>
-                    <span className="text-xs flex-1 flex items-center gap-1">
-                      {showOrbes ? <Eye size={12}/> : <EyeOff size={12}/>}
-                      Mostrar orbes en el header
-                    </span>
-                  </label>
+                    <div>
+                      <div className="text-[11px] font-medium text-muted-foreground mb-1 flex items-center gap-1"><Cake size={10}/>Cumpleaños</div>
+                      <input type="date" value={birthday} onChange={e => setBirthday(e.target.value)}
+                        className="w-full bg-input/50 rounded-lg px-2.5 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary/40"/>
+                    </div>
+                  </EditSection>
+
+                  <EditSection label="Estilo" hint="Tu firma visual en el perfil">
+                    <div>
+                      <div className="text-[11px] font-medium text-muted-foreground mb-1 flex items-center gap-1"><Palette size={10}/>Color de acento</div>
+                      <div className="flex items-center gap-2">
+                        <input type="color" value={accentColor} onChange={e => setAccentColor(e.target.value)}
+                          className="w-10 h-10 rounded-lg border border-border cursor-pointer bg-transparent"/>
+                        <input value={accentColor} onChange={e => setAccentColor(e.target.value)}
+                          className="flex-1 bg-input/50 rounded-lg px-2.5 py-1.5 text-xs font-mono outline-none"/>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[11px] font-medium text-muted-foreground mb-1 flex items-center gap-1"><Gamepad2 size={10}/>Género favorito</div>
+                      <div className="flex flex-wrap gap-1">
+                        {GENRES.map(g => (
+                          <button key={g} onClick={() => setFavoriteGenre(g === favoriteGenre ? "" : g)}
+                            className={`px-2.5 py-1 rounded-lg text-[11px] border transition ${favoriteGenre === g ? "bg-primary text-white border-primary" : "border-border bg-surface text-muted-foreground hover:text-foreground"}`}>
+                            {g}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </EditSection>
+
+                  <EditSection label="Contenido" hint="Etiquetas que describen lo que te gusta">
+                    <LabeledInput label="Intereses (separados por coma, máx 10)" value={interestsRaw} onChange={setInterestsRaw} placeholder="pixel art, roguelike, coop" max={200} icon={<Tag size={10}/>}/>
+                  </EditSection>
+
+                  <EditSection label="Privacidad" hint="Qué información muestras en el header">
+                    <label className="flex items-center gap-2 px-2 py-2 rounded-lg border border-border cursor-pointer">
+                      <button type="button" onClick={() => setShowOrbes(v => !v)}
+                        className={`w-9 h-5 rounded-full transition relative ${showOrbes ? "bg-primary" : "bg-muted"}`}>
+                        <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition ${showOrbes ? "left-4" : "left-0.5"}`}/>
+                      </button>
+                      <span className="text-xs flex-1 flex items-center gap-1">
+                        {showOrbes ? <Eye size={12}/> : <EyeOff size={12}/>}
+                        Mostrar orbes en el header
+                      </span>
+                    </label>
+                  </EditSection>
                 </div>
               )}
             </div>
@@ -656,6 +669,21 @@ function FollowListModal({ list, myId, onClose, onChanged }: {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Bloque de personalización con etiqueta + descripción (separa los apartados). */
+function EditSection({ label, hint, children }: {
+  label: string; hint: string; children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-xl border border-border/60 bg-muted/20 p-2.5 space-y-2">
+      <div>
+        <div className="text-[9px] font-mono tracking-[0.14em] uppercase text-primary-glow">{label}</div>
+        <div className="text-[10px] text-muted-foreground mt-0.5">{hint}</div>
+      </div>
+      {children}
     </div>
   );
 }

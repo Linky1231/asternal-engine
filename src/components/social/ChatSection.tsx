@@ -522,7 +522,7 @@ function AnnouncementCard({ m, sender }: { m: ChatMessage; sender?: Profile | nu
     <div className="relative overflow-hidden rounded-2xl border border-primary/30 grad-brand-soft px-3.5 py-3 shadow-sm">
 
       <div className="relative flex items-start gap-2.5">
-        <div className="w-8 h-8 rounded-xl grad-brand text-primary-foreground grid place-items-center shrink-0 shadow-[0_4px_12px_-6px_oklch(0.52_0.19_258/0.6)]">
+        <div className="w-8 h-8 rounded-xl grad-brand text-primary-foreground grid place-items-center shrink-0 shadow-[0_4px_12px_-6px_oklch(0.55_0.14_262/0.5)]">
           <Megaphone size={14} />
         </div>
         <div className="min-w-0 flex-1">
@@ -568,7 +568,7 @@ function PollCard({
 
       <div className="relative">
         <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-          <div className="w-7 h-7 rounded-lg grad-brand text-primary-foreground grid place-items-center shrink-0 shadow-[0_4px_10px_-6px_oklch(0.52_0.19_258/0.5)]">
+          <div className="w-7 h-7 rounded-lg grad-brand text-primary-foreground grid place-items-center shrink-0 shadow-[0_4px_10px_-6px_oklch(0.55_0.14_262/0.45)]">
             <BarChart3 size={13} />
           </div>
           <span className="text-[9px] font-display tracking-[0.18em] text-primary font-bold">ENCUESTA</span>
@@ -748,7 +748,7 @@ function GiftCard({
             animate={open ? { scale: [1, 1.06, 1] } : { scale: 1 }}
             transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
             style={{ willChange: "transform" }}
-            className="w-12 h-12 shrink-0 rounded-2xl grad-brand text-primary-foreground grid place-items-center shadow-[0_8px_20px_-8px_oklch(0.52_0.19_258/0.6)]"
+            className="w-12 h-12 shrink-0 rounded-2xl grad-brand text-primary-foreground grid place-items-center shadow-[0_8px_20px_-8px_oklch(0.55_0.14_262/0.5)]"
           >
             <Gift size={22} strokeWidth={2} />
             <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/20 pointer-events-none" />
@@ -803,7 +803,7 @@ function GiftCard({
             <button
               onClick={onClaim}
               disabled={claiming || expiring}
-              className="w-full py-2.5 rounded-xl grad-brand text-primary-foreground text-[11px] font-display tracking-widest shadow-[0_6px_16px_-6px_oklch(0.52_0.19_258/0.5)] active:scale-[0.98] transition disabled:opacity-50 flex items-center justify-center gap-1.5"
+              className="w-full py-2.5 rounded-xl grad-brand text-primary-foreground text-[11px] font-display tracking-widest shadow-[0_6px_16px_-6px_oklch(0.55_0.14_262/0.45)] active:scale-[0.98] transition disabled:opacity-50 flex items-center justify-center gap-1.5"
             >
               {claiming ? <Loader2 size={13} className="animate-spin" /> : <Gift size={13} />}
               {claiming ? "ABRIENDO…" : "ABRIR REGALO"}
@@ -838,7 +838,7 @@ function GiftCard({
                   style={{ willChange: "transform, opacity" }}
                   className="text-center px-4"
                 >
-                  <div className="w-14 h-14 mx-auto mb-2.5 rounded-2xl grad-brand text-primary-foreground grid place-items-center shadow-[0_8px_20px_-8px_oklch(0.52_0.19_258/0.6)]">
+                  <div className="w-14 h-14 mx-auto mb-2.5 rounded-2xl grad-brand text-primary-foreground grid place-items-center shadow-[0_8px_20px_-8px_oklch(0.55_0.14_262/0.5)]">
                     <Sparkles size={26} />
                   </div>
                   <div className="text-sm font-bold text-white drop-shadow">¡+{claimedAmount ?? gift.amount_per_person} ORBES!</div>

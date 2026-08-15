@@ -181,7 +181,7 @@ function FeedPage() {
         ) : (
           <>
             {posts.map((p, i) => (
-              <div key={p.id} className="card-enter" style={{ animationDelay: `${Math.min(i * 45, 350)}ms` }}>
+              <div key={p.id} className="card-enter" style={{ animationDelay: `${Math.min(i * 25, 180)}ms` }}>
                 <PostCard post={p} myId={myId} isMod={mod} onChange={reload} />
               </div>
             ))}

@@ -124,8 +124,8 @@ function CreatorRobot() {
     <div className="relative">
       {/* Head */}
       <div className="w-12 h-11 rounded-[10px] bg-gradient-to-b from-white to-white/70 border-2 border-primary/25 shadow-lg flex items-center justify-center gap-[3px]">
-        <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_6px_oklch(0.52_0.19_258/0.6)]" />
-        <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_6px_oklch(0.52_0.19_258/0.6)]" />
+        <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_6px_oklch(0.55_0.14_262/0.55)]" />
+        <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_6px_oklch(0.55_0.14_262/0.55)]" />
       </div>
       {/* Neck */}
       <div className="w-1.5 h-2 bg-primary/20 mx-auto" />
@@ -227,7 +227,7 @@ function HeroScene() {
               <div className="w-5 h-8 rounded-t-lg rounded-b-sm grad-brand shadow-lg shadow-accent/30 rotate-12" />
             </div>
             {/* Disc */}
-            <div className="relative -mt-1 z-10 w-[250px] h-[54px] rounded-[50%] bg-gradient-to-b from-white/90 to-white/40 border border-white/70 shadow-[0_25px_60px_-15px_oklch(0.52_0.19_258/0.4)]">
+            <div className="relative -mt-1 z-10 w-[250px] h-[54px] rounded-[50%] bg-gradient-to-b from-white/90 to-white/40 border border-white/70 shadow-[0_25px_60px_-15px_oklch(0.55_0.14_262/0.35)]">
               <div className="absolute inset-0 rounded-[50%] overflow-hidden opacity-40"
                 style={{
                   background:
@@ -593,7 +593,7 @@ function AuthPage() {
               animation: loaded ? 'fade-in-up 800ms 700ms cubic-bezier(0.22,1,0.36,1) both' : 'none',
             }}>
                 {/* Tarjeta premium: borde degradado + sombras en capas + radius 24px */}
-                <div className="relative rounded-3xl border border-primary/15 shadow-[0_30px_80px_-20px_oklch(0.52_0.19_258/0.3),0_10px_30px_-10px_oklch(0.52_0.19_258/0.18)]">
+                <div className="relative rounded-3xl border border-primary/15 shadow-[0_30px_80px_-20px_oklch(0.55_0.14_262/0.28),0_10px_30px_-10px_oklch(0.55_0.14_262/0.16)]">
                   <div className="relative bg-white/85 backdrop-blur-md rounded-3xl p-7 overflow-hidden group/form-card">
 
                     {/* Shine superior */}

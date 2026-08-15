@@ -96,7 +96,7 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
 
   const Chip = ({ active, onClick, title, children }: { active?: boolean; onClick: () => void; title: string; children: React.ReactNode }) => (
     <button onClick={onClick} title={title}
-      className={`relative shrink-0 h-9 px-3 rounded-xl grid grid-flow-col auto-cols-max items-center gap-1.5 text-[11px] font-medium transition-[transform,color,border-color,background-color,box-shadow] duration-300 ease-out active:scale-[0.95] ${active ? "text-primary-foreground shadow-[0_2px_10px_-2px_oklch(0.52_0.19_258/0.45)] border border-transparent" : "bg-muted/50 text-muted-foreground hover:text-primary hover:bg-primary/10 hover:border-primary/25 border border-transparent"}`}>
+      className={`relative shrink-0 h-9 px-3 rounded-xl grid grid-flow-col auto-cols-max items-center gap-1.5 text-[11px] font-medium transition-[transform,color,border-color,background-color,box-shadow] duration-300 ease-out active:scale-[0.95] ${active ? "text-primary-foreground shadow-[0_2px_10px_-2px_oklch(0.55_0.14_262/0.45)] border border-transparent" : "bg-muted/50 text-muted-foreground hover:text-primary hover:bg-primary/10 hover:border-primary/25 border border-transparent"}`}>
       <span aria-hidden className={`absolute inset-0 rounded-xl grad-brand transition-opacity duration-300 ease-out ${active ? "opacity-100" : "opacity-0"}`} />
       <span className="relative z-10 flex items-center gap-1.5">{children}</span>
     </button>
@@ -275,7 +275,7 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
           <span className="text-[8px] font-mono text-muted-foreground/30 mr-auto" title="marcador compositor">ast-composer-v1</span>
           <span className={`text-[10px] font-mono text-muted-foreground ${content.length > 1900 ? "text-destructive" : ""}`}>{content.length}/2000</span>
           <button onClick={submit} disabled={!canSubmit}
-            className="h-10 pl-4 pr-5 rounded-xl grad-brand text-primary-foreground font-display tracking-[0.15em] text-xs flex items-center gap-1.5 active:scale-[0.97] transition-[transform,box-shadow,opacity] duration-300 ease-out shadow-[0_4px_14px_-4px_oklch(0.52_0.19_258/0.5)] disabled:opacity-40 disabled:pointer-events-none hover:-translate-y-0.5 hover:shadow-[0_8px_20px_-5px_oklch(0.52_0.19_258/0.65)]">
+            className="h-10 pl-4 pr-5 rounded-xl grad-brand text-primary-foreground font-display tracking-[0.15em] text-xs flex items-center gap-1.5 active:scale-[0.97] transition-[transform,box-shadow,opacity] duration-300 ease-out shadow-[0_4px_14px_-4px_oklch(0.55_0.14_262/0.45)] disabled:opacity-40 disabled:pointer-events-none hover:-translate-y-0.5 hover:shadow-[0_8px_20px_-5px_oklch(0.55_0.14_262/0.6)]">
             {busy ? <Loader2 size={14} className="animate-spin" /> : <Send size={13} />}
             {busy ? "…" : "PUBLICAR"}
           </button>

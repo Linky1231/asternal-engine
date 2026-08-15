@@ -287,9 +287,9 @@ function FeaturedBanner({ post, plays24, onPlay }: { post: PostWithMeta; plays24
           <img src={post.signed_cover} alt={title} className="absolute inset-0 w-full h-full object-cover" />
         ) : (
           <>
-            {/* Mesh profundo de marca (cobalto/violeta/cian): con foto o sin ella,
-                el banner siempre lleva la identidad de la app, nunca gris apagado. */}
-            <div className="absolute inset-0 grad-brand-deep" />
+            {/* Sin portada: el MISMO degradado oficial de la página (Azure Drift),
+                nunca un degradado distinto — la identidad es una sola en toda la app. */}
+            <div className="absolute inset-0 grad-brand" />
             {/* Marca de agua: icono de juego translúcido de fondo */}
             <div className="absolute inset-0 grid place-items-center">
               <Joystick size={150} strokeWidth={1} className="text-white/[0.13] drop-shadow-[0_12px_32px_rgba(0,0,0,0.35)]" />
