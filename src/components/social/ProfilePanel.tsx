@@ -227,6 +227,30 @@ export function ProfilePanel({
     setTimeout(() => setCodeCopied(false), 1600);
   };
 
+  // Marco Plus del avatar: anillo de degradado pegado a la foto (estilo PostCard).
+  const frameRing = profile.avatar_frame && isPlusActive(profile) ? frameCss(profile.avatar_frame) : null;
+  const avatarButton = (
+    <button
+      type="button"
+      onClick={() => viewingOwn && editing && fileRef.current?.click()}
+      className={`relative w-20 h-20 rounded-2xl overflow-hidden border-[3px] border-white block shadow-[0_12px_28px_-12px_oklch(0.45_0.22_268/0.4)] ${viewingOwn && editing ? "cursor-pointer active:scale-95" : ""}`}
+      aria-label="Avatar"
+    >
+      <Avatar
+        p={avatarPreview ? { ...profile, avatar_url: avatarPreview } : profile}
+        size={72}
+        rounded="xl"
+      />
+      {viewingOwn && editing && (
+        <div className="absolute inset-0 bg-black/40 grid place-items-center">
+          <Camera size={20} className="text-white" />
+        </div>
+      )}
+      <input ref={fileRef} type="file" accept="image/*" className="hidden"
+        onChange={e => pickAvatar(e.target.files?.[0] ?? null)} />
+    </button>
+  );
+
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
       {/* Header card with banner */}
@@ -245,28 +269,15 @@ export function ProfilePanel({
 
         <div className="p-4 space-y-3">
           <div className="flex items-start gap-3 -mt-12">
-            {/* Avatar frame wrapper (overflow visible so animated frame shows) */}
-            <div className={`relative shrink-0 rounded-2xl ${profile.avatar_frame && isPlusActive(profile) ? `plus-frame plus-frame-${profile.avatar_frame}` : ""}`}>
-              <button
-                type="button"
-                onClick={() => viewingOwn && editing && fileRef.current?.click()}
-                className={`relative w-20 h-20 rounded-2xl overflow-hidden border-4 border-background block ${viewingOwn && editing ? "cursor-pointer active:scale-95" : ""}`}
-                aria-label="Avatar"
-              >
-                <Avatar
-                  p={avatarPreview ? { ...profile, avatar_url: avatarPreview } : profile}
-                  size={72}
-                  rounded="xl"
-                />
-                {viewingOwn && editing && (
-                  <div className="absolute inset-0 bg-black/40 grid place-items-center">
-                    <Camera size={20} className="text-white" />
-                  </div>
-                )}
-                <input ref={fileRef} type="file" accept="image/*" className="hidden"
-                  onChange={e => pickAvatar(e.target.files?.[0] ?? null)} />
-              </button>
-            </div>
+            {/* Avatar: marco de degradado ceñido a la foto (mismo lenguaje que PostCard),
+                en vez del anillo animado flotante que se veía como un borde roto. */}
+            {frameRing ? (
+              <div className="relative shrink-0 rounded-2xl p-[2px]" style={{ background: frameRing }}>
+                {avatarButton}
+              </div>
+            ) : (
+              avatarButton
+            )}
 
 
             <div className="flex-1 min-w-0 pt-12">
@@ -664,6 +675,17 @@ function TikTokIcon({ size = 14 }: { size?: number }) {
       <path d="M19.6 6.7a5.1 5.1 0 0 1-3.3-1.2 5.2 5.2 0 0 1-1.6-3H11v12.4a2.6 2.6 0 1 1-2.6-2.6c.3 0 .5 0 .8.1V8.7a6.4 6.4 0 1 0 5.5 6.3V9.5c1.3.9 2.9 1.5 4.6 1.5V7.6c-.3 0-.5-.1-.7-.2Z"/>
     </svg>
   );
+}
+
+/** Gradiente del marco de avatar Plus (mismo set que PostCard). */
+function frameCss(id: string): string {
+  switch (id) {
+    case "aurora": return "linear-gradient(135deg, #1AA6D6, #2FD9D2, #7BE7FF)";
+    case "ocean": return "linear-gradient(135deg, #0F6C9E, #1AA6D6, #2FD9D2)";
+    case "ice": return "linear-gradient(135deg, #B8ECFF, #7BE7FF, #2FD9D2)";
+    case "neon": return "linear-gradient(135deg, #2FD9D2, #B8ECFF, #1AA6D6)";
+    default: return "linear-gradient(135deg, #1AA6D6, #2FD9D2)";
+  }
 }
 
 function SocialLinksRow({ links }: { links: import("@/lib/social/api").SocialLinks }) {
