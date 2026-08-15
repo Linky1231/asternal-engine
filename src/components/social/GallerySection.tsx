@@ -253,7 +253,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
           className="flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground/50"
         />
         {searchQ && (
-          <button onClick={() => setSearchQ("")} className="w-6 h-6 grid place-items-center rounded-full hover:bg-muted/50 text-muted-foreground transition">
+          <button onClick={() => setSearchQ("")} className="w-6 h-6 grid place-items-center rounded-lg hover:bg-muted/50 text-muted-foreground transition">
             <X size={13} />
           </button>
         )}
@@ -387,7 +387,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
 
                     {/* Premium hover overlay with glass effect */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/0 via-black/0 to-black/0 group-hover:from-black/30 group-hover:via-black/10 group-hover:to-transparent transition-all duration-300 flex items-center justify-center">
-                      <div className="opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center gap-1.5 px-4 py-2 rounded-full bg-black/50 backdrop-blur-sm text-white text-[10px] font-semibold translate-y-3 group-hover:translate-y-0">
+                      <div className="opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center gap-1.5 px-4 py-2 rounded-xl bg-black/50 backdrop-blur-sm text-white text-[10px] font-semibold translate-y-3 group-hover:translate-y-0">
                         <Eye size={12} /> VER DETALLE
                       </div>
                     </div>
@@ -582,7 +582,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
                 )}
                 <button
                   onClick={() => setDetailPost(null)}
-                  className="absolute top-3 right-3 w-8 h-8 grid place-items-center rounded-full bg-black/40 text-white hover:bg-black/60 transition backdrop-blur-sm"
+                  className="absolute top-3 right-3 w-8 h-8 grid place-items-center rounded-lg bg-black/40 text-white hover:bg-black/60 transition backdrop-blur-sm"
                 >
                   <X size={14} />
                 </button>

@@ -218,7 +218,7 @@ function AudioBubble({ url, mine, duration }: { url: string; mine: boolean; dura
     <div className={`flex items-center gap-2 min-w-[200px] max-w-[240px] ${mine ? "flex-row" : "flex-row-reverse"}`}>
       <button
         onClick={toggle}
-        className={`w-8 h-8 rounded-full grid place-items-center shrink-0 transition active:scale-90 ${
+        className={`w-8 h-8 rounded-xl grid place-items-center shrink-0 transition active:scale-90 ${
           mine ? "bg-white/25 text-white hover:bg-white/30" : "bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-sm"
         }`}
       >
@@ -2854,7 +2854,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
         {unseen > 0 && (
           <button
             onClick={jumpToBottom}
-            className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground text-[11px] font-display tracking-wide shadow-lg active:scale-95 transition"
+            className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-[11px] font-display tracking-wide shadow-lg active:scale-95 transition"
           >
             <ArrowDown size={12} /> {unseen >= 100 ? "99" : unseen} nuevo{unseen > 1 ? "s" : ""}
           </button>
@@ -2884,7 +2884,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                 });
               }}
               disabled={mediaUploading}
-              className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 text-white grid place-items-center active:scale-90 transition disabled:opacity-40"
+              className="absolute top-1.5 right-1.5 w-6 h-6 rounded-lg bg-black/60 text-white grid place-items-center active:scale-90 transition disabled:opacity-40"
             >
               <X size={11} />
             </button>

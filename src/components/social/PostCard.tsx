@@ -120,9 +120,9 @@ export const PostCard = memo(function PostCard({
               className="w-full bg-input/40 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary/40" />
             <div className="flex gap-2 justify-end">
               <button onClick={() => setEditing(false)}
-                className="text-xs px-3.5 py-1.5 rounded-full border border-border hover:bg-muted/40 transition-colors duration-200">Cancelar</button>
+                className="text-xs px-3.5 py-1.5 rounded-xl border border-border hover:bg-muted/40 transition-colors duration-200">Cancelar</button>
               <button onClick={saveEdit}
-                className="text-xs px-3.5 py-1.5 rounded-full bg-primary text-white active:scale-[0.96] transition-transform duration-300 ease-out">Guardar</button>
+                className="text-xs px-3.5 py-1.5 rounded-xl bg-primary text-white active:scale-[0.96] transition-transform duration-300 ease-out">Guardar</button>
             </div>
           </div>
         ) : (

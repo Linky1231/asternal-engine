@@ -217,7 +217,7 @@ export function GameCard({
           <div className="absolute inset-0 opacity-40" style={{ background: "radial-gradient(circle at 30% 30%, oklch(0.67 0.14 250 / 0.35), transparent 60%)" }} />
         )}
         <button
-          className="relative w-16 h-16 rounded-full bg-white/95 backdrop-blur grid place-items-center shadow-xl active:scale-95 hover:scale-105 transition-transform duration-200"
+          className="relative w-16 h-16 rounded-2xl bg-white/95 backdrop-blur grid place-items-center shadow-xl active:scale-95 hover:scale-105 transition-transform duration-200"
           aria-label={needsPurchase ? "Comprar y jugar" : "Jugar"}
         >
           {loading ? <Loader2 size={20} className="animate-spin text-primary" /> :
@@ -357,7 +357,7 @@ export function GameCard({
         >
           <button
             onClick={() => setViewer(null)}
-            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 text-white grid place-items-center hover:bg-white/20 active:scale-90 transition z-10"
+            className="absolute top-4 right-4 w-10 h-10 rounded-xl bg-white/10 text-white grid place-items-center hover:bg-white/20 active:scale-90 transition z-10"
             aria-label="Cerrar"
           >
             <X size={18} />
@@ -366,14 +366,14 @@ export function GameCard({
             <>
               <button
                 onClick={e => { e.stopPropagation(); setViewer(v => (v! - 1 + post.signed_screenshots.length) % post.signed_screenshots.length); }}
-                className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 text-white grid place-items-center hover:bg-white/20 active:scale-90 transition z-10"
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-white/10 text-white grid place-items-center hover:bg-white/20 active:scale-90 transition z-10"
                 aria-label="Anterior"
               >
                 <ChevronLeft size={20} />
               </button>
               <button
                 onClick={e => { e.stopPropagation(); setViewer(v => (v! + 1) % post.signed_screenshots.length); }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 text-white grid place-items-center hover:bg-white/20 active:scale-90 transition z-10"
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-white/10 text-white grid place-items-center hover:bg-white/20 active:scale-90 transition z-10"
                 aria-label="Siguiente"
               >
                 <ChevronRight size={20} />

@@ -432,7 +432,7 @@ export function ProfilePanel({
                     <div className="flex flex-wrap gap-1">
                       {GENRES.map(g => (
                         <button key={g} onClick={() => setFavoriteGenre(g === favoriteGenre ? "" : g)}
-                          className={`px-2.5 py-1 rounded-full text-[11px] border transition ${favoriteGenre === g ? "bg-primary text-white border-primary" : "border-border bg-surface text-muted-foreground hover:text-foreground"}`}>
+                          className={`px-2.5 py-1 rounded-lg text-[11px] border transition ${favoriteGenre === g ? "bg-primary text-white border-primary" : "border-border bg-surface text-muted-foreground hover:text-foreground"}`}>
                           {g}
                         </button>
                       ))}
@@ -679,7 +679,7 @@ function SocialLinksRow({ links }: { links: import("@/lib/social/api").SocialLin
       {items.map(it => (
         <a key={it.key} href={/^https?:\/\//.test(it.url!) ? it.url! : `https://${it.url}`}
           target="_blank" rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] border border-border/60 bg-muted/30 active:scale-95 transition"
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] border border-border/60 bg-muted/30 active:scale-95 transition"
           style={{ color: it.color }}>
           {it.icon}<span className="text-foreground">{it.label}</span>
         </a>

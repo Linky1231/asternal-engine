@@ -177,7 +177,7 @@ function TrendChip({ active, onClick, icon, label }: { active: boolean; onClick:
   return (
     <button
       onClick={onClick}
-      className={`shrink-0 flex items-center gap-1.5 px-3 h-8 rounded-full text-[11px] font-medium transition-colors duration-200 active:scale-[0.96] ${
+      className={`shrink-0 flex items-center gap-1.5 px-3 h-8 rounded-lg text-[11px] font-medium transition-colors duration-200 active:scale-[0.96] ${
         active
           ? "bg-primary text-white"
           : "bg-card border border-line-strong text-ink-2 hover:border-primary/30 hover:text-primary"

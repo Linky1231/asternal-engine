@@ -352,7 +352,7 @@ function HomePage() {
       {/* Floating CTA to editor */}
       <Link
         to="/editor"
-        className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-[max(1.25rem,env(safe-area-inset-right))] z-30 h-14 pl-4 pr-5 rounded-full btn-grad shadow-[0_3px_10px_-4px_oklch(0.52_0.19_258/0.5)] ring-1 ring-white/25 ring-inset flex items-center gap-2 active:scale-95 font-display tracking-widest text-xs"
+        className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-[max(1.25rem,env(safe-area-inset-right))] z-30 h-14 pl-4 pr-5 rounded-xl btn-grad shadow-[0_3px_10px_-4px_oklch(0.52_0.19_258/0.5)] ring-1 ring-white/25 ring-inset flex items-center gap-2 active:scale-95 font-display tracking-widest text-xs"
       >
         <Plus size={18} strokeWidth={2} /> CREAR
       </Link>
@@ -521,7 +521,7 @@ function FeedSubTabs({ value, onChange }: { value: FeedSub; onChange: (v: FeedSu
             key={it.id}
             onClick={() => onChange(it.id)}
             aria-pressed={active}
-            className={`flex-1 min-w-0 flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-full text-[10px] sm:text-[11px] font-display font-semibold tracking-wide whitespace-nowrap border transition-colors duration-200 outline-none focus:outline-none active:scale-[0.97] ${
+            className={`flex-1 min-w-0 flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-xl text-[10px] sm:text-[11px] font-display font-semibold tracking-wide whitespace-nowrap border transition-colors duration-200 outline-none focus:outline-none active:scale-[0.97] ${
               active
                 ? "border-transparent bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-sm"
                 : "border-line-strong bg-card text-muted-foreground hover:border-primary/25 hover:text-foreground"

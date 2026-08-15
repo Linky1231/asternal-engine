@@ -440,7 +440,7 @@ function ThreadListView({
                         <img src={url} alt="" className="w-full rounded-xl" loading="lazy" />
                       )}
                       <button onClick={() => setMediaFiles(f => f.filter((_, idx) => idx !== i))}
-                        className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/50 text-white grid place-items-center opacity-0 group-hover:opacity-100 hover:bg-black/70 transition-all active:scale-90"
+                        className="absolute top-2 right-2 w-7 h-7 rounded-lg bg-black/50 text-white grid place-items-center opacity-0 group-hover:opacity-100 hover:bg-black/70 transition-all active:scale-90"
                       >
                         <X size={12} />
                       </button>

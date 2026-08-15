@@ -163,7 +163,7 @@ export function GlobalSearchPanel({
   const chip = (active: boolean, label: string, onClick: () => void) => (
     <button
       onClick={onClick}
-      className={`shrink-0 px-3 py-1.5 rounded-full text-[10px] font-display tracking-wider transition active:scale-95 ${
+      className={`shrink-0 px-3 py-1.5 rounded-lg text-[10px] font-display tracking-wider transition active:scale-95 ${
         active
           ? "bg-primary text-white"
           : "bg-card border border-border text-muted-foreground hover:text-foreground"
@@ -351,7 +351,7 @@ export function GlobalSearchPanel({
           {chip(scope === "work", "Trabajo", () => setScope("work"))}
           <button
             onClick={() => setFiltersOpen((v) => !v)}
-            className={`ml-auto shrink-0 px-3 py-1.5 rounded-full text-[10px] font-display tracking-wider transition active:scale-95 ${
+            className={`ml-auto shrink-0 px-3 py-1.5 rounded-lg text-[10px] font-display tracking-wider transition active:scale-95 ${
               channelId || personId || dateFrom || dateTo
                 ? "bg-primary/15 text-primary border border-primary/30"
                 : "bg-card border border-border text-muted-foreground hover:text-foreground"

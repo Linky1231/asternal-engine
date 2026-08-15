@@ -95,7 +95,7 @@ function FeedPage() {
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
           {CATEGORIES.map((c) => (
             <button key={c.id} onClick={() => setCategory(c.id)}
-              className={`shrink-0 h-9 px-4 rounded-full grid grid-flow-col auto-cols-max items-center gap-1.5 text-xs font-medium transition-colors duration-200 active:scale-[0.96] border ${
+              className={`shrink-0 h-9 px-4 rounded-xl grid grid-flow-col auto-cols-max items-center gap-1.5 text-xs font-medium transition-colors duration-200 active:scale-[0.96] border ${
                 category === c.id
                   ? "border-transparent bg-primary text-white"
                   : "border-border/40 bg-muted/30 text-muted-foreground hover:text-primary hover:bg-muted/60"
@@ -105,7 +105,7 @@ function FeedPage() {
             </button>
           ))}
           <button onClick={() => setShowFilters(s => !s)}
-            className={`shrink-0 h-9 px-3 rounded-full grid grid-flow-col auto-cols-max items-center gap-1.5 text-xs font-medium transition-[transform,color,background-color,border-color] duration-300 ease-out active:scale-[0.96] ${showFilters ? "bg-primary/10 text-primary-glow border border-primary/30" : "bg-card border border-border text-muted-foreground hover:text-primary-glow hover:border-primary/30"}`}>
+            className={`shrink-0 h-9 px-3 rounded-xl grid grid-flow-col auto-cols-max items-center gap-1.5 text-xs font-medium transition-[transform,color,background-color,border-color] duration-300 ease-out active:scale-[0.96] ${showFilters ? "bg-primary/10 text-primary-glow border border-primary/30" : "bg-card border border-border text-muted-foreground hover:text-primary-glow hover:border-primary/30"}`}>
             <SlidersHorizontal size={13} />
             Filtros
           </button>

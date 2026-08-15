@@ -197,7 +197,7 @@ export function PublishGameDialog({
                   <button
                     type="button"
                     onClick={() => removeScreen(s.id, s.url, s.existing)}
-                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white grid place-items-center active:scale-90 transition opacity-0 group-hover:opacity-100"
+                    className="absolute top-1 right-1 w-5 h-5 rounded-md bg-black/60 text-white grid place-items-center active:scale-90 transition opacity-0 group-hover:opacity-100"
                     aria-label="Quitar captura"
                   >
                     <X size={11} />
@@ -247,7 +247,7 @@ export function PublishGameDialog({
             <div className="mt-1.5 flex flex-wrap gap-1.5">
               {GAME_GENRES.map(g => (
                 <button key={g} type="button" onClick={() => setGenre(genre === g ? "" : g)}
-                  className={`px-2.5 h-7 rounded-full text-[10px] font-display tracking-wide transition active:scale-95 border ${
+                  className={`px-2.5 h-7 rounded-lg text-[10px] font-display tracking-wide transition active:scale-95 border ${
                     genre === g
                       ? "border-transparent bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-sm"
                       : "border-border/60 bg-muted/30 text-muted-foreground hover:text-primary-glow hover:border-primary/30"
