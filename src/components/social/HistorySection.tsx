@@ -26,8 +26,8 @@ function StatCard({ icon, label, value, sub, tone }: {
   const toneCls =
     tone === "primary" ? "from-primary/15 to-accent/10 text-primary"
     : tone === "accent" ? "from-accent/15 to-primary/10 text-accent"
-    : tone === "emerald" ? "from-emerald-500/15 to-teal-500/10 text-emerald-600 dark:text-emerald-400"
-    : "from-rose-500/15 to-pink-500/10 text-rose-500";
+    : tone === "emerald" ? "from-success/15 to-success/10 text-success"
+    : "from-destructive/15 to-destructive/10 text-destructive";
   return (
     <div className="rounded-lg border border-border/70 bg-surface p-2.5 flex flex-col gap-1 min-w-0">
       <div className={`w-7 h-7 rounded-lg bg-gradient-to-br grid place-items-center ${toneCls}`}>
