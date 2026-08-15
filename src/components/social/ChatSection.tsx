@@ -1,7 +1,7 @@
 import { Component, useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, Copy, Check, Reply, SmilePlus, ImagePlus, Film, Loader2, Users, Users2, Settings2, UserPlus, UserMinus, Camera, Pencil, LogOut, MessageCircle, AtSign, BarChart3, Shield, ShieldCheck, ArrowLeft, WifiOff, RefreshCw, KeyRound, CheckCircle2, AlertTriangle, Mic, Play, Pause, Trash2, ArrowDown, ExternalLink, Megaphone, Gift, PartyPopper, Lock, Sparkles, Timer, Undo2, ChevronRight, Briefcase, ClipboardList, FolderOpen, MessagesSquare, Download, Paperclip, MessageSquarePlus, Search, Layers } from "lucide-react";
+import { X, Send, Copy, Check, Reply, SmilePlus, ImagePlus, Image as ImageIcon, Film, Loader2, Users, Users2, Settings2, UserPlus, UserMinus, Camera, Pencil, LogOut, MessageCircle, AtSign, BarChart3, Shield, ShieldCheck, ArrowLeft, WifiOff, RefreshCw, KeyRound, CheckCircle2, AlertTriangle, Mic, Play, Pause, Trash2, ArrowDown, ExternalLink, Megaphone, Gift, PartyPopper, Lock, Sparkles, Timer, Undo2, ChevronRight, Briefcase, ClipboardList, FolderOpen, MessagesSquare, Download, Paperclip, MessageSquarePlus, Search, Layers } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
@@ -85,6 +85,16 @@ function fmtDay(iso: string): string {
   const today = new Date();
   if (d.toDateString() === today.toDateString()) return fmtTime(iso);
   return d.toLocaleDateString([], { day: "2-digit", month: "short" });
+}
+
+/** Mini etiqueta con icono para previsualizar el tipo de media de un mensaje. */
+function MediaLabel({ m, muted }: { m: Pick<ChatMessage, "media_type" | "media_url"> & { content?: string | null }; muted?: boolean }) {
+  const cls = `inline-flex items-center gap-1 ${muted ? "text-muted-foreground/80" : ""}`;
+  if (isAudioMessage(m)) return <span className={cls}><Mic size={10} /> Audio de voz</span>;
+  if (isVideoMessage(m)) return <span className={cls}><Film size={10} /> Vídeo</span>;
+  if (isImageMessage(m)) return <span className={cls}><ImageIcon size={10} /> Foto</span>;
+  if (m.media_url) return <span className={cls}><SmilePlus size={10} /> Sticker</span>;
+  return <span>{m.content || "Mensaje"}</span>;
 }
 
 /** Convierte el error técnico del chat en una pista útil para el usuario. */
@@ -433,7 +443,7 @@ function MessageBubble({
         >
           {reply && (
             <div className="mb-1.5 border-l-2 border-primary/50 pl-2 py-0.5 rounded-r-md bg-black/5 dark:bg-white/5 text-[11px] text-muted-foreground line-clamp-2">
-              {isAudioMessage(reply) ? "🎤 Audio de voz" : isVideoMessage(reply) ? "🎬 Vídeo" : isImageMessage(reply) ? "🖼️ Foto" : reply.media_url ? "🖼️ Sticker" : reply.content || "Mensaje"}
+              <MediaLabel m={reply} />
             </div>
           )}
           {displayContent && (
@@ -502,7 +512,7 @@ class SafeRow extends Component<{ children: ReactNode }, { failed: boolean }> {
 function AnnouncementCard({ m, sender }: { m: ChatMessage; sender?: Profile | null }) {
   return (
     <div className="relative overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/[0.12] via-accent/[0.08] to-transparent px-3.5 py-3 shadow-sm">
-      <div className="absolute -right-8 -top-8 w-28 h-28 rounded-full bg-primary/15 blur-2xl pointer-events-none" />
+
       <div className="relative flex items-start gap-2.5">
         <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center shrink-0 shadow-[0_4px_12px_-6px_oklch(0.52_0.19_258/0.6)]">
           <Megaphone size={14} />
@@ -547,7 +557,7 @@ function PollCard({
   const pct = (n: number) => (total ? Math.round((n / total) * 100) : 0);
   return (
     <div className="relative overflow-hidden rounded-2xl border border-primary/25 bg-card shadow-sm px-3.5 py-3">
-      <div className="absolute -right-8 -top-8 w-28 h-28 rounded-full bg-accent/15 blur-2xl pointer-events-none" />
+
       <div className="relative">
         <div className="flex items-center gap-2 mb-1.5 flex-wrap">
           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center shrink-0 shadow-[0_4px_10px_-6px_oklch(0.52_0.19_258/0.5)]">
@@ -723,8 +733,7 @@ function GiftCard({
   return (
     <div className="flex justify-center px-1">
       <div className="relative w-full max-w-sm overflow-hidden rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/[0.10] via-accent/[0.06] to-transparent px-3.5 py-3 shadow-sm">
-        <div className="absolute -left-6 -top-8 w-24 h-24 rounded-full bg-primary/15 blur-2xl pointer-events-none" />
-        <div className="absolute -right-6 -bottom-8 w-24 h-24 rounded-full bg-accent/10 blur-2xl pointer-events-none" />
+
 
         <div className="relative flex items-center gap-3">
           <motion.div
@@ -2667,17 +2676,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                   </div>
                   <div className="flex items-center justify-between gap-2 mt-0.5">
                     <span className="text-[11px] text-muted-foreground truncate">
-                      {g.last_message
-                        ? isAudioMessage(g.last_message)
-                          ? "🎤 Audio de voz"
-                          : isVideoMessage(g.last_message)
-                            ? "🎬 Vídeo"
-                            : isImageMessage(g.last_message)
-                              ? "🖼️ Foto"
-                              : g.last_message.media_url
-                                ? "🖼️ Sticker"
-                                : g.last_message.content || "Mensaje"
-                        : g.description || `${g.member_count} ${g.member_count === 1 ? "miembro" : "miembros"}`}
+                      {g.last_message ? <MediaLabel m={g.last_message} muted /> : g.description || `${g.member_count} ${g.member_count === 1 ? "miembro" : "miembros"}`}
                     </span>
                     {g.unread > 0 && (
                       <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground text-[9px] font-display grid place-items-center">
@@ -2719,19 +2718,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                   </div>
                   <div className="flex items-center justify-between gap-2 mt-0.5">
                     <span className="text-[11px] text-muted-foreground truncate">
-                      {dm.last_message
-                        ? isAudioMessage(dm.last_message)
-                          ? "🎤 Audio de voz"
-                          : isVideoMessage(dm.last_message)
-                            ? "🎬 Vídeo"
-                            : isImageMessage(dm.last_message)
-                              ? "🖼️ Foto"
-                              : dm.last_message.media_url
-                                ? "🖼️ Sticker"
-                                : dm.last_message.content || "Mensaje"
-                        : dm.chat_id
-                          ? "Sin mensajes todavía"
-                          : "Se siguen mutuamente · inicia la conversación"}
+                      {dm.last_message ? <MediaLabel m={dm.last_message} muted /> : dm.chat_id ? "Sin mensajes todavía" : "Se siguen mutuamente · inicia la conversación"}
                     </span>
                     {dm.unread > 0 && (
                       <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground text-[9px] font-display grid place-items-center">
@@ -2772,9 +2759,10 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
           </div>
         ) : !currentChatId ? null : !messages.length ? (
           <div className="text-center text-xs text-muted-foreground py-10 px-6">
+            <MessageCircle size={20} className="mx-auto mb-2 text-muted-foreground/30" />
             {activeDm
-              ? "Sin mensajes todavía · saluda a esta persona 👋"
-              : "Sé el primero en saludar a la comunidad 👋"}
+              ? "Sin mensajes todavía · saluda a esta persona"
+              : "Sé el primero en saludar a la comunidad"}
           </div>
         ) : (
           messages.map((m) => (
@@ -2926,7 +2914,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                   ""}
               </div>
               <div className="text-[11px] text-muted-foreground truncate">
-                {isAudioMessage(replyTo) ? "🎤 Audio de voz" : isVideoMessage(replyTo) ? "🎬 Vídeo" : isImageMessage(replyTo) ? "🖼️ Foto" : replyTo.media_url ? "🖼️ Sticker" : replyTo.content || ""}
+                <MediaLabel m={replyTo} />
               </div>
             </div>
             <button onClick={() => setReplyTo(null)} className="w-6 h-6 grid place-items-center rounded-md hover:bg-muted/70 text-muted-foreground shrink-0">
@@ -3128,7 +3116,8 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                 </div>
                 {myStickers.length === 0 ? (
                   <div className="text-[11px] text-muted-foreground text-center py-4">
-                    Aún no tienes stickers guardados. Sube el primero 👇
+                    <SmilePlus size={16} className="mx-auto mb-1.5 text-muted-foreground/40" />
+                    Aún no tienes stickers guardados. Sube el primero
                   </div>
                 ) : (
                   <div className="grid grid-cols-4 gap-2">

@@ -377,7 +377,7 @@ export function TaskManager({
         </div>
       )}
 
-      {section("todo", "PENDIENTES", "Sin tareas pendientes 🎉")}
+      {section("todo", "PENDIENTES", "Sin tareas pendientes")}
       {section("doing", "EN PROGRESO", "Nada en progreso ahora mismo")}
       {section("done", "COMPLETADAS", "Aún no hay tareas completadas")}
     </Overlay>
