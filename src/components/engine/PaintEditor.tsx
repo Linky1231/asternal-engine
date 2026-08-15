@@ -750,7 +750,7 @@ export function PaintEditor({ onSave, onClose, size: initialSize = 512 }: Props)
             Cancel
           </button>
           <button onClick={save} className="text-[11px] font-semibold px-3 py-1.5 rounded-lg text-primary-foreground transition active:scale-[0.97]" style={{
-            background: "linear-gradient(180deg, oklch(0.78 0.14 238), oklch(0.66 0.18 246))",
+            background: "var(--gradient-asternal)",
             boxShadow: "inset 0 1px 0 oklch(1 0 0 / 0.25), 0 4px 14px -4px oklch(0.66 0.18 246 / 0.55)",
           }}>
             Save
@@ -815,7 +815,7 @@ export function PaintEditor({ onSave, onClose, size: initialSize = 512 }: Props)
               </div>
               <div className="flex gap-1.5">
                 <button onClick={() => setTextInput(null)} className="text-[10px] font-medium px-2 py-1.5 rounded-lg border border-border bg-muted flex-1">Cancel</button>
-                <button onClick={commitText} className="text-[10px] font-semibold px-2 py-1.5 rounded-lg text-primary-foreground flex-1" style={{ background: "linear-gradient(180deg, oklch(0.78 0.14 238), oklch(0.66 0.18 246))" }}>Add</button>
+                <button onClick={commitText} className="text-[10px] font-semibold px-2 py-1.5 rounded-lg text-primary-foreground flex-1" style={{ background: "var(--gradient-asternal)" }}>Add</button>
               </div>
             </div>
           )}
@@ -842,7 +842,7 @@ export function PaintEditor({ onSave, onClose, size: initialSize = 512 }: Props)
                 <button key={t.id} title={t.title} onClick={() => setTool(t.id)}
                   className={`flex-1 h-9 rounded-xl text-base transition-all flex items-center justify-center ${tool === t.id ? "text-primary-foreground" : "text-foreground/60 hover:text-foreground/90"}`}
                   style={tool === t.id ? {
-                    background: "linear-gradient(180deg, oklch(0.78 0.14 238), oklch(0.64 0.18 252))",
+                    background: "var(--gradient-asternal)",
                     boxShadow: "inset 0 1px 0 oklch(1 0 0 / 0.25), 0 2px 8px -2px oklch(0.66 0.18 246 / 0.5)",
                   } : undefined}
                 >{t.icon}</button>
@@ -915,7 +915,7 @@ export function PaintEditor({ onSave, onClose, size: initialSize = 512 }: Props)
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-semibold tracking-wider text-foreground/80 inline-flex items-center gap-1.5"><Layers size={11} /> CAPAS · {layers.length}</span>
                 <div className="flex gap-1">
-                  <button onClick={addLayer} className="text-[9px] font-semibold px-2 py-1 rounded-lg text-primary-foreground active:scale-95 transition inline-flex items-center gap-1" style={{ background: "linear-gradient(180deg, oklch(0.78 0.14 238), oklch(0.66 0.18 246))" }}><Plus size={11} strokeWidth={2.5} /> Nueva</button>
+                  <button onClick={addLayer} className="text-[9px] font-semibold px-2 py-1 rounded-lg text-primary-foreground active:scale-95 transition inline-flex items-center gap-1" style={{ background: "var(--gradient-asternal)" }}><Plus size={11} strokeWidth={2.5} /> Nueva</button>
                   <button onClick={flatten} className="text-[9px] font-medium px-2 py-1 rounded-lg border border-border bg-muted text-foreground/80 active:scale-95 transition">Aplanar</button>
                 </div>
               </div>

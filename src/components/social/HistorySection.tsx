@@ -24,13 +24,13 @@ function StatCard({ icon, label, value, sub, tone }: {
   tone?: "primary" | "accent" | "emerald" | "rose";
 }) {
   const toneCls =
-    tone === "primary" ? "from-primary/15 to-accent/10 text-primary"
-    : tone === "accent" ? "from-accent/15 to-primary/10 text-accent"
-    : tone === "emerald" ? "from-success/15 to-success/10 text-success"
-    : "from-destructive/15 to-destructive/10 text-destructive";
+    tone === "primary" ? "bg-primary/10 text-primary"
+    : tone === "accent" ? "bg-accent/10 text-accent"
+    : tone === "emerald" ? "bg-success/10 text-success"
+    : "bg-destructive/10 text-destructive";
   return (
     <div className="rounded-lg border border-border/70 bg-surface p-2.5 flex flex-col gap-1 min-w-0">
-      <div className={`w-7 h-7 rounded-lg bg-gradient-to-br grid place-items-center ${toneCls}`}>
+      <div className={`w-7 h-7 rounded-lg grid place-items-center ${toneCls}`}>
         {icon}
       </div>
       <div className="text-sm font-semibold font-display leading-tight truncate">{value}</div>
@@ -186,7 +186,7 @@ export function HistorySection() {
             <Heart size={13} /> LIKES
           </button>
           <div
-            className="absolute top-0.5 bottom-0.5 w-[calc(50%-2px)] rounded-lg bg-gradient-to-br from-primary to-accent shadow-sm transition-transform duration-300 ease-out"
+            className="absolute top-0.5 bottom-0.5 w-[calc(50%-2px)] rounded-lg grad-brand shadow-sm transition-transform duration-300 ease-out"
             style={{ transform: `translateX(${tab === "games" ? "0%" : "calc(100% + 4px)"})` }}
           />
         </div>
@@ -227,7 +227,7 @@ export function HistorySection() {
                 >
                   <div className="flex items-center gap-3 p-3">
                     {/* Cover thumbnail */}
-                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 shrink-0 overflow-hidden grid place-items-center">
+                    <div className="w-14 h-14 rounded-xl bg-primary/10 shrink-0 overflow-hidden grid place-items-center">
                       {data.coverUrl ? (
                         <img src={data.coverUrl} alt={data.title} className="w-full h-full object-cover" />
                       ) : (
@@ -304,7 +304,7 @@ export function HistorySection() {
                     <Link
                       to="/profile/$userId"
                       params={{ userId: p.author_id }}
-                      className="w-9 h-9 rounded-full bg-gradient-to-br from-primary/40 to-accent/30 grid place-items-center overflow-hidden shrink-0"
+                      className="w-9 h-9 rounded-full bg-primary/10 grid place-items-center overflow-hidden shrink-0"
                     >
                       <Avatar p={p.author} size={36} />
                     </Link>

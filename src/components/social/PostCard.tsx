@@ -74,7 +74,7 @@ export const PostCard = memo(function PostCard({
   return (
     <article className={`group panel rounded-2xl border border-border/60 transition-[border-color,box-shadow] duration-200 ease-out pointer-fine:hover:border-primary/30 pointer-fine:hover:shadow-sm ${entranceClass}`}>
       {/* Hairline degradado superior */}
-      <div className="h-[3px] w-full rounded-t-2xl bg-gradient-to-r from-primary via-accent to-transparent opacity-70 pointer-fine:group-hover:opacity-100 transition-opacity duration-300" />
+      <div className="h-[3px] w-full rounded-t-2xl grad-brand-fade opacity-70 pointer-fine:group-hover:opacity-100 transition-opacity duration-300" />
 
       <div className="p-3 space-y-3">
         <header className="flex items-center gap-2.5">
@@ -154,7 +154,7 @@ export const PostCard = memo(function PostCard({
             {post.signed_documents.map((d, i) => (
               <a key={i} href={d.url} target="_blank" rel="noreferrer" download={d.name}
                 className="flex items-center gap-2.5 bg-muted/30 pointer-fine:hover:bg-primary/10 rounded-xl px-3 py-2.5 text-xs border border-border/50 pointer-fine:hover:border-primary/30 transition-[background-color,border-color] duration-300 ease-out group/doc">
-                <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/20 to-accent/15 grid place-items-center shrink-0">
+                <span className="w-8 h-8 rounded-lg bg-primary/10 grid place-items-center shrink-0">
                   <FileText size={14} className="text-primary" />
                 </span>
                 <span className="flex-1 truncate font-medium">{d.name}</span>
@@ -185,7 +185,7 @@ export const PostCard = memo(function PostCard({
         {/* Juego fijado */}
         {post.pinned_game && (
           <Link to="/" search={{ p: post.pinned_game.id } as never}
-            className="group/game flex items-center gap-3 rounded-2xl p-2 pr-3 bg-gradient-to-r from-primary/8 via-accent/8 to-transparent border border-primary/20 pointer-fine:hover:border-primary/40 transition-[border-color,box-shadow] duration-300 ease-out pointer-fine:hover:shadow-md">
+            className="group/game flex items-center gap-3 rounded-2xl p-2 pr-3 bg-primary/[0.04] border border-primary/20 pointer-fine:hover:border-primary/40 transition-[border-color,box-shadow] duration-300 ease-out pointer-fine:hover:shadow-md">
             {post.pinned_game.cover_url ? (
               <img src={post.pinned_game.cover_url} alt="" className="w-14 h-14 rounded-xl object-cover shrink-0 ring-1 ring-border/50" />
             ) : (
@@ -206,7 +206,7 @@ export const PostCard = memo(function PostCard({
 
         {/* Contenido desbloqueable */}
         {post.locked_content && (
-          <div className={`rounded-2xl border p-3.5 transition-[border-color,background-color] duration-500 ease-out ${post.is_unlocked ? "border-primary/40 bg-gradient-to-br from-primary/8 to-accent/8" : "border-dashed border-border bg-muted/20"}`}>
+          <div className={`rounded-2xl border p-3.5 transition-[border-color,background-color] duration-500 ease-out ${post.is_unlocked ? "border-primary/40 bg-primary/[0.05]" : "border-dashed border-border bg-muted/20"}`}>
             <div className="flex items-center gap-2 text-[11px] font-display tracking-[0.15em] mb-2">
               <span className={`w-6 h-6 rounded-full grid place-items-center ${post.is_unlocked ? "bg-primary/15 text-primary-glow" : "bg-muted text-muted-foreground"}`}>
                 <Lock size={11} />

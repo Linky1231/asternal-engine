@@ -374,10 +374,11 @@
   background-size: 28px 28px;
 }
 
-/* ============ Refinamiento visual blanco (mesh + grano + tiles) ============ */
+/* ============ Refinamiento visual blanco (grano + tiles) ============ */
 
-/* Mesh orgánico: cobalto, cian y violeta suaves sobre blanco (banner destacado). */
-/* Un solo tipo de degradado: el oficial de Asternal en sus tres intensidades. */
+/* UN solo tipo de degradado en toda la app: el oficial de Asternal (135°
+   cobalto → azur) en sus tres intensidades + la firma en hairline. Cualquier
+   superficie de marca usa estas clases; no se mezclan ángulos ni familias. */
 .grad-brand {
   background-image: var(--gradient-asternal);
 }
@@ -388,11 +389,16 @@
   background-image: var(--gradient-asternal-deep);
 }
 
-/* Un solo degradado: cualquier bg-gradient-to-r residual (botones, chips,
-   franjas de identidad) se fuerza a la diagonal 135° del oficial (to bottom
-   right). Los fades verticales neutros (to-b / to-t) no se tocan. */
-.bg-gradient-to-r {
-  --tw-gradient-position: to bottom right in oklab;
+/* Firma en hairline (borde superior de publicaciones, franjas de identidad):
+   el MISMO degradado oficial que se desvanece hacia la derecha. */
+.grad-brand-fade {
+  background-image: linear-gradient(
+    to right,
+    oklch(0.44 0.24 268) 0%,
+    oklch(0.53 0.22 262) 40%,
+    oklch(0.66 0.15 240) 62%,
+    transparent 100%
+  );
 }
 
 /* ============ Banner destacado: azul de marca + animación «mejor juego» ============ */

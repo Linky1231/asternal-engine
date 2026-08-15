@@ -255,7 +255,7 @@ export function ProfilePanel({
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
       {/* Header card with banner */}
       <section className="rounded-lg border border-border/70 bg-surface overflow-hidden">
-        <div className="relative h-28 bg-gradient-to-br from-primary/25 to-accent/25">
+        <div className="relative h-28 grad-brand-soft">
           {bannerPreview && <img src={bannerPreview} alt="banner" className="absolute inset-0 w-full h-full object-cover" />}
           {viewingOwn && editing && (
             <button onClick={() => bannerRef.current?.click()}

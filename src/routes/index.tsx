@@ -526,7 +526,7 @@ function FeedSubTabs({ value, onChange }: { value: FeedSub; onChange: (v: FeedSu
             aria-pressed={active}
             className={`flex-1 min-w-0 flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-xl text-[10px] sm:text-[11px] font-display font-semibold tracking-wide whitespace-nowrap border transition-colors duration-200 outline-none focus:outline-none active:scale-[0.97] ${
               active
-                ? "border-transparent bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-sm"
+                ? "border-transparent grad-brand text-primary-foreground shadow-sm"
                 : "border-line-strong bg-card text-muted-foreground hover:border-primary/25 hover:text-foreground"
             }`}
           >

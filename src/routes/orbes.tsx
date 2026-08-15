@@ -168,7 +168,7 @@ function OrbesPage() {
 
       <main className="flex-1 max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto w-full px-3 py-4 pb-24 space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
         {/* Balance card */}
-        <section className="relative overflow-hidden rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/15 via-accent/10 to-transparent p-5 shadow-lg">
+        <section className="relative overflow-hidden rounded-3xl border border-primary/30 grad-brand-soft p-5 shadow-lg">
           <div className="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-primary/20 blur-3xl" />
           <div className="relative">
             <div className="text-[10px] font-display tracking-[0.2em] text-muted-foreground">SALDO ACTUAL</div>
@@ -217,7 +217,7 @@ function OrbesPage() {
                 <a
                   key={id}
                   href={`/?g=${id}`}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-r from-primary/12 to-accent/12 border border-primary/20 text-[10px] font-display tracking-wide text-primary-glow hover:border-primary/50 hover:from-primary/20 transition"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-display tracking-wide text-primary-glow hover:border-primary/50 hover:bg-primary/15 transition"
                 >
                   <Gamepad2 size={10} /> {gameTitles.get(id) ?? "Juego"} <ExternalLink size={9} className="opacity-60" />
                 </a>
@@ -249,7 +249,7 @@ function OrbesPage() {
               {last7.map((d, i) => (
                 <div key={i} className="flex-1 flex flex-col items-center gap-1 min-w-0">
                   <div
-                    className="w-full rounded-md bg-gradient-to-t from-rose-500/70 to-accent/70 transition-all hover:from-rose-500 hover:to-accent"
+                    className="w-full rounded-md bg-accent/80 transition-all hover:bg-accent"
                     style={{ height: `${Math.max(6, (d.spent / maxSpent7) * 100)}%`, minHeight: 4 }}
                     title={`${d.label}: ${d.spent} orbes gastados`}
                   />

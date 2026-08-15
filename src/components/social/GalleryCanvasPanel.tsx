@@ -744,7 +744,7 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
           <button onClick={onClose} className="h-8 px-2.5 rounded-md border border-border/50 bg-muted/50 text-foreground/70 hover:text-foreground hover:bg-muted/80 transition inline-flex items-center gap-1 text-xs font-semibold">
             <X size={15} />
           </button>
-          <button onClick={doSave} className="h-9 px-3.5 rounded-md bg-gradient-to-br from-primary to-accent text-primary-foreground hover:shadow-lg hover:shadow-primary/20 transition active:scale-[0.97] inline-flex items-center gap-1.5 text-sm font-semibold shadow-sm">
+          <button onClick={doSave} className="h-9 px-3.5 rounded-md grad-brand text-primary-foreground hover:shadow-lg hover:shadow-primary/20 transition active:scale-[0.97] inline-flex items-center gap-1.5 text-sm font-semibold shadow-sm">
             <Save size={16} />
             <span className="hidden sm:inline">Publicar</span>
           </button>
@@ -804,7 +804,7 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
               </div>
               <div className="flex gap-1.5">
                 <button onClick={() => setTextInput(null)} className="text-[10px] font-medium px-2 py-1.5 rounded-lg border border-border bg-muted flex-1">Cancel</button>
-                <button onClick={commitText} className="text-[10px] font-semibold px-2 py-1.5 rounded-lg text-primary-foreground flex-1" style={{ background: "linear-gradient(180deg, oklch(0.78 0.17 250), oklch(0.66 0.18 252))" }}>Add</button>
+                <button onClick={commitText} className="text-[10px] font-semibold px-2 py-1.5 rounded-lg text-primary-foreground flex-1" style={{ background: "var(--gradient-asternal)" }}>Add</button>
               </div>
             </div>
           )}
@@ -819,7 +819,7 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
                   <Layers size={13} /> CAPAS · {layers.length}
                 </span>
                 <div className="flex gap-1">
-                  <button onClick={(e) => { e.stopPropagation(); addLayer(); }} className="w-7 h-7 rounded-md flex items-center justify-center text-primary-foreground active:scale-95 transition" style={{ background: "linear-gradient(180deg, oklch(0.78 0.17 250), oklch(0.66 0.18 252))" }}>
+                  <button onClick={(e) => { e.stopPropagation(); addLayer(); }} className="w-7 h-7 rounded-md flex items-center justify-center text-primary-foreground active:scale-95 transition" style={{ background: "var(--gradient-asternal)" }}>
                     <Plus size={13} strokeWidth={2} />
                   </button>
                   <button onClick={() => setLayersOpen(false)} className="w-7 h-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground bg-muted/60 hover:bg-muted/80 border border-border/40 transition">
@@ -871,7 +871,7 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
                       : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
                   }`}
                   style={tool === t.id ? {
-                    background: "linear-gradient(180deg, oklch(0.78 0.17 250), oklch(0.64 0.18 252))",
+                    background: "var(--gradient-asternal)",
                     boxShadow: "inset 0 1px 0 oklch(1 0 0 / 0.25), 0 2px 8px -2px oklch(0.66 0.18 252 / 0.5)",
                   } : undefined}
                 >{t.icon}</button>

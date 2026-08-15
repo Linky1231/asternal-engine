@@ -222,7 +222,7 @@ export function EventsSection({ isAdmin }: { isAdmin: boolean }) {
                     {ev.banner_url ? (
                       <img src={ev.banner_url} alt={ev.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
                     ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-primary/20 via-primary/10 to-accent/20 grid place-items-center">
+                      <div className="w-full h-full bg-primary/10 grid place-items-center">
                         <Trophy size={40} className="text-primary/40" />
                       </div>
                     )}
@@ -324,7 +324,7 @@ export function EventsSection({ isAdmin }: { isAdmin: boolean }) {
                                   className={`w-full h-10 rounded-lg text-xs font-semibold transition active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50 ${
                                     registered
                                       ? "bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100"
-                                      : "bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-sm shadow-primary/20 hover:brightness-110"
+                                      : "grad-brand text-primary-foreground shadow-sm shadow-primary/20 hover:brightness-110"
                                   }`}
                                 >
                                   {busyId === ev.id ? (

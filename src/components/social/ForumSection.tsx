@@ -252,7 +252,7 @@ function CategoryListView({ onSelect }: { onSelect: (id: string, name: string) =
     <motion.div initial="initial" animate="animate" variants={stagger.container} className="space-y-3">
       {/* Header */}
       <motion.div variants={stagger.item} className="flex items-center gap-3 px-1">
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary/10 to-accent/10 border border-primary/10 grid place-items-center">
+        <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/10 grid place-items-center">
           <Hash size={15} className="text-primary/60" />
         </div>
         <div>
@@ -270,7 +270,7 @@ function CategoryListView({ onSelect }: { onSelect: (id: string, name: string) =
           >
             <div className="flex items-start gap-3.5">
               {/* Icon bubble */}
-              <span className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary/8 to-accent/8 border border-primary/10 grid place-items-center shrink-0 text-primary group-hover:scale-110 group-hover:from-primary/15 group-hover:to-accent/15 transition-all duration-300">
+              <span className="w-11 h-11 rounded-xl bg-primary/10 border border-primary/10 grid place-items-center shrink-0 text-primary group-hover:scale-110 group-hover:bg-primary/15 transition-all duration-300">
                 {CAT_ICONS[cat.icon] ?? <MessageSquare size={20} />}
               </span>
 
@@ -370,7 +370,7 @@ function ThreadListView({
         </motion.button>
 
         <div className="flex-1 min-w-0 flex items-center gap-2">
-          <div className="hidden min-[400px]:grid w-8 h-8 rounded-xl bg-gradient-to-br from-primary/10 to-accent/10 border border-primary/10 place-items-center shrink-0">
+          <div className="hidden min-[400px]:grid w-8 h-8 rounded-xl bg-primary/10 border border-primary/10 place-items-center shrink-0">
             {CAT_ICONS[
               categoryId === "general" ? "globe" :
               categoryId === "help" ? "life-buoy" :
@@ -414,7 +414,7 @@ function ThreadListView({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] as const }}
-            className="p-3.5 sm:p-5 rounded-2xl border border-primary/20 bg-gradient-to-b from-primary/[0.03] to-transparent shadow-sm space-y-3.5"
+            className="p-3.5 sm:p-5 rounded-2xl border border-primary/20 bg-primary/[0.02] shadow-sm space-y-3.5"
             >
               <div className="flex items-center gap-2.5 mb-1">
                 <Sparkles size={14} className="text-primary/60" />
@@ -753,7 +753,7 @@ function ThreadDetailView({
       {/* ── Thread body + replies ── */}
       <motion.div initial="initial" animate="animate" variants={stagger.container} className="space-y-2.5 max-h-[65vh] overflow-y-auto pr-1.5 no-scrollbar">
         {/* ── Original post (featured) ── */}
-        <motion.div variants={stagger.item} className="p-3.5 sm:p-5 rounded-2xl border border-border/30 bg-gradient-to-b from-white/80 to-white/50 shadow-sm">
+        <motion.div variants={stagger.item} className="p-3.5 sm:p-5 rounded-2xl border border-border/30 bg-white/60 shadow-sm">
           {/* Author header */}
           <div className="flex items-start gap-3 mb-4">
             <AvatarMini username={thread.authorUsername} size="lg" />
@@ -859,7 +859,7 @@ function ThreadDetailView({
             )}
             {/* Quote */}
             {p.quoteContent && (
-              <div className="mb-3 pl-4 border-l-[3px] border-primary/30 bg-gradient-to-r from-primary/[0.03] to-transparent rounded-r-lg py-2.5 px-3 text-xs">
+              <div className="mb-3 pl-4 border-l-[3px] border-primary/30 bg-primary/[0.02] rounded-r-lg py-2.5 px-3 text-xs">
                 <div className="flex items-center gap-1.5 text-[9px] font-semibold text-primary/60 uppercase tracking-wider mb-1">
                   <Quote size={10} /> @{p.quoteAuthor} escribió:
                 </div>
@@ -980,7 +980,7 @@ function ThreadDetailView({
           <AnimatePresence>
             {quotePost && (
               <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-                className="flex items-start gap-2.5 p-3 rounded-xl bg-gradient-to-r from-primary/[0.04] to-transparent border border-primary/20 text-xs"
+                className="flex items-start gap-2.5 p-3 rounded-xl bg-primary/[0.03] border border-primary/20 text-xs"
               >
                 <Quote size={13} className="text-primary/50 shrink-0 mt-0.5" />
                 <div className="flex-1 min-w-0">

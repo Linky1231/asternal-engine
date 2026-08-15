@@ -297,7 +297,7 @@ function ClipPanel({
           <div className="flex gap-1.5">
             <button
               onClick={() => setPaintOpen(true)}
-              className="text-[10px] font-display tracking-widest px-2 py-1 rounded-md bg-gradient-to-r from-accent/30 to-primary/30 border border-accent/50 text-primary-glow glow-border"
+              className="text-[10px] font-display tracking-widest px-2 py-1 rounded-md bg-primary/10 border border-primary/25 text-primary-glow glow-border"
             >
               ✎ DRAW FRAME
             </button>

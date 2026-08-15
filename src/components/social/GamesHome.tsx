@@ -88,7 +88,7 @@ export function GamesHome({
         <div className="text-xs text-muted-foreground max-w-xs mx-auto">
           Abre el editor y publica el primero.
         </div>
-        <Link to="/editor" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-xs font-display tracking-widest">
+        <Link to="/editor" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl grad-brand text-primary-foreground text-xs font-display tracking-widest">
           ABRIR EDITOR
         </Link>
       </div>
@@ -214,7 +214,7 @@ function Ranking24({ games, totalGames, onOpen }: {
   const medals = ["text-amber-400", "text-slate-400", "text-amber-700"];
 
   return (
-    <section className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/[0.06] to-accent/[0.05] p-3.5 space-y-2.5">
+    <section className="rounded-2xl border border-primary/20 grad-brand-soft p-3.5 space-y-2.5">
       <div className="flex items-center gap-2">
         <Trophy size={15} className="text-primary" />
         <div className="font-display text-[13px] leading-tight">Ranking · Más jugados (24h)</div>
@@ -229,7 +229,7 @@ function Ranking24({ games, totalGames, onOpen }: {
               onClick={() => onOpen(g)}
               className="w-full flex items-center gap-2.5 rounded-xl bg-card/80 border border-border/50 px-2.5 py-2 text-left hover:border-primary/40 hover:bg-card active:scale-[0.99] transition"
             >
-              <span className={`w-6 h-6 shrink-0 rounded-lg grid place-items-center font-display text-[11px] font-bold ${i < 3 ? `bg-gradient-to-br from-primary/20 to-accent/15 ${medals[i]}` : "text-muted-foreground/60 bg-muted/60"}`}>
+              <span className={`w-6 h-6 shrink-0 rounded-lg grid place-items-center font-display text-[11px] font-bold ${i < 3 ? `bg-primary/10 ${medals[i]}` : "text-muted-foreground/60 bg-muted/60"}`}>
                 {i + 1}
               </span>
               <div className="relative w-11 h-11 shrink-0 rounded-lg overflow-hidden border border-border/60 bg-muted/40">

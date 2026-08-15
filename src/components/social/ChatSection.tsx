@@ -219,7 +219,7 @@ function AudioBubble({ url, mine, duration }: { url: string; mine: boolean; dura
       <button
         onClick={toggle}
         className={`w-8 h-8 rounded-xl grid place-items-center shrink-0 transition active:scale-90 ${
-          mine ? "bg-white/25 text-white hover:bg-white/30" : "bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-sm"
+          mine ? "bg-white/25 text-white hover:bg-white/30" : "grad-brand text-primary-foreground shadow-sm"
         }`}
       >
         {playing ? <Pause size={13} /> : <Play size={13} className="ml-0.5" />}
@@ -437,7 +437,7 @@ function MessageBubble({
         <div
           className={
             mine
-              ? "bg-gradient-to-br from-primary to-accent text-primary-foreground rounded-2xl rounded-br-md px-3 py-2 shadow-sm shadow-primary/25"
+              ? "grad-brand text-primary-foreground rounded-2xl rounded-br-md px-3 py-2 shadow-sm shadow-primary/25"
               : "bg-card border border-border/70 shadow-sm rounded-2xl rounded-bl-md px-3 py-2"
           }
         >
@@ -519,10 +519,10 @@ class SafeRow extends Component<{ children: ReactNode }, { failed: boolean }> {
 /** Aviso del grupo: solo lo publica el administrador y lo ve toda la comunidad. */
 function AnnouncementCard({ m, sender }: { m: ChatMessage; sender?: Profile | null }) {
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/[0.12] via-accent/[0.08] to-transparent px-3.5 py-3 shadow-sm">
+    <div className="relative overflow-hidden rounded-2xl border border-primary/30 grad-brand-soft px-3.5 py-3 shadow-sm">
 
       <div className="relative flex items-start gap-2.5">
-        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center shrink-0 shadow-[0_4px_12px_-6px_oklch(0.52_0.19_258/0.6)]">
+        <div className="w-8 h-8 rounded-xl grad-brand text-primary-foreground grid place-items-center shrink-0 shadow-[0_4px_12px_-6px_oklch(0.52_0.19_258/0.6)]">
           <Megaphone size={14} />
         </div>
         <div className="min-w-0 flex-1">
@@ -568,7 +568,7 @@ function PollCard({
 
       <div className="relative">
         <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center shrink-0 shadow-[0_4px_10px_-6px_oklch(0.52_0.19_258/0.5)]">
+          <div className="w-7 h-7 rounded-lg grad-brand text-primary-foreground grid place-items-center shrink-0 shadow-[0_4px_10px_-6px_oklch(0.52_0.19_258/0.5)]">
             <BarChart3 size={13} />
           </div>
           <span className="text-[9px] font-display tracking-[0.18em] text-primary font-bold">ENCUESTA</span>
@@ -608,7 +608,7 @@ function PollCard({
               >
                 {total > 0 && (
                   <span
-                    className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary/15 to-accent/10"
+                    className="absolute inset-y-0 left-0 bg-primary/10"
                     style={{ width: `${pct(count)}%` }}
                   />
                 )}
@@ -740,7 +740,7 @@ function GiftCard({
 
   return (
     <div className="flex justify-center px-1">
-      <div className="relative w-full max-w-sm overflow-hidden rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/[0.10] via-accent/[0.06] to-transparent px-3.5 py-3 shadow-sm">
+      <div className="relative w-full max-w-sm overflow-hidden rounded-2xl border border-primary/25 grad-brand-soft px-3.5 py-3 shadow-sm">
 
 
         <div className="relative flex items-center gap-3">
@@ -748,7 +748,7 @@ function GiftCard({
             animate={open ? { scale: [1, 1.06, 1] } : { scale: 1 }}
             transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
             style={{ willChange: "transform" }}
-            className="w-12 h-12 shrink-0 rounded-2xl bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center shadow-[0_8px_20px_-8px_oklch(0.52_0.19_258/0.6)]"
+            className="w-12 h-12 shrink-0 rounded-2xl grad-brand text-primary-foreground grid place-items-center shadow-[0_8px_20px_-8px_oklch(0.52_0.19_258/0.6)]"
           >
             <Gift size={22} strokeWidth={2} />
             <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/20 pointer-events-none" />
@@ -775,7 +775,7 @@ function GiftCard({
           </div>
           <div className="h-2 rounded-full bg-black/10 dark:bg-white/10 overflow-hidden">
             <motion.div
-              className="h-full rounded-full bg-gradient-to-br from-primary to-accent"
+              className="h-full rounded-full bg-primary"
               initial={false}
               animate={{ width: `${progress}%` }}
               transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
@@ -803,7 +803,7 @@ function GiftCard({
             <button
               onClick={onClaim}
               disabled={claiming || expiring}
-              className="w-full py-2.5 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-[11px] font-display tracking-widest shadow-[0_6px_16px_-6px_oklch(0.52_0.19_258/0.5)] active:scale-[0.98] transition disabled:opacity-50 flex items-center justify-center gap-1.5"
+              className="w-full py-2.5 rounded-xl grad-brand text-primary-foreground text-[11px] font-display tracking-widest shadow-[0_6px_16px_-6px_oklch(0.52_0.19_258/0.5)] active:scale-[0.98] transition disabled:opacity-50 flex items-center justify-center gap-1.5"
             >
               {claiming ? <Loader2 size={13} className="animate-spin" /> : <Gift size={13} />}
               {claiming ? "ABRIENDO…" : "ABRIR REGALO"}
@@ -838,7 +838,7 @@ function GiftCard({
                   style={{ willChange: "transform, opacity" }}
                   className="text-center px-4"
                 >
-                  <div className="w-14 h-14 mx-auto mb-2.5 rounded-2xl bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center shadow-[0_8px_20px_-8px_oklch(0.52_0.19_258/0.6)]">
+                  <div className="w-14 h-14 mx-auto mb-2.5 rounded-2xl grad-brand text-primary-foreground grid place-items-center shadow-[0_8px_20px_-8px_oklch(0.52_0.19_258/0.6)]">
                     <Sparkles size={26} />
                   </div>
                   <div className="text-sm font-bold text-white drop-shadow">¡+{claimedAmount ?? gift.amount_per_person} ORBES!</div>
@@ -2337,7 +2337,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
       className="fixed z-[90] bg-background flex flex-col top-3 bottom-3 left-0 right-0 mx-auto max-w-3xl rounded-2xl border border-border/60 overflow-hidden shadow-2xl h-[calc(100dvh-1.5rem)]"
     >
       {/* ───── Header ───── */}
-      <div className="h-[3px] w-full bg-gradient-to-r from-primary via-accent to-transparent shrink-0" />
+      <div className="h-[3px] w-full grad-brand-fade shrink-0" />
       <header className="shrink-0 border-b border-border/60 bg-background/80 backdrop-blur-md">
         <span className="absolute top-1 right-2 text-[8px] font-mono text-muted-foreground/30" title="marcador chat">ast-chat-v1</span>
         <div className="max-w-2xl md:max-w-full mx-auto flex items-center gap-2 px-4 py-3">
@@ -2391,7 +2391,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
             <div className="flex items-center gap-2.5 flex-1 min-w-0">
               <div
                 className="rounded-full grid place-items-center shrink-0 font-display font-semibold text-primary-foreground"
-                style={{ width: 36, height: 36, fontSize: 15, background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))" }}
+                style={{ width: 36, height: 36, fontSize: 15, background: "var(--gradient-asternal)" }}
               >
                 {view === "dms" ? <MessageCircle size={16} /> : view === "groups" ? <Users2 size={16} /> : <Users size={16} />}
               </div>
@@ -2510,7 +2510,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                 setView("group");
                 setActiveDm(null);
               }}
-              className={`flex-1 py-1.5 rounded-xl text-[10px] font-display tracking-[0.14em] flex items-center justify-center gap-1.5 transition active:scale-[0.98] ${view === "group" ? "bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[0_4px_12px_-5px_oklch(0.55_0.22_258/0.5)]" : "bg-card border border-border text-muted-foreground hover:text-foreground"}`}
+              className={`flex-1 py-1.5 rounded-xl text-[10px] font-display tracking-[0.14em] flex items-center justify-center gap-1.5 transition active:scale-[0.98] ${view === "group" ? "grad-brand text-primary-foreground shadow-[0_4px_12px_-5px_oklch(0.55_0.22_258/0.5)]" : "bg-card border border-border text-muted-foreground hover:text-foreground"}`}
             >
               <Users size={12} /> GRUPO
             </button>
@@ -2521,11 +2521,11 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                 setActiveDm(null);
                 void loadGroupList();
               }}
-              className={`relative flex-1 py-1.5 rounded-xl text-[10px] font-display tracking-[0.14em] flex items-center justify-center gap-1.5 transition active:scale-[0.98] ${view === "groups" ? "bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[0_4px_12px_-5px_oklch(0.55_0.22_258/0.5)]" : "bg-card border border-border text-muted-foreground hover:text-foreground"}`}
+              className={`relative flex-1 py-1.5 rounded-xl text-[10px] font-display tracking-[0.14em] flex items-center justify-center gap-1.5 transition active:scale-[0.98] ${view === "groups" ? "grad-brand text-primary-foreground shadow-[0_4px_12px_-5px_oklch(0.55_0.22_258/0.5)]" : "bg-card border border-border text-muted-foreground hover:text-foreground"}`}
             >
               <Users2 size={12} /> GRUPOS
               {totalGroupUnread > 0 && (
-                <span className="shrink-0 min-w-[16px] h-4 px-1 rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground text-[9px] font-display grid place-items-center">
+                <span className="shrink-0 min-w-[16px] h-4 px-1 rounded-full grad-brand text-primary-foreground text-[9px] font-display grid place-items-center">
                   {totalGroupUnread >= 100 ? "99" : totalGroupUnread}
                 </span>
               )}
@@ -2537,11 +2537,11 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                 void loadDmList();
               }}
 
-              className={`relative flex-1 py-1.5 rounded-xl text-[10px] font-display tracking-[0.14em] flex items-center justify-center gap-1.5 transition active:scale-[0.98] ${view === "dms" ? "bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[0_4px_12px_-5px_oklch(0.55_0.22_258/0.5)]" : "bg-card border border-border text-muted-foreground hover:text-foreground"}`}
+              className={`relative flex-1 py-1.5 rounded-xl text-[10px] font-display tracking-[0.14em] flex items-center justify-center gap-1.5 transition active:scale-[0.98] ${view === "dms" ? "grad-brand text-primary-foreground shadow-[0_4px_12px_-5px_oklch(0.55_0.22_258/0.5)]" : "bg-card border border-border text-muted-foreground hover:text-foreground"}`}
             >
               <MessageCircle size={12} /> DIRECTOS
               {totalDmUnread > 0 && (
-                <span className="shrink-0 min-w-[16px] h-4 px-1 rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground text-[9px] font-display grid place-items-center">
+                <span className="shrink-0 min-w-[16px] h-4 px-1 rounded-full grad-brand text-primary-foreground text-[9px] font-display grid place-items-center">
                   {totalDmUnread >= 100 ? "99" : totalDmUnread}
                 </span>
               )}
@@ -2561,14 +2561,14 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
           {hasSupabaseConfig() ? (
             <Link
               to="/auth"
-              className="shrink-0 px-2.5 py-1 rounded-lg bg-gradient-to-br from-primary to-accent text-primary-foreground text-[10px] font-display tracking-widest active:scale-95 transition"
+              className="shrink-0 px-2.5 py-1 rounded-lg grad-brand text-primary-foreground text-[10px] font-display tracking-widest active:scale-95 transition"
             >
               INICIAR SESIÓN
             </Link>
           ) : (
             <button
               onClick={() => setConnecting(true)}
-              className="shrink-0 px-2.5 py-1 rounded-lg bg-gradient-to-br from-primary to-accent text-primary-foreground text-[10px] font-display tracking-widest active:scale-95 transition"
+              className="shrink-0 px-2.5 py-1 rounded-lg grad-brand text-primary-foreground text-[10px] font-display tracking-widest active:scale-95 transition"
             >
               CONECTAR
             </button>
@@ -2617,7 +2617,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
             {initError === "auth" && (
               <Link
                 to="/auth"
-                className="flex-1 py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-[10px] font-display tracking-widest active:scale-[0.98] transition flex items-center justify-center gap-1.5"
+                className="flex-1 py-2 rounded-xl grad-brand text-primary-foreground text-[10px] font-display tracking-widest active:scale-[0.98] transition flex items-center justify-center gap-1.5"
               >
                 <KeyRound size={12} /> INICIAR SESIÓN
               </Link>
@@ -2687,7 +2687,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                       {g.last_message ? <MediaLabel m={g.last_message} muted /> : g.description || `${g.member_count} ${g.member_count === 1 ? "miembro" : "miembros"}`}
                     </span>
                     {g.unread > 0 && (
-                      <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground text-[9px] font-display grid place-items-center">
+                      <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full grad-brand text-primary-foreground text-[9px] font-display grid place-items-center">
                         {g.unread >= 100 ? "99" : g.unread}
                       </span>
                     )}
@@ -2729,7 +2729,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                       {dm.last_message ? <MediaLabel m={dm.last_message} muted /> : dm.chat_id ? "Sin mensajes todavía" : "Se siguen mutuamente · inicia la conversación"}
                     </span>
                     {dm.unread > 0 && (
-                      <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground text-[9px] font-display grid place-items-center">
+                      <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full grad-brand text-primary-foreground text-[9px] font-display grid place-items-center">
                         {dm.unread >= 100 ? "99" : dm.unread}
                       </span>
                     )}
@@ -2748,14 +2748,14 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
         <div className="shrink-0 mx-3 mt-2">
           <button
             onClick={jumpToBottom}
-            className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-primary to-accent text-primary-foreground text-[11px] font-display tracking-wide shadow-lg shadow-primary/25 active:scale-[0.98] transition"
+            className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl grad-brand text-primary-foreground text-[11px] font-display tracking-wide shadow-lg shadow-primary/25 active:scale-[0.98] transition"
           >
             <ArrowDown size={12} /> {unseen >= 100 ? "99" : unseen} mensaje{unseen === 1 ? "" : "s"} nuevo{unseen === 1 ? "" : "s"}
           </button>
         </div>
       )}
 
-<div ref={listRef} onScroll={onScrollList} className="relative flex-1 overflow-y-auto px-3 py-4 space-y-3 no-scrollbar min-h-0 bg-gradient-to-b from-primary/[0.03] via-transparent to-transparent">
+<div ref={listRef} onScroll={onScrollList} className="relative flex-1 overflow-y-auto px-3 py-4 space-y-3 no-scrollbar min-h-0 bg-primary/[0.02]">
         {loadingMore && (
           <div className="flex justify-center py-1">
             <Loader2 size={14} className="animate-spin text-muted-foreground" />
@@ -2838,7 +2838,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                     onClick={() => setOpenThread(t)}
                     className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl border border-border/70 bg-card hover:border-primary/40 hover:bg-primary/5 transition text-left active:scale-[0.99]"
                   >
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center shrink-0">
+                    <div className="w-8 h-8 rounded-lg grad-brand text-primary-foreground grid place-items-center shrink-0">
                       <MessagesSquare size={13} />
                     </div>
                     <div className="min-w-0 flex-1">
@@ -2863,7 +2863,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
         {unseen > 0 && (
           <button
             onClick={jumpToBottom}
-            className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-[11px] font-display tracking-wide shadow-lg active:scale-95 transition"
+            className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-xl grad-brand text-primary-foreground text-[11px] font-display tracking-wide shadow-lg active:scale-95 transition"
           >
             <ArrowDown size={12} /> {unseen >= 100 ? "99" : unseen} nuevo{unseen > 1 ? "s" : ""}
           </button>
@@ -2953,7 +2953,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
               <button
                 onClick={() => void stopRecording(true)}
                 disabled={sendingAudio}
-                className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500 to-rose-600 text-white grid place-items-center active:scale-95 transition shrink-0 shadow-[0_4px_12px_-5px_oklch(0.577_0.245_27.3/0.5)] disabled:opacity-50"
+                className="w-10 h-10 rounded-xl bg-destructive text-white grid place-items-center active:scale-95 transition shrink-0 shadow-[0_4px_12px_-5px_oklch(0.577_0.245_27.3/0.5)] disabled:opacity-50"
                 title="Enviar audio"
               >
                 {sendingAudio ? <Loader2 size={16} className="animate-spin" /> : <Send size={15} />}
@@ -3094,7 +3094,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
           <button
             onClick={() => void (pendingMedia ? sendPendingMedia() : handleSend())}
             disabled={!draft.trim() && !pendingMedia}
-            className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center active:scale-95 transition shrink-0 disabled:opacity-40 disabled:active:scale-100 shadow-[0_4px_12px_-5px_oklch(0.55_0.22_258/0.5)]"
+            className="w-9 h-9 rounded-xl grad-brand text-primary-foreground grid place-items-center active:scale-95 transition shrink-0 disabled:opacity-40 disabled:active:scale-100 shadow-[0_4px_12px_-5px_oklch(0.55_0.22_258/0.5)]"
           >
             <Send size={15} />
           </button>
@@ -3217,7 +3217,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                 <button
                   onClick={() => cgAvatarRef.current?.click()}
                   className="relative w-16 h-16 rounded-full overflow-hidden grid place-items-center shrink-0 font-display font-semibold text-primary-foreground active:scale-95 transition border-2 border-primary/30"
-                  style={{ background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))" }}
+                  style={{ background: "var(--gradient-asternal)" }}
                 >
                   {cgAvatarPreview ? (
                     <img src={cgAvatarPreview} alt="" className="w-full h-full object-cover" />
@@ -3355,7 +3355,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                 <button
                   onClick={() => void handleCreateGroup()}
                   disabled={cgBusy}
-                  className="flex-1 py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-xs font-display tracking-widest active:scale-[0.98] transition disabled:opacity-40 flex items-center justify-center gap-1.5"
+                  className="flex-1 py-2 rounded-xl grad-brand text-primary-foreground text-xs font-display tracking-widest active:scale-[0.98] transition disabled:opacity-40 flex items-center justify-center gap-1.5"
                 >
                   {cgBusy ? <Loader2 size={13} className="animate-spin" /> : <Users2 size={13} />}
                   {cgBusy ? "CREANDO…" : "CREAR GRUPO"}
@@ -3479,7 +3479,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                     <button
                       onClick={() => void handleEditGroup()}
                       disabled={egBusy}
-                      className="flex-1 py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-xs font-display tracking-widest active:scale-[0.98] transition disabled:opacity-40 flex items-center justify-center gap-1.5"
+                      className="flex-1 py-2 rounded-xl grad-brand text-primary-foreground text-xs font-display tracking-widest active:scale-[0.98] transition disabled:opacity-40 flex items-center justify-center gap-1.5"
                     >
                       {egBusy ? <Loader2 size={13} className="animate-spin" /> : <Pencil size={13} />}
                       {egBusy ? "GUARDANDO…" : "GUARDAR"}
@@ -3707,7 +3707,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                 <button
                   onClick={doConnect}
                   disabled={!connectUrl.trim() || !connectKey.trim()}
-                  className="flex-1 py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-xs font-display tracking-widest active:scale-[0.98] transition disabled:opacity-40"
+                  className="flex-1 py-2 rounded-xl grad-brand text-primary-foreground text-xs font-display tracking-widest active:scale-[0.98] transition disabled:opacity-40"
                 >
                   CONECTAR
                 </button>
@@ -3770,7 +3770,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                 <button
                   onClick={() => void publishAnnouncement()}
                   disabled={announceBusy || !announceText.trim()}
-                  className="flex-1 py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-xs font-display tracking-widest active:scale-[0.98] transition disabled:opacity-40 flex items-center justify-center gap-1.5"
+                  className="flex-1 py-2 rounded-xl grad-brand text-primary-foreground text-xs font-display tracking-widest active:scale-[0.98] transition disabled:opacity-40 flex items-center justify-center gap-1.5"
                 >
                   {announceBusy ? <Loader2 size={13} className="animate-spin" /> : <Megaphone size={13} />}
                   {announceBusy ? "PUBLICANDO…" : "PUBLICAR AVISO"}
@@ -3878,7 +3878,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                 <button
                   onClick={() => void createGiftPackage()}
                   disabled={giftBusy}
-                  className="flex-1 py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-xs font-display tracking-widest active:scale-[0.98] transition disabled:opacity-40 flex items-center justify-center gap-1.5"
+                  className="flex-1 py-2 rounded-xl grad-brand text-primary-foreground text-xs font-display tracking-widest active:scale-[0.98] transition disabled:opacity-40 flex items-center justify-center gap-1.5"
                 >
                   {giftBusy ? <Loader2 size={13} className="animate-spin" /> : <Gift size={13} />}
                   {giftBusy ? "CREANDO…" : "CREAR REGALOS"}
@@ -3973,7 +3973,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
                 <button
                   onClick={() => void handleCreatePoll()}
                   disabled={pollBusy || !pollQuestion.trim() || pollOptions.filter((o) => o.trim()).length < 2}
-                  className="flex-1 py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-xs font-display tracking-widest active:scale-[0.98] transition disabled:opacity-40 flex items-center justify-center gap-1.5"
+                  className="flex-1 py-2 rounded-xl grad-brand text-primary-foreground text-xs font-display tracking-widest active:scale-[0.98] transition disabled:opacity-40 flex items-center justify-center gap-1.5"
                 >
                   {pollBusy ? <Loader2 size={13} className="animate-spin" /> : <BarChart3 size={13} />}
                   {pollBusy ? "PUBLICANDO…" : "PUBLICAR ENCUESTA"}

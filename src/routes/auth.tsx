@@ -130,9 +130,9 @@ function CreatorRobot() {
       {/* Neck */}
       <div className="w-1.5 h-2 bg-primary/20 mx-auto" />
       {/* Body with screen */}
-      <div className="w-11 h-12 rounded-[10px] bg-gradient-to-br from-primary to-accent shadow-lg shadow-primary/30 relative overflow-hidden">
+      <div className="w-11 h-12 rounded-[10px] grad-brand shadow-lg shadow-primary/30 relative overflow-hidden">
         <div className="absolute inset-x-2 bottom-2 top-4 rounded-md bg-white/90 flex items-center justify-center">
-          <div className="w-4 h-3 rounded-sm bg-gradient-to-br from-primary to-accent opacity-70" />
+          <div className="w-4 h-3 rounded-sm grad-brand opacity-70" />
         </div>
       </div>
       {/* Arms */}
@@ -161,7 +161,7 @@ function SpritePanel() {
             style={{ background: px === "·" ? "transparent" : PX_COLORS[px] }} />
         ))}
       </div>
-      <div className="mt-2 h-[3px] rounded-full bg-gradient-to-r from-primary/60 to-accent/60 opacity-60" />
+      <div className="mt-2 h-[3px] rounded-full bg-primary/20 opacity-60" />
     </div>
   );
 }
@@ -190,7 +190,7 @@ function BlockPanel() {
 function PlayPanel() {
   return (
     <div className="flex items-center gap-2 rounded-full pl-2 pr-3.5 py-1.5 border border-border/60 bg-white/90 shadow-sm">
-      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary to-accent grid place-items-center shadow-md shadow-primary/30">
+      <div className="w-7 h-7 rounded-full grad-brand grid place-items-center shadow-md shadow-primary/30">
         <Play size={12} className="text-white fill-white" />
       </div>
       <div className="text-[9px] font-semibold text-foreground/80 leading-tight">
@@ -210,9 +210,9 @@ function HeroScene() {
 
           {/* Ambient glows */}
           <div className="absolute left-1/2 top-[42%] -translate-x-1/2 -translate-y-1/2 w-[360px] h-[360px] rounded-full"
-            style={{ background: "radial-gradient(circle, oklch(0.52 0.19 258 / 0.14), transparent 62%)" }} />
+            style={{ background: "oklch(0.52 0.19 258 / 0.10)" }} />
           <div className="absolute left-1/2 top-[42%] -translate-x-1/2 -translate-y-1/2 w-[220px] h-[220px] rounded-full"
-            style={{ background: "radial-gradient(circle, oklch(0.72 0.14 235 / 0.12), transparent 60%)" }} />
+            style={{ background: "oklch(0.72 0.14 235 / 0.08)" }} />
 
 
           {/* Floating island + robot */}
@@ -224,7 +224,7 @@ function HeroScene() {
             </div>
             {/* Crystal */}
             <div className="absolute right-[12%] top-[6px] animate-float-icon" style={{ animationDelay: "0.8s" }}>
-              <div className="w-5 h-8 rounded-t-lg rounded-b-sm bg-gradient-to-b from-accent to-primary/40 shadow-lg shadow-accent/30 rotate-12" />
+              <div className="w-5 h-8 rounded-t-lg rounded-b-sm grad-brand shadow-lg shadow-accent/30 rotate-12" />
             </div>
             {/* Disc */}
             <div className="relative -mt-1 z-10 w-[250px] h-[54px] rounded-[50%] bg-gradient-to-b from-white/90 to-white/40 border border-white/70 shadow-[0_25px_60px_-15px_oklch(0.52_0.19_258/0.4)]">
@@ -296,9 +296,6 @@ function FloatInput({
   return (
     <div className="space-y-1">
       <div className="relative group/input">
-        <div className={`absolute -inset-1 rounded-xl opacity-0 blur-sm transition-opacity duration-500 ${focused ? 'opacity-100' : ''}`}
-          style={{ background: "radial-gradient(ellipse at center, oklch(0.52 0.19 258 / 0.06), transparent 70%)" }}
-        />
         <div className={`relative flex items-center border rounded-xl bg-white transition-all duration-300 ${
           focused
             ? 'border-primary/50 ring-[3px] ring-primary/[0.06] shadow-sm shadow-primary/5'
@@ -378,13 +375,13 @@ function Logo({ loaded }: { loaded: boolean }) {
       <Link to="/" className="inline-flex items-center gap-3 group">
         <div className="relative">
           <div className="absolute inset-0 rounded-2xl bg-primary/30 blur-xl scale-150 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-          <div className="relative w-11 h-11 rounded-2xl bg-gradient-to-br from-primary to-accent grid place-items-center shadow-lg shadow-primary/30"
+          <div className="relative w-11 h-11 rounded-2xl grad-brand grid place-items-center shadow-lg shadow-primary/30"
             style={{ animation: "bob-slow 5s ease-in-out infinite" }}>
             <Gamepad2 size={22} className="text-white" />
           </div>
           <div className="absolute -right-1 -top-1 w-2.5 h-2.5 rounded-full bg-accent border-2 border-background animate-pulse" />
         </div>
-        <span className="text-xl font-display font-bold tracking-tight bg-gradient-to-r from-foreground via-foreground to-foreground/60 bg-clip-text text-transparent">
+        <span className="text-xl font-display font-bold tracking-tight text-foreground">
           Asternal
         </span>
       </Link>
@@ -503,12 +500,8 @@ function AuthPage() {
       {/* ─── Background layers ─── */}
       <div className="fixed inset-0 pointer-events-none select-none overflow-hidden" style={{ transform: "translateZ(0)" }}>
         {/* Base glow */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,oklch(0.52_0.19_258/0.09),transparent)]" />
+        <div className="absolute inset-0 grad-brand-soft" />
         {/* Mesh blobs */}
-        <div className="absolute -top-[30%] -left-[20%] w-[70%] h-[70%] opacity-50"
-          style={{ background: "radial-gradient(circle at 30% 50%, oklch(0.52 0.19 258 / 0.07), transparent 60%)" }} />
-        <div className="absolute -bottom-[30%] -right-[20%] w-[70%] h-[70%] opacity-50"
-          style={{ background: "radial-gradient(circle at 70% 50%, oklch(0.72 0.14 235 / 0.06), transparent 60%)" }} />
         {/* Dot grid */}
         <svg className="absolute inset-0 w-full h-full opacity-[0.02]" xmlns="http://www.w3.org/2000/svg">
           <defs>
@@ -600,8 +593,8 @@ function AuthPage() {
               animation: loaded ? 'fade-in-up 800ms 700ms cubic-bezier(0.22,1,0.36,1) both' : 'none',
             }}>
                 {/* Tarjeta premium: borde degradado + sombras en capas + radius 24px */}
-                <div className="relative rounded-3xl p-px bg-gradient-to-b from-white/70 via-white/25 to-primary/15 shadow-[0_30px_80px_-20px_oklch(0.52_0.19_258/0.3),0_10px_30px_-10px_oklch(0.52_0.19_258/0.18)]">
-                  <div className="relative bg-white/75 backdrop-blur-md rounded-[calc(1.5rem-1px)] p-7 overflow-hidden group/form-card">
+                <div className="relative rounded-3xl border border-primary/15 shadow-[0_30px_80px_-20px_oklch(0.52_0.19_258/0.3),0_10px_30px_-10px_oklch(0.52_0.19_258/0.18)]">
+                  <div className="relative bg-white/85 backdrop-blur-md rounded-3xl p-7 overflow-hidden group/form-card">
 
                     {/* Shine superior */}
                     <div className="absolute top-0 left-1/2 -translate-x-1/2 h-px w-3/4 bg-gradient-to-r from-transparent via-white/90 to-transparent" />
@@ -610,7 +603,7 @@ function AuthPage() {
 
                     {/* Header */}
                     <div className="text-center mb-6 relative">
-                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-accent grid place-items-center mx-auto mb-3 shadow-lg shadow-primary/25 relative">
+                      <div className="w-12 h-12 rounded-2xl grad-brand grid place-items-center mx-auto mb-3 shadow-lg shadow-primary/25 relative">
                         <div className="absolute inset-0 rounded-2xl bg-primary/20 blur-lg scale-125 animate-pulse" style={{ animationDuration: '3s' }} />
                         <Gamepad2 size={22} className="text-white relative" />
                       </div>
@@ -707,7 +700,7 @@ function AuthPage() {
                       {/* Submit button */}
                       <div style={{ animation: 'slide-in-up 300ms cubic-bezier(0.22,1,0.36,1) both', animationDelay: '240ms' }}>
                         <button disabled={busy}
-                          className="relative w-full py-2.5 rounded-xl bg-gradient-to-br from-primary to-accent text-white text-sm font-display font-semibold tracking-wide shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 active:scale-[0.98] transition-all duration-300 disabled:opacity-50 overflow-hidden group/btn"
+                          className="relative w-full py-2.5 rounded-xl grad-brand text-white text-sm font-display font-semibold tracking-wide shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 active:scale-[0.98] transition-all duration-300 disabled:opacity-50 overflow-hidden group/btn"
                         >
                           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700 ease-in-out" />
                           <div className="absolute inset-0 bg-white/[0.06] translate-y-full group-hover/btn:translate-y-0 transition-transform duration-500" />

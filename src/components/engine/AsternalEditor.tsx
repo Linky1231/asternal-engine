@@ -616,7 +616,7 @@ function LibrarySheet({
 
 function Logo() {
   return (
-    <a href="/" title="Volver al menú principal" className="relative w-9 h-9 rounded-lg bg-gradient-to-br from-primary to-accent grid place-items-center shadow-sm ring-1 ring-white/25 ring-inset active:scale-95 transition">
+    <a href="/" title="Volver al menú principal" className="relative w-9 h-9 rounded-lg grad-brand grid place-items-center shadow-sm ring-1 ring-white/25 ring-inset active:scale-95 transition">
       <span className="font-display text-lg text-primary-foreground">A</span>
     </a>
   );
@@ -1268,11 +1268,11 @@ function AssetsPanel({
         <div className="flex gap-1.5">
           <button
             onClick={() => setPaintOpen(true)}
-            className="text-xs font-display px-3 py-1.5 rounded-md bg-gradient-to-r from-accent/30 to-primary/30 border border-accent/50 text-primary-glow glow-border"
+            className="text-xs font-display px-3 py-1.5 rounded-md bg-primary/10 border border-accent/50 text-primary-glow glow-border"
           >✎ DRAW</button>
           <button
             onClick={() => fileRef.current?.click()}
-            className="text-xs font-display px-3 py-1.5 rounded-md bg-gradient-to-r from-primary/30 to-accent/30 border border-primary/50 text-primary-glow glow-border"
+            className="text-xs font-display px-3 py-1.5 rounded-md bg-primary/10 border border-primary/50 text-primary-glow glow-border"
           >+ IMPORT</button>
         </div>
         <input
@@ -1330,7 +1330,7 @@ function AssetsPanel({
             <div className="mt-1.5 grid grid-cols-2 gap-1">
               <button
                 onClick={() => onPlaceOnScene(sp)}
-                className="text-[10px] py-1.5 rounded bg-gradient-to-r from-primary/20 to-accent/20 border border-primary/50 text-primary-glow font-display tracking-widest glow-border"
+                className="text-[10px] py-1.5 rounded bg-primary/10 border border-primary/50 text-primary-glow font-display tracking-widest glow-border"
               >＋ PLACE</button>
               <button
                 onClick={() => removeSprite(sp.id)}
@@ -1379,7 +1379,7 @@ function ScriptsButton({ entity, onUpdate }: { entity: Entity; onUpdate: (patch:
     <>
       <button
         onClick={() => setOpen(true)}
-        className="w-full mt-1 px-3 py-2.5 rounded-md bg-gradient-to-r from-accent/20 to-primary/20 border border-accent/50 text-primary-glow font-display text-xs tracking-widest flex items-center justify-between glow-border"
+        className="w-full mt-1 px-3 py-2.5 rounded-md bg-primary/10 border border-accent/50 text-primary-glow font-display text-xs tracking-widest flex items-center justify-between glow-border"
       >
         <span>◉ EVENTS · BLOCKS</span>
         <span className="font-mono text-[10px] opacity-80">{count} SCRIPTS</span>

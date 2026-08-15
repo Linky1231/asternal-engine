@@ -248,13 +248,13 @@ export default function OrionPanel({ onClose }: { onClose: () => void }) {
               width: 42,
               height: 42,
               padding: 2,
-              background: "conic-gradient(from 210deg, var(--color-primary), var(--color-accent), var(--color-primary))",
+              background: "var(--color-primary)",
               boxShadow: "0 4px 16px -6px oklch(0.52 0.19 258/0.5)",
             }}
           >
             <div
               className="w-full h-full rounded-full grid place-items-center"
-              style={{ background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))" }}
+              style={{ background: "var(--gradient-asternal)" }}
             >
               <Bot size={19} strokeWidth={2.2} className="drop-shadow-[0_1px_2px_rgba(0,0,0,0.25)]" />
             </div>
@@ -366,7 +366,7 @@ export default function OrionPanel({ onClose }: { onClose: () => void }) {
             <div className="flex flex-col items-center justify-center pt-10 pb-4 text-center">
               <div
                 className="w-16 h-16 rounded-full grid place-items-center text-primary-foreground mb-3"
-                style={{ background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))", boxShadow: "0 8px 30px -8px oklch(0.52 0.19 258/0.5)" }}
+                style={{ background: "var(--gradient-asternal)", boxShadow: "0 8px 30px -8px oklch(0.52 0.19 258/0.5)" }}
               >
                 <Bot size={28} />
               </div>
@@ -399,7 +399,7 @@ export default function OrionPanel({ onClose }: { onClose: () => void }) {
                 {m.role === "assistant" && (
                   <div
                     className="shrink-0 rounded-full grid place-items-center text-primary-foreground"
-                    style={{ width: 28, height: 28, background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))" }}
+                    style={{ width: 28, height: 28, background: "var(--gradient-asternal)" }}
                   >
                     <Bot size={14} />
                   </div>
@@ -427,7 +427,7 @@ export default function OrionPanel({ onClose }: { onClose: () => void }) {
             <div className="flex gap-2 justify-start">
               <div
                 className="shrink-0 rounded-full grid place-items-center text-primary-foreground"
-                style={{ width: 28, height: 28, background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))" }}
+                style={{ width: 28, height: 28, background: "var(--gradient-asternal)" }}
               >
                 <Bot size={14} />
               </div>

@@ -206,16 +206,14 @@ export function GameCard({
       <div
         onClick={play}
         className="relative aspect-[16/10] grid place-items-center cursor-pointer active:scale-[0.99] transition overflow-hidden"
-        style={post.signed_cover ? undefined : { background: "linear-gradient(135deg, oklch(0.67 0.14 250 / 0.25), oklch(0.67 0.14 250 / 0.1))" }}
+        style={post.signed_cover ? undefined : { background: "var(--gradient-asternal-soft)" }}
       >
         {post.signed_cover ? (
           <>
             <img src={post.signed_cover} alt={title} className="absolute inset-0 w-full h-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
           </>
-        ) : (
-          <div className="absolute inset-0 opacity-40" style={{ background: "radial-gradient(circle at 30% 30%, oklch(0.67 0.14 250 / 0.35), transparent 60%)" }} />
-        )}
+        ) : null}
         <button
           className="relative w-16 h-16 rounded-2xl bg-white/95 backdrop-blur grid place-items-center shadow-xl active:scale-95 hover:scale-105 transition-transform duration-200"
           aria-label={needsPurchase ? "Comprar y jugar" : "Jugar"}
@@ -291,7 +289,7 @@ export function GameCard({
 
       {post.game_genre && (
         <div className="px-3 pt-2.5">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-r from-primary/12 to-accent/12 border border-primary/20 text-[10px] font-display tracking-wide text-primary-glow">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-display tracking-wide text-primary-glow">
             <Gamepad2 size={11} /> {post.game_genre}
           </span>
         </div>
@@ -417,7 +415,7 @@ export function GameCard({
 
             {(buyState === "idle" || buyState === "loading") && (
               <>
-                <div className="mx-auto w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/25 to-accent/20 grid place-items-center mb-3">
+                <div className="mx-auto w-14 h-14 rounded-2xl bg-primary/10 grid place-items-center mb-3">
                   {buyState === "loading"
                     ? <Loader2 size={26} className="animate-spin text-primary" />
                     : <Sparkles size={26} className="text-primary" fill="currentColor" />}
@@ -440,7 +438,7 @@ export function GameCard({
                 <button
                   onClick={confirmPurchase}
                   disabled={buyState === "loading" || (balance !== null && balance < price)}
-                  className="mt-4 w-full h-11 rounded-2xl bg-gradient-to-br from-primary to-accent text-primary-foreground font-display tracking-widest text-xs disabled:opacity-50 active:scale-[0.98] transition"
+                  className="mt-4 w-full h-11 rounded-2xl grad-brand text-primary-foreground font-display tracking-widest text-xs disabled:opacity-50 active:scale-[0.98] transition"
                 >
                   {buyState === "loading" ? <Loader2 size={16} className="animate-spin mx-auto" /> : "CONFIRMAR COMPRA"}
                 </button>

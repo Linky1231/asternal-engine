@@ -262,7 +262,7 @@ export function SupabaseSetupDialog({ open, onOpenChange }: { open: boolean; onO
                 <button
                   onClick={saveAndConnect}
                   disabled={!canSave}
-                  className="w-full py-2.5 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-xs font-display font-semibold tracking-wider disabled:opacity-40 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md shadow-primary/20"
+                  className="w-full py-2.5 rounded-xl grad-brand text-primary-foreground text-xs font-display font-semibold tracking-wider disabled:opacity-40 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md shadow-primary/20"
                 >
                   <Save size={14} /> GUARDAR Y CONECTAR
                 </button>
@@ -338,7 +338,7 @@ export function SupabaseSetupDialog({ open, onOpenChange }: { open: boolean; onO
                 <button
                   onClick={doSetup}
                   disabled={busy || !token.trim().startsWith("sbp_")}
-                  className="w-full py-2.5 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-xs font-display font-semibold tracking-wider disabled:opacity-40 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md shadow-primary/20"
+                  className="w-full py-2.5 rounded-xl grad-brand text-primary-foreground text-xs font-display font-semibold tracking-wider disabled:opacity-40 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md shadow-primary/20"
                 >
                   {busy ? <Loader2 size={14} className="animate-spin" /> : <Plug size={14} />}
                   {busy ? "CREANDO ESQUEMA…" : "CREAR ESQUEMA AUTOMÁTICAMENTE"}
@@ -377,7 +377,7 @@ export function SupabaseSetupDialog({ open, onOpenChange }: { open: boolean; onO
 
                 <button
                   onClick={copySql}
-                  className="w-full py-2.5 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-xs font-display font-semibold tracking-wider active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md shadow-primary/20"
+                  className="w-full py-2.5 rounded-xl grad-brand text-primary-foreground text-xs font-display font-semibold tracking-wider active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md shadow-primary/20"
                 >
                   {copied ? <CheckCircle2 size={14} /> : <Copy size={14} />}
                   {copied ? "¡SQL COPIADO!" : "COPIAR TODO EL SQL"}

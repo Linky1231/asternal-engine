@@ -294,7 +294,7 @@ export function TaskManager({
       {canAssign && !formOpen && (
         <button
           onClick={() => setFormOpen(true)}
-          className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-[11px] font-display tracking-widest active:scale-[0.98] transition mb-3"
+          className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl grad-brand text-primary-foreground text-[11px] font-display tracking-widest active:scale-[0.98] transition mb-3"
         >
           <Plus size={13} /> NUEVA TAREA
         </button>
@@ -460,7 +460,7 @@ export function FileManager({
       <button
         onClick={() => inputRef.current?.click()}
         disabled={reading}
-        className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-[11px] font-display tracking-widest active:scale-[0.98] transition disabled:opacity-40 mb-3"
+        className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl grad-brand text-primary-foreground text-[11px] font-display tracking-widest active:scale-[0.98] transition disabled:opacity-40 mb-3"
       >
         {reading ? <Loader2 size={13} className="animate-spin" /> : <Paperclip size={13} />}
         {reading ? "GUARDANDO…" : "SUBIR ARCHIVO"}
@@ -564,7 +564,7 @@ export function ThreadsManager({
       {!formOpen && (
         <button
           onClick={() => setFormOpen(true)}
-          className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-[11px] font-display tracking-widest active:scale-[0.98] transition mb-3"
+          className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl grad-brand text-primary-foreground text-[11px] font-display tracking-widest active:scale-[0.98] transition mb-3"
         >
           <Plus size={13} /> NUEVO HILO
         </button>
@@ -1070,7 +1070,7 @@ export function ProjectsManager({
       {canManage && !formOpen && (
         <button
           onClick={() => setFormOpen(true)}
-          className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-[11px] font-display tracking-widest active:scale-[0.98] transition mb-3"
+          className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl grad-brand text-primary-foreground text-[11px] font-display tracking-widest active:scale-[0.98] transition mb-3"
         >
           <Plus size={13} /> NUEVO PROYECTO
         </button>

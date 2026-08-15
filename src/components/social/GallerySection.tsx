@@ -200,7 +200,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
       {/* ====== HEADER ====== */}
       <div className="rounded-lg border border-border/70 bg-surface overflow-hidden">
         {/* Hairline degradado superior */}
-        <div className="h-[3px] w-full bg-gradient-to-r from-primary via-accent to-transparent opacity-80" />
+        <div className="h-[3px] w-full grad-brand-fade opacity-80" />
         <div className="flex items-center justify-between gap-3 p-3">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 text-primary grid place-items-center shrink-0">
@@ -236,7 +236,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
           </div>
           <button
             onClick={() => setCanvasOpen(true)}
-            className="h-10 pl-4 pr-5 rounded-lg bg-gradient-to-br from-primary to-accent text-white text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition shrink-0"
+            className="h-10 pl-4 pr-5 rounded-lg grad-brand text-white text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition shrink-0"
           >
             <ImagePlus size={16} /> NUEVA OBRA
           </button>
@@ -367,9 +367,9 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
               >
                 <div className="relative rounded-lg overflow-hidden border border-border/70 bg-surface hover:border-border-strong transition-colors duration-200 active:scale-[0.97]">
                   {/* Hairline degradado superior */}
-                  <div className="h-[2px] w-full bg-gradient-to-r from-primary via-accent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <div className="h-[2px] w-full grad-brand-fade opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   {/* Image area with decorative gradient border */}
-                  <div className="aspect-square bg-gradient-to-br from-muted/20 to-muted/5 relative overflow-hidden">
+                  <div className="aspect-square bg-muted/20 relative overflow-hidden">
                     {imgUrl ? (
                       <>
                         <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -634,7 +634,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
                         detailPost.owned
                           ? "bg-emerald-500/15 text-emerald-600 border border-emerald-500/30"
                           : effPrice(detailPost) > 0
-                            ? "bg-gradient-to-br from-primary to-accent text-white"
+                            ? "grad-brand text-white"
                             : "bg-emerald-500/15 text-emerald-600 border border-emerald-500/30 hover:bg-emerald-500/25"
                       }`}
                     >
@@ -793,7 +793,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
                 <button
                   onClick={doPublish}
                   disabled={publishing || !pubTitle.trim()}
-                  className="flex-1 h-10 rounded-lg bg-gradient-to-br from-primary to-accent text-white text-xs font-semibold active:scale-95 disabled:opacity-50 transition"
+                  className="flex-1 h-10 rounded-lg grad-brand text-white text-xs font-semibold active:scale-95 disabled:opacity-50 transition"
                 >
                   {publishing ? <Loader2 size={14} className="animate-spin mx-auto" /> : "PUBLICAR"}
                 </button>
@@ -949,7 +949,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
                   <button
                     onClick={confirmBuy}
                     disabled={buyState === "loading" || (balance !== null && (balance - (artworks.find(a => a.id === buyPostId) ? effPrice(artworks.find(a => a.id === buyPostId)!) : 0) < 0))}
-                    className="w-full h-10 rounded-lg bg-gradient-to-br from-primary to-accent text-white text-xs font-semibold disabled:opacity-50 active:scale-[0.98] transition"
+                    className="w-full h-10 rounded-lg grad-brand text-white text-xs font-semibold disabled:opacity-50 active:scale-[0.98] transition"
                   >
                     {buyState === "loading" ? <Loader2 size={14} className="animate-spin mx-auto" /> : "CONFIRMAR"}
                   </button>

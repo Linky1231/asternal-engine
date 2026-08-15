@@ -162,7 +162,7 @@ export function ScriptEditor({ entity, onChange, onClose }: Props) {
       <div className="p-3 border-t panel">
         <button
           onClick={addScript}
-          className="w-full py-3 rounded-lg bg-gradient-to-br from-primary to-accent text-primary-foreground font-display tracking-widest text-sm glow-border"
+          className="w-full py-3 rounded-lg grad-brand text-primary-foreground font-display tracking-widest text-sm glow-border"
         >+ NEW SCRIPT</button>
       </div>
     </div>

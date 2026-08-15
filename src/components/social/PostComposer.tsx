@@ -97,7 +97,7 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
   const Chip = ({ active, onClick, title, children }: { active?: boolean; onClick: () => void; title: string; children: React.ReactNode }) => (
     <button onClick={onClick} title={title}
       className={`relative shrink-0 h-9 px-3 rounded-xl grid grid-flow-col auto-cols-max items-center gap-1.5 text-[11px] font-medium transition-[transform,color,border-color,background-color,box-shadow] duration-300 ease-out active:scale-[0.95] ${active ? "text-primary-foreground shadow-[0_2px_10px_-2px_oklch(0.52_0.19_258/0.45)] border border-transparent" : "bg-muted/50 text-muted-foreground hover:text-primary hover:bg-primary/10 hover:border-primary/25 border border-transparent"}`}>
-      <span aria-hidden className={`absolute inset-0 rounded-xl bg-gradient-to-br from-primary to-accent transition-opacity duration-300 ease-out ${active ? "opacity-100" : "opacity-0"}`} />
+      <span aria-hidden className={`absolute inset-0 rounded-xl grad-brand transition-opacity duration-300 ease-out ${active ? "opacity-100" : "opacity-0"}`} />
       <span className="relative z-10 flex items-center gap-1.5">{children}</span>
     </button>
   );
@@ -105,8 +105,8 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
   const avatarEl = <Avatar p={me} size={40} className="ring-1 ring-border/60" />;
 
   return (
-    <div className={`panel rounded-2xl border bg-gradient-to-b from-card to-muted/20 transition-all duration-300 ${expanded ? "border-primary/35 shadow-lg" : "border-border/60 shadow-sm hover:border-primary/25 hover:shadow-md"}`}>
-      <div className="h-[3px] w-full bg-gradient-to-r from-primary via-accent to-transparent rounded-t-2xl opacity-80" />
+    <div className={`panel rounded-2xl border bg-card transition-all duration-300 ${expanded ? "border-primary/35 shadow-lg" : "border-border/60 shadow-sm hover:border-primary/25 hover:shadow-md"}`}>
+      <div className="h-[3px] w-full grad-brand-fade rounded-t-2xl opacity-80" />
       <div className="p-3 space-y-3">
         <div className="flex items-start gap-2.5">
           {avatarEl}
@@ -139,7 +139,7 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
           <div className="space-y-1.5">
             {documents.map((d, i) => (
               <div key={i} className="flex items-center gap-2.5 bg-input/40 rounded-xl px-3 py-2 text-xs border border-border/50">
-                <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary/20 to-accent/15 grid place-items-center shrink-0">
+                <span className="w-7 h-7 rounded-lg bg-primary/10 grid place-items-center shrink-0">
                   <FileText size={13} className="text-primary" />
                 </span>
                 <span className="flex-1 truncate font-medium">{d.name}</span>
@@ -242,8 +242,8 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
         {expanded && (
           <div className="text-[10px] font-display tracking-[0.2em] px-1 flex items-center gap-2">
             <Sparkles size={11} className="text-primary-glow shrink-0" />
-            <span className="bg-gradient-to-br from-primary to-accent bg-clip-text text-transparent">AÑADIR A TU PUBLICACIÓN</span>
-            <span className="flex-1 h-px bg-gradient-to-r from-primary/25 to-transparent" />
+            <span className="text-gradient">AÑADIR A TU PUBLICACIÓN</span>
+            <span className="flex-1 h-px bg-primary/20" />
           </div>
         )}
 
@@ -275,7 +275,7 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
           <span className="text-[8px] font-mono text-muted-foreground/30 mr-auto" title="marcador compositor">ast-composer-v1</span>
           <span className={`text-[10px] font-mono text-muted-foreground ${content.length > 1900 ? "text-destructive" : ""}`}>{content.length}/2000</span>
           <button onClick={submit} disabled={!canSubmit}
-            className="h-10 pl-4 pr-5 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground font-display tracking-[0.15em] text-xs flex items-center gap-1.5 active:scale-[0.97] transition-[transform,box-shadow,opacity] duration-300 ease-out shadow-[0_4px_14px_-4px_oklch(0.52_0.19_258/0.5)] disabled:opacity-40 disabled:pointer-events-none hover:-translate-y-0.5 hover:shadow-[0_8px_20px_-5px_oklch(0.52_0.19_258/0.65)]">
+            className="h-10 pl-4 pr-5 rounded-xl grad-brand text-primary-foreground font-display tracking-[0.15em] text-xs flex items-center gap-1.5 active:scale-[0.97] transition-[transform,box-shadow,opacity] duration-300 ease-out shadow-[0_4px_14px_-4px_oklch(0.52_0.19_258/0.5)] disabled:opacity-40 disabled:pointer-events-none hover:-translate-y-0.5 hover:shadow-[0_8px_20px_-5px_oklch(0.52_0.19_258/0.65)]">
             {busy ? <Loader2 size={14} className="animate-spin" /> : <Send size={13} />}
             {busy ? "…" : "PUBLICAR"}
           </button>

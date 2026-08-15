@@ -249,7 +249,7 @@ export function PublishGameDialog({
                 <button key={g} type="button" onClick={() => setGenre(genre === g ? "" : g)}
                   className={`px-2.5 h-7 rounded-lg text-[10px] font-display tracking-wide transition active:scale-95 border ${
                     genre === g
-                      ? "border-transparent bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-sm"
+                      ? "border-transparent grad-brand text-primary-foreground shadow-sm"
                       : "border-border/60 bg-muted/30 text-muted-foreground hover:text-primary-glow hover:border-primary/30"
                   }`}>
                   {g}
@@ -270,9 +270,9 @@ export function PublishGameDialog({
             </div>
             <input type="checkbox" checked={allowRemix} onChange={e => setAllowRemix(e.target.checked)} className="sr-only" />
           </label>
-          <div className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/5 to-accent/5 p-3">
+          <div className="rounded-xl border border-primary/30 bg-primary/[0.04] p-3">
             <div className="flex items-center gap-2 mb-2">
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-accent grid place-items-center shadow-sm">
+              <div className="w-7 h-7 rounded-lg bg-primary grid place-items-center shadow-sm">
                 <Sparkles size={14} className="text-primary-foreground" />
               </div>
               <div className="flex-1">
@@ -306,7 +306,7 @@ export function PublishGameDialog({
             <button onClick={() => onOpenChange(false)} disabled={busy}
               className="px-4 py-2 rounded-xl border border-border text-xs font-display tracking-widest">CANCELAR</button>
             <button onClick={submit} disabled={busy || done}
-              className="px-4 py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-xs font-display tracking-widest flex items-center gap-2 active:scale-95 transition disabled:opacity-60">
+              className="px-4 py-2 rounded-xl grad-brand text-primary-foreground text-xs font-display tracking-widest flex items-center gap-2 active:scale-95 transition disabled:opacity-60">
               {done ? <><CheckCircle2 size={14}/> {isEdit ? "GUARDADO" : "PUBLICADO"}</> : busy ? <><Loader2 size={14} className="animate-spin"/> …</> : <><Upload size={14}/> {isEdit ? "GUARDAR" : "PUBLICAR"}</>}
             </button>
           </div>

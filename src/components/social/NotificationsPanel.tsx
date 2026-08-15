@@ -154,7 +154,7 @@ export function NotificationsPanel({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-[90] bg-background flex flex-col">
       {/* Franja de identidad (mismo lenguaje que el chat) */}
-      <div className="h-[3px] shrink-0 bg-gradient-to-br from-primary to-accent" />
+      <div className="h-[3px] shrink-0 grad-brand" />
 
       {/* Cabecera */}
       <header className="shrink-0 border-b border-border/60 bg-background/95 backdrop-blur-md px-3 sm:px-4 py-2.5 flex items-center gap-2.5">
@@ -190,10 +190,10 @@ export function NotificationsPanel({ onClose }: { onClose: () => void }) {
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-2xl md:max-w-3xl lg:max-w-4xl mx-auto w-full px-3 py-3 pb-12 space-y-3">
           {/* Tarjeta hero: sin leer */}
-          <section className="relative overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/15 via-accent/10 to-transparent p-4 shadow-sm">
+          <section className="relative overflow-hidden rounded-2xl border border-primary/30 grad-brand-soft p-4 shadow-sm">
             <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-primary/15 blur-2xl" />
             <div className="relative flex items-center gap-3.5">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center shadow-lg shrink-0">
+              <div className="w-12 h-12 rounded-xl bg-primary text-primary-foreground grid place-items-center shadow-lg shrink-0">
                 <Bell size={20} />
               </div>
               <div className="flex-1 min-w-0">
@@ -210,7 +210,7 @@ export function NotificationsPanel({ onClose }: { onClose: () => void }) {
             {/* Progreso de leídas */}
             <div className="relative mt-3 h-1.5 rounded-full bg-black/10 dark:bg-white/10 overflow-hidden">
               <div
-                className="h-full rounded-full bg-gradient-to-br from-primary to-accent transition-all duration-500"
+                className="h-full rounded-full bg-primary transition-all duration-500"
                 style={{ width: `${readPct}%` }}
               />
             </div>
@@ -256,7 +256,7 @@ export function NotificationsPanel({ onClose }: { onClose: () => void }) {
                       <div className="flex items-center gap-2">
                         <span className="text-[12px] font-display font-medium truncate">{c.label}</span>
                         {un > 0 && (
-                          <span className="shrink-0 min-w-[16px] h-4 px-1 rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground text-[9px] font-display grid place-items-center">
+                          <span className="shrink-0 min-w-[16px] h-4 px-1 rounded-full grad-brand text-primary-foreground text-[9px] font-display grid place-items-center">
                             {un}
                           </span>
                         )}
@@ -266,7 +266,7 @@ export function NotificationsPanel({ onClose }: { onClose: () => void }) {
                     <span className="text-[10px] font-mono text-muted-foreground/50 shrink-0">{share}%</span>
                   </div>
                   <div className="mt-1.5 h-1 rounded-full bg-muted/40 overflow-hidden">
-                    <div className="h-full rounded-full bg-gradient-to-br from-primary to-accent" style={{ width: `${share}%` }} />
+                    <div className="h-full rounded-full bg-primary" style={{ width: `${share}%` }} />
                   </div>
                 </button>
               );
