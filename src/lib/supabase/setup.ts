@@ -81,10 +81,12 @@ export function projectRefFromUrl(url: string): string | null {
 }
 
 /**
- * Comprueba si el esquema existe. Verifica tres tablas clave: `posts` (creada al
- * inicio del script), `user_projects` (guarda la sincronización de proyectos
- * entre dispositivos) y `forum_categories` (casi al final), para detectar tanto
- * esquemas inexistentes como instalaciones parciales.
+ * Comprueba si el esquema existe. Verifica cuatro tablas clave: `posts` (creada
+ * al inicio del script), `user_projects` (guarda la sincronización de proyectos
+ * entre dispositivos), `forum_categories` (casi al final) y `game_plays` (el
+ * ranking de «más jugados», añadida después de la primera instalación — sin
+ * ella el ranking solo cuenta jugadas del navegador y no sincroniza).
+ * Detecta tanto esquemas inexistentes como instalaciones parciales/antiguas.
  */
 export async function checkSchemaReady(): Promise<boolean> {
   if (!hasSupabaseConfig()) return false;
@@ -97,7 +99,11 @@ export async function checkSchemaReady(): Promise<boolean> {
     const { error: err2 } = await supabase.from("user_projects").select("id").limit(1);
     if (err2) return false;
     const { error: err3 } = await supabase.from("forum_categories").select("id").limit(1);
-    return !err3;
+    if (err3) return false;
+    // Sin game_plays el ranking de «más jugados (24h)» no se sincroniza entre
+    // dispositivos: la instalación está incompleta aunque el resto funcione.
+    const { error: err4 } = await supabase.from("game_plays").select("id").limit(1);
+    return !err4;
   } catch {
     return false;
   }
@@ -188,4 +194,39 @@ export async function runSchemaSetup(accessToken: string): Promise<SetupResult> 
  */
 export async function runChatSchemaSetup(accessToken: string): Promise<SetupResult> {
   return runSqlOnProject(accessToken, CHAT_SCHEMA_SQL);
+}
+
+/**
+ * DDL independiente de la tabla `game_plays` (ranking «más jugados 24h»).
+ * Idempotente (create table if not exists + políticas reemplazadas): se puede
+ * ejecutar tantas veces como sea necesario sin romper nada. Incluye el mismo
+ * bloque que el esquema completo para poder instalar SOLO el ranking cuando el
+ * resto de la plataforma ya está montado (esquemas instalados antes de añadir
+ * esta tabla no la tienen → el ranking no sincroniza entre dispositivos).
+ */
+export const GAME_PLAYS_SCHEMA_SQL = `-- ───────────── RANKING: JUEGOS MÁS JUGADOS (24h) ─────────────
+
+create table if not exists public.game_plays (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete set null,
+  post_id uuid not null references public.posts(id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+alter table public.game_plays enable row level security;
+create index if not exists game_plays_24h_idx on public.game_plays (post_id, created_at desc);
+
+-- Lectura pública (el ranking es global) e inserción por el propio jugador.
+drop policy if exists plays_read on public.game_plays;
+create policy plays_read on public.game_plays for select using (true);
+drop policy if exists plays_insert on public.game_plays;
+create policy plays_insert on public.game_plays for insert with check (auth.uid() = user_id);
+`;
+
+/**
+ * Ejecuta solo la creación de `game_plays` (ranking sincronizado). Útil cuando
+ * el esquema ya está instalado pero es anterior a esta tabla.
+ * @param accessToken Token de acceso personal de Supabase (sbp_...).
+ */
+export async function runGamePlaysSchemaSetup(accessToken: string): Promise<SetupResult> {
+  return runSqlOnProject(accessToken, GAME_PLAYS_SCHEMA_SQL);
 }

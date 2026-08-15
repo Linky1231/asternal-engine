@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Play, Flame, Rocket, Heart, Sparkles as SparklesIcon, Users, ChevronRight, Gamepad2, Trophy, Joystick, Crown } from "lucide-react";
+import { Play, Flame, Rocket, Heart, Sparkles as SparklesIcon, Users, ChevronRight, Gamepad2, Trophy, Joystick, Crown, CloudOff, Loader2, CheckCircle2 } from "lucide-react";
 import type { PostWithMeta } from "@/lib/social/api";
 import { fetchGamePlayCounts24h } from "@/lib/social/api";
+import { SUPABASE_ACCESS_TOKEN, runGamePlaysSchemaSetup } from "@/lib/supabase/setup";
 import { GameIcon } from "./GameIcon";
 import { GameCard } from "./GameCard";
 
@@ -21,24 +22,55 @@ export function GamesHome({
   const [selected, setSelected] = useState<PostWithMeta | null>(null);
   const [trend, setTrend] = useState<TrendTab>("hot");
   const [playCounts, setPlayCounts] = useState<Record<string, number>>({});
+  // Estado de la sincronización del ranking: null = comprobando, true = nube OK,
+  // false = la tabla game_plays no existe (solo hay conteo local del navegador).
+  const [rankCloud, setRankCloud] = useState<boolean | null>(null);
+  const [installing, setInstalling] = useState(false);
+  const [installMsg, setInstallMsg] = useState<string | null>(null);
 
   // Cuenta real de jugadas en las últimas 24h para el ranking.
   useEffect(() => {
     let alive = true;
-    if (!games.length) { setPlayCounts({}); return; }
+    if (!games.length) { setPlayCounts({}); setRankCloud(false); return; }
     fetchGamePlayCounts24h(games.map(g => g.id))
-      .then(c => { if (alive) setPlayCounts(c); })
-      .catch(() => { if (alive) setPlayCounts({}); });
+      .then(r => { if (alive) { setPlayCounts(r.counts); setRankCloud(r.cloud); } })
+      .catch(() => { if (alive) { setPlayCounts({}); setRankCloud(false); } });
     return () => { alive = false; };
   }, [games]);
 
-  // Ranking de los más jugados en las últimas 24 horas (real).
+  // Instala la tabla game_plays (ranking sincronizado) con un clic, usando el
+  // token de acceso de Supabase si está disponible (Keys). Si no, guía al diálogo.
+  const installRankingTable = async () => {
+    setInstalling(true);
+    setInstallMsg(null);
+    try {
+      const token = (SUPABASE_ACCESS_TOKEN ?? "").trim();
+      if (!token) {
+        setInstallMsg("Sin token de Supabase. Abre ⋮ → Supabase → «Instalar esquema» para crear la tabla.");
+        return;
+      }
+      const r = await runGamePlaysSchemaSetup(token);
+      setInstallMsg(r.ok ? "Tabla creada: el ranking ya se sincroniza entre dispositivos." : r.message);
+      if (r.ok && games.length) {
+        const rr = await fetchGamePlayCounts24h(games.map(g => g.id));
+        setPlayCounts(rr.counts);
+        setRankCloud(rr.cloud);
+      }
+    } catch (e) {
+      setInstallMsg((e as Error)?.message ?? "No se pudo instalar. Revisa el token en Keys.");
+    } finally {
+      setInstalling(false);
+    }
+  };
+
+  // Ranking de los más jugados en las últimas 24 horas (real). Solo el TOP 3:
+  // el podio debe ser corto y selectivo, no una lista larga.
   const ranking24 = useMemo(() => {
     return [...games]
       .map(g => ({ g, n: playCounts[g.id] ?? 0 }))
       .filter(x => x.n > 0)
       .sort((a, b) => b.n - a.n)
-      .slice(0, 10);
+      .slice(0, 3);
   }, [games, playCounts]);
 
   const sections = useMemo(() => {
@@ -104,6 +136,13 @@ export function GamesHome({
       <FeaturedBanner post={featured} plays24={playCounts[featured.id] ?? 0} onPlay={() => setSelected(featured)} />
 
       {/* 2. Ranking · Más jugados en las últimas 24h */}
+      {rankCloud === false && games.length > 0 && (
+        <RankingSyncBanner
+          installing={installing}
+          message={installMsg}
+          onInstall={installRankingTable}
+        />
+      )}
       <Ranking24 games={ranking24} totalGames={games.length} onOpen={setSelected} />
 
       {/* 3. Continuar jugando */}
@@ -188,6 +227,42 @@ function TrendChip({ active, onClick, icon, label }: { active: boolean; onClick:
   );
 }
 
+function RankingSyncBanner({ installing, message, onInstall }: {
+  installing: boolean;
+  message: string | null;
+  onInstall: () => void;
+}) {
+  return (
+    <section className="flex items-center gap-2.5 rounded-2xl border border-amber-400/40 bg-amber-50/70 dark:bg-amber-500/10 px-3.5 py-3">
+      <div className="w-9 h-9 shrink-0 rounded-xl bg-amber-500/15 grid place-items-center">
+        <CloudOff size={16} className="text-amber-600" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="font-display text-[12px] font-semibold leading-tight text-amber-900 dark:text-amber-200">
+          El ranking no se sincroniza entre dispositivos
+        </div>
+        <div className="text-[10px] text-amber-800/80 dark:text-amber-300/80 leading-snug mt-0.5">
+          Falta la tabla <span className="font-mono">game_plays</span> en Supabase. Con un clic la creas y el conteo pasa a ser global.
+        </div>
+        {message && (
+          <div className={`text-[10px] mt-1 leading-snug flex items-center gap-1 ${message.startsWith("Tabla creada") || message.startsWith("Tabla") ? "text-emerald-600" : "text-amber-700"}`}>
+            {message.startsWith("Tabla creada") ? <CheckCircle2 size={10} className="shrink-0" /> : null}
+            {message}
+          </div>
+        )}
+      </div>
+      <button
+        onClick={onInstall}
+        disabled={installing}
+        className="shrink-0 h-8 px-3 rounded-lg grad-brand text-primary-foreground text-[10px] font-display font-semibold tracking-widest shadow-sm active:scale-[0.97] transition disabled:opacity-50 flex items-center gap-1.5"
+      >
+        {installing ? <Loader2 size={11} className="animate-spin" /> : <Trophy size={11} />}
+        {installing ? "CREANDO…" : "INSTALAR"}
+      </button>
+    </section>
+  );
+}
+
 function Ranking24({ games, totalGames, onOpen }: {
   games: { g: PostWithMeta; n: number }[];
   totalGames: number;
@@ -218,10 +293,11 @@ function Ranking24({ games, totalGames, onOpen }: {
       <div className="flex items-center gap-2">
         <Trophy size={15} className="text-primary" />
         <div className="font-display text-[13px] leading-tight">Ranking · Más jugados (24h)</div>
+        <span className="px-1.5 py-0.5 rounded-md bg-primary/10 text-primary text-[9px] font-mono font-bold tracking-wider">TOP 3</span>
         <span className="ml-auto text-[9px] font-mono text-muted-foreground/60">en vivo</span>
       </div>
       <div className="space-y-1.5">
-        {games.slice(0, 5).map(({ g, n }, i) => {
+        {games.map(({ g, n }, i) => {
           const title = extractTitle(g.content);
           return (
             <button
@@ -254,20 +330,6 @@ function Ranking24({ games, totalGames, onOpen }: {
           );
         })}
       </div>
-      {games.length > 5 && (
-        <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-0.5 px-0.5 pt-0.5">
-          {games.slice(5).map(({ g, n }) => (
-            <button key={g.id} onClick={() => onOpen(g)} className="shrink-0">
-              <div className="relative">
-                <GameIcon post={g} onOpen={() => onOpen(g)} />
-                <span className="absolute -bottom-1 -right-1 flex items-center gap-0.5 px-1.5 h-4 rounded-full bg-primary text-primary-foreground text-[8px] font-bold tabular-nums shadow">
-                  <Flame size={7} fill="currentColor" /> {n}
-                </span>
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
     </section>
   );
 }

@@ -894,12 +894,18 @@ export async function recordGamePlay(postId: string): Promise<void> {
 
 /**
  * Cuenta las jugadas de cada juego en las últimas 24 horas.
- * Devuelve un mapa post_id → número de jugadas. Usa la nube cuando la tabla
- * existe y, si no (o falla), combina con el registro local del navegador.
+ * Devuelve { counts, cloud }:
+ *  - counts: mapa post_id → número de jugadas.
+ *  - cloud: true si la nube respondió (la tabla game_plays existe y el ranking
+ *    se sincroniza entre dispositivos); false si solo hay registro local del
+ *    navegador (tabla sin crear o sin sesión → sin sincronización).
+ * Cuando la nube funciona se usan SOLO sus datos: el registro local contiene
+ * exactamente las mismas jugadas ya subidas por este navegador, así que
+ * sumarlas duplicaría el conteo.
  */
-export async function fetchGamePlayCounts24h(postIds: string[]): Promise<Record<string, number>> {
+export async function fetchGamePlayCounts24h(postIds: string[]): Promise<{ counts: Record<string, number>; cloud: boolean }> {
   const counts: Record<string, number> = {};
-  if (!postIds.length) return counts;
+  if (!postIds.length) return { counts, cloud: false };
   const since = new Date(Date.now() - PLAYS_WINDOW_MS).toISOString();
   let cloudOk = false;
   try {
@@ -915,28 +921,26 @@ export async function fetchGamePlayCounts24h(postIds: string[]): Promise<Record<
       }
     }
   } catch {
-    /* tabla sin crear → se suma el respaldo local */
+    /* tabla sin crear → se usa solo el respaldo local */
   }
-  try {
-    const raw = localStorage.getItem(LOCAL_PLAYS_KEY);
-    if (raw) {
-      const list = JSON.parse(raw) as { post_id: string; at: number }[];
-      const cut = Date.now() - PLAYS_WINDOW_MS;
-      const ids = new Set(postIds);
-      for (const x of list) {
-        if (typeof x.at === "number" && x.at > cut && ids.has(x.post_id)) {
-          counts[x.post_id] = (counts[x.post_id] ?? 0) + 1;
+  if (!cloudOk) {
+    try {
+      const raw = localStorage.getItem(LOCAL_PLAYS_KEY);
+      if (raw) {
+        const list = JSON.parse(raw) as { post_id: string; at: number }[];
+        const cut = Date.now() - PLAYS_WINDOW_MS;
+        const ids = new Set(postIds);
+        for (const x of list) {
+          if (typeof x.at === "number" && x.at > cut && ids.has(x.post_id)) {
+            counts[x.post_id] = (counts[x.post_id] ?? 0) + 1;
+          }
         }
       }
+    } catch {
+      /* noop */
     }
-  } catch {
-    /* noop */
   }
-  // Si la nube funcionó, la copia local solo duplicaría; en ese caso descartar
-  // el aporte local si ya hay datos de nube (el registro local es el que la
-  // creó, así que al menos la sesión actual ya está contada en la nube).
-  if (cloudOk) return counts;
-  return counts;
+  return { counts, cloud: cloudOk };
 }
 
 // ---------- Cloud project sync ----------
