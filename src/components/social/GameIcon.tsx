@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Sparkles, Lock } from "lucide-react";
 import type { PostWithMeta } from "@/lib/social/api";
 
@@ -7,12 +8,23 @@ function extractTitle(content: string): string {
 }
 
 /**
+ * Marca del tile sin portada: primer emoji del contenido si lo hay, si no la
+ * inicial del título. Neutro (cobalto sobre blanco), nunca púrpura.
+ */
+export function extractTileMark(content: string): string {
+  const line = content.split("\n")[0] || "";
+  const emoji = line.match(/\p{Extended_Pictographic}/u)?.[0];
+  if (emoji) return emoji;
+  return (extractTitle(content).charAt(0) || "J").toUpperCase();
+}
+
+/**
  * App-icon style game tile. Square, rounded, with cover image cropped from center.
  * Tap fires onOpen — the parent decides whether to open a play sheet, GameCard modal, etc.
  *
- * Sin portada: tile «blueprint» (cuadrícula técnica sobre blanco) con una marca
- * geométrica mínima y ticks de esquina, en lugar del recuadro celeste con el
- * icono de control genérico.
+ * Portada: cover del juego → primera captura → si no hay (o la imagen falla),
+ * tile «blueprint» (cuadrícula técnica sobre blanco) con monograma del título
+ * y ticks de esquina. Sin morado: el acento es cobalto sobre blanco.
  */
 export function GameIcon({
   post,
@@ -30,9 +42,16 @@ export function GameIcon({
   const owned = post.owned ?? price <= 0;
   const needsPurchase = !owned && price > 0;
 
+  const coverUrl = post.signed_cover ?? post.signed_screenshots[0] ?? null;
+  const [imgFailed, setImgFailed] = useState(false);
+  // Al cambiar la URL (o aparecer) se reintenta la imagen.
+  useEffect(() => {
+    setImgFailed(false);
+  }, [coverUrl]);
+  const hasCover = !!coverUrl && !imgFailed;
+
   const dims = size === "sm" ? "w-16" : size === "lg" ? "w-24" : "w-20";
   const radius = size === "lg" ? "rounded-[22px]" : "rounded-2xl";
-  const hasCover = !!post.signed_cover;
 
   return (
     <button
@@ -49,13 +68,14 @@ export function GameIcon({
       >
         {hasCover ? (
           <img
-            src={post.signed_cover ?? undefined}
+            src={coverUrl}
             alt={title}
             loading="lazy"
+            onError={() => setImgFailed(true)}
             className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.04]"
           />
         ) : (
-          <BlueprintMark />
+          <TileMark text={extractTileMark(post.content)} />
         )}
         {/* subtle top gloss like iOS icons */}
         <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-white/15 via-transparent to-black/[0.06]" />
@@ -80,12 +100,13 @@ export function GameIcon({
   );
 }
 
-/** Marca geométrica mínima: rombo de cruz con centro en degradado cobalto→violeta. */
-function BlueprintMark() {
+/** Monograma del juego: emoji o inicial en una medalla blanca con borde cobalto. */
+function TileMark({ text }: { text: string }) {
   return (
-    <span className="relative grid place-items-center pointer-events-none" aria-hidden>
-      <span className="w-8 h-8 rotate-45 rounded-[6px] border border-primary/40 bg-white/80 shadow-[0_6px_18px_-8px_oklch(0.53_0.22_262/0.5)]" />
-      <span className="absolute w-3 h-3 rotate-45 rounded-[3px] bg-gradient-to-br from-primary to-violet-500" />
+    <span className="absolute inset-0 grid place-items-center pointer-events-none" aria-hidden>
+      <span className="w-9 h-9 rounded-full bg-white/90 border border-primary/30 text-primary grid place-items-center font-display font-bold text-sm leading-none shadow-[0_8px_20px_-8px_oklch(0.5_0.2_262/0.55)]">
+        {text}
+      </span>
     </span>
   );
 }

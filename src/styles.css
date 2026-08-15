@@ -107,7 +107,7 @@
 
   /* Sombras de color (elementos flotando sobre el lienzo blanco) */
   --shadow-float: 0 18px 44px -18px oklch(0.45 0.22 268 / 0.45);
-  --shadow-glow: 0 10px 30px -12px oklch(0.53 0.22 262 / 0.4), 0 4px 18px -8px oklch(0.6 0.21 300 / 0.3);
+  --shadow-glow: 0 10px 30px -12px oklch(0.53 0.22 262 / 0.4), 0 4px 18px -8px oklch(0.63 0.14 210 / 0.35);
 
   /* ── Degradados oficiales (DESIGN.md §2.2) ── */
   --gradient-asternal: linear-gradient(120deg, oklch(0.44 0.24 268) 0%, oklch(0.53 0.22 262) 38%, oklch(0.62 0.2 258) 66%, oklch(0.68 0.14 235) 100%);
@@ -177,7 +177,7 @@
   --shadow-md: 0 4px 12px -2px oklch(0 0 0 / 0.08), 0 2px 4px -2px oklch(0 0 0 / 0.04);
   --shadow-lg: 0 12px 28px -8px oklch(0 0 0 / 0.10), 0 4px 12px -4px oklch(0 0 0 / 0.06);
   --shadow-float: 0 18px 44px -18px oklch(0.45 0.22 268 / 0.45);
-  --shadow-glow: 0 10px 30px -12px oklch(0.53 0.22 262 / 0.4), 0 4px 18px -8px oklch(0.6 0.21 300 / 0.3);
+  --shadow-glow: 0 10px 30px -12px oklch(0.53 0.22 262 / 0.4), 0 4px 18px -8px oklch(0.63 0.14 210 / 0.35);
 }
 
 @layer base {

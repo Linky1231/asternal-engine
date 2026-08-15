@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { Play, Flame, Rocket, Heart, Sparkles as SparklesIcon, Users, ChevronRight, Gamepad2, Trophy } from "lucide-react";
 import type { PostWithMeta } from "@/lib/social/api";
 import { fetchGamePlayCounts24h } from "@/lib/social/api";
-import { GameIcon } from "./GameIcon";
+import { GameIcon, extractTileMark } from "./GameIcon";
 import { GameCard } from "./GameCard";
 
 function extractTitle(content: string): string {
@@ -281,7 +281,15 @@ function FeaturedBanner({ post, plays24, onPlay }: { post: PostWithMeta; plays24
         {post.signed_cover ? (
           <img src={post.signed_cover} alt={title} className="absolute inset-0 w-full h-full object-cover" />
         ) : (
-          <div className="absolute inset-0 mesh-bg" />
+          <>
+            <div className="absolute inset-0 mesh-bg" />
+            {/* Monograma del juego sobre el mesh: sin portada nunca se ve vacío ni púrpura */}
+            <div className="absolute inset-0 grid place-items-center">
+              <div className="w-20 h-20 rounded-2xl bg-white/85 backdrop-blur-sm border border-white/70 text-primary grid place-items-center font-display font-bold text-3xl leading-none shadow-[0_18px_44px_-18px_oklch(0.45_0.22_268/0.65)]">
+                {extractTileMark(post.content)}
+              </div>
+            </div>
+          </>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/10" />
         {/* Textura de grano sutil sobre el degradado: nunca plano, nunca “de algoritmo”. */}

@@ -60,6 +60,8 @@ export function NotificationsPanel({ onClose }: { onClose: () => void }) {
   const reload = async () => {
     try {
       setItems((await fetchAllNotifications()) as Notif[]);
+    } catch {
+      /* Esquema sin crear o red caída: el panel se muestra vacío sin romperse. */
     } finally {
       setLoading(false);
     }

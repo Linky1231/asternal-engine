@@ -216,7 +216,7 @@ function HomePage() {
       <header className="app-header sticky top-0 z-20 bg-background/90 backdrop-blur-xl border-b border-border/70">
         <div className={`max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto flex items-center gap-2 sm:gap-2.5 px-3 sm:px-4 ${inPreview ? "pt-14 pb-3" : "py-2.5"}`}>
           <button onClick={() => navigate({ to: "/profile" })} title="Mi perfil"
-            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl overflow-hidden ring-1 ring-line-strong shadow-sm active:scale-95 transition shrink-0">
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl overflow-hidden border border-slate-900/5 shadow-[0_8px_20px_-10px_oklch(0.45_0.22_268/0.4)] active:scale-95 transition shrink-0">
             <Avatar p={me} className="w-full h-full" />
           </button>
           <div className="flex-1 min-w-0 header-name">
@@ -406,7 +406,7 @@ function HomePage() {
             <MenuItem icon={<MessageCircle size={16} className="text-primary-glow"/>} label="Chats" onClick={() => { setChatOpen(true); closeMenu(); }} />
             <MenuItem icon={<Bot size={16} className="text-primary-glow"/>} label="Asistencia · Orión" onClick={() => { setOrionOpen(true); closeMenu(); }} />
             <MenuItem icon={<Search size={16}/>} label="Buscar" onClick={() => { setShowSearch(s => !s); closeMenu(); }} />
-            <MenuItem icon={<Bell size={16}/>} label="Notificaciones" onClick={() => { setNotifOpen(true); closeMenu(); }} />
+            <MenuItem icon={<Bell size={16}/>} label="Notificaciones" onClick={() => { setMenuOpen(false); setNotifOpen(true); }} />
 
             {/* Categoría: COMUNIDAD */}
             <CategoryHeader label="COMUNIDAD" />
@@ -422,7 +422,7 @@ function HomePage() {
             <MenuLink icon={<Star size={16} fill="currentColor" style={{ color: "var(--plus)" }}/>} label="Centro Plus" to="/plus" onClick={closeMenu} />
 
             <div className="flex-1 min-h-4" />
-            <div className="text-[9px] font-mono text-muted-foreground/40 px-3 pb-1" title="Marcador de build para diagnóstico">build · ast-white-v2</div>
+            <div className="text-[9px] font-mono text-muted-foreground/40 px-3 pb-1" title="Marcador de build para diagnóstico">build · ast-white-v3</div>
             <button onClick={() => { logout(); closeMenu(); }}
               className="flex items-center gap-3 px-3 h-11 rounded-lg text-destructive hover:bg-destructive/10 active:scale-[0.98] transition">
               <LogOut size={16} /> <span className="text-sm font-medium">Cerrar sesión</span>

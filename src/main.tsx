@@ -7,8 +7,8 @@ import { RouterProvider } from "@tanstack/react-router";
 import { getRouter } from "./router";
 import "./styles.css";
 
-// Marcador de build para diagnóstico del preview (ast-white-v2).
-console.info("[ast-white-v2] preview build tag — si no ves esto, el preview está sirviendo un build viejo.");
+// Marcador de build para diagnóstico del preview (ast-white-v3).
+console.info("[ast-white-v3] preview build tag — si no ves esto, el preview está sirviendo un build viejo.");
 
 // Initialize the router with query client
 const router = getRouter();

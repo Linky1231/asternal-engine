@@ -10,11 +10,34 @@ export type AvatarLike = {
 };
 
 /**
- * Avatar universal: foto subida → inicial con color de acento.
+ * Degradados suaves (cobalto/cian/violeta) para el monograma de respaldo.
+ * Deterministas por usuario: mismo perfil → mismo degradado en toda la app.
+ */
+const FALLBACK_GRADIENTS = [
+  "linear-gradient(135deg, oklch(0.55 0.19 262) 0%, oklch(0.63 0.14 215) 100%)",
+  "linear-gradient(135deg, oklch(0.5 0.21 288) 0%, oklch(0.59 0.17 240) 100%)",
+  "linear-gradient(135deg, oklch(0.6 0.12 215) 0%, oklch(0.68 0.1 190) 100%)",
+  "linear-gradient(135deg, oklch(0.52 0.2 275) 0%, oklch(0.61 0.16 228) 100%)",
+  "linear-gradient(135deg, oklch(0.57 0.16 250) 0%, oklch(0.66 0.12 205) 100%)",
+];
+
+/** Hash FNV-1a estable por id/usuario → degradado fijo (nunca cambia entre renders). */
+function hashKey(s: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+/**
+ * Avatar universal: foto subida → monograma con degradado suave determinista.
  *
- * La inicial siempre se renderiza POR DEBAJO de la foto: mientras la imagen
- * carga (o si la URL está rota/expirada) se ve la letra, nunca un hueco ni un
- * «?». Si la imagen falla, se elimina y queda la inicial de respaldo.
+ * El monograma siempre se renderiza POR DEBAJO de la foto: mientras la imagen
+ * carga (o si la URL está rota/expirada) se ve la inicial con color de acento,
+ * nunca un hueco, un «?» ni un cuadro gris genérico. Si la imagen falla, se
+ * elimina y queda el monograma.
  */
 export function Avatar({
   p,
@@ -34,9 +57,12 @@ export function Avatar({
 }) {
   const [imgFailed, setImgFailed] = useState(false);
   const url = p?.avatar_url;
-  const initial = (label || p?.display_name || p?.username || "?").trim().charAt(0).toUpperCase();
+  const name = (label || p?.display_name || p?.username || "").trim();
+  const initial = (name.charAt(0) || "A").toUpperCase();
+  const seed = p?.id ?? p?.username ?? name ?? "user";
+  const gradient = FALLBACK_GRADIENTS[hashKey(seed) % FALLBACK_GRADIENTS.length];
 
-  // Al cambiar la URL (o aparecer) se reintenta la imagen y se vuelve a la inicial.
+  // Al cambiar la URL (o aparecer) se reintenta la imagen y se vuelve al monograma.
   useEffect(() => {
     setImgFailed(false);
   }, [url]);
@@ -45,8 +71,8 @@ export function Avatar({
   const dims = size !== undefined ? { width: size, height: size, fontSize: Math.max(10, size * 0.42) } : {};
   return (
     <div
-      className={`relative overflow-hidden shrink-0 grid place-items-center font-display font-semibold text-primary-foreground bg-primary ${roundCls} ${className}`}
-      style={{ ...dims, ...style }}
+      className={`relative overflow-hidden shrink-0 grid place-items-center font-display font-semibold text-white ${roundCls} ${className}`}
+      style={{ ...dims, backgroundImage: gradient, ...style }}
     >
       <span className="relative">{initial}</span>
       {url && !imgFailed && (
