@@ -57,6 +57,59 @@ export async function fetchCloudProjects(): Promise<CloudProject[]> {
   return cloudListProjects();
 }
 
+// ───── Biblioteca de assets (imágenes/prefabs del editor) ─────
+// Se guarda en una fila RESERVADA de user_projects (data.__kind =
+// "asset-library") para sincronizarla entre dispositivos sin necesitar tablas
+// nuevas: cloudListProjects la filtra y nunca la muestra como proyecto.
+export const ASSET_LIBRARY_KIND = "asset-library";
+export type AssetLibraryItem = { id: string; name: string; preset: unknown };
+
+export function isAssetLibraryRow(data: unknown): boolean {
+  return !!data && typeof data === "object" && (data as { __kind?: string }).__kind === ASSET_LIBRARY_KIND;
+}
+
+let libraryPushTimer: ReturnType<typeof setTimeout> | null = null;
+
+/** Push diferido de la biblioteca de assets (mismo patrón que los proyectos). */
+export function scheduleAssetLibraryPush(items: AssetLibraryItem[]) {
+  if (typeof window === "undefined") return;
+  if (libraryPushTimer) clearTimeout(libraryPushTimer);
+  libraryPushTimer = setTimeout(() => { void pushAssetLibraryToCloud(items); }, 1500);
+}
+
+/** Sube la biblioteca completa como una única fila por cuenta (upsert). */
+export async function pushAssetLibraryToCloud(items: AssetLibraryItem[]): Promise<void> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase.from("user_projects").select("id,data").eq("user_id", user.id);
+    const rows = (data ?? []) as Array<{ id: string; data?: unknown }>;
+    const row = rows.find(r => isAssetLibraryRow(r.data));
+    const payload = { name: "__asternal_assets__", data: { __kind: ASSET_LIBRARY_KIND, items } as never };
+    if (row) {
+      await supabase.from("user_projects")
+        .update({ name: payload.name, data: payload.data })
+        .eq("id", (row as { id: string }).id).eq("user_id", user.id);
+    } else {
+      await supabase.from("user_projects").insert({ user_id: user.id, ...payload } as never);
+    }
+  } catch { /* sin sesión, esquema sin crear o red caída: silencioso */ }
+}
+
+/** Descarga la biblioteca de la nube (null si no existe, sin sesión o error). */
+export async function pullAssetLibraryFromCloud(): Promise<AssetLibraryItem[] | null> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+    const { data } = await supabase.from("user_projects").select("data").eq("user_id", user.id);
+    const rows = (data ?? []) as Array<{ data?: unknown }>;
+    const row = rows.find(r => isAssetLibraryRow(r.data));
+    if (!row) return null;
+    const items = (row.data as { items?: AssetLibraryItem[] } | undefined)?.items;
+    return Array.isArray(items) ? items : null;
+  } catch { return null; }
+}
+
 /**
  * Sincronización completa en ambos sentidos:
  *  1. Sube a la nube los proyectos locales que aún no tienen cloudId (backup).

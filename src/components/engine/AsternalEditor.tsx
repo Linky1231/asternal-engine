@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Settings, Layers, Copy, X, Eye, EyeOff, Lock, Unlock, ArrowUp, ArrowDown, ChevronsUp, ChevronsDown, Trash2, Merge, Plus, Upload, Home, FolderOpen, MousePointer2, Boxes, Square, Flower2, CircleDollarSign, Triangle, Target, PersonStanding, Eraser, SlidersHorizontal, PanelsTopLeft, Image as ImageIcon, Layers3, Play, LibraryBig } from "lucide-react";
-import { schedulePushToCloud } from "@/lib/engine/cloud-sync";
+import { schedulePushToCloud, scheduleAssetLibraryPush, pullAssetLibraryFromCloud } from "@/lib/engine/cloud-sync";
+import { supabase } from "@/integrations/supabase/client";
 import { Link } from "@tanstack/react-router";
 import { PublishGameDialog } from "./PublishGameDialog";
 import type { EntityKind, Project, SpriteAsset, Entity, Scene, Hitbox, SceneLayer } from "@/lib/engine/core";
@@ -61,7 +62,13 @@ export function AsternalEditor() {
   const [publishOpen, setPublishOpen] = useState(false);
   const [layersOpen, setLayersOpen] = useState(false);
   const [library, setLibrary] = useState<LibraryItem[]>(() => loadLibrary());
-  const updateLibrary = (items: LibraryItem[]) => { setLibrary(items); saveLibrary(items); };
+  const updateLibrary = (items: LibraryItem[]) => {
+    setLibrary(items);
+    saveLibrary(items);
+    // Respaldo en la nube (debounced) para que la biblioteca aparezca en
+    // cualquier otro dispositivo con la misma cuenta.
+    scheduleAssetLibraryPush(items);
+  };
 
   const formFactor = useFormFactor();
   const isTablet = formFactor === "tablet" || formFactor === "desktop";
@@ -76,6 +83,39 @@ export function AsternalEditor() {
       loaded.scenes = loaded.scenes.map(s => ensureSceneLayers(s));
     }
     setProject(loaded);
+  }, []);
+
+  // Biblioteca de assets en la nube: al abrir el editor con una cuenta real se
+  // sincroniza en ambos sentidos — importa la de la nube si este dispositivo no
+  // tiene nada (o fusiona lo que falte) y respalda la local si aún no está
+  // guardada. Así las imágenes/prefabs aparecen en cualquier dispositivo.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session || cancelled) return;
+        const cloud = await pullAssetLibraryFromCloud();
+        if (cancelled) return;
+        const local = loadLibrary();
+        if (cloud && cloud.length > 0) {
+          if (local.length === 0) {
+            // Este dispositivo aún no tenía nada: adopta la biblioteca de la cuenta.
+            updateLibrary(cloud as LibraryItem[]);
+          } else {
+            // Fusiona sin pisar: conserva lo local y añade lo de la nube que falte.
+            const ids = new Set(local.map(i => i.id));
+            const merged = [...local, ...cloud.filter(c => !ids.has(c.id))];
+            if (merged.length !== local.length) updateLibrary(merged as LibraryItem[]);
+            else scheduleAssetLibraryPush(local);
+          }
+        } else if (local.length > 0) {
+          // La cuenta no tenía biblioteca: respalda la local por primera vez.
+          scheduleAssetLibraryPush(local);
+        }
+      } catch { /* noop */ }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   const openProject = (id: string) => {
