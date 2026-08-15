@@ -127,6 +127,14 @@ function HomePage() {
     } catch { /* noop */ }
   }, []);
 
+  // Al cambiar de apartado del encabezado (JUEGOS/FEED/GALERÍA/EVENTOS/PERFIL)
+  // la página vuelve al inicio: si estabas scrolleado abajo, la nueva sección
+  // empezaba desde esa posición y no se veían su cabecera ni su indicador de
+  // carga. Al reiniciar el scroll siempre se muestra desde arriba.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [tab]);
+
   const reload = useCallback(async (which: Tab) => {
     if (which === "profile") return;
     setLoading(true);
