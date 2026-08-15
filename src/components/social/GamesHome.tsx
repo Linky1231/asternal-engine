@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Play, Flame, Rocket, Heart, Sparkles as SparklesIcon, Users, ChevronRight, Gamepad2, Trophy, Joystick } from "lucide-react";
+import { Play, Flame, Rocket, Heart, Sparkles as SparklesIcon, Users, ChevronRight, Gamepad2, Trophy, Joystick, Crown } from "lucide-react";
 import type { PostWithMeta } from "@/lib/social/api";
 import { fetchGamePlayCounts24h } from "@/lib/social/api";
 import { GameIcon } from "./GameIcon";
@@ -276,7 +276,7 @@ function FeaturedBanner({ post, plays24, onPlay }: { post: PostWithMeta; plays24
   const title = extractTitle(post.content);
   const active = plays24 && plays24 > 0 ? plays24 : 1 + Math.floor((post.likes + post.comments_count) * 1.3);
   return (
-    <div className="relative rounded-3xl overflow-hidden border border-white/70 shadow-[0_24px_60px_-24px_oklch(0.45_0.24_268/0.5)]">
+    <div className="banner-glow relative rounded-3xl overflow-hidden border border-white/70">
       <div className="relative aspect-[16/10] w-full md:aspect-[21/9]">
         {post.signed_cover ? (
           <img src={post.signed_cover} alt={title} className="absolute inset-0 w-full h-full object-cover" />
@@ -291,11 +291,14 @@ function FeaturedBanner({ post, plays24, onPlay }: { post: PostWithMeta; plays24
             </div>
           </>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/10" />
+        {/* Overlay azul de marca (nunca negro): la portada o el mesh se leen azules, no gris */}
+        <div className="absolute inset-0 banner-overlay-deep" />
+        {/* Barrido de luz: animación que subraya «este es el mejor juego» */}
+        <div className="banner-shine" />
         {/* Textura de grano sutil sobre el degradado: nunca plano, nunca “de algoritmo”. */}
         <div className="absolute inset-0 pointer-events-none noise-overlay opacity-[0.16] mix-blend-overlay" />
-        <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 h-6 rounded-full bg-primary/90 text-primary-foreground text-[10px] font-display tracking-widest ring-1 ring-white/30 ring-inset shadow-[0_6px_16px_-6px_oklch(0.2_0.04_262/0.6)]">
-          <Flame size={11} fill="currentColor" /> DESTACADO
+        <div className="badge-glow absolute top-3 left-3 flex items-center gap-1.5 px-2.5 h-6 rounded-full bg-primary/95 text-primary-foreground text-[10px] font-display tracking-widest ring-1 ring-white/30 ring-inset">
+          <Crown size={11} fill="currentColor" /> MEJOR JUEGO
         </div>
       </div>
       <div className="absolute inset-x-0 bottom-0 p-4 space-y-3">

@@ -396,6 +396,59 @@
   background-image: var(--gradient-mesh-deep);
 }
 
+/* ============ Banner destacado: azul de marca + animación «mejor juego» ============ */
+
+/* Overlay azul (nunca negro): mantiene el banner en la identidad cobalto incluso
+   con portadas grises/apagadas, y da contraste al título sin desaturar a gris. */
+.banner-overlay-deep {
+  background: linear-gradient(
+    to top,
+    oklch(0.2 0.09 262 / 0.95) 0%,
+    oklch(0.27 0.1 262 / 0.45) 40%,
+    oklch(0.32 0.1 262 / 0.12) 75%,
+    transparent 100%
+  );
+}
+
+/* Respiro de brillo azul: el banner del «mejor juego» late suavemente. */
+@keyframes banner-glow-pulse {
+  0%, 100% {
+    box-shadow: 0 24px 60px -24px oklch(0.45 0.24 268 / 0.5);
+  }
+  50% {
+    box-shadow: 0 26px 72px -18px oklch(0.55 0.22 262 / 0.7),
+                0 0 26px -6px oklch(0.66 0.16 235 / 0.4);
+  }
+}
+.banner-glow {
+  animation: banner-glow-pulse 4s ease-in-out infinite;
+}
+
+/* Barrido de luz que cruza el banner cada pocos segundos. */
+@keyframes banner-shine {
+  0% { transform: translateX(-160%) skewX(-16deg); }
+  55%, 100% { transform: translateX(320%) skewX(-16deg); }
+}
+.banner-shine {
+  position: absolute;
+  top: -10%;
+  bottom: -10%;
+  left: 0;
+  width: 34%;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.16) 50%, transparent 100%);
+  animation: banner-shine 5s ease-in-out infinite;
+}
+
+/* Insignia MEJOR JUEGO: pulso de halo cobalto. */
+@keyframes badge-glow {
+  0%, 100% { box-shadow: 0 6px 16px -6px oklch(0.2 0.04 262 / 0.6); }
+  50% { box-shadow: 0 8px 22px -6px oklch(0.45 0.24 268 / 0.85), 0 0 20px 1px oklch(0.68 0.16 235 / 0.5); }
+}
+.badge-glow {
+  animation: badge-glow 2.6s ease-in-out infinite;
+}
+
 /* Textura de grano sutil sobre degradados (nunca se ve plano ni "de algoritmo"). */
 .noise-overlay {
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='140' height='140' filter='url(%23n)'/></svg>");
@@ -872,6 +925,9 @@
 @media (prefers-reduced-motion: reduce) {
   .animate-mesh-grad,
   .animate-mesh-grad-alt,
+  .banner-shine,
+  .banner-glow,
+  .badge-glow,
   .animate-float-icon,
   .animate-shimmer-text,
   .animate-shimmer-border,
