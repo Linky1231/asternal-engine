@@ -370,12 +370,12 @@ function AdminPage() {
               {showNewCat && (
                 <div className="p-3 rounded-xl border border-primary/20 bg-primary/[0.03] space-y-2">
                   <input value={catName} onChange={e => setCatName(e.target.value)} placeholder="Nombre de la categoría"
-                    maxLength={30} className="w-full bg-input/40 rounded-lg px-3 py-2 text-sm outline-none border border-border/50 focus:border-primary/40" />
+                    maxLength={30} className="w-full bg-white/70 rounded-lg px-3 py-2 text-sm outline-none border border-border/50 focus:border-primary/40" />
                   <input value={catDesc} onChange={e => setCatDesc(e.target.value)} placeholder="Descripción"
-                    maxLength={100} className="w-full bg-input/40 rounded-lg px-3 py-2 text-sm outline-none border border-border/50 focus:border-primary/40" />
+                    maxLength={100} className="w-full bg-white/70 rounded-lg px-3 py-2 text-sm outline-none border border-border/50 focus:border-primary/40" />
                   <div className="flex items-center gap-2">
                     <select value={catIcon} onChange={e => setCatIcon(e.target.value)}
-                      className="flex-1 bg-input/40 rounded-lg px-3 py-2 text-xs outline-none border border-border/50">
+                      className="flex-1 bg-white/70 rounded-lg px-3 py-2 text-xs outline-none border border-border/50">
                       <option value="globe">🌍 General</option>
                       <option value="life-buoy">🛟 Ayuda</option>
                       <option value="trophy">🏆 Showcase</option>
@@ -397,7 +397,7 @@ function AdminPage() {
               <div className="flex flex-wrap gap-1.5">
                 {categories.map(cat => (
                   <div key={cat.id}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border/30 bg-card/60 text-xs">
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border/30 bg-white/60 text-xs">
                     <span className="font-display font-medium">{cat.name}</span>
                     <span className="text-[10px] text-muted-foreground/50">{cat.threadCount} hilos</span>
                     {admin && (

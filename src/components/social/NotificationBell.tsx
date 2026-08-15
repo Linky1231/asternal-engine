@@ -48,7 +48,7 @@ export function NotificationBell() {
       <button
         onClick={() => setOpen(true)}
         title="Notificaciones"
-        className="relative w-9 h-9 rounded-lg border border-line-strong bg-card text-ink-2 grid place-items-center hover:bg-muted/60 hover:text-foreground active:scale-95 transition shrink-0"
+        className="relative w-10 h-10 rounded-lg border border-line-strong bg-card grid place-items-center active:scale-95 transition text-ink-2 hover:bg-muted/60 hover:text-foreground shrink-0"
       >
         <Bell size={16} />
         {unread > 0 && (

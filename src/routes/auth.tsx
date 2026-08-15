@@ -123,15 +123,15 @@ function CreatorRobot() {
   return (
     <div className="relative">
       {/* Head */}
-      <div className="w-12 h-11 rounded-[10px] bg-gradient-to-b from-card to-card/70 border-2 border-primary/25 shadow-lg flex items-center justify-center gap-[3px]">
-        <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_6px_oklch(0.62_0.24_292/0.6)]" />
-        <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_6px_oklch(0.62_0.24_292/0.6)]" />
+      <div className="w-12 h-11 rounded-[10px] bg-gradient-to-b from-white to-white/70 border-2 border-primary/25 shadow-lg flex items-center justify-center gap-[3px]">
+        <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_6px_oklch(0.52_0.19_258/0.6)]" />
+        <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_6px_oklch(0.52_0.19_258/0.6)]" />
       </div>
       {/* Neck */}
       <div className="w-1.5 h-2 bg-primary/20 mx-auto" />
       {/* Body with screen */}
       <div className="w-11 h-12 rounded-[10px] bg-gradient-to-br from-primary to-accent shadow-lg shadow-primary/30 relative overflow-hidden">
-        <div className="absolute inset-x-2 bottom-2 top-4 rounded-md bg-card/90 flex items-center justify-center">
+        <div className="absolute inset-x-2 bottom-2 top-4 rounded-md bg-white/90 flex items-center justify-center">
           <div className="w-4 h-3 rounded-sm bg-gradient-to-r from-primary to-accent opacity-70" />
         </div>
       </div>
@@ -148,7 +148,7 @@ function CreatorRobot() {
 /* ─── Floating editor panel (sprite) ─── */
 function SpritePanel() {
   return (
-    <div className="w-[122px] rounded-xl p-2.5 border border-border/60 bg-card/90 shadow-sm">
+    <div className="w-[122px] rounded-xl p-2.5 border border-border/60 bg-white/90 shadow-sm">
       <div className="flex items-center gap-1.5 mb-2">
         <div className="w-2 h-2 rounded-full bg-primary" />
         <div className="w-2 h-2 rounded-full bg-amber-400" />
@@ -169,7 +169,7 @@ function SpritePanel() {
 /* ─── Floating editor panel (blocks) ─── */
 function BlockPanel() {
   return (
-    <div className="w-[112px] rounded-xl p-2.5 border border-border/60 bg-card/90 shadow-sm">
+    <div className="w-[112px] rounded-xl p-2.5 border border-border/60 bg-white/90 shadow-sm">
       <div className="text-[8px] font-mono text-muted-foreground/50 mb-1.5 tracking-wider">LÓGICA</div>
       <div className="space-y-1">
         <div className="h-3.5 rounded-md bg-primary/80 flex items-center px-1.5 shadow-sm">
@@ -189,7 +189,7 @@ function BlockPanel() {
 /* ─── Floating play pill ─── */
 function PlayPanel() {
   return (
-    <div className="flex items-center gap-2 rounded-full pl-2 pr-3.5 py-1.5 border border-border/60 bg-card/90 shadow-sm">
+    <div className="flex items-center gap-2 rounded-full pl-2 pr-3.5 py-1.5 border border-border/60 bg-white/90 shadow-sm">
       <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary to-accent grid place-items-center shadow-md shadow-primary/30">
         <Play size={12} className="text-white fill-white" />
       </div>
@@ -227,13 +227,13 @@ function HeroScene() {
               <div className="w-5 h-8 rounded-t-lg rounded-b-sm bg-gradient-to-b from-accent to-primary/40 shadow-lg shadow-accent/30 rotate-12" />
             </div>
             {/* Disc */}
-            <div className="relative -mt-1 z-10 w-[250px] h-[54px] rounded-[50%] bg-gradient-to-b from-card to-card/40 border border-white/15 shadow-[0_25px_60px_-15px_oklch(0.62_0.24_292/0.4)]">
+            <div className="relative -mt-1 z-10 w-[250px] h-[54px] rounded-[50%] bg-gradient-to-b from-white/90 to-white/40 border border-white/70 shadow-[0_25px_60px_-15px_oklch(0.52_0.19_258/0.4)]">
               <div className="absolute inset-0 rounded-[50%] overflow-hidden opacity-40"
                 style={{
                   background:
                     "repeating-linear-gradient(90deg, transparent 0 13px, oklch(0.52 0.19 258 / 0.1) 13px 14px), repeating-linear-gradient(0deg, transparent 0 13px, oklch(0.52 0.19 258 / 0.1) 13px 14px)",
                 }} />
-              <div className="absolute left-1/2 top-0 -translate-x-1/2 w-3/4 h-[3px] rounded-full bg-card/80 blur-[1px]" />
+              <div className="absolute left-1/2 top-0 -translate-x-1/2 w-3/4 h-[3px] rounded-full bg-white/80 blur-[1px]" />
             </div>
             {/* Floating rocks */}
             <div className="absolute -left-10 top-[52px] w-14 h-7 rounded-full bg-primary/10 border border-primary/15 animate-float-icon" style={{ animationDelay: "1.2s" }} />
@@ -251,7 +251,7 @@ function HeroScene() {
             <PlayPanel />
           </div>
           <div className="absolute left-[8%] bottom-[20%] animate-float-icon" style={{ animationDelay: "2.3s", willChange: "transform" }}>
-            <div className="w-9 h-9 rounded-full bg-card/90 border border-border/60 grid place-items-center shadow-sm">
+            <div className="w-9 h-9 rounded-full bg-white/90 border border-border/60 grid place-items-center shadow-sm">
               <Sparkles size={15} className="text-accent" />
             </div>
           </div>
@@ -299,7 +299,7 @@ function FloatInput({
         <div className={`absolute -inset-1 rounded-xl opacity-0 blur-sm transition-opacity duration-500 ${focused ? 'opacity-100' : ''}`}
           style={{ background: "radial-gradient(ellipse at center, oklch(0.52 0.19 258 / 0.06), transparent 70%)" }}
         />
-        <div className={`relative flex items-center border rounded-xl bg-card transition-all duration-300 ${
+        <div className={`relative flex items-center border rounded-xl bg-white transition-all duration-300 ${
           focused
             ? 'border-primary/50 ring-[3px] ring-primary/[0.06] shadow-sm shadow-primary/5'
             : error
@@ -503,7 +503,7 @@ function AuthPage() {
       {/* ─── Background layers ─── */}
       <div className="fixed inset-0 pointer-events-none select-none overflow-hidden" style={{ transform: "translateZ(0)" }}>
         {/* Base glow */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,oklch(0.62_0.24_292/0.09),transparent)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,oklch(0.52_0.19_258/0.09),transparent)]" />
         {/* Mesh blobs */}
         <div className="absolute -top-[30%] -left-[20%] w-[70%] h-[70%] opacity-50 animate-mesh-grad"
           style={{ background: "radial-gradient(circle at 30% 50%, oklch(0.52 0.19 258 / 0.07), transparent 60%)" }} />
@@ -545,7 +545,7 @@ function AuthPage() {
             <div style={{
               animation: loaded ? 'fade-in-up 500ms 300ms cubic-bezier(0.22,1,0.36,1) both' : 'none',
             }}>
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-primary/15 bg-card/50 backdrop-blur-sm text-[11px] font-display font-medium tracking-wide text-primary/80 shadow-sm -mt-1 lg:-mt-3">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-primary/15 bg-white/50 backdrop-blur-sm text-[11px] font-display font-medium tracking-wide text-primary/80 shadow-sm -mt-1 lg:-mt-3">
                 <Sparkles size={12} className="text-accent" />
                 Todo comienza con una idea
               </div>
@@ -582,7 +582,7 @@ function AuthPage() {
                 { icon: Users, label: "Comunidad activa", desc: "Remixa y colabora" },
               ].map((f, i) => (
                 <div key={f.label} className="group/card" style={{ animation: loaded ? `fade-in-up 900ms ${1000 + i * 280}ms cubic-bezier(0.16,1,0.3,1) both` : 'none' }}>
-                  <div className="p-2.5 rounded-xl border border-border/50 bg-card/40 backdrop-blur-sm transition-all duration-400 group-hover/card:bg-card/80 group-hover/card:border-primary/30 group-hover/card:shadow-lg group-hover/card:shadow-primary/5 group-hover/card:-translate-y-0.5">
+                  <div className="p-2.5 rounded-xl border border-border/50 bg-white/40 backdrop-blur-sm transition-all duration-400 group-hover/card:bg-white/80 group-hover/card:border-primary/30 group-hover/card:shadow-lg group-hover/card:shadow-primary/5 group-hover/card:-translate-y-0.5">
                     <div className="flex items-center gap-1.5 text-[12px] font-display font-semibold text-foreground mb-0.5 group-hover/card:text-primary transition-colors duration-300">
                       <f.icon size={12} className="text-primary/60 group-hover/card:text-primary transition-colors duration-300" />
                       {f.label}
@@ -600,8 +600,8 @@ function AuthPage() {
               animation: loaded ? 'fade-in-up 800ms 700ms cubic-bezier(0.22,1,0.36,1) both' : 'none',
             }}>
                 {/* Tarjeta premium: borde degradado + sombras en capas + radius 24px */}
-                <div className="relative rounded-3xl p-px bg-gradient-to-b from-white/20 via-white/10 to-primary/25 shadow-[0_30px_80px_-20px_oklch(0.62_0.24_292/0.3),0_10px_30px_-10px_oklch(0.62_0.24_292/0.18)]">
-                  <div className="relative bg-card/80 backdrop-blur-md rounded-[calc(1.5rem-1px)] p-7 overflow-hidden group/form-card">
+                <div className="relative rounded-3xl p-px bg-gradient-to-b from-white/70 via-white/25 to-primary/15 shadow-[0_30px_80px_-20px_oklch(0.52_0.19_258/0.3),0_10px_30px_-10px_oklch(0.52_0.19_258/0.18)]">
+                  <div className="relative bg-white/75 backdrop-blur-md rounded-[calc(1.5rem-1px)] p-7 overflow-hidden group/form-card">
 
                     {/* Shine superior */}
                     <div className="absolute top-0 left-1/2 -translate-x-1/2 h-px w-3/4 bg-gradient-to-r from-transparent via-white/90 to-transparent" />

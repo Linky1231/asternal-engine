@@ -141,7 +141,7 @@ function TagPill({ tag, small }: { tag: string; small?: boolean }) {
 /* ─── Skeleton loading ─── */
 function SkeletonCard() {
   return (
-    <div className="animate-pulse p-4 rounded-xl border border-border/30 bg-card/40 space-y-3">
+    <div className="animate-pulse p-4 rounded-xl border border-border/30 bg-white/40 space-y-3">
       <div className="h-4 bg-muted/40 rounded w-3/4" />
       <div className="h-3 bg-muted/30 rounded w-1/2" />
       <div className="h-3 bg-muted/30 rounded w-1/4" />
@@ -266,7 +266,7 @@ function CategoryListView({ onSelect }: { onSelect: (id: string, name: string) =
         {cats.map(cat => (
           <motion.button key={cat.id} variants={stagger.item}
             onClick={() => onSelect(cat.id, cat.name)}
-            className="group w-full text-left p-3.5 sm:p-4 rounded-2xl border border-border/40 bg-card/60 hover:bg-card/90 hover:border-primary/20 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 active:scale-[0.98]"
+            className="group w-full text-left p-3.5 sm:p-4 rounded-2xl border border-border/40 bg-white/60 hover:bg-white/90 hover:border-primary/20 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 active:scale-[0.98]"
           >
             <div className="flex items-start gap-3.5">
               {/* Icon bubble */}
@@ -364,7 +364,7 @@ function ThreadListView({
       {/* ── Header bar ── */}
       <div className="flex items-center gap-2.5">
         <motion.button whileTap={{ scale: 0.9 }} onClick={onBack}
-          className="w-9 h-9 rounded-xl border border-border/40 bg-card/60 grid place-items-center shrink-0 hover:bg-muted/30 hover:border-border/60 transition-all shadow-sm"
+          className="w-9 h-9 rounded-xl border border-border/40 bg-white/60 grid place-items-center shrink-0 hover:bg-muted/30 hover:border-border/60 transition-all shadow-sm"
         >
           <ArrowLeft size={15} />
         </motion.button>
@@ -394,7 +394,7 @@ function ThreadListView({
       </div>
 
       {/* ── Search bar ── */}
-      <div className="flex items-center gap-2.5 bg-card/70 rounded-2xl px-3 sm:px-4 py-2 sm:py-2.5 border border-border/30 focus-within:border-primary/25 focus-within:shadow-md focus-within:shadow-primary/5 transition-all duration-200">
+      <div className="flex items-center gap-2.5 bg-white/70 rounded-2xl px-3 sm:px-4 py-2 sm:py-2.5 border border-border/30 focus-within:border-primary/25 focus-within:shadow-md focus-within:shadow-primary/5 transition-all duration-200">
         <Search size={14} className="text-muted-foreground/40 shrink-0" />
         <input value={searchQ} onChange={e => setSearchQ(e.target.value)}
           placeholder="Buscar hilos por título o contenido…"
@@ -423,11 +423,11 @@ function ThreadListView({
 
               <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Título del hilo…"
                 maxLength={120} autoFocus
-                className="w-full bg-card/80 rounded-xl px-4 py-3 text-sm outline-none border border-border/50 focus:border-primary/40 focus:shadow-md transition-all placeholder:text-muted-foreground/40" />
+                className="w-full bg-white/80 rounded-xl px-4 py-3 text-sm outline-none border border-border/50 focus:border-primary/40 focus:shadow-md transition-all placeholder:text-muted-foreground/40" />
 
               <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="Escribe tu mensaje…"
                 rows={4} maxLength={5000}
-                className="w-full bg-card/80 rounded-xl px-4 py-3 text-sm outline-none border border-border/50 focus:border-primary/40 focus:shadow-md resize-none transition-all placeholder:text-muted-foreground/40" />
+                className="w-full bg-white/80 rounded-xl px-4 py-3 text-sm outline-none border border-border/50 focus:border-primary/40 focus:shadow-md resize-none transition-all placeholder:text-muted-foreground/40" />
 
               {/* Media previews */}
               {mediaPreviews.length > 0 && (
@@ -453,7 +453,7 @@ function ThreadListView({
               {docFiles.length > 0 && (
                 <div className="space-y-1.5">
                   {docFiles.map((d, i) => (
-                    <div key={i} className="flex items-center gap-2.5 bg-card/60 rounded-xl px-3.5 py-2.5 text-xs border border-border/30">
+                    <div key={i} className="flex items-center gap-2.5 bg-white/60 rounded-xl px-3.5 py-2.5 text-xs border border-border/30">
                       <FileText size={14} className="text-primary/60 shrink-0" />
                       <span className="flex-1 truncate font-medium text-foreground/80">{d.name}</span>
                       <span className="text-muted-foreground/50 tabular-nums text-[10px]">{(d.size / 1024).toFixed(0)} KB</span>
@@ -527,7 +527,7 @@ function ThreadListView({
         ) : filtered.map((t, idx) => (
           <motion.button key={t.id} variants={stagger.item} layout
             onClick={() => onSelect(t.id)}
-            className="group w-full text-left p-3 sm:p-4 rounded-2xl border border-border/30 bg-card/60 hover:bg-card/95 hover:border-primary/15 hover:shadow-lg hover:shadow-primary/5 transition-all duration-250 active:scale-[0.99]"
+            className="group w-full text-left p-3 sm:p-4 rounded-2xl border border-border/30 bg-white/60 hover:bg-white/95 hover:border-primary/15 hover:shadow-lg hover:shadow-primary/5 transition-all duration-250 active:scale-[0.99]"
           >
             <div className="flex items-start gap-3.5">
               {/* ── Vote column ── */}
@@ -711,7 +711,7 @@ function ThreadDetailView({
       {/* ── Navigation bar ── */}
       <div className="flex items-center gap-2.5">
         <motion.button whileTap={{ scale: 0.9 }} onClick={onBack}
-          className="w-9 h-9 rounded-xl border border-border/40 bg-card/60 grid place-items-center shrink-0 hover:bg-muted/30 transition-all shadow-sm"
+          className="w-9 h-9 rounded-xl border border-border/40 bg-white/60 grid place-items-center shrink-0 hover:bg-muted/30 transition-all shadow-sm"
         >
           <ArrowLeft size={15} />
         </motion.button>
@@ -753,7 +753,7 @@ function ThreadDetailView({
       {/* ── Thread body + replies ── */}
       <motion.div initial="initial" animate="animate" variants={stagger.container} className="space-y-2.5 max-h-[65vh] overflow-y-auto pr-1.5 no-scrollbar">
         {/* ── Original post (featured) ── */}
-        <motion.div variants={stagger.item} className="p-3.5 sm:p-5 rounded-2xl border border-border/30 bg-gradient-to-b from-card to-card/50 shadow-sm">
+        <motion.div variants={stagger.item} className="p-3.5 sm:p-5 rounded-2xl border border-border/30 bg-gradient-to-b from-white/80 to-white/50 shadow-sm">
           {/* Author header */}
           <div className="flex items-start gap-3 mb-4">
             <AvatarMini username={thread.authorUsername} size="lg" />
@@ -832,7 +832,7 @@ function ThreadDetailView({
         {/* ── Replies ── */}
         {posts.filter(p => p.id !== posts[0]?.id).length === 0 ? (
           <motion.div variants={stagger.item}>
-            <div className="text-center py-10 border border-dashed border-border/30 rounded-2xl bg-card/30">
+            <div className="text-center py-10 border border-dashed border-border/30 rounded-2xl bg-white/30">
               <MessageSquare size={22} className="mx-auto mb-2.5 text-muted-foreground/20" />
               <p className="text-xs text-muted-foreground/50">Sin respuestas aún</p>
               <p className="text-[10px] text-muted-foreground/30 mt-0.5">¡Sé el primero en comentar!</p>
@@ -845,7 +845,7 @@ function ThreadDetailView({
             className={`group/post p-3 sm:p-4 rounded-2xl border transition-all duration-200 ${
               isSolution
                 ? "border-emerald-300/40 bg-emerald-50/30 hover:bg-emerald-50/60 dark:bg-emerald-950/10 dark:border-emerald-800/30"
-                : "border-border/25 bg-card/50 hover:bg-card/80 hover:border-border/40"
+                : "border-border/25 bg-white/50 hover:bg-white/80 hover:border-border/40"
             }`}
           >
             {/* Solution badge */}
@@ -891,7 +891,7 @@ function ThreadDetailView({
                   <div className="space-y-2">
                     <textarea value={editContent} onChange={e => setEditContent(e.target.value)}
                       rows={3}
-                      className="w-full bg-card rounded-xl px-3.5 py-2.5 text-sm outline-none border border-primary/40 resize-none focus:shadow-md transition-all" />
+                      className="w-full bg-white rounded-xl px-3.5 py-2.5 text-sm outline-none border border-primary/40 resize-none focus:shadow-md transition-all" />
                     <div className="flex gap-2 justify-end">
                       <button onClick={() => setEditingPost(null)}
                         className="text-[10px] px-3 py-1.5 rounded-lg border border-border/50 hover:bg-muted/20 transition-colors">
@@ -1002,7 +1002,7 @@ function ThreadDetailView({
               placeholder={quotePost ? "Escribe tu respuesta a esta cita…" : "Escribe un comentario…"}
               rows={2} maxLength={5000}
               onKeyDown={e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); sendReply(); } }}
-              className="w-full bg-card/70 rounded-2xl px-4 py-3 text-sm outline-none border border-border/40 focus:border-primary/30 focus:shadow-lg focus:shadow-primary/5 transition-all resize-none placeholder:text-muted-foreground/40"
+              className="w-full bg-white/70 rounded-2xl px-4 py-3 text-sm outline-none border border-border/40 focus:border-primary/30 focus:shadow-lg focus:shadow-primary/5 transition-all resize-none placeholder:text-muted-foreground/40"
             />
             {/* Bottom actions */}
             <div className="flex justify-between items-center px-1 py-1.5">
@@ -1019,7 +1019,7 @@ function ThreadDetailView({
           </div>
         </div>
       ) : !myId ? (
-        <div className="flex items-center justify-center gap-2 py-5 border border-dashed border-border/30 rounded-2xl bg-card/30">
+        <div className="flex items-center justify-center gap-2 py-5 border border-dashed border-border/30 rounded-2xl bg-white/30">
           <MessageSquare size={14} className="text-muted-foreground/30" />
           <span className="text-xs text-muted-foreground/50">Inicia sesión para participar en la conversación.</span>
         </div>

@@ -159,7 +159,7 @@ export function SupabaseSetupDialog({ open, onOpenChange }: { open: boolean; onO
                   </div>
                 </div>
 
-                <div className="font-mono text-[11px] bg-surface-2/70 rounded-lg px-3 py-2 space-y-1.5">
+                <div className="font-mono text-[11px] bg-white/70 dark:bg-black/20 rounded-lg px-3 py-2 space-y-1.5">
                   <div className="flex items-center justify-between gap-2">
                     <span className="break-all"><b>VITE_SUPABASE_URL</b></span>
                     {getSupabaseUrl() ? (
@@ -229,7 +229,7 @@ export function SupabaseSetupDialog({ open, onOpenChange }: { open: boolean; onO
                     placeholder="https://xxxxxxxx.supabase.co"
                     autoComplete="off"
                     spellCheck={false}
-                    className="w-full bg-input/40 border border-border/60 rounded-xl px-3.5 py-2.5 text-sm font-mono outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all"
+                    className="w-full bg-white/70 dark:bg-input/40 border border-border/60 rounded-xl px-3.5 py-2.5 text-sm font-mono outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -243,7 +243,7 @@ export function SupabaseSetupDialog({ open, onOpenChange }: { open: boolean; onO
                     placeholder="eyJhbGciOi… (anon key — nunca tu token sbp_…)"
                     autoComplete="off"
                     spellCheck={false}
-                    className="w-full bg-input/40 border border-border/60 rounded-xl px-3.5 py-2.5 text-sm font-mono outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all"
+                    className="w-full bg-white/70 dark:bg-input/40 border border-border/60 rounded-xl px-3.5 py-2.5 text-sm font-mono outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all"
                   />
                 </div>
                 <p className="text-[10px] text-muted-foreground/60 leading-relaxed">
@@ -270,7 +270,7 @@ export function SupabaseSetupDialog({ open, onOpenChange }: { open: boolean; onO
 
               <button
                 onClick={() => window.location.reload()}
-                className="w-full py-2 rounded-xl border border-amber-300/50 bg-surface-2/70 text-amber-800 dark:text-amber-300 text-[11px] font-semibold tracking-wide hover:bg-input/60 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
+                className="w-full py-2 rounded-xl border border-amber-300/50 bg-white/70 dark:bg-black/20 text-amber-800 dark:text-amber-300 text-[11px] font-semibold tracking-wide hover:bg-white dark:hover:bg-black/30 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
               >
                 <RefreshCw size={12} /> RECARGAR LA APP PARA DETECTAR LAS CLAVES DE KEYS
               </button>
@@ -326,7 +326,7 @@ export function SupabaseSetupDialog({ open, onOpenChange }: { open: boolean; onO
                     type="password"
                     placeholder="sbp_xxxxxxxxxxxxxxxx"
                     autoComplete="off"
-                    className="w-full bg-input/40 border border-border/60 rounded-xl px-3.5 py-2.5 text-sm font-mono outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all"
+                    className="w-full bg-white/70 dark:bg-input/40 border border-border/60 rounded-xl px-3.5 py-2.5 text-sm font-mono outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all"
                   />
                   <p className="text-[10px] text-muted-foreground/50 leading-relaxed flex items-start gap-1.5">
                     <ExternalLink size={10} className="shrink-0 mt-0.5" />
@@ -453,7 +453,7 @@ export function SupabaseSetupDialog({ open, onOpenChange }: { open: boolean; onO
                       value={getSchemaSql()}
                       onFocus={e => e.currentTarget.select()}
                       spellCheck={false}
-                      className="w-full h-44 font-mono text-[10px] leading-relaxed bg-input/40 border border-border/70 rounded-xl p-3 outline-none focus:border-primary/40 resize-y"
+                      className="w-full h-44 font-mono text-[10px] leading-relaxed bg-white/70 dark:bg-black/25 border border-border/70 rounded-xl p-3 outline-none focus:border-primary/40 resize-y"
                     />
                   </div>
                 )}

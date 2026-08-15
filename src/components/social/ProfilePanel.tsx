@@ -246,11 +246,11 @@ export function ProfilePanel({
         <div className="p-4 space-y-3">
           <div className="flex items-start gap-3 -mt-12">
             {/* Avatar frame wrapper (overflow visible so animated frame shows) */}
-            <div className={`relative shrink-0 rounded-xl ${profile.avatar_frame && isPlusActive(profile) ? `plus-frame plus-frame-${profile.avatar_frame}` : ""}`}>
+            <div className={`relative shrink-0 rounded-2xl ${profile.avatar_frame && isPlusActive(profile) ? `plus-frame plus-frame-${profile.avatar_frame}` : ""}`}>
               <button
                 type="button"
                 onClick={() => viewingOwn && editing && fileRef.current?.click()}
-                className={`relative w-20 h-20 rounded-xl overflow-hidden border-4 border-background block ${viewingOwn && editing ? "cursor-pointer active:scale-95" : ""}`}
+                className={`relative w-20 h-20 rounded-2xl overflow-hidden border-4 border-background block ${viewingOwn && editing ? "cursor-pointer active:scale-95" : ""}`}
                 aria-label="Avatar"
               >
                 <Avatar
