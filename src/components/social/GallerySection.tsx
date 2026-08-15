@@ -738,11 +738,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
             className="fixed inset-0 z-[160] bg-black/70 backdrop-blur-md grid place-items-center p-4"
             onClick={() => { if (!publishing) setSavedSprite(null); }}
           >
-            <motion.div
-              initial={{ opacity: 0, y: 30, scale: 0.96 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 30, scale: 0.96 }}
-              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            <div
               className="w-full max-w-sm rounded-lg border border-border bg-surface p-5 space-y-4 shadow-md"
               onClick={e => e.stopPropagation()}
             >
@@ -802,26 +798,20 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
                   {publishing ? <Loader2 size={14} className="animate-spin mx-auto" /> : "PUBLICAR"}
                 </button>
               </div>
-            </motion.div>
+            </div>
           </motion.div>
         )}
 
         {pubDone && (
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[160] bg-black/70 backdrop-blur-md grid place-items-center p-4"
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-              className="w-full max-w-xs rounded-lg border border-border bg-surface p-6 text-center space-y-2 shadow-md"
-            >
+          <div className="fixed inset-0 z-[160] bg-black/70 backdrop-blur-md grid place-items-center p-4">
+            <div className="w-full max-w-xs rounded-lg border border-border bg-surface p-6 text-center space-y-2 shadow-md">
               <div className="w-14 h-14 rounded-2xl bg-emerald-500/15 grid place-items-center mx-auto">
                 <CheckCircle2 size={28} className="text-emerald-500" />
               </div>
               <div className="font-display text-base">¡Publicada!</div>
               <div className="text-xs text-muted-foreground">Tu obra ya está en la galería</div>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         )}
       </AnimatePresence>
 

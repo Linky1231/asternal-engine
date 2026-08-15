@@ -28,7 +28,6 @@ import { GameCard } from "./GameCard";
 import { PostCard } from "./PostCard";
 import { UserName } from "./UserName";
 import { Avatar } from "./Avatar";
-import { AvatarBuilder } from "./AvatarBuilder";
 import { SegmentedControl } from "@/components/ui/segmented";
 import { getUserCode } from "@/lib/social/avatar";
 
@@ -48,7 +47,6 @@ export function ProfilePanel({
   const [err, setErr] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [showMore, setShowMore] = useState(false);
-  const [avatarBuilderOpen, setAvatarBuilderOpen] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
 
   // form state
@@ -268,17 +266,6 @@ export function ProfilePanel({
                 <input ref={fileRef} type="file" accept="image/*" className="hidden"
                   onChange={e => pickAvatar(e.target.files?.[0] ?? null)} />
               </button>
-              {viewingOwn && editing && (
-                <button
-                  type="button"
-                  onClick={e => { e.stopPropagation(); setAvatarBuilderOpen(true); }}
-                  className="absolute -bottom-1 -right-1 w-7 h-7 rounded-lg bg-primary text-white grid place-items-center shadow-sm border-2 border-background active:scale-90 transition"
-                  title="Dibujar avatar"
-                  aria-label="Dibujar avatar"
-                >
-                  <Palette size={13} />
-                </button>
-              )}
             </div>
 
 
@@ -470,19 +457,6 @@ export function ProfilePanel({
           {err && <div className="text-xs text-destructive">{err}</div>}
         </div>
       </section>
-
-      {avatarBuilderOpen && (
-        <AvatarBuilder
-          open={avatarBuilderOpen}
-          onClose={() => setAvatarBuilderOpen(false)}
-          profile={profile}
-          onSaved={spec => {
-            setProfile(prev => prev ? { ...prev, avatar_spec: spec } : prev);
-            onProfileChange?.({ ...profile, avatar_spec: spec });
-            setAvatarBuilderOpen(false);
-          }}
-        />
-      )}
 
       {/* Centro Plus card (unified — appears here for own profile) */}
       {viewingOwn && (
