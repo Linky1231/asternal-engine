@@ -188,7 +188,7 @@ export function NotificationsPanel({ onClose }: { onClose: () => void }) {
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-2xl md:max-w-3xl lg:max-w-4xl mx-auto w-full px-3 py-3 pb-12 space-y-3">
           {/* Tarjeta hero: sin leer */}
-          <section className="relative overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/15 via-accent/10 to-transparent p-4 shadow-sm">
+          <section className="relative overflow-hidden rounded-xl border border-primary/30 bg-gradient-to-br from-primary/15 via-accent/10 to-transparent p-4 shadow-sm">
             <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-primary/15 blur-2xl" />
             <div className="relative flex items-center gap-3.5">
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center shadow-lg shrink-0">

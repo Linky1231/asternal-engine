@@ -124,7 +124,7 @@ export function GamesHome({
       <div className="space-y-2">
         <div className="flex items-end justify-between px-1">
           <div>
-            <div className="font-display text-base leading-tight">Tendencias</div>
+            <div className="font-display text-base leading-tight tracking-tight">Tendencias</div>
             <div className="text-[11px] text-muted-foreground">Lo que se mueve ahora mismo</div>
           </div>
         </div>
@@ -153,7 +153,7 @@ function Section({ title, subtitle, children }: { title: string; subtitle?: stri
     <section className="space-y-2">
       <div className="flex items-end justify-between px-1">
         <div>
-          <div className="font-display text-base leading-tight">{title}</div>
+          <div className="font-display text-base leading-tight tracking-tight">{title}</div>
           {subtitle && <div className="text-[11px] text-muted-foreground">{subtitle}</div>}
         </div>
         <ChevronRight size={16} className="text-muted-foreground opacity-40" />
@@ -179,8 +179,8 @@ function TrendChip({ active, onClick, icon, label }: { active: boolean; onClick:
       onClick={onClick}
       className={`shrink-0 flex items-center gap-1.5 px-3 h-8 rounded-lg text-[11px] font-medium transition-colors duration-200 active:scale-[0.96] ${
         active
-          ? "bg-primary text-white"
-          : "bg-card border border-line-strong text-ink-2 hover:border-primary/30 hover:text-primary"
+          ? "bg-gradient-to-r from-primary to-accent text-white border border-transparent shadow-lg shadow-primary/30"
+          : "bg-card border border-white/10 text-ink-2 hover:border-primary/50 hover:text-primary"
       }`}
     >
       {icon} {label}
@@ -195,7 +195,7 @@ function Ranking24({ games, totalGames, onOpen }: {
 }) {
   if (games.length === 0) {
     return (
-      <section className="rounded-2xl border border-border/60 bg-card/60 p-3.5 flex items-center gap-3">
+      <section className="rounded-xl border border-white/10 bg-card/70 p-3.5 flex items-center gap-3">
         <div className="w-10 h-10 shrink-0 rounded-xl bg-primary/10 grid place-items-center">
           <Trophy size={17} className="text-primary" />
         </div>
@@ -214,11 +214,17 @@ function Ranking24({ games, totalGames, onOpen }: {
   const medals = ["text-amber-400", "text-slate-400", "text-amber-700"];
 
   return (
-    <section className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/[0.06] to-accent/[0.05] p-3.5 space-y-2.5">
+    <section className="rounded-xl border border-white/10 bg-card/70 p-3.5 space-y-2.5 shadow-[0_0_30px_-14px_oklch(0.62_0.24_292/0.4)]">
       <div className="flex items-center gap-2">
         <Trophy size={15} className="text-primary" />
-        <div className="font-display text-[13px] leading-tight">Ranking · Más jugados (24h)</div>
-        <span className="ml-auto text-[9px] font-mono text-muted-foreground/60">en vivo</span>
+        <div className="font-display text-[13px] leading-tight tracking-tight">Ranking · Más jugados (24h)</div>
+        <span className="ml-auto flex items-center gap-1.5 text-[9px] font-mono text-emerald-400">
+          <span className="relative flex w-1.5 h-1.5">
+            <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
+            <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-emerald-400" />
+          </span>
+          en vivo
+        </span>
       </div>
       <div className="space-y-1.5">
         {games.slice(0, 5).map(({ g, n }, i) => {
@@ -227,7 +233,7 @@ function Ranking24({ games, totalGames, onOpen }: {
             <button
               key={g.id}
               onClick={() => onOpen(g)}
-              className="w-full flex items-center gap-2.5 rounded-xl bg-card/80 border border-border/50 px-2.5 py-2 text-left hover:border-primary/40 hover:bg-card active:scale-[0.99] transition"
+              className="w-full flex items-center gap-2.5 rounded-lg bg-card/80 border border-white/10 px-2.5 py-2 text-left hover:border-primary/60 hover:bg-card active:scale-[0.99] transition"
             >
               <span className={`w-6 h-6 shrink-0 rounded-lg grid place-items-center font-display text-[11px] font-bold ${i < 3 ? `bg-gradient-to-br from-primary/20 to-accent/15 ${medals[i]}` : "text-muted-foreground/60 bg-muted/60"}`}>
                 {i + 1}
@@ -276,7 +282,7 @@ function FeaturedBanner({ post, plays24, onPlay }: { post: PostWithMeta; plays24
   const title = extractTitle(post.content);
   const active = plays24 && plays24 > 0 ? plays24 : 1 + Math.floor((post.likes + post.comments_count) * 1.3);
   return (
-    <div className="relative rounded-3xl overflow-hidden border border-primary/30 shadow-lg">
+    <div className="relative rounded-xl overflow-hidden border border-white/15 shadow-[0_0_44px_-14px_oklch(0.62_0.24_292/0.6)]">
       <div className="relative aspect-[16/10] w-full md:aspect-[21/9]">
         {post.signed_cover ? (
           <img src={post.signed_cover} alt={title} className="absolute inset-0 w-full h-full object-cover" />
@@ -284,8 +290,12 @@ function FeaturedBanner({ post, plays24, onPlay }: { post: PostWithMeta; plays24
           <div className="absolute inset-0 bg-gradient-to-br from-primary/40 to-accent/40" />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/10" />
-        <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 h-6 rounded-full bg-primary/90 text-primary-foreground text-[10px] font-display tracking-widest">
-          <Flame size={11} fill="currentColor" /> DESTACADO
+        <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 h-6 rounded-md bg-gradient-to-r from-primary to-accent text-white text-[10px] font-display tracking-widest shadow-lg shadow-primary/30 border border-white/20">
+          <span className="relative flex w-1.5 h-1.5">
+            <span className="absolute inline-flex h-full w-full rounded-full bg-white opacity-75 animate-ping" />
+            <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-white" />
+          </span>
+          DESTACADO
         </div>
       </div>
       <div className="absolute inset-x-0 bottom-0 p-4 space-y-3">
@@ -298,7 +308,7 @@ function FeaturedBanner({ post, plays24, onPlay }: { post: PostWithMeta; plays24
         <div className="flex items-center gap-2">
           <button
             onClick={onPlay}
-            className="flex-1 h-11 rounded-xl bg-white text-primary font-display tracking-widest text-xs flex items-center justify-center gap-2 active:scale-95 transition shadow-md"
+            className="flex-1 h-11 rounded-lg bg-gradient-to-r from-primary to-accent text-white font-display tracking-widest text-xs flex items-center justify-center gap-2 active:scale-95 hover:brightness-110 transition shadow-[0_4px_20px_-4px_oklch(0.62_0.24_292/0.7)] border border-white/20"
           >
             <Play size={16} fill="currentColor" /> JUGAR
           </button>

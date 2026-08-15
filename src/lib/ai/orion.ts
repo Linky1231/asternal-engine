@@ -158,6 +158,16 @@ export function needsCodingModel(q: string): boolean {
   );
 }
 
+/** Limite y temperatura por defecto según el tipo de petición: para código se
+ *  pide más espacio (los 900 tokens por defecto cortaban scripts a medias) y
+ *  menos temperatura (respuestas deterministas, sin inventar APIs). */
+function defaultTokens(coding?: boolean): number {
+  return coding ? 1800 : 900;
+}
+function defaultTemperature(coding?: boolean): number {
+  return coding ? 0.3 : 0.7;
+}
+
 function buildPayload(
   history: OrionMessage[],
   opts: { coding?: boolean; maxTokens?: number; temperature?: number; stream?: boolean } = {}
@@ -166,8 +176,8 @@ function buildPayload(
   return {
     model: opts.coding ? ORION_MODEL_CODING : ORION_MODEL,
     messages,
-    max_tokens: opts.maxTokens ?? 900,
-    temperature: opts.temperature ?? 0.7,
+    max_tokens: opts.maxTokens ?? defaultTokens(opts.coding),
+    temperature: opts.temperature ?? defaultTemperature(opts.coding),
     ...(opts.stream ? { stream: true } : {}),
   };
 }
@@ -209,8 +219,8 @@ export async function orionChat(
   const payload = {
     model: opts.coding ? ORION_MODEL_CODING : ORION_MODEL,
     messages,
-    max_tokens: opts.maxTokens ?? 900,
-    temperature: opts.temperature ?? 0.7,
+    max_tokens: opts.maxTokens ?? defaultTokens(opts.coding),
+    temperature: opts.temperature ?? defaultTemperature(opts.coding),
   };
 
   let res: Response;
@@ -291,6 +301,21 @@ export async function orionChat(
  * Si el stream falla, reintenta con orionChat (sin streaming) y entrega el
  * texto completo de una vez a través de onDelta.
  */
+/** Si el usuario detuvo la generación (AbortController), aborta sin respaldos. */
+function throwIfAborted(signal?: AbortSignal): void {
+  if (signal?.aborted) {
+    const err = new Error("Aborted");
+    err.name = "AbortError";
+    throw err;
+  }
+}
+
+function abortError(): Error {
+  const err = new Error("Aborted");
+  err.name = "AbortError";
+  return err;
+}
+
 export async function orionChatStream(
   history: OrionMessage[],
   onDelta: (delta: string) => void,
@@ -306,14 +331,20 @@ export async function orionChatStream(
       body: JSON.stringify(payload),
       signal: opts.signal,
     });
-  } catch {
+  } catch (e) {
+    // El usuario detuvo la petición: NUNCA saltar al respaldo sin streaming
+    // (antes, al pulsar DETENER durante el arranque, igualmente se completaba
+    // una petición completa por detrás y aparecía la respuesta entera).
+    if (opts.signal?.aborted || (e as Error).name === "AbortError") {
+      throw abortError();
+    }
     // Proxy inalcanzable → intento directo (puede fallar por CORS, pero por
     // si acaso) y si tampoco, respaldo sin streaming.
     try {
       const r = await orionChat(history, opts);
       onDelta(r.content);
       return r;
-    } catch (e) {
+    } catch {
       throw new Error(
         "No se pudo conectar con Orión. Comprueba tu conexión a internet e inténtalo de nuevo."
       );
@@ -329,8 +360,10 @@ export async function orionChatStream(
       /* noop */
     }
     // El proxy devolvió error pero puede que la clave esté bien: si el proxy
-    // falla por algo distinto a credenciales, reintenta con el chat sin stream.
+    // falla por algo distinto a credenciales, reintenta con el chat sin stream
+    // (nunca si el usuario ya detuvo la generación).
     if (res.status !== 401 && res.status !== 403 && res.status !== 429) {
+      throwIfAborted(opts.signal);
       try {
         const r = await orionChat(history, opts);
         onDelta(r.content);
@@ -343,6 +376,7 @@ export async function orionChatStream(
   }
 
   if (!res.body) {
+    throwIfAborted(opts.signal);
     const r = await orionChat(history, opts);
     onDelta(r.content);
     return r;
@@ -357,6 +391,12 @@ export async function orionChatStream(
 
   while (true) {
     const { done, value } = await reader.read();
+    // Detener también interrumpe el stream a mitad: cancela el reader y
+    // termina sin respaldos ni texto fantasma.
+    if (opts.signal?.aborted) {
+      try { await reader.cancel(); } catch { /* noop */ }
+      throw abortError();
+    }
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
     const lines = buffer.split("\n");
@@ -390,8 +430,10 @@ export async function orionChatStream(
   }
 
   // Si el proxy respondió pero no llegó texto (p. ej. stream interrumpido a
-  // mitad), reintenta sin streaming para no dejar al usuario sin respuesta.
+  // mitad), reintenta sin streaming para no dejar al usuario sin respuesta
+  // (salvo que la generación ya se haya detenido).
   if (!content) {
+    throwIfAborted(opts.signal);
     const r = await orionChat(history, opts);
     onDelta(r.content);
     return r;

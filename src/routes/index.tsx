@@ -29,7 +29,7 @@ export const Route = createFileRoute("/")({
     links: [
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" },
+      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" },
     ],
   }),
   component: HomePage,
@@ -216,7 +216,7 @@ function HomePage() {
       <header className="app-header sticky top-0 z-20 bg-background/90 backdrop-blur-xl border-b border-border/70">
         <div className={`max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto flex items-center gap-2 sm:gap-2.5 px-3 sm:px-4 ${inPreview ? "pt-14 pb-3" : "py-2.5"}`}>
           <button onClick={() => navigate({ to: "/profile" })} title="Mi perfil"
-            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl overflow-hidden ring-1 ring-line-strong shadow-sm active:scale-95 transition shrink-0">
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg overflow-hidden ring-1 ring-white/15 shadow-sm active:scale-95 transition shrink-0">
             <Avatar p={me} className="w-full h-full" />
           </button>
           <div className="flex-1 min-w-0 header-name">
@@ -233,6 +233,7 @@ function HomePage() {
               <span className="text-[11px] sm:text-xs font-display font-semibold tabular-nums">{me.orbes}</span>
             </Link>
           )}
+          <NotificationBell />
           <button onClick={() => setMenuOpen(true)} title="Menú"
             className="w-9 h-9 rounded-lg border border-line-strong bg-card text-ink-2 grid place-items-center hover:bg-muted/60 hover:text-foreground active:scale-95 transition shrink-0">
             <Menu size={16} />
@@ -349,10 +350,12 @@ function HomePage() {
         </AnimatePresence>
       </main>
 
-      {/* Floating CTA to editor */}
+      {/* Floating CTA to editor: un solo marco sólido (borde brillante) que se
+          pinta con el botón — sin border transparente + ring inset, que dejaba
+          ver un borde fino antes de que apareciera el marco. */}
       <Link
         to="/editor"
-        className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-[max(1.25rem,env(safe-area-inset-right))] z-30 h-14 pl-4 pr-5 rounded-xl btn-grad shadow-[0_3px_10px_-4px_oklch(0.52_0.19_258/0.5)] ring-1 ring-white/25 ring-inset flex items-center gap-2 active:scale-95 font-display tracking-widest text-xs"
+        className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-[max(1.25rem,env(safe-area-inset-right))] z-30 h-14 pl-4 pr-5 rounded-xl bg-[linear-gradient(135deg,oklch(0.55_0.23_295),oklch(0.62_0.24_292)_50%,oklch(0.78_0.14_200))] border border-white/25 text-white shadow-[0_3px_18px_-4px_oklch(0.62_0.24_292/0.55)] flex items-center gap-2 active:scale-95 hover:brightness-110 transition font-display tracking-widest text-xs"
       >
         <Plus size={18} strokeWidth={2} /> CREAR
       </Link>
