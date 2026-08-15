@@ -494,14 +494,22 @@ class SafeRow extends Component<{ children: ReactNode }, { failed: boolean }> {
   static getDerivedStateFromError() {
     return { failed: true };
   }
+  componentDidCatch(error: unknown) {
+    // Deja visible en consola la causa real del mensaje roto (F12).
+    console.error("[chat] mensaje no renderizable:", error);
+  }
   render() {
     if (this.state.failed) {
       return (
-        <div className="flex justify-center py-2">
-          <span className="text-[10px] text-muted-foreground/60 px-3 py-1.5 rounded-xl border border-border bg-card">
-            No se pudo mostrar este mensaje
+        <button
+          onClick={() => this.setState({ failed: false })}
+          title="Toca para reintentar"
+          className="mx-auto flex justify-center py-2 group"
+        >
+          <span className="text-[10px] text-muted-foreground/60 px-3 py-1.5 rounded-lg border border-border bg-card group-hover:text-muted-foreground group-hover:border-primary/30 transition">
+            No se pudo mostrar este mensaje · toca para reintentar
           </span>
-        </div>
+        </button>
       );
     }
     return this.props.children;
