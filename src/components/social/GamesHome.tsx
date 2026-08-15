@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Play, Flame, Rocket, Heart, Sparkles as SparklesIcon, Users, ChevronRight, Gamepad2, Trophy } from "lucide-react";
+import { Play, Flame, Rocket, Heart, Sparkles as SparklesIcon, Users, ChevronRight, Gamepad2, Trophy, Joystick } from "lucide-react";
 import type { PostWithMeta } from "@/lib/social/api";
 import { fetchGamePlayCounts24h } from "@/lib/social/api";
-import { GameIcon, extractTileMark } from "./GameIcon";
+import { GameIcon } from "./GameIcon";
 import { GameCard } from "./GameCard";
 
 function extractTitle(content: string): string {
@@ -282,12 +282,12 @@ function FeaturedBanner({ post, plays24, onPlay }: { post: PostWithMeta; plays24
           <img src={post.signed_cover} alt={title} className="absolute inset-0 w-full h-full object-cover" />
         ) : (
           <>
-            <div className="absolute inset-0 mesh-bg" />
-            {/* Monograma del juego sobre el mesh: sin portada nunca se ve vacío ni púrpura */}
+            {/* Mesh profundo de marca (cobalto/violeta/cian): con foto o sin ella,
+                el banner siempre lleva la identidad de la app, nunca gris apagado. */}
+            <div className="absolute inset-0 mesh-bg-deep" />
+            {/* Marca de agua: icono de juego translúcido de fondo */}
             <div className="absolute inset-0 grid place-items-center">
-              <div className="w-20 h-20 rounded-2xl bg-white/85 backdrop-blur-sm border border-white/70 text-primary grid place-items-center font-display font-bold text-3xl leading-none shadow-[0_18px_44px_-18px_oklch(0.45_0.22_268/0.65)]">
-                {extractTileMark(post.content)}
-              </div>
+              <Joystick size={150} strokeWidth={1} className="text-white/[0.13] drop-shadow-[0_12px_32px_rgba(0,0,0,0.35)]" />
             </div>
           </>
         )}

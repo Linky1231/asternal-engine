@@ -172,6 +172,13 @@
     radial-gradient(120% 90% at 82% 96%, oklch(0.85 0.09 205 / 0.5) 0%, transparent 55%),
     radial-gradient(70% 60% at 40% 70%, oklch(0.9 0.05 258 / 0.35) 0%, transparent 60%),
     linear-gradient(135deg, #ffffff 0%, oklch(0.965 0.01 256) 100%);
+  /* Mesh profundo de marca (cobalto/violeta/cian) para el banner destacado sin portada. */
+  --gradient-mesh-deep:
+    radial-gradient(120% 90% at 8% 0%, oklch(0.56 0.22 268 / 0.95) 0%, transparent 55%),
+    radial-gradient(100% 90% at 95% 6%, oklch(0.58 0.2 300 / 0.8) 0%, transparent 55%),
+    radial-gradient(120% 100% at 85% 100%, oklch(0.55 0.18 225 / 0.9) 0%, transparent 60%),
+    radial-gradient(80% 70% at 25% 85%, oklch(0.48 0.2 280 / 0.75) 0%, transparent 60%),
+    linear-gradient(135deg, oklch(0.33 0.16 270) 0%, oklch(0.4 0.19 258) 55%, oklch(0.46 0.16 240) 100%);
   --shadow-xs: 0 1px 2px 0 oklch(0.2 0.02 260 / 0.05);
   --shadow-sm: 0 1px 3px 0 oklch(0 0 0 / 0.06), 0 1px 2px -1px oklch(0 0 0 / 0.06);
   --shadow-md: 0 4px 12px -2px oklch(0 0 0 / 0.08), 0 2px 4px -2px oklch(0 0 0 / 0.04);
@@ -383,6 +390,10 @@
 /* Mesh orgánico: cobalto, cian y violeta suaves sobre blanco (banner destacado). */
 .mesh-bg {
   background-image: var(--gradient-mesh);
+}
+
+.mesh-bg-deep {
+  background-image: var(--gradient-mesh-deep);
 }
 
 /* Textura de grano sutil sobre degradados (nunca se ve plano ni "de algoritmo"). */

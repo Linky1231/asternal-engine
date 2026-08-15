@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Sparkles, Lock } from "lucide-react";
+import { Sparkles, Lock, Joystick } from "lucide-react";
 import type { PostWithMeta } from "@/lib/social/api";
 
 function extractTitle(content: string): string {
@@ -8,23 +8,12 @@ function extractTitle(content: string): string {
 }
 
 /**
- * Marca del tile sin portada: primer emoji del contenido si lo hay, si no la
- * inicial del título. Neutro (cobalto sobre blanco), nunca púrpura.
- */
-export function extractTileMark(content: string): string {
-  const line = content.split("\n")[0] || "";
-  const emoji = line.match(/\p{Extended_Pictographic}/u)?.[0];
-  if (emoji) return emoji;
-  return (extractTitle(content).charAt(0) || "J").toUpperCase();
-}
-
-/**
  * App-icon style game tile. Square, rounded, with cover image cropped from center.
  * Tap fires onOpen — the parent decides whether to open a play sheet, GameCard modal, etc.
  *
  * Portada: cover del juego → primera captura → si no hay (o la imagen falla),
- * tile «blueprint» (cuadrícula técnica sobre blanco) con monograma del título
- * y ticks de esquina. Sin morado: el acento es cobalto sobre blanco.
+ * tile «blueprint» (cuadrícula técnica sobre blanco) con icono de juego de
+ * trazo fino y ticks de esquina. Sin morado ni emojis: cobalto sobre blanco.
  */
 export function GameIcon({
   post,
@@ -75,7 +64,7 @@ export function GameIcon({
             className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.04]"
           />
         ) : (
-          <TileMark text={extractTileMark(post.content)} />
+          <TileMark />
         )}
         {/* subtle top gloss like iOS icons */}
         <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-white/15 via-transparent to-black/[0.06]" />
@@ -100,13 +89,13 @@ export function GameIcon({
   );
 }
 
-/** Monograma del juego: emoji o inicial en una medalla blanca con borde cobalto. */
-function TileMark({ text }: { text: string }) {
+/** Marca del tile sin portada: icono de juego de trazo fino sobre la cuadrícula blueprint. */
+function TileMark() {
   return (
     <span className="absolute inset-0 grid place-items-center pointer-events-none" aria-hidden>
-      <span className="w-9 h-9 rounded-full bg-white/90 border border-primary/30 text-primary grid place-items-center font-display font-bold text-sm leading-none shadow-[0_8px_20px_-8px_oklch(0.5_0.2_262/0.55)]">
-        {text}
-      </span>
+      {/* halo suave: profundidad sin caja ni recuadro genérico */}
+      <span className="absolute w-14 h-14 rounded-full bg-primary/10 blur-xl" />
+      <Joystick size={22} strokeWidth={1.5} className="relative text-primary/70" />
     </span>
   );
 }
