@@ -2326,8 +2326,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2, ease: "easeOut" }}
-      className="fixed inset-0 z-[90] bg-background flex flex-col md:mx-auto md:max-w-3xl md:border-x md:border-border/60 md:shadow-2xl"
-      style={{ height: "100dvh" }}
+      className="fixed z-[90] bg-background flex flex-col top-3 bottom-3 left-0 right-0 mx-auto max-w-3xl rounded-2xl border border-border/60 overflow-hidden shadow-2xl h-[calc(100dvh-1.5rem)]"
     >
       {/* ───── Header ───── */}
       <div className="h-[3px] w-full bg-gradient-to-r from-primary via-accent to-transparent shrink-0" />
