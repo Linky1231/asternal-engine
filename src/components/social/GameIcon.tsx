@@ -51,7 +51,7 @@ export function GameIcon({
       <div
         className={`relative aspect-square w-full ${radius} overflow-hidden ${
           hasCover
-            ? "border border-white/60 shadow-[0_14px_36px_-16px_oklch(0.45_0.22_268/0.55)] transition-shadow group-hover:shadow-[0_20px_44px_-16px_oklch(0.45_0.24_268/0.6)]"
+            ? "border border-white/60 shadow-[0_14px_36px_-16px_oklch(0.5_0.15_268/0.4)] transition-shadow group-hover:shadow-[0_20px_44px_-16px_oklch(0.5_0.16_262/0.45)]"
             : "tile-blueprint"
         }`}
       >
@@ -112,7 +112,7 @@ function CornerTicks() {
       <path
         d="M7 22 V7 H22 M73 22 V7 H58 M73 58 V73 H58 M7 58 V73 H22"
         fill="none"
-        stroke="oklch(0.53 0.22 262 / 0.5)"
+        stroke="oklch(0.56 0.16 262 / 0.45)"
         strokeWidth="1.5"
         vectorEffect="non-scaling-stroke"
         strokeLinecap="round"

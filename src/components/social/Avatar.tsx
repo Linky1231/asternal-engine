@@ -14,11 +14,11 @@ export type AvatarLike = {
  * Deterministas por usuario: mismo perfil → mismo degradado en toda la app.
  */
 const FALLBACK_GRADIENTS = [
-  "linear-gradient(135deg, oklch(0.55 0.19 262) 0%, oklch(0.63 0.14 215) 100%)",
-  "linear-gradient(135deg, oklch(0.5 0.21 288) 0%, oklch(0.59 0.17 240) 100%)",
-  "linear-gradient(135deg, oklch(0.6 0.12 215) 0%, oklch(0.68 0.1 190) 100%)",
-  "linear-gradient(135deg, oklch(0.52 0.2 275) 0%, oklch(0.61 0.16 228) 100%)",
-  "linear-gradient(135deg, oklch(0.57 0.16 250) 0%, oklch(0.66 0.12 205) 100%)",
+  "linear-gradient(135deg, oklch(0.58 0.14 262) 0%, oklch(0.66 0.09 218) 100%)",
+  "linear-gradient(135deg, oklch(0.55 0.14 288) 0%, oklch(0.64 0.1 242) 100%)",
+  "linear-gradient(135deg, oklch(0.64 0.08 218) 0%, oklch(0.72 0.07 192) 100%)",
+  "linear-gradient(135deg, oklch(0.57 0.13 275) 0%, oklch(0.66 0.09 230) 100%)",
+  "linear-gradient(135deg, oklch(0.61 0.11 252) 0%, oklch(0.69 0.08 208) 100%)",
 ];
 
 /** Hash FNV-1a estable por id/usuario → degradado fijo (nunca cambia entre renders). */

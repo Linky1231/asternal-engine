@@ -20,16 +20,19 @@ type Notif = {
 
 type Cat = "todas" | "interacciones" | "seguidores" | "juegos";
 
-const TYPE_META: Record<string, { icon: typeof Heart; label: string; cat: Exclude<Cat, "todas">; tone: string }> = {
-  comment: { icon: MessageSquare, label: "comentó tu post", cat: "interacciones", tone: "text-primary bg-primary/12" },
-  reply: { icon: Reply, label: "respondió tu comentario", cat: "interacciones", tone: "text-accent bg-accent/12" },
-  reaction: { icon: Heart, label: "reaccionó a tu contenido", cat: "interacciones", tone: "text-rose-500 bg-rose-500/12" },
-  like: { icon: Heart, label: "le gustó tu contenido", cat: "interacciones", tone: "text-rose-500 bg-rose-500/12" },
-  favorite: { icon: Star, label: "guardó tu contenido como favorito", cat: "interacciones", tone: "text-amber-500 bg-amber-500/12" },
-  repost: { icon: Repeat, label: "reposteó tu post", cat: "interacciones", tone: "text-emerald-500 bg-emerald-500/12" },
-  mention: { icon: AtSign, label: "te mencionó", cat: "interacciones", tone: "text-violet-500 bg-violet-500/12" },
-  follow: { icon: UserPlus, label: "te siguió", cat: "seguidores", tone: "text-sky-500 bg-sky-500/12" },
-  game: { icon: Gamepad2, label: "publicó un juego", cat: "juegos", tone: "text-primary bg-primary/12" },
+/* Icono por tipo: insignia SÓLIDA con icono blanco. La versión anterior usaba
+   un tinte al 12% con el icono del mismo color: sobre el blanco del panel el
+   icono quedaba casi invisible (parecía un círculo vacío). */
+const TYPE_META: Record<string, { icon: typeof Heart; label: string; cat: Exclude<Cat, "todas">; badge: string }> = {
+  comment: { icon: MessageSquare, label: "comentó tu post", cat: "interacciones", badge: "bg-primary" },
+  reply: { icon: Reply, label: "respondió tu comentario", cat: "interacciones", badge: "bg-sky-500" },
+  reaction: { icon: Heart, label: "reaccionó a tu contenido", cat: "interacciones", badge: "bg-rose-500" },
+  like: { icon: Heart, label: "le gustó tu contenido", cat: "interacciones", badge: "bg-rose-500" },
+  favorite: { icon: Star, label: "guardó tu contenido como favorito", cat: "interacciones", badge: "bg-amber-500" },
+  repost: { icon: Repeat, label: "reposteó tu post", cat: "interacciones", badge: "bg-emerald-500" },
+  mention: { icon: AtSign, label: "te mencionó", cat: "interacciones", badge: "bg-violet-500" },
+  follow: { icon: UserPlus, label: "te siguió", cat: "seguidores", badge: "bg-sky-500" },
+  game: { icon: Gamepad2, label: "publicó un juego", cat: "juegos", badge: "bg-primary" },
 };
 
 const CATS: { id: Cat; label: string; icon: typeof Heart; tone: string }[] = [
@@ -338,8 +341,8 @@ export function NotificationsPanel({ onClose }: { onClose: () => void }) {
                         onClick={e => { if (!n.actor_id) e.preventDefault(); }}
                         className="relative shrink-0">
                         <Avatar p={n.actor} size={36} />
-                        <span className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full grid place-items-center border-2 border-background ${meta.tone}`}>
-                          <Icon size={9} />
+                        <span className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full grid place-items-center border-2 border-background text-white shadow-sm ${meta.badge}`}>
+                          <Icon size={10} strokeWidth={2.5} />
                         </span>
                       </Link>
                       <div className="flex-1 min-w-0 pt-0.5">

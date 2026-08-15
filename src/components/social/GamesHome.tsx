@@ -276,8 +276,13 @@ function FeaturedBanner({ post, plays24, onPlay }: { post: PostWithMeta; plays24
   const title = extractTitle(post.content);
   const active = plays24 && plays24 > 0 ? plays24 : 1 + Math.floor((post.likes + post.comments_count) * 1.3);
   return (
-    <div className="banner-glow relative rounded-3xl overflow-hidden border border-white/70">
-      <div className="relative aspect-[16/10] w-full md:aspect-[21/9]">
+    <div className="relative">
+      {/* Halo de brillo aparte: sombra estática con pulso SOLO de opacidad
+          (capa compuesta por la GPU). Antes se animaba box-shadow en el propio
+          banner y cada frame se repintaba el banner entero → lag al hacer scroll. */}
+      <div className="banner-glow-halo absolute -inset-3 rounded-[32px]" aria-hidden />
+      <div className="banner-glow relative rounded-3xl overflow-hidden border border-white/70">
+        <div className="relative aspect-[16/10] w-full md:aspect-[21/9]">
         {post.signed_cover ? (
           <img src={post.signed_cover} alt={title} className="absolute inset-0 w-full h-full object-cover" />
         ) : (
@@ -311,7 +316,7 @@ function FeaturedBanner({ post, plays24, onPlay }: { post: PostWithMeta; plays24
         <div className="flex items-center gap-2">
           <button
             onClick={onPlay}
-            className="flex-1 h-11 rounded-xl bg-white text-primary font-display tracking-widest text-xs flex items-center justify-center gap-2 active:scale-95 transition shadow-[0_12px_28px_-10px_oklch(0.2_0.04_262/0.45)]"
+            className="flex-1 h-11 rounded-xl bg-white text-primary font-display tracking-widest text-xs flex items-center justify-center gap-2 active:scale-95 transition shadow-[0_12px_28px_-10px_oklch(0.25_0.06_262/0.4)]"
           >
             <Play size={16} fill="currentColor" /> JUGAR
           </button>
@@ -323,6 +328,7 @@ function FeaturedBanner({ post, plays24, onPlay }: { post: PostWithMeta; plays24
           </span>
           <span className="flex items-center gap-1"><Heart size={11} fill="currentColor" /> {post.likes}</span>
         </div>
+      </div>
       </div>
     </div>
   );

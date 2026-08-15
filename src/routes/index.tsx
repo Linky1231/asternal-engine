@@ -213,10 +213,12 @@ function HomePage() {
   return (
     <div className="min-h-screen w-full flex flex-col bg-background text-foreground">
       {/* Header */}
-      <header className="app-header sticky top-0 z-20 bg-background/90 backdrop-blur-xl border-b border-border/70">
+      {/* bg casi opaco + blur reducido: el backdrop-blur-xl sobre un header
+          sticky obligaba a re-desenfocar el fondo en cada frame de scroll → lag. */}
+      <header className="app-header sticky top-0 z-20 bg-background/95 backdrop-blur-md border-b border-border/70">
         <div className={`max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto flex items-center gap-2 sm:gap-2.5 px-3 sm:px-4 ${inPreview ? "pt-14 pb-3" : "py-2.5"}`}>
           <button onClick={() => navigate({ to: "/profile" })} title="Mi perfil"
-            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl overflow-hidden border border-slate-900/5 shadow-[0_8px_20px_-10px_oklch(0.45_0.22_268/0.4)] active:scale-95 transition shrink-0">
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl overflow-hidden border border-slate-900/5 shadow-[0_8px_20px_-10px_oklch(0.5_0.15_268/0.35)] active:scale-95 transition shrink-0">
             <Avatar p={me} className="w-full h-full" />
           </button>
           <div className="flex-1 min-w-0 header-name">
@@ -268,13 +270,17 @@ function HomePage() {
 
       {/* Content */}
       <main className="flex-1 max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto w-full px-3 py-3 space-y-3 pb-24">
-        <AnimatePresence mode="popLayout" initial={false}>
+        {/* mode="wait" en vez de popLayout: el popLayout mantiene las dos pestañas
+            montadas y posicionadas de forma absoluta durante la transición (más DOM,
+            más medición de layout). Con wait solo existe una a la vez y el fade es
+            composited: cambio de pestaña sin lag. */}
+        <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={tab}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.15, ease: "easeOut" }}
+            transition={{ duration: 0.12, ease: "easeOut" }}
             className="space-y-3"
           >
             {tab === "games" ? (
@@ -352,7 +358,7 @@ function HomePage() {
       {/* Floating CTA to editor */}
       <Link
         to="/editor"
-        className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-[max(1.25rem,env(safe-area-inset-right))] z-30 h-14 pl-4 pr-5 rounded-xl btn-grad shadow-[0_16px_40px_-14px_oklch(0.45_0.24_268/0.55)] flex items-center gap-2 active:scale-95 font-display tracking-widest text-xs"
+        className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-[max(1.25rem,env(safe-area-inset-right))] z-30 h-14 pl-4 pr-5 rounded-xl btn-grad shadow-[0_16px_40px_-14px_oklch(0.5_0.16_262/0.45)] flex items-center gap-2 active:scale-95 font-display tracking-widest text-xs"
       >
         <Plus size={18} strokeWidth={2} /> CREAR
       </Link>
@@ -380,7 +386,7 @@ function HomePage() {
             initial={{ x: "100%", opacity: 0.4 }}
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: "100%", opacity: 0 }}
-            transition={{ type: "spring", stiffness: 340, damping: 34 }}
+            transition={{ type: "tween", duration: 0.26, ease: [0.16, 1, 0.3, 1] }}
           >
             <div className="flex items-center justify-between mb-1">
               <div className="section-label">MENÚ</div>

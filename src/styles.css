@@ -69,14 +69,14 @@
   --popover: oklch(1 0 0);
   --popover-foreground: var(--ink);
 
-  /* ── Azul Asternal ── */
-  --primary: oklch(0.53 0.22 262);
+  /* ── Azul Asternal (suave y profesional: menos saturación, más luz) ── */
+  --primary: oklch(0.56 0.16 262);
   --primary-foreground: oklch(0.99 0 0);
-  --primary-glow: oklch(0.62 0.2 258);
-  --blue-600: oklch(0.44 0.24 268);
-  --azure: oklch(0.66 0.15 240);
-  --violet-accent: oklch(0.6 0.21 300);
-  --cyan-accent: oklch(0.7 0.13 205);
+  --primary-glow: oklch(0.64 0.13 258);
+  --blue-600: oklch(0.47 0.17 268);
+  --azure: oklch(0.71 0.1 240);
+  --violet-accent: oklch(0.63 0.15 300);
+  --cyan-accent: oklch(0.73 0.09 205);
   --accent: var(--azure);
   --accent-foreground: oklch(0.25 0.03 260);
 
@@ -91,7 +91,7 @@
   --line-strong: oklch(0.83 0.016 252 / 0.75);
   --border: var(--line);
   --input: oklch(0.92 0.008 252 / 0.7);
-  --ring: oklch(0.52 0.19 258 / 0.35);
+  --ring: oklch(0.56 0.13 258 / 0.35);
   --grid: oklch(0.87 0.01 252 / 0.4);
   --destructive: oklch(0.577 0.215 25);
   --destructive-foreground: oklch(0.99 0 0);
@@ -106,15 +106,15 @@
   --shadow-xl: 0 20px 44px -12px oklch(0 0 0 / 0.14);
 
   /* Sombras de color (elementos flotando sobre el lienzo blanco) */
-  --shadow-float: 0 18px 44px -18px oklch(0.45 0.22 268 / 0.45);
-  --shadow-glow: 0 10px 30px -12px oklch(0.53 0.22 262 / 0.4), 0 4px 18px -8px oklch(0.63 0.14 210 / 0.35);
+  --shadow-float: 0 18px 44px -18px oklch(0.5 0.14 268 / 0.32);
+  --shadow-glow: 0 10px 30px -12px oklch(0.56 0.15 262 / 0.32), 0 4px 18px -8px oklch(0.68 0.09 210 / 0.28);
 
   /* ── Degradados oficiales (DESIGN.md §2.2) ── */
   /* ÚNICO degradado de marca (DESIGN.md §2.2): 135° cobalto → azur. */
-  --gradient-asternal: linear-gradient(135deg, oklch(0.44 0.24 268) 0%, oklch(0.53 0.22 262) 48%, oklch(0.66 0.15 240) 100%);
-  /* Variantes del MISMO degradado: diluido (acentos de fondo) y oscuro (banner destacado). */
-  --gradient-asternal-soft: linear-gradient(135deg, oklch(0.44 0.24 268 / 0.1), oklch(0.53 0.22 262 / 0.08) 48%, oklch(0.66 0.15 240 / 0.06));
-  --gradient-asternal-deep: linear-gradient(135deg, oklch(0.31 0.16 268) 0%, oklch(0.39 0.18 262) 48%, oklch(0.47 0.14 235) 100%);
+  --gradient-asternal: linear-gradient(135deg, oklch(0.5 0.16 266) 0%, oklch(0.58 0.13 258) 48%, oklch(0.7 0.08 238) 100%);
+  /* Variantes del MISMO degradado: diluido (acentos de fondo) y suave-profundo (banner destacado). */
+  --gradient-asternal-soft: linear-gradient(135deg, oklch(0.5 0.16 266 / 0.1), oklch(0.58 0.13 258 / 0.08) 48%, oklch(0.7 0.08 238 / 0.06));
+  --gradient-asternal-deep: linear-gradient(135deg, oklch(0.37 0.1 268) 0%, oklch(0.43 0.1 262) 48%, oklch(0.52 0.07 238) 100%);
 
   /* Asternal Plus — azul cian (logo gota+cruz) */
   --plus: oklch(0.62 0.12 220);
@@ -142,13 +142,13 @@
   --surface-2: oklch(0.95 0.008 252);
   --popover: oklch(1 0 0);
   --popover-foreground: var(--ink);
-  --primary: oklch(0.53 0.22 262);
+  --primary: oklch(0.56 0.16 262);
   --primary-foreground: oklch(0.99 0 0);
-  --primary-glow: oklch(0.62 0.2 258);
-  --blue-600: oklch(0.44 0.24 268);
-  --azure: oklch(0.66 0.15 240);
-  --violet-accent: oklch(0.6 0.21 300);
-  --cyan-accent: oklch(0.7 0.13 205);
+  --primary-glow: oklch(0.64 0.13 258);
+  --blue-600: oklch(0.47 0.17 268);
+  --azure: oklch(0.71 0.1 240);
+  --violet-accent: oklch(0.63 0.15 300);
+  --cyan-accent: oklch(0.73 0.09 205);
   --accent: var(--azure);
   --accent-foreground: oklch(0.25 0.03 260);
   --secondary: var(--surface-2);
@@ -159,21 +159,21 @@
   --line-strong: oklch(0.83 0.016 252 / 0.75);
   --border: var(--line);
   --input: oklch(0.92 0.008 252 / 0.7);
-  --ring: oklch(0.52 0.19 258 / 0.35);
+  --ring: oklch(0.56 0.13 258 / 0.35);
   --grid: oklch(0.87 0.01 252 / 0.4);
   --destructive: oklch(0.577 0.215 25);
   --destructive-foreground: oklch(0.99 0 0);
   --success: oklch(0.62 0.17 155);
   --warn: oklch(0.75 0.16 80);
-  --gradient-asternal: linear-gradient(135deg, oklch(0.44 0.24 268) 0%, oklch(0.53 0.22 262) 48%, oklch(0.66 0.15 240) 100%);
-  --gradient-asternal-soft: linear-gradient(135deg, oklch(0.44 0.24 268 / 0.1), oklch(0.53 0.22 262 / 0.08) 48%, oklch(0.66 0.15 240 / 0.06));
-  --gradient-asternal-deep: linear-gradient(135deg, oklch(0.31 0.16 268) 0%, oklch(0.39 0.18 262) 48%, oklch(0.47 0.14 235) 100%);
+  --gradient-asternal: linear-gradient(135deg, oklch(0.5 0.16 266) 0%, oklch(0.58 0.13 258) 48%, oklch(0.7 0.08 238) 100%);
+  --gradient-asternal-soft: linear-gradient(135deg, oklch(0.5 0.16 266 / 0.1), oklch(0.58 0.13 258 / 0.08) 48%, oklch(0.7 0.08 238 / 0.06));
+  --gradient-asternal-deep: linear-gradient(135deg, oklch(0.37 0.1 268) 0%, oklch(0.43 0.1 262) 48%, oklch(0.52 0.07 238) 100%);
   --shadow-xs: 0 1px 2px 0 oklch(0.2 0.02 260 / 0.05);
   --shadow-sm: 0 1px 3px 0 oklch(0 0 0 / 0.06), 0 1px 2px -1px oklch(0 0 0 / 0.06);
   --shadow-md: 0 4px 12px -2px oklch(0 0 0 / 0.08), 0 2px 4px -2px oklch(0 0 0 / 0.04);
   --shadow-lg: 0 12px 28px -8px oklch(0 0 0 / 0.10), 0 4px 12px -4px oklch(0 0 0 / 0.06);
-  --shadow-float: 0 18px 44px -18px oklch(0.45 0.22 268 / 0.45);
-  --shadow-glow: 0 10px 30px -12px oklch(0.53 0.22 262 / 0.4), 0 4px 18px -8px oklch(0.63 0.14 210 / 0.35);
+  --shadow-float: 0 18px 44px -18px oklch(0.5 0.14 268 / 0.32);
+  --shadow-glow: 0 10px 30px -12px oklch(0.56 0.15 262 / 0.32), 0 4px 18px -8px oklch(0.68 0.09 210 / 0.28);
 }
 
 @layer base {
@@ -394,9 +394,9 @@
 .grad-brand-fade {
   background-image: linear-gradient(
     to right,
-    oklch(0.44 0.24 268) 0%,
-    oklch(0.53 0.22 262) 40%,
-    oklch(0.66 0.15 240) 62%,
+    oklch(0.5 0.16 266) 0%,
+    oklch(0.58 0.13 258) 40%,
+    oklch(0.7 0.08 238) 62%,
     transparent 100%
   );
 }
@@ -408,25 +408,29 @@
 .banner-overlay-deep {
   background: linear-gradient(
     to top,
-    oklch(0.2 0.09 262 / 0.95) 0%,
-    oklch(0.27 0.1 262 / 0.45) 40%,
-    oklch(0.32 0.1 262 / 0.12) 75%,
+    oklch(0.25 0.07 262 / 0.94) 0%,
+    oklch(0.31 0.08 262 / 0.42) 40%,
+    oklch(0.35 0.07 262 / 0.1) 75%,
     transparent 100%
   );
 }
 
-/* Respiro de brillo azul: el banner del «mejor juego» late suavemente. */
-@keyframes banner-glow-pulse {
-  0%, 100% {
-    box-shadow: 0 24px 60px -24px oklch(0.45 0.24 268 / 0.5);
-  }
-  50% {
-    box-shadow: 0 26px 72px -18px oklch(0.55 0.22 262 / 0.7),
-                0 0 26px -6px oklch(0.66 0.16 235 / 0.4);
-  }
+/* Respiro de brillo azul: el banner del «mejor juego» late suavemente.
+   Rendimiento: la sombra es ESTÁTICA y solo se anima la opacidad de un halo
+   separado (capa compuesta por la GPU). Animar box-shadow por frame repintaba
+   todo el banner en cada scroll → lag perceptible en móvil. */
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.45; }
+  50%      { opacity: 1; }
 }
 .banner-glow {
-  animation: banner-glow-pulse 4s ease-in-out infinite;
+  box-shadow: 0 24px 60px -24px oklch(0.5 0.15 262 / 0.45);
+}
+.banner-glow-halo {
+  pointer-events: none;
+  box-shadow: 0 26px 72px -18px oklch(0.55 0.15 262 / 0.5),
+              0 0 30px -6px oklch(0.68 0.09 238 / 0.32);
+  animation: glow-pulse 4s ease-in-out infinite;
 }
 
 /* Barrido de luz que cruza el banner cada pocos segundos. */
@@ -445,13 +449,10 @@
   animation: banner-shine 5s ease-in-out infinite;
 }
 
-/* Insignia MEJOR JUEGO: pulso de halo cobalto. */
-@keyframes badge-glow {
-  0%, 100% { box-shadow: 0 6px 16px -6px oklch(0.2 0.04 262 / 0.6); }
-  50% { box-shadow: 0 8px 22px -6px oklch(0.45 0.24 268 / 0.85), 0 0 20px 1px oklch(0.68 0.16 235 / 0.5); }
-}
+/* Insignia MEJOR JUEGO: sombra estática + pulso de opacidad (composited). */
 .badge-glow {
-  animation: badge-glow 2.6s ease-in-out infinite;
+  box-shadow: 0 6px 16px -6px oklch(0.35 0.1 262 / 0.45);
+  animation: glow-pulse 2.8s ease-in-out infinite;
 }
 
 /* Textura de grano sutil sobre degradados (nunca se ve plano ni "de algoritmo"). */
@@ -472,7 +473,7 @@
   box-shadow: var(--shadow-float);
 }
 .tile-blueprint:hover {
-  border-color: oklch(0.55 0.2 262 / 0.45);
+  border-color: oklch(0.58 0.16 262 / 0.4);
   box-shadow: var(--shadow-glow);
 }
 
@@ -914,6 +915,7 @@
 @media (prefers-reduced-motion: reduce) {
   .banner-shine,
   .banner-glow,
+  .banner-glow-halo,
   .badge-glow,
   .animate-float-icon,
   .animate-shimmer-text,
