@@ -236,7 +236,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
           </div>
           <button
             onClick={() => setCanvasOpen(true)}
-            className="h-10 pl-4 pr-5 rounded-lg bg-gradient-to-r from-primary to-accent text-white text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition shrink-0"
+            className="h-10 pl-4 pr-5 rounded-lg bg-gradient-to-br from-primary to-accent text-white text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition shrink-0"
           >
             <ImagePlus size={16} /> NUEVA OBRA
           </button>
@@ -634,7 +634,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
                         detailPost.owned
                           ? "bg-emerald-500/15 text-emerald-600 border border-emerald-500/30"
                           : effPrice(detailPost) > 0
-                            ? "bg-gradient-to-r from-primary to-accent text-white"
+                            ? "bg-gradient-to-br from-primary to-accent text-white"
                             : "bg-emerald-500/15 text-emerald-600 border border-emerald-500/30 hover:bg-emerald-500/25"
                       }`}
                     >
@@ -793,7 +793,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
                 <button
                   onClick={doPublish}
                   disabled={publishing || !pubTitle.trim()}
-                  className="flex-1 h-10 rounded-lg bg-gradient-to-r from-primary to-accent text-white text-xs font-semibold active:scale-95 disabled:opacity-50 transition"
+                  className="flex-1 h-10 rounded-lg bg-gradient-to-br from-primary to-accent text-white text-xs font-semibold active:scale-95 disabled:opacity-50 transition"
                 >
                   {publishing ? <Loader2 size={14} className="animate-spin mx-auto" /> : "PUBLICAR"}
                 </button>
@@ -949,7 +949,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
                   <button
                     onClick={confirmBuy}
                     disabled={buyState === "loading" || (balance !== null && (balance - (artworks.find(a => a.id === buyPostId) ? effPrice(artworks.find(a => a.id === buyPostId)!) : 0) < 0))}
-                    className="w-full h-10 rounded-lg bg-gradient-to-r from-primary to-accent text-white text-xs font-semibold disabled:opacity-50 active:scale-[0.98] transition"
+                    className="w-full h-10 rounded-lg bg-gradient-to-br from-primary to-accent text-white text-xs font-semibold disabled:opacity-50 active:scale-[0.98] transition"
                   >
                     {buyState === "loading" ? <Loader2 size={14} className="animate-spin mx-auto" /> : "CONFIRMAR"}
                   </button>

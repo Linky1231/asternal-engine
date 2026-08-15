@@ -132,7 +132,7 @@ function CreatorRobot() {
       {/* Body with screen */}
       <div className="w-11 h-12 rounded-[10px] bg-gradient-to-br from-primary to-accent shadow-lg shadow-primary/30 relative overflow-hidden">
         <div className="absolute inset-x-2 bottom-2 top-4 rounded-md bg-white/90 flex items-center justify-center">
-          <div className="w-4 h-3 rounded-sm bg-gradient-to-r from-primary to-accent opacity-70" />
+          <div className="w-4 h-3 rounded-sm bg-gradient-to-br from-primary to-accent opacity-70" />
         </div>
       </div>
       {/* Arms */}
@@ -209,9 +209,9 @@ function HeroScene() {
         <div className="relative w-[460px] h-[460px]">
 
           {/* Ambient glows */}
-          <div className="absolute left-1/2 top-[42%] -translate-x-1/2 -translate-y-1/2 w-[360px] h-[360px] rounded-full animate-mesh-grad"
+          <div className="absolute left-1/2 top-[42%] -translate-x-1/2 -translate-y-1/2 w-[360px] h-[360px] rounded-full"
             style={{ background: "radial-gradient(circle, oklch(0.52 0.19 258 / 0.14), transparent 62%)" }} />
-          <div className="absolute left-1/2 top-[42%] -translate-x-1/2 -translate-y-1/2 w-[220px] h-[220px] rounded-full animate-mesh-grad-alt"
+          <div className="absolute left-1/2 top-[42%] -translate-x-1/2 -translate-y-1/2 w-[220px] h-[220px] rounded-full"
             style={{ background: "radial-gradient(circle, oklch(0.72 0.14 235 / 0.12), transparent 60%)" }} />
 
 
@@ -505,9 +505,9 @@ function AuthPage() {
         {/* Base glow */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,oklch(0.52_0.19_258/0.09),transparent)]" />
         {/* Mesh blobs */}
-        <div className="absolute -top-[30%] -left-[20%] w-[70%] h-[70%] opacity-50 animate-mesh-grad"
+        <div className="absolute -top-[30%] -left-[20%] w-[70%] h-[70%] opacity-50"
           style={{ background: "radial-gradient(circle at 30% 50%, oklch(0.52 0.19 258 / 0.07), transparent 60%)" }} />
-        <div className="absolute -bottom-[30%] -right-[20%] w-[70%] h-[70%] opacity-50 animate-mesh-grad-alt"
+        <div className="absolute -bottom-[30%] -right-[20%] w-[70%] h-[70%] opacity-50"
           style={{ background: "radial-gradient(circle at 70% 50%, oklch(0.72 0.14 235 / 0.06), transparent 60%)" }} />
         {/* Dot grid */}
         <svg className="absolute inset-0 w-full h-full opacity-[0.02]" xmlns="http://www.w3.org/2000/svg">
@@ -707,7 +707,7 @@ function AuthPage() {
                       {/* Submit button */}
                       <div style={{ animation: 'slide-in-up 300ms cubic-bezier(0.22,1,0.36,1) both', animationDelay: '240ms' }}>
                         <button disabled={busy}
-                          className="relative w-full py-2.5 rounded-xl bg-gradient-to-r from-primary to-accent text-white text-sm font-display font-semibold tracking-wide shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 active:scale-[0.98] transition-all duration-300 disabled:opacity-50 overflow-hidden group/btn"
+                          className="relative w-full py-2.5 rounded-xl bg-gradient-to-br from-primary to-accent text-white text-sm font-display font-semibold tracking-wide shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 active:scale-[0.98] transition-all duration-300 disabled:opacity-50 overflow-hidden group/btn"
                         >
                           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700 ease-in-out" />
                           <div className="absolute inset-0 bg-white/[0.06] translate-y-full group-hover/btn:translate-y-0 transition-transform duration-500" />

@@ -775,7 +775,7 @@ function GiftCard({
           </div>
           <div className="h-2 rounded-full bg-black/10 dark:bg-white/10 overflow-hidden">
             <motion.div
-              className="h-full rounded-full bg-gradient-to-r from-primary to-accent"
+              className="h-full rounded-full bg-gradient-to-br from-primary to-accent"
               initial={false}
               animate={{ width: `${progress}%` }}
               transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}

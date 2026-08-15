@@ -744,7 +744,7 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
           <button onClick={onClose} className="h-8 px-2.5 rounded-md border border-border/50 bg-muted/50 text-foreground/70 hover:text-foreground hover:bg-muted/80 transition inline-flex items-center gap-1 text-xs font-semibold">
             <X size={15} />
           </button>
-          <button onClick={doSave} className="h-9 px-3.5 rounded-md bg-gradient-to-r from-primary to-accent text-primary-foreground hover:shadow-lg hover:shadow-primary/20 transition active:scale-[0.97] inline-flex items-center gap-1.5 text-sm font-semibold shadow-sm">
+          <button onClick={doSave} className="h-9 px-3.5 rounded-md bg-gradient-to-br from-primary to-accent text-primary-foreground hover:shadow-lg hover:shadow-primary/20 transition active:scale-[0.97] inline-flex items-center gap-1.5 text-sm font-semibold shadow-sm">
             <Save size={16} />
             <span className="hidden sm:inline">Publicar</span>
           </button>

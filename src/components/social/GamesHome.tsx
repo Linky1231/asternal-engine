@@ -88,7 +88,7 @@ export function GamesHome({
         <div className="text-xs text-muted-foreground max-w-xs mx-auto">
           Abre el editor y publica el primero.
         </div>
-        <Link to="/editor" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-primary to-accent text-primary-foreground text-xs font-display tracking-widest">
+        <Link to="/editor" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-xs font-display tracking-widest">
           ABRIR EDITOR
         </Link>
       </div>
@@ -284,7 +284,7 @@ function FeaturedBanner({ post, plays24, onPlay }: { post: PostWithMeta; plays24
           <>
             {/* Mesh profundo de marca (cobalto/violeta/cian): con foto o sin ella,
                 el banner siempre lleva la identidad de la app, nunca gris apagado. */}
-            <div className="absolute inset-0 mesh-bg-deep" />
+            <div className="absolute inset-0 grad-brand-deep" />
             {/* Marca de agua: icono de juego translúcido de fondo */}
             <div className="absolute inset-0 grid place-items-center">
               <Joystick size={150} strokeWidth={1} className="text-white/[0.13] drop-shadow-[0_12px_32px_rgba(0,0,0,0.35)]" />

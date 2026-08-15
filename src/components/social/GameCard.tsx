@@ -440,7 +440,7 @@ export function GameCard({
                 <button
                   onClick={confirmPurchase}
                   disabled={buyState === "loading" || (balance !== null && balance < price)}
-                  className="mt-4 w-full h-11 rounded-2xl bg-gradient-to-r from-primary to-accent text-primary-foreground font-display tracking-widest text-xs disabled:opacity-50 active:scale-[0.98] transition"
+                  className="mt-4 w-full h-11 rounded-2xl bg-gradient-to-br from-primary to-accent text-primary-foreground font-display tracking-widest text-xs disabled:opacity-50 active:scale-[0.98] transition"
                 >
                   {buyState === "loading" ? <Loader2 size={16} className="animate-spin mx-auto" /> : "CONFIRMAR COMPRA"}
                 </button>

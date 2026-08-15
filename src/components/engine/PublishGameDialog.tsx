@@ -249,7 +249,7 @@ export function PublishGameDialog({
                 <button key={g} type="button" onClick={() => setGenre(genre === g ? "" : g)}
                   className={`px-2.5 h-7 rounded-lg text-[10px] font-display tracking-wide transition active:scale-95 border ${
                     genre === g
-                      ? "border-transparent bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-sm"
+                      ? "border-transparent bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-sm"
                       : "border-border/60 bg-muted/30 text-muted-foreground hover:text-primary-glow hover:border-primary/30"
                   }`}>
                   {g}
@@ -306,7 +306,7 @@ export function PublishGameDialog({
             <button onClick={() => onOpenChange(false)} disabled={busy}
               className="px-4 py-2 rounded-xl border border-border text-xs font-display tracking-widest">CANCELAR</button>
             <button onClick={submit} disabled={busy || done}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-primary to-accent text-primary-foreground text-xs font-display tracking-widest flex items-center gap-2 active:scale-95 transition disabled:opacity-60">
+              className="px-4 py-2 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground text-xs font-display tracking-widest flex items-center gap-2 active:scale-95 transition disabled:opacity-60">
               {done ? <><CheckCircle2 size={14}/> {isEdit ? "GUARDADO" : "PUBLICADO"}</> : busy ? <><Loader2 size={14} className="animate-spin"/> …</> : <><Upload size={14}/> {isEdit ? "GUARDAR" : "PUBLICAR"}</>}
             </button>
           </div>

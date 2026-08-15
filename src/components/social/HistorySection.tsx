@@ -144,7 +144,7 @@ export function HistorySection() {
               {stats.last7.map((d, i) => (
                 <div key={i} className="flex-1 flex flex-col items-center gap-1 min-w-0">
                   <div
-                    className="w-full rounded-md bg-gradient-to-t from-primary/70 to-accent/70 transition-all hover:from-primary hover:to-accent"
+                    className="w-full rounded-md bg-primary/80 transition-colors hover:bg-primary"
                     style={{ height: `${Math.max(6, (d.seconds / max7) * 100)}%`, minHeight: 4 }}
                     title={formatPlayTime(d.seconds)}
                   />

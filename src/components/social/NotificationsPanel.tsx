@@ -154,7 +154,7 @@ export function NotificationsPanel({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-[90] bg-background flex flex-col">
       {/* Franja de identidad (mismo lenguaje que el chat) */}
-      <div className="h-[3px] shrink-0 bg-gradient-to-r from-primary to-accent" />
+      <div className="h-[3px] shrink-0 bg-gradient-to-br from-primary to-accent" />
 
       {/* Cabecera */}
       <header className="shrink-0 border-b border-border/60 bg-background/95 backdrop-blur-md px-3 sm:px-4 py-2.5 flex items-center gap-2.5">
@@ -210,7 +210,7 @@ export function NotificationsPanel({ onClose }: { onClose: () => void }) {
             {/* Progreso de leídas */}
             <div className="relative mt-3 h-1.5 rounded-full bg-black/10 dark:bg-white/10 overflow-hidden">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-primary to-accent transition-all duration-500"
+                className="h-full rounded-full bg-gradient-to-br from-primary to-accent transition-all duration-500"
                 style={{ width: `${readPct}%` }}
               />
             </div>
@@ -266,7 +266,7 @@ export function NotificationsPanel({ onClose }: { onClose: () => void }) {
                     <span className="text-[10px] font-mono text-muted-foreground/50 shrink-0">{share}%</span>
                   </div>
                   <div className="mt-1.5 h-1 rounded-full bg-muted/40 overflow-hidden">
-                    <div className="h-full rounded-full bg-gradient-to-r from-primary to-accent" style={{ width: `${share}%` }} />
+                    <div className="h-full rounded-full bg-gradient-to-br from-primary to-accent" style={{ width: `${share}%` }} />
                   </div>
                 </button>
               );
@@ -298,7 +298,7 @@ export function NotificationsPanel({ onClose }: { onClose: () => void }) {
               {last7.map((d, i) => (
                 <div key={i} className="flex-1 flex flex-col items-center gap-1 min-w-0">
                   <div
-                    className="w-full rounded-md bg-gradient-to-t from-primary/70 to-accent/70 transition-all hover:from-primary hover:to-accent"
+                    className="w-full rounded-md bg-primary/80 transition-colors hover:bg-primary"
                     style={{ height: `${Math.max(6, (d.count / max7) * 100)}%`, minHeight: 4 }}
                     title={`${d.label}: ${d.count} notificación${d.count !== 1 ? "es" : ""}`}
                   />

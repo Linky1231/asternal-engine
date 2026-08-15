@@ -283,7 +283,7 @@ function AdminPage() {
                         } catch (e) { setEvErr((e as Error).message); }
                       }}
                       disabled={!evTitle.trim() || !evDesc.trim() || !evStarts || !evEnds}
-                      className="w-full py-2.5 rounded-lg bg-gradient-to-r from-primary to-accent text-primary-foreground text-[10px] font-display tracking-widest disabled:opacity-50 flex items-center justify-center gap-1 active:scale-[0.98] transition shadow-sm shadow-primary/25">
+                      className="w-full py-2.5 rounded-lg bg-gradient-to-br from-primary to-accent text-primary-foreground text-[10px] font-display tracking-widest disabled:opacity-50 flex items-center justify-center gap-1 active:scale-[0.98] transition shadow-sm shadow-primary/25">
                       <Trophy size={12}/> CREAR EVENTO
                     </button>
                   </div>
@@ -387,7 +387,7 @@ function AdminPage() {
                       <X size={13} />
                     </button>
                     <button onClick={handleNewCategory} disabled={!catName.trim()}
-                      className="px-4 py-2 rounded-lg bg-gradient-to-r from-primary to-accent text-primary-foreground text-[10px] font-display tracking-wider disabled:opacity-40 active:scale-95 transition shadow-sm shadow-primary/25">
+                      className="px-4 py-2 rounded-lg bg-gradient-to-br from-primary to-accent text-primary-foreground text-[10px] font-display tracking-wider disabled:opacity-40 active:scale-95 transition shadow-sm shadow-primary/25">
                       <Check size={13} />
                     </button>
                   </div>

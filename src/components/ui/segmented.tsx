@@ -93,7 +93,7 @@ export function SegmentedControl<T extends string>({
       })}
       <div
         aria-hidden
-        className={`absolute top-0.5 bottom-0.5 rounded-[10px] bg-gradient-to-r from-primary to-accent shadow-sm transition-transform duration-300 ease-out will-change-transform ${pillClassName}`}
+        className={`absolute top-0.5 bottom-0.5 rounded-[10px] bg-gradient-to-br from-primary to-accent shadow-sm transition-transform duration-300 ease-out will-change-transform ${pillClassName}`}
         style={{
           left: 0,
           width: pill?.width ?? 0,

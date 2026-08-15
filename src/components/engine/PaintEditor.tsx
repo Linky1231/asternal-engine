@@ -709,7 +709,7 @@ export function PaintEditor({ onSave, onClose, size: initialSize = 512 }: Props)
   const [toolsExpanded, setToolsExpanded] = useState(true);
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col" style={{ background: "var(--gradient-deep)" }}>
+    <div className="fixed inset-0 z-50 flex flex-col" style={{ background: "var(--canvas)" }}>
       {/* Top bar */}
       <div
         className="flex items-center justify-between px-3 py-2 border-b border-border gap-2 shrink-0"

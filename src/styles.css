@@ -110,10 +110,11 @@
   --shadow-glow: 0 10px 30px -12px oklch(0.53 0.22 262 / 0.4), 0 4px 18px -8px oklch(0.63 0.14 210 / 0.35);
 
   /* ── Degradados oficiales (DESIGN.md §2.2) ── */
-  --gradient-asternal: linear-gradient(120deg, oklch(0.44 0.24 268) 0%, oklch(0.53 0.22 262) 38%, oklch(0.62 0.2 258) 66%, oklch(0.68 0.14 235) 100%);
-  --gradient-cyber: linear-gradient(135deg, oklch(0.49 0.21 264), oklch(0.62 0.2 258));
-  --gradient-deep: linear-gradient(180deg, oklch(0.972 0.006 252) 0%, oklch(0.965 0.008 250) 55%, oklch(0.955 0.012 247) 100%);
-  --gradient-hero: linear-gradient(120deg, oklch(0.44 0.24 268) 0%, oklch(0.55 0.22 262) 48%, oklch(0.62 0.2 258) 78%, oklch(0.72 0.12 225) 100%);
+  /* ÚNICO degradado de marca (DESIGN.md §2.2): 135° cobalto → azur. */
+  --gradient-asternal: linear-gradient(135deg, oklch(0.44 0.24 268) 0%, oklch(0.53 0.22 262) 48%, oklch(0.66 0.15 240) 100%);
+  /* Variantes del MISMO degradado: diluido (acentos de fondo) y oscuro (banner destacado). */
+  --gradient-asternal-soft: linear-gradient(135deg, oklch(0.44 0.24 268 / 0.1), oklch(0.53 0.22 262 / 0.08) 48%, oklch(0.66 0.15 240 / 0.06));
+  --gradient-asternal-deep: linear-gradient(135deg, oklch(0.31 0.16 268) 0%, oklch(0.39 0.18 262) 48%, oklch(0.47 0.14 235) 100%);
 
   /* Asternal Plus — azul cian (logo gota+cruz) */
   --plus: oklch(0.62 0.12 220);
@@ -164,21 +165,9 @@
   --destructive-foreground: oklch(0.99 0 0);
   --success: oklch(0.62 0.17 155);
   --warn: oklch(0.75 0.16 80);
-  --gradient-asternal: linear-gradient(120deg, oklch(0.44 0.24 268) 0%, oklch(0.53 0.22 262) 38%, oklch(0.62 0.2 258) 66%, oklch(0.68 0.14 235) 100%);
-  --gradient-deep: linear-gradient(180deg, oklch(0.972 0.006 252) 0%, oklch(0.965 0.008 250) 55%, oklch(0.955 0.012 247) 100%);
-  --gradient-mesh:
-    radial-gradient(120% 90% at 8% 4%, oklch(0.84 0.1 262 / 0.55) 0%, transparent 55%),
-    radial-gradient(90% 80% at 92% 8%, oklch(0.86 0.09 300 / 0.45) 0%, transparent 55%),
-    radial-gradient(120% 90% at 82% 96%, oklch(0.85 0.09 205 / 0.5) 0%, transparent 55%),
-    radial-gradient(70% 60% at 40% 70%, oklch(0.9 0.05 258 / 0.35) 0%, transparent 60%),
-    linear-gradient(135deg, #ffffff 0%, oklch(0.965 0.01 256) 100%);
-  /* Mesh profundo de marca (cobalto/violeta/cian) para el banner destacado sin portada. */
-  --gradient-mesh-deep:
-    radial-gradient(120% 90% at 8% 0%, oklch(0.56 0.22 268 / 0.95) 0%, transparent 55%),
-    radial-gradient(100% 90% at 95% 6%, oklch(0.58 0.2 300 / 0.8) 0%, transparent 55%),
-    radial-gradient(120% 100% at 85% 100%, oklch(0.55 0.18 225 / 0.9) 0%, transparent 60%),
-    radial-gradient(80% 70% at 25% 85%, oklch(0.48 0.2 280 / 0.75) 0%, transparent 60%),
-    linear-gradient(135deg, oklch(0.33 0.16 270) 0%, oklch(0.4 0.19 258) 55%, oklch(0.46 0.16 240) 100%);
+  --gradient-asternal: linear-gradient(135deg, oklch(0.44 0.24 268) 0%, oklch(0.53 0.22 262) 48%, oklch(0.66 0.15 240) 100%);
+  --gradient-asternal-soft: linear-gradient(135deg, oklch(0.44 0.24 268 / 0.1), oklch(0.53 0.22 262 / 0.08) 48%, oklch(0.66 0.15 240 / 0.06));
+  --gradient-asternal-deep: linear-gradient(135deg, oklch(0.31 0.16 268) 0%, oklch(0.39 0.18 262) 48%, oklch(0.47 0.14 235) 100%);
   --shadow-xs: 0 1px 2px 0 oklch(0.2 0.02 260 / 0.05);
   --shadow-sm: 0 1px 3px 0 oklch(0 0 0 / 0.06), 0 1px 2px -1px oklch(0 0 0 / 0.06);
   --shadow-md: 0 4px 12px -2px oklch(0 0 0 / 0.08), 0 2px 4px -2px oklch(0 0 0 / 0.04);
@@ -202,7 +191,7 @@
   }
 
   body {
-    background: var(--gradient-deep);
+    background: var(--canvas);
     color: var(--color-foreground);
     font-family: var(--font-sans);
     font-feature-settings: "ss01", "cv11";
@@ -388,12 +377,22 @@
 /* ============ Refinamiento visual blanco (mesh + grano + tiles) ============ */
 
 /* Mesh orgánico: cobalto, cian y violeta suaves sobre blanco (banner destacado). */
-.mesh-bg {
-  background-image: var(--gradient-mesh);
+/* Un solo tipo de degradado: el oficial de Asternal en sus tres intensidades. */
+.grad-brand {
+  background-image: var(--gradient-asternal);
+}
+.grad-brand-soft {
+  background-image: var(--gradient-asternal-soft);
+}
+.grad-brand-deep {
+  background-image: var(--gradient-asternal-deep);
 }
 
-.mesh-bg-deep {
-  background-image: var(--gradient-mesh-deep);
+/* Un solo degradado: cualquier bg-gradient-to-r residual (botones, chips,
+   franjas de identidad) se fuerza a la diagonal 135° del oficial (to bottom
+   right). Los fades verticales neutros (to-b / to-t) no se tocan. */
+.bg-gradient-to-r {
+  --tw-gradient-position: to bottom right in oklab;
 }
 
 /* ============ Banner destacado: azul de marca + animación «mejor juego» ============ */
@@ -461,7 +460,7 @@
   background:
     linear-gradient(var(--grid) 1px, transparent 1px),
     linear-gradient(90deg, var(--grid) 1px, transparent 1px),
-    linear-gradient(155deg, oklch(0.995 0.003 260) 0%, oklch(0.965 0.012 254) 55%, oklch(0.95 0.022 250) 100%);
+    var(--gradient-asternal-soft);
   background-size: 24px 24px, 24px 24px, 100% 100%;
   border: 1px solid oklch(0.87 0.018 255 / 0.7);
   box-shadow: var(--shadow-float);
@@ -798,16 +797,6 @@
   50%      { transform: translateY(-4px) rotate(-2deg); }
   75%      { transform: translateY(-14px) rotate(3deg); }
 }
-@keyframes mesh-grad {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33%      { transform: translate(5%, 3%) scale(1.05); }
-  66%      { transform: translate(-3%, -2%) scale(0.98); }
-}
-@keyframes mesh-grad-alt {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33%      { transform: translate(-4%, 2%) scale(0.97); }
-  66%      { transform: translate(3%, -3%) scale(1.04); }
-}
 @keyframes shimmer-border {
   0%   { background-position: 0% 50%; }
   50%  { background-position: 100% 50%; }
@@ -827,12 +816,6 @@
   100% { background-position: 200% 50%; }
 }
 
-.animate-mesh-grad {
-  animation: mesh-grad 12s ease-in-out infinite;
-}
-.animate-mesh-grad-alt {
-  animation: mesh-grad-alt 15s ease-in-out infinite;
-}
 .animate-shimmer-border {
   animation: shimmer-border 6s ease-in-out infinite;
 }
@@ -923,8 +906,6 @@
 
 /* ============ Rendimiento: reduce motion ============ */
 @media (prefers-reduced-motion: reduce) {
-  .animate-mesh-grad,
-  .animate-mesh-grad-alt,
   .banner-shine,
   .banner-glow,
   .badge-glow,
