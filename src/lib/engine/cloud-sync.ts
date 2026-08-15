@@ -53,6 +53,50 @@ function existsLocalWithCloud(cloudId: string): boolean {
   } catch { return false; }
 }
 
+/**
+ * ¿Es el proyecto por defecto que storage crea automáticamente en un
+ * dispositivo nuevo ("Untitled Game" sin escenas tocadas ni sprites)?
+ * Estos no deben subirse a la nube (crearían duplicados vacíos) y, cuando la
+ * cuenta tiene proyectos, conviene cambiarse al proyecto real de la nube.
+ */
+function isPristineDefault(p: Project | null): boolean {
+  if (!p) return true;
+  if (p.name !== "Untitled Game") return false;
+  const hasEntities = (p.scenes ?? []).some(s => (s.entities ?? []).length > 0);
+  if (hasEntities) return false;
+  if ((p.assets?.sprites?.length ?? 0) > 0) return false;
+  return true;
+}
+
+/**
+ * Si el proyecto actual es el "Untitled Game" vacío recién creado (dispositivo
+ * nuevo / sesión nueva), cambia al proyecto de la nube más reciente de la
+ * cuenta — importándolo localmente si aún no existe — para que el editor abra
+ * el juego real (con sus imágenes) en lugar de uno vacío. Devuelve el id local
+ * activado o null.
+ */
+export async function activateCloudProjectIfBlank(): Promise<string | null> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+    const curId = getCurrentProjectId();
+    const cur = loadProjectById(curId);
+    if (!cur || !isPristineDefault(cur)) return null;
+    // cloudListProjects ya viene ordenado por updated_at desc.
+    const list = await cloudListProjects();
+    if (!list.length) return null;
+    const best = list[0];
+    let localId = listProjects().find(m => m.cloudId === best.id)?.id;
+    if (!localId) {
+      localId = createProject(best.name);
+      saveProjectById(localId, best.data as Project);
+      setProjectCloudId(localId, best.id);
+    }
+    setCurrentProjectId(localId);
+    return localId;
+  } catch { return null; }
+}
+
 export async function fetchCloudProjects(): Promise<CloudProject[]> {
   return cloudListProjects();
 }
@@ -123,11 +167,14 @@ export async function syncAllProjects(): Promise<{ pushed: number; imported: num
   if (!user) return { pushed: 0, imported: 0 };
 
   // 1) Subir proyectos locales que todavía no están respaldados en la nube.
+  // Se saltan los "Untitled Game" vacíos que storage crea automáticamente en
+  // cada dispositivo: subirlos solo llenaría la nube de duplicados vacíos.
   let pushed = 0;
   for (const m of listProjects()) {
     if (getProjectCloudId(m.id)) continue; // ya respaldado
     const p = loadProjectById(m.id);
     if (!p) continue;
+    if (isPristineDefault(p)) continue;
     try {
       const saved = await cloudSaveProject({ id: undefined, name: p.name || m.name, data: p });
       setProjectCloudId(m.id, saved.id);
@@ -151,7 +198,11 @@ export async function syncAllProjects(): Promise<{ pushed: number; imported: num
       setProjectCloudId(localId, c.id);
       imported++;
     }
-    if (prevCurrent) setCurrentProjectId(prevCurrent);
+    // En un dispositivo nuevo el proyecto actual es el "Untitled Game" vacío.
+    // Si sigue sin tocar, activa el proyecto de la nube más reciente para que
+    // el editor abra el juego real (con sus imágenes/sprites) y no uno vacío.
+    const activated = await activateCloudProjectIfBlank();
+    if (prevCurrent && !activated) setCurrentProjectId(prevCurrent);
   } catch {
     /* esquema sin crear / red caída: no se importa nada */
   }

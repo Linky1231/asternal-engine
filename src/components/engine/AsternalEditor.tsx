@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Settings, Layers, Copy, X, Eye, EyeOff, Lock, Unlock, ArrowUp, ArrowDown, ChevronsUp, ChevronsDown, Trash2, Merge, Plus, Upload, Home, FolderOpen, MousePointer2, Boxes, Square, Flower2, CircleDollarSign, Triangle, Target, PersonStanding, Eraser, SlidersHorizontal, PanelsTopLeft, Image as ImageIcon, Layers3, Play, LibraryBig } from "lucide-react";
-import { schedulePushToCloud, scheduleAssetLibraryPush, pullAssetLibraryFromCloud } from "@/lib/engine/cloud-sync";
+import { schedulePushToCloud, scheduleAssetLibraryPush, pullAssetLibraryFromCloud, activateCloudProjectIfBlank } from "@/lib/engine/cloud-sync";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "@tanstack/react-router";
 import { PublishGameDialog } from "./PublishGameDialog";
@@ -112,6 +112,20 @@ export function AsternalEditor() {
         } else if (local.length > 0) {
           // La cuenta no tenía biblioteca: respalda la local por primera vez.
           scheduleAssetLibraryPush(local);
+        }
+        // Dispositivo nuevo: si el proyecto actual es el "Untitled Game" vacío
+        // que crea storage, activa el proyecto de la nube más reciente para que
+        // el editor abra el juego real (con sus imágenes) en lugar de uno vacío.
+        const activatedId = await activateCloudProjectIfBlank();
+        if (cancelled) return;
+        if (activatedId) {
+          const p = loadProjectById(activatedId);
+          if (p) {
+            p.scenes = p.scenes.map(s => ensureSceneLayers(s));
+            setProjectId(activatedId);
+            setProject(p);
+            setSelectedId(null);
+          }
         }
       } catch { /* noop */ }
     })();
