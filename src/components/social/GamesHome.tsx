@@ -276,15 +276,17 @@ function FeaturedBanner({ post, plays24, onPlay }: { post: PostWithMeta; plays24
   const title = extractTitle(post.content);
   const active = plays24 && plays24 > 0 ? plays24 : 1 + Math.floor((post.likes + post.comments_count) * 1.3);
   return (
-    <div className="relative rounded-3xl overflow-hidden border border-primary/30 shadow-lg">
+    <div className="relative rounded-3xl overflow-hidden border border-white/70 shadow-[0_24px_60px_-24px_oklch(0.45_0.24_268/0.5)]">
       <div className="relative aspect-[16/10] w-full md:aspect-[21/9]">
         {post.signed_cover ? (
           <img src={post.signed_cover} alt={title} className="absolute inset-0 w-full h-full object-cover" />
         ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/40 to-accent/40" />
+          <div className="absolute inset-0 mesh-bg" />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/10" />
-        <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 h-6 rounded-full bg-primary/90 text-primary-foreground text-[10px] font-display tracking-widest">
+        {/* Textura de grano sutil sobre el degradado: nunca plano, nunca “de algoritmo”. */}
+        <div className="absolute inset-0 pointer-events-none noise-overlay opacity-[0.16] mix-blend-overlay" />
+        <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 h-6 rounded-full bg-primary/90 text-primary-foreground text-[10px] font-display tracking-widest ring-1 ring-white/30 ring-inset shadow-[0_6px_16px_-6px_oklch(0.2_0.04_262/0.6)]">
           <Flame size={11} fill="currentColor" /> DESTACADO
         </div>
       </div>
@@ -298,7 +300,7 @@ function FeaturedBanner({ post, plays24, onPlay }: { post: PostWithMeta; plays24
         <div className="flex items-center gap-2">
           <button
             onClick={onPlay}
-            className="flex-1 h-11 rounded-xl bg-white text-primary font-display tracking-widest text-xs flex items-center justify-center gap-2 active:scale-95 transition shadow-md"
+            className="flex-1 h-11 rounded-xl bg-white text-primary font-display tracking-widest text-xs flex items-center justify-center gap-2 active:scale-95 transition shadow-[0_12px_28px_-10px_oklch(0.2_0.04_262/0.45)]"
           >
             <Play size={16} fill="currentColor" /> JUGAR
           </button>

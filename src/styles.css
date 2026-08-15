@@ -46,9 +46,9 @@
   --color-success: var(--success);
   --color-warn: var(--warn);
 
-  --font-display: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif;
+  --font-display: "Space Grotesk", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif;
   --font-sans: "SF Pro Text", -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif;
-  --font-mono: "SF Mono", ui-monospace, "JetBrains Mono", monospace;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
 }
 
 :root {
@@ -70,11 +70,13 @@
   --popover-foreground: var(--ink);
 
   /* ── Azul Asternal ── */
-  --primary: oklch(0.52 0.19 258);
+  --primary: oklch(0.53 0.22 262);
   --primary-foreground: oklch(0.99 0 0);
-  --primary-glow: oklch(0.62 0.17 252);
-  --blue-600: oklch(0.42 0.21 264);
-  --azure: oklch(0.64 0.14 240);
+  --primary-glow: oklch(0.62 0.2 258);
+  --blue-600: oklch(0.44 0.24 268);
+  --azure: oklch(0.66 0.15 240);
+  --violet-accent: oklch(0.6 0.21 300);
+  --cyan-accent: oklch(0.7 0.13 205);
   --accent: var(--azure);
   --accent-foreground: oklch(0.25 0.03 260);
 
@@ -85,10 +87,10 @@
   --muted-foreground: oklch(0.52 0.024 256);
 
   /* ── Líneas y estados ── */
-  --line: oklch(0.905 0.011 252);
-  --line-strong: oklch(0.84 0.016 252);
+  --line: oklch(0.9 0.012 252 / 0.6);
+  --line-strong: oklch(0.83 0.016 252 / 0.75);
   --border: var(--line);
-  --input: oklch(0.92 0.008 252);
+  --input: oklch(0.92 0.008 252 / 0.7);
   --ring: oklch(0.52 0.19 258 / 0.35);
   --grid: oklch(0.87 0.01 252 / 0.4);
   --destructive: oklch(0.577 0.215 25);
@@ -103,11 +105,15 @@
   --shadow-lg: 0 12px 28px -8px oklch(0 0 0 / 0.10), 0 4px 12px -4px oklch(0 0 0 / 0.06);
   --shadow-xl: 0 20px 44px -12px oklch(0 0 0 / 0.14);
 
+  /* Sombras de color (elementos flotando sobre el lienzo blanco) */
+  --shadow-float: 0 18px 44px -18px oklch(0.45 0.22 268 / 0.45);
+  --shadow-glow: 0 10px 30px -12px oklch(0.53 0.22 262 / 0.4), 0 4px 18px -8px oklch(0.6 0.21 300 / 0.3);
+
   /* ── Degradados oficiales (DESIGN.md §2.2) ── */
-  --gradient-asternal: linear-gradient(135deg, oklch(0.42 0.21 264) 0%, oklch(0.52 0.19 258) 48%, oklch(0.64 0.14 240) 100%);
-  --gradient-cyber: linear-gradient(135deg, oklch(0.49 0.19 258), oklch(0.62 0.15 244));
+  --gradient-asternal: linear-gradient(120deg, oklch(0.44 0.24 268) 0%, oklch(0.53 0.22 262) 38%, oklch(0.62 0.2 258) 66%, oklch(0.68 0.14 235) 100%);
+  --gradient-cyber: linear-gradient(135deg, oklch(0.49 0.21 264), oklch(0.62 0.2 258));
   --gradient-deep: linear-gradient(180deg, oklch(0.972 0.006 252) 0%, oklch(0.965 0.008 250) 55%, oklch(0.955 0.012 247) 100%);
-  --gradient-hero: linear-gradient(135deg, oklch(0.49 0.19 258) 0%, oklch(0.62 0.15 244) 55%, oklch(0.78 0.09 230) 100%);
+  --gradient-hero: linear-gradient(120deg, oklch(0.44 0.24 268) 0%, oklch(0.55 0.22 262) 48%, oklch(0.62 0.2 258) 78%, oklch(0.72 0.12 225) 100%);
 
   /* Asternal Plus — azul cian (logo gota+cruz) */
   --plus: oklch(0.62 0.12 220);
@@ -135,33 +141,43 @@
   --surface-2: oklch(0.95 0.008 252);
   --popover: oklch(1 0 0);
   --popover-foreground: var(--ink);
-  --primary: oklch(0.52 0.19 258);
+  --primary: oklch(0.53 0.22 262);
   --primary-foreground: oklch(0.99 0 0);
-  --primary-glow: oklch(0.62 0.17 252);
-  --blue-600: oklch(0.42 0.21 264);
-  --azure: oklch(0.64 0.14 240);
+  --primary-glow: oklch(0.62 0.2 258);
+  --blue-600: oklch(0.44 0.24 268);
+  --azure: oklch(0.66 0.15 240);
+  --violet-accent: oklch(0.6 0.21 300);
+  --cyan-accent: oklch(0.7 0.13 205);
   --accent: var(--azure);
   --accent-foreground: oklch(0.25 0.03 260);
   --secondary: var(--surface-2);
   --secondary-foreground: oklch(0.27 0.03 256);
   --muted: var(--surface-2);
   --muted-foreground: oklch(0.52 0.024 256);
-  --line: oklch(0.905 0.011 252);
-  --line-strong: oklch(0.84 0.016 252);
+  --line: oklch(0.9 0.012 252 / 0.6);
+  --line-strong: oklch(0.83 0.016 252 / 0.75);
   --border: var(--line);
-  --input: oklch(0.92 0.008 252);
+  --input: oklch(0.92 0.008 252 / 0.7);
   --ring: oklch(0.52 0.19 258 / 0.35);
   --grid: oklch(0.87 0.01 252 / 0.4);
   --destructive: oklch(0.577 0.215 25);
   --destructive-foreground: oklch(0.99 0 0);
   --success: oklch(0.62 0.17 155);
   --warn: oklch(0.75 0.16 80);
-  --gradient-asternal: linear-gradient(135deg, oklch(0.42 0.21 264) 0%, oklch(0.52 0.19 258) 48%, oklch(0.64 0.14 240) 100%);
+  --gradient-asternal: linear-gradient(120deg, oklch(0.44 0.24 268) 0%, oklch(0.53 0.22 262) 38%, oklch(0.62 0.2 258) 66%, oklch(0.68 0.14 235) 100%);
   --gradient-deep: linear-gradient(180deg, oklch(0.972 0.006 252) 0%, oklch(0.965 0.008 250) 55%, oklch(0.955 0.012 247) 100%);
+  --gradient-mesh:
+    radial-gradient(120% 90% at 8% 4%, oklch(0.84 0.1 262 / 0.55) 0%, transparent 55%),
+    radial-gradient(90% 80% at 92% 8%, oklch(0.86 0.09 300 / 0.45) 0%, transparent 55%),
+    radial-gradient(120% 90% at 82% 96%, oklch(0.85 0.09 205 / 0.5) 0%, transparent 55%),
+    radial-gradient(70% 60% at 40% 70%, oklch(0.9 0.05 258 / 0.35) 0%, transparent 60%),
+    linear-gradient(135deg, #ffffff 0%, oklch(0.965 0.01 256) 100%);
   --shadow-xs: 0 1px 2px 0 oklch(0.2 0.02 260 / 0.05);
   --shadow-sm: 0 1px 3px 0 oklch(0 0 0 / 0.06), 0 1px 2px -1px oklch(0 0 0 / 0.06);
   --shadow-md: 0 4px 12px -2px oklch(0 0 0 / 0.08), 0 2px 4px -2px oklch(0 0 0 / 0.04);
   --shadow-lg: 0 12px 28px -8px oklch(0 0 0 / 0.10), 0 4px 12px -4px oklch(0 0 0 / 0.06);
+  --shadow-float: 0 18px 44px -18px oklch(0.45 0.22 268 / 0.45);
+  --shadow-glow: 0 10px 30px -12px oklch(0.53 0.22 262 / 0.4), 0 4px 18px -8px oklch(0.6 0.21 300 / 0.3);
 }
 
 @layer base {
@@ -207,8 +223,8 @@
 
   h1, h2, h3, h4, .font-display {
     font-family: var(--font-display);
-    letter-spacing: -0.022em;
-    font-weight: 600;
+    letter-spacing: -0.03em;
+    font-weight: 700;
   }
 
   /* Focus visible global (accesibilidad, DESIGN.md §9). */
@@ -260,17 +276,18 @@
 }
 .btn-grad:hover {
   filter: brightness(1.07);
-  box-shadow: 0 4px 16px -6px oklch(0.52 0.19 258 / 0.5);
+  box-shadow: var(--shadow-glow);
 }
 .btn-grad:active {
   transform: scale(0.97);
 }
 
 /* Micro-label consistente de sección (una vez por bloque). */
+/* Micro-label de sección: mono + mayúsculas (contraste con los títulos display). */
 @utility section-label {
-  font-family: var(--font-display);
-  font-size: 11px;
-  letter-spacing: 0.09em;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.13em;
   text-transform: uppercase;
   color: var(--color-muted-foreground);
   display: inline-flex;
@@ -359,6 +376,35 @@
     linear-gradient(var(--color-grid) 1px, transparent 1px),
     linear-gradient(90deg, var(--color-grid) 1px, transparent 1px);
   background-size: 28px 28px;
+}
+
+/* ============ Refinamiento visual blanco (mesh + grano + tiles) ============ */
+
+/* Mesh orgánico: cobalto, cian y violeta suaves sobre blanco (banner destacado). */
+.mesh-bg {
+  background-image: var(--gradient-mesh);
+}
+
+/* Textura de grano sutil sobre degradados (nunca se ve plano ni "de algoritmo"). */
+.noise-overlay {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='140' height='140' filter='url(%23n)'/></svg>");
+  background-size: 140px 140px;
+}
+
+/* Tile de juego sin portada: blueprint sobre blanco + borde brillante fino y
+   sombra de color difusa (reemplaza el recuadro celeste con el icono genérico). */
+.tile-blueprint {
+  background:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px),
+    linear-gradient(155deg, oklch(0.995 0.003 260) 0%, oklch(0.965 0.012 254) 55%, oklch(0.95 0.022 250) 100%);
+  background-size: 24px 24px, 24px 24px, 100% 100%;
+  border: 1px solid oklch(0.87 0.018 255 / 0.7);
+  box-shadow: var(--shadow-float);
+}
+.tile-blueprint:hover {
+  border-color: oklch(0.55 0.2 262 / 0.45);
+  box-shadow: var(--shadow-glow);
 }
 
 @utility glass {
