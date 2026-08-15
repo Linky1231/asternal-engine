@@ -3098,7 +3098,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
           <button
             onClick={() => void (pendingMedia ? sendPendingMedia() : handleSend())}
             disabled={!draft.trim() && !pendingMedia}
-            className="w-10 h-10 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground grid place-items-center active:scale-95 transition shrink-0 disabled:opacity-40 disabled:active:scale-100 shadow-[0_4px_14px_-4px_oklch(0.52_0.19_258/0.5)]"
+            className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground grid place-items-center active:scale-95 transition shrink-0 disabled:opacity-40 disabled:active:scale-100 shadow-[0_4px_12px_-5px_oklch(0.55_0.22_258/0.5)]"
           >
             <Send size={15} />
           </button>
