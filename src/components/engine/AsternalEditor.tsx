@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { Settings, Layers, Copy, Star, X, Eye, EyeOff, Lock, Unlock, ArrowUp, ArrowDown, ChevronsUp, ChevronsDown, Trash2, Merge, Plus, Upload, Home, FolderOpen, MousePointer2, Boxes, Square, Flower2, CircleDollarSign, Triangle, Target, PersonStanding, Eraser, SlidersHorizontal, PanelsTopLeft, Image as ImageIcon, Layers3, Play, LibraryBig } from "lucide-react";
+import { Settings, Layers, Copy, X, Eye, EyeOff, Lock, Unlock, ArrowUp, ArrowDown, ChevronsUp, ChevronsDown, Trash2, Merge, Plus, Upload, Home, FolderOpen, MousePointer2, Boxes, Square, Flower2, CircleDollarSign, Triangle, Target, PersonStanding, Eraser, SlidersHorizontal, PanelsTopLeft, Image as ImageIcon, Layers3, Play, LibraryBig } from "lucide-react";
 import { schedulePushToCloud } from "@/lib/engine/cloud-sync";
 import { Link } from "@tanstack/react-router";
 import { PublishGameDialog } from "./PublishGameDialog";
@@ -308,7 +308,7 @@ export function AsternalEditor() {
                     updateScene({ ...activeScene, entities: [...activeScene.entities, copy] });
                     setSelectedId(copy.id);
                   }}
-                  className="pointer-events-auto w-11 h-11 rounded-xl bg-card border border-line-strong shadow-md text-ink-2 hover:text-primary hover:border-primary/40 active:scale-90 transition"
+                  className="pointer-events-auto w-11 h-11 rounded-xl bg-card border border-line-strong shadow-md text-ink-2 hover:text-primary hover:border-primary/40 active:scale-90 transition grid place-items-center"
                   title="Duplicar asset (Ctrl+D)"
                   aria-label="Duplicar"
                 ><Copy size={18} /></button>
@@ -325,7 +325,7 @@ export function AsternalEditor() {
               ><Layers size={18} /></button>
               <button
                 onClick={() => setLibraryOpen(true)}
-                className="pointer-events-auto w-11 h-11 rounded-xl bg-card border border-line-strong shadow-md text-ink-2 hover:text-primary hover:border-primary/40 active:scale-90 transition"
+                className="pointer-events-auto w-11 h-11 rounded-xl bg-card border border-line-strong shadow-md text-ink-2 hover:text-primary hover:border-primary/40 active:scale-90 transition grid place-items-center"
                 title={t("library.title")}
                 aria-label="Librería de assets"
               ><LibraryBig size={18} /></button>
