@@ -335,7 +335,7 @@ function HomePage() {
                       );
                     }
                     return filtered.map((p, i) => (
-                      <div key={p.id} className="card-enter" style={{ animationDelay: `${Math.min(i * 25, 180)}ms` }}>
+                      <div key={p.id} className="card-enter mb-3 last:mb-0" style={{ animationDelay: `${Math.min(i * 25, 180)}ms` }}>
                         <PostCard post={p} myId={myId} isMod={mod} onChange={onFeedChange} />
                       </div>
                     ));

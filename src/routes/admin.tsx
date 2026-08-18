@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   isMod, isAdmin, listManagedUsers, setUserModerator, type ManagedUser,
   listBannedEmails, banEmail, unbanEmail, type BannedEmail,
+  getTrustPoints, deductTrustPoints, restoreTrustPoints, DEFAULT_TRUST_POINTS,
 } from "@/lib/social/api";
 import {
   getForumThreads, getForumCategories, deleteForumThread,
@@ -43,6 +44,9 @@ function AdminPage() {
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
+  const [trustBusy, setTrustBusy] = useState<string | null>(null);
+  const [trustDeductAmt, setTrustDeductAmt] = useState<Record<string, number>>({});
+  const [trustReason, setTrustReason] = useState<Record<string, string>>({});
   const [newEmail, setNewEmail] = useState("");
   const [newReason, setNewReason] = useState("");
   const [banErr, setBanErr] = useState<string | null>(null);
@@ -115,6 +119,28 @@ function AdminPage() {
     if (!confirm("¿Quitar del baneo?")) return;
     setBusy(id);
     try { await unbanEmail(id); await load(); } finally { setBusy(null); }
+
+  const deductTrust = async (userId: string, username: string) => {
+    const amt = trustDeductAmt[userId] || 1;
+    const reason = trustReason[userId]?.trim() || "Sin razón especificada";
+    if (!confirm(`¿Quitar ${amt} punto(s) de confianza a @${username}?
+Razón: ${reason}`)) return;
+    setTrustBusy(userId);
+    try {
+      const result = await deductTrustPoints(userId, amt, reason);
+      if (result.banned) alert(`@${username} alcanzó 0 puntos y fue baneado.`);
+      setTrustDeductAmt(prev => ({ ...prev, [userId]: 1 }));
+      setTrustReason(prev => ({ ...prev, [userId]: "" }));
+      await load(q);
+    } catch (e) { alert((e as Error).message); }
+    finally { setTrustBusy(null); }
+  };
+
+  const restoreTrust = async (userId: string) => {
+    setTrustBusy(userId);
+    try { await restoreTrustPoints(userId, 1); await load(q); }
+    catch (e) { alert((e as Error).message); }
+    finally { setTrustBusy(null); }
   };
 
   const handleDeleteThread = (threadId: string) => {
@@ -199,7 +225,7 @@ function AdminPage() {
           ) : users.length === 0 ? (
             <div className="text-center text-xs text-muted-foreground py-10">Sin resultados.</div>
           ) : users.map(u => (
-            <div key={u.id} className="panel border border-border/50 rounded-xl px-3 py-2.5 flex items-center gap-3">
+            <div key={u.id} className="panel border border-border/50 rounded-xl px-3 py-2.5 space-y-2">
               <Link
                 to="/profile/$userId" params={{ userId: u.id }}
                 className="flex items-center gap-3 flex-1 min-w-0 group"
@@ -220,104 +246,27 @@ function AdminPage() {
                   {u.is_mod ? "MOD" : "HACER MOD"}
                 </button>
               )}
+              {/* Trust Points */}
+              <div className="flex items-center gap-2 pt-2 border-t border-border/30">
+                <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold ${(u.trust_points ?? 10) <= 3 ? "bg-red-50 text-red-600 border border-red-200/60" : (u.trust_points ?? 10) <= 6 ? "bg-amber-50 text-amber-600 border border-amber-200/60" : "bg-emerald-50 text-emerald-600 border border-emerald-200/60"}`}>
+                  <div className={`w-1.5 h-1.5 rounded-full ${(u.trust_points ?? 10) <= 3 ? "bg-red-500" : (u.trust_points ?? 10) <= 6 ? "bg-amber-500" : "bg-emerald-500"}`} />
+                  {u.trust_points ?? 10} pts
+                </div>
+                <input type="number" min={1} max={10} value={trustDeductAmt[u.id] || 1}
+                  onChange={e => setTrustDeductAmt(prev => ({ ...prev, [u.id]: Math.max(1, Math.min(10, parseInt(e.target.value) || 1)) }))}
+                  className="w-10 h-6 px-1 rounded bg-card border border-border/50 text-[10px] text-center font-mono outline-none focus:border-primary/40"
+                />
+                <input value={trustReason[u.id] || ""} onChange={e => setTrustReason(prev => ({ ...prev, [u.id]: e.target.value }))}
+                  placeholder="Razon..."
+                  className="flex-1 h-6 px-2 rounded bg-card border border-border/50 text-[10px] outline-none focus:border-primary/40 placeholder:text-muted-foreground/30"
+                />
+                <button onClick={() => restoreTrust(u.id)} disabled={trustBusy === u.id || (u.trust_points ?? 10) >= 10}
+                  className="h-6 px-1.5 rounded bg-emerald-500 text-white text-[9px] font-semibold active:scale-95 transition disabled:opacity-40">+1</button>
+                <button onClick={() => deductTrust(u.id, u.username)} disabled={trustBusy === u.id || (u.trust_points ?? 10) <= 0}
+                  className="h-6 px-1.5 rounded bg-red-500 text-white text-[9px] font-semibold active:scale-95 transition disabled:opacity-40">-{trustDeductAmt[u.id] || 1}</button>
+              </div>
             </div>
           ))
-        ) : tab === "eventos" ? (
-          <>
-            <div className="panel border border-border/50 rounded-xl p-3 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="font-display text-[10px] tracking-widest text-primary flex items-center gap-1"><Trophy size={12}/> NUEVO EVENTO</div>
-                  <button onClick={() => setShowNewEvent(s => !s)}
-                    className={`text-[10px] px-2.5 py-1 rounded-lg border transition ${showNewEvent ? "bg-muted/30 border-border" : "border-primary/30 bg-primary/5 text-primary"}`}>
-                    {showNewEvent ? "Cancelar" : "Crear"}
-                  </button>
-                </div>
-                {showNewEvent && (
-                  <div className="space-y-2 border-t border-border/40 pt-3">
-                    <input value={evTitle} onChange={e => setEvTitle(e.target.value)} placeholder="Título del evento" maxLength={60}
-                      className="w-full bg-input/50 rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary/40" />
-                    <textarea value={evDesc} onChange={e => setEvDesc(e.target.value)} placeholder="Descripción del evento" maxLength={500} rows={2}
-                      className="w-full bg-input/50 rounded-lg px-3 py-2 text-sm outline-none resize-none focus:ring-1 focus:ring-primary/40" />
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <div className="text-[10px] text-muted-foreground mb-0.5">Inicio</div>
-                        <input type="datetime-local" value={evStarts} onChange={e => setEvStarts(e.target.value)}
-                          className="w-full bg-input/50 rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary/40" />
-                      </div>
-                      <div>
-                        <div className="text-[10px] text-muted-foreground mb-0.5">Fin</div>
-                        <input type="datetime-local" value={evEnds} onChange={e => setEvEnds(e.target.value)}
-                          className="w-full bg-input/50 rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary/40" />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <div className="text-[10px] text-muted-foreground mb-0.5">Premio (Orbes)</div>
-                        <input type="number" min={0} value={evPrizePool} onChange={e => setEvPrizePool(e.target.value ? Number(e.target.value) : "")} placeholder="0"
-                          className="w-full bg-input/50 rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary/40" />
-                      </div>
-                    </div>
-                    <textarea value={evPrizeDesc} onChange={e => setEvPrizeDesc(e.target.value)} placeholder="Descripción del premio" maxLength={300} rows={1}
-                      className="w-full bg-input/50 rounded-lg px-3 py-2 text-sm outline-none resize-none focus:ring-1 focus:ring-primary/40" />
-                    <textarea value={evRules} onChange={e => setEvRules(e.target.value)} placeholder="Reglas del evento" maxLength={1000} rows={2}
-                      className="w-full bg-input/50 rounded-lg px-3 py-2 text-sm outline-none resize-none focus:ring-1 focus:ring-primary/40" />
-                    {evErr && <div className="text-xs text-destructive">{evErr}</div>}
-                    <button onClick={async () => {
-                        setEvErr(null);
-                        if (!evTitle.trim() || !evDesc.trim() || !evStarts || !evEnds) { setEvErr("Completa todos los campos obligatorios"); return; }
-                        if (new Date(evStarts) >= new Date(evEnds)) { setEvErr("La fecha de fin debe ser posterior al inicio"); return; }
-                        try {
-                          await createEvent({
-                            title: evTitle.trim(),
-                            description: evDesc.trim(),
-                            starts_at: new Date(evStarts).toISOString(),
-                            ends_at: new Date(evEnds).toISOString(),
-                            prize_pool: typeof evPrizePool === "number" ? evPrizePool : null,
-                            prize_description: evPrizeDesc.trim() || null,
-                            rules: evRules.trim() || null,
-                          });
-                          setEvTitle(""); setEvDesc(""); setEvStarts(""); setEvEnds("");
-                          setEvPrizePool(""); setEvPrizeDesc(""); setEvRules("");
-                          setShowNewEvent(false);
-                          await load();
-                        } catch (e) { setEvErr((e as Error).message); }
-                      }}
-                      disabled={!evTitle.trim() || !evDesc.trim() || !evStarts || !evEnds}
-                      className="w-full py-2.5 rounded-lg grad-brand text-primary-foreground text-[10px] font-display tracking-widest disabled:opacity-50 flex items-center justify-center gap-1 active:scale-[0.98] transition shadow-sm shadow-primary/25">
-                      <Trophy size={12}/> CREAR EVENTO
-                    </button>
-                  </div>
-                )}
-              </div>
-            {events.length === 0 ? (
-              <div className="text-center text-xs text-muted-foreground py-10">No hay eventos creados aún.</div>
-            ) : events.map(ev => {
-              const statusOpts: Array<"upcoming" | "active" | "completed"> = ["upcoming", "active", "completed"];
-              return (
-                <div key={ev.id} className="panel border border-border/50 rounded-xl p-3 flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-muted/60 border border-border/40 grid place-items-center shrink-0">
-                    <Trophy size={18} className="text-amber-500" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-display text-sm font-semibold truncate">{ev.title}</div>
-                    <div className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">{ev.description}</div>
-                    <div className="flex items-center gap-3 mt-1.5 text-[10px] text-muted-foreground">
-                      <span>{new Date(ev.starts_at).toLocaleDateString()}</span>
-                      <span>{ev.participant_count ?? 0} participantes</span>
-                      <span>{ev.submission_count ?? 0} subs</span>
-                    </div>
-                  </div>
-                  <select value={ev.status} onChange={e => {
-                    const v = e.target.value as "upcoming" | "active" | "completed";
-                    updateEventStatus(ev.id, v).then(() => load()).catch(() => {});
-                  }}
-                    className="text-[10px] bg-input/50 rounded-lg px-2 py-1 border border-border/50 outline-none">
-                    {statusOpts.map(s => <option key={s} value={s}>{s.toUpperCase()}</option>)}
-                  </select>
-                </div>
-              );
-            })}
-          </>
         ) : tab === "bans" ? (
           <>
             {admin && (
@@ -349,6 +298,97 @@ function AdminPage() {
                 </button>
               </div>
             ))}
+          </>
+        ) : tab === "eventos" ? (
+          <>
+            <div className="panel border border-border/50 rounded-xl p-3 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="font-display text-[10px] tracking-widest text-primary flex items-center gap-1"><Trophy size={12}/> NUEVO EVENTO</div>
+                <button onClick={() => setShowNewEvent(s => !s)}
+                  className={`text-[10px] px-2.5 py-1 rounded-lg border transition ${showNewEvent ? "bg-muted/30 border-border" : "border-primary/30 bg-primary/5 text-primary"}`}>
+                  {showNewEvent ? "Cancelar" : "Crear"}
+                </button>
+              </div>
+              {showNewEvent && (
+                <div className="space-y-2 border-t border-border/40 pt-3">
+                  <input value={evTitle} onChange={e => setEvTitle(e.target.value)} placeholder="Titulo del evento" maxLength={60}
+                    className="w-full bg-input/50 rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary/40" />
+                  <textarea value={evDesc} onChange={e => setEvDesc(e.target.value)} placeholder="Descripcion del evento" maxLength={500} rows={2}
+                    className="w-full bg-input/50 rounded-lg px-3 py-2 text-sm outline-none resize-none focus:ring-1 focus:ring-primary/40" />
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <div className="text-[10px] text-muted-foreground mb-0.5">Inicio</div>
+                      <input type="datetime-local" value={evStarts} onChange={e => setEvStarts(e.target.value)}
+                        className="w-full bg-input/50 rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary/40" />
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-muted-foreground mb-0.5">Fin</div>
+                      <input type="datetime-local" value={evEnds} onChange={e => setEvEnds(e.target.value)}
+                        className="w-full bg-input/50 rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary/40" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <div className="text-[10px] text-muted-foreground mb-0.5">Premio (Orbes)</div>
+                      <input type="number" min={0} value={evPrizePool} onChange={e => setEvPrizePool(e.target.value ? Number(e.target.value) : "")} placeholder="0"
+                        className="w-full bg-input/50 rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary/40" />
+                    </div>
+                  </div>
+                  <textarea value={evPrizeDesc} onChange={e => setEvPrizeDesc(e.target.value)} placeholder="Descripcion del premio" maxLength={300} rows={1}
+                    className="w-full bg-input/50 rounded-lg px-3 py-2 text-sm outline-none resize-none focus:ring-1 focus:ring-primary/40" />
+                  <textarea value={evRules} onChange={e => setEvRules(e.target.value)} placeholder="Reglas del evento" maxLength={1000} rows={2}
+                    className="w-full bg-input/50 rounded-lg px-3 py-2 text-sm outline-none resize-none focus:ring-1 focus:ring-primary/40" />
+                  {evErr && <div className="text-xs text-destructive">{evErr}</div>}
+                  <button onClick={async () => {
+                      setEvErr(null);
+                      if (!evTitle.trim() || !evDesc.trim() || !evStarts || !evEnds) { setEvErr("Completa todos los campos obligatorios"); return; }
+                      if (new Date(evStarts) >= new Date(evEnds)) { setEvErr("La fecha de fin debe ser posterior al inicio"); return; }
+                      try {
+                        await createEvent({
+                          title: evTitle.trim(), description: evDesc.trim(),
+                          starts_at: new Date(evStarts).toISOString(), ends_at: new Date(evEnds).toISOString(),
+                          prize_pool: typeof evPrizePool === "number" ? evPrizePool : null,
+                          prize_description: evPrizeDesc.trim() || null, rules: evRules.trim() || null,
+                        });
+                        setEvTitle(""); setEvDesc(""); setEvStarts(""); setEvEnds("");
+                        setEvPrizePool(""); setEvPrizeDesc(""); setEvRules("");
+                        setShowNewEvent(false); await load();
+                      } catch (e) { setEvErr((e as Error).message); }
+                    }}
+                    disabled={!evTitle.trim() || !evDesc.trim() || !evStarts || !evEnds}
+                    className="w-full py-2.5 rounded-lg grad-brand text-primary-foreground text-[10px] font-display tracking-widest disabled:opacity-50 flex items-center justify-center gap-1 active:scale-[0.98] transition shadow-sm shadow-primary/25">
+                    <Trophy size={12}/> CREAR EVENTO
+                  </button>
+                </div>
+              )}
+            </div>
+            {events.length === 0 ? (
+              <div className="text-center text-xs text-muted-foreground py-10">No hay eventos creados aun.</div>
+            ) : events.map(ev => {
+              const statusOpts = ["upcoming", "active", "completed"] as const;
+              return (
+                <div key={ev.id} className="panel border border-border/50 rounded-xl p-3 flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-muted/60 border border-border/40 grid place-items-center shrink-0">
+                    <Trophy size={18} className="text-amber-500" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-display text-sm font-semibold truncate">{ev.title}</div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">{ev.description}</div>
+                    <div className="flex items-center gap-3 mt-1.5 text-[10px] text-muted-foreground">
+                      <span>{new Date(ev.starts_at).toLocaleDateString()}</span>
+                      <span>{ev.participant_count ?? 0} participantes</span>
+                      <span>{ev.submission_count ?? 0} subs</span>
+                    </div>
+                  </div>
+                  <select value={ev.status} onChange={e => {
+                    const v = e.target.value as "upcoming" | "active" | "completed";
+                    updateEventStatus(ev.id, v).then(() => load());
+                  }} className="text-[10px] bg-input/50 rounded-lg px-2 py-1 border border-border/50 outline-none">
+                    {statusOpts.map(s => <option key={s} value={s}>{s.toUpperCase()}</option>)}
+                  </select>
+                </div>
+              );
+            })}
           </>
         ) : (
           /* ── FOROS TAB ── */

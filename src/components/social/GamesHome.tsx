@@ -372,7 +372,7 @@ function FeaturedBanner({ post, plays24, onPlay }: { post: PostWithMeta; plays24
         {/* Textura de grano sutil sobre el degradado: nunca plano, nunca “de algoritmo”. */}
         <div className="absolute inset-0 pointer-events-none noise-overlay opacity-[0.16] mix-blend-overlay" />
         <div className="badge-glow absolute top-3 left-3 flex items-center gap-1.5 px-2.5 h-6 rounded-full bg-primary/95 text-primary-foreground text-[10px] font-display tracking-widest ring-1 ring-white/30 ring-inset">
-          <Crown size={11} fill="currentColor" /> MEJOR JUEGO
+          <Crown size={11} fill="currentColor" /> JUEGO MÁS JUGADO
         </div>
       </div>
       <div className="absolute inset-x-0 bottom-0 p-4 space-y-3">

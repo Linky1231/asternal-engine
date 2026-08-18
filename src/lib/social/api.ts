@@ -995,7 +995,7 @@ export async function cloudDeleteProject(id: string): Promise<void> {
 }
 
 // ---------- Admin ----------
-export type ManagedUser = { id: string; username: string; display_name: string | null; avatar_url: string | null; is_mod: boolean; is_admin: boolean };
+export type ManagedUser = { id: string; username: string; display_name: string | null; avatar_url: string | null; is_mod: boolean; is_admin: boolean; trust_points: number | null };
 
 export async function isAdmin(): Promise<boolean> {
   const { data: { user } } = await supabase.auth.getUser();
@@ -1005,7 +1005,7 @@ export async function isAdmin(): Promise<boolean> {
 }
 
 export async function listManagedUsers(search?: string): Promise<ManagedUser[]> {
-  let q = supabase.from("profiles").select("id,username,display_name,avatar_url").limit(200);
+  let q = supabase.from("profiles").select("id,username,display_name,avatar_url,trust_points").limit(200);
   if (search) q = q.ilike("username", `%${search}%`);
   const { data: profs, error } = await q;
   if (error) throw error;
