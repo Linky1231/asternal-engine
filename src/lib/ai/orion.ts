@@ -6,7 +6,9 @@
 import { ENGINE_KNOWLEDGE } from "./engine-knowledge";
 
 /** OmegaTech — API gratuita sin clave */
-const OMEGATECH_URL = "https://api.omegatech.app/api/ai/Gpt-4-mini";
+const OMEGATECH_DIRECT = "https://api.omegatech.app/api/ai/Gpt-4-mini";
+const OMEGATECH_PROXY =
+  "https://gxpgczwkovertezeydkt.supabase.co/functions/v1/omega-proxy";
 
 /** La API de OmegaTech no requiere clave. Se mantiene getOrionApiKey por compatibilidad. */
 export function getOrionApiKey(): string {
@@ -169,16 +171,25 @@ export async function orionChat(
   const message = buildSingleMessage(history);
 
   let res: Response;
+  // Intentar vía proxy de Supabase (CORS-safe), luego directo como respaldo.
   try {
-    res = await fetch(OMEGATECH_URL, {
+    res = await fetch(OMEGATECH_PROXY, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message }),
     });
   } catch {
-    throw new Error(
-      "No se pudo conectar con Orión. Comprueba tu conexión a internet e inténtalo de nuevo."
-    );
+    try {
+      res = await fetch(OMEGATECH_DIRECT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message }),
+      });
+    } catch {
+      throw new Error(
+        "No se pudo conectar con Orión. Comprueba tu conexión a internet e inténtalo de nuevo."
+      );
+    }
   }
 
   if (!res.ok) {
