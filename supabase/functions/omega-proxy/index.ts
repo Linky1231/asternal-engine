@@ -1,17 +1,15 @@
 // omega-proxy: Edge Function para proyectar llamadas a OmegaTech API
 // desde el navegador (CORS-safe).
-// Deploy: supabase functions deploy omega-proxy --project-ref gxpgczwkovertezeydkt
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const OMEGA_URL = "https://api.omegatech.app/api/ai/Gpt-4-mini";
 
 serve(async (req: Request): Promise<Response> => {
-  // CORS headers
-  const corsHeaders = {
+  const corsHeaders: Record<string, string> = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
   };
 
   if (req.method === "OPTIONS") {
