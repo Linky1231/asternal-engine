@@ -173,9 +173,13 @@ export async function orionChat(
   let res: Response;
   // Intentar vía proxy de Supabase (CORS-safe), luego directo como respaldo.
   try {
+    const anonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd4cGdjendrb3ZlcnRlemV5ZGt0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU2MTk5NTUsImV4cCI6MjEwMTE5NTk1NX0.GGGjdgi2l2NmQBQ1pS8k37npT3p6hx9Sl5JF0DdQ9cM";
     res = await fetch(OMEGATECH_PROXY, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${anonKey}`,
+      },
       body: JSON.stringify({ message }),
     });
   } catch {
