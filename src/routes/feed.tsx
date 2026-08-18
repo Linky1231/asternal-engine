@@ -67,7 +67,7 @@ function FeedPage() {
 
   return (
     <div className="min-h-screen w-full flex flex-col bg-background">
-      <header className="app-header sticky top-0 z-20 bg-background/90 backdrop-blur-xl border-b border-border/70">
+      <header className="app-header sticky top-0 z-20 bg-background border-b border-border/70">
         <div className="max-w-2xl md:max-w-3xl lg:max-w-4xl mx-auto flex items-center gap-2 px-3 py-2.5">
           <Link to="/" aria-label="Volver al inicio"
             className="w-10 h-10 rounded-xl overflow-hidden ring-1 ring-line-strong shadow-sm active:scale-95 transition grid place-items-center bg-primary/10 shrink-0">

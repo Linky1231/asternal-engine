@@ -236,11 +236,11 @@ export default function OrionPanel({ onClose }: { onClose: () => void }) {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2, ease: "easeOut" }}
-      className="fixed inset-0 z-[90] bg-background/97 backdrop-blur-xl flex flex-col"
+      className="fixed inset-0 z-[90] bg-background flex flex-col"
       style={{ height: "100dvh" }}
     >
       {/* Cabecera */}
-      <header className="shrink-0 border-b border-border/60 bg-background/80 backdrop-blur-md">
+      <header className="shrink-0 border-b border-border/60 bg-background">
         <div className="max-w-2xl md:max-w-3xl mx-auto flex items-center gap-2.5 px-4 py-3">
           <div
             className="relative shrink-0 rounded-full grid place-items-center text-primary-foreground"
@@ -457,7 +457,7 @@ export default function OrionPanel({ onClose }: { onClose: () => void }) {
       </div>
 
       {/* Barra de escritura */}
-      <div className="shrink-0 border-t border-border/60 bg-background/80 backdrop-blur-md">
+      <div className="shrink-0 border-t border-border/60 bg-background">
         <div className="max-w-2xl md:max-w-3xl mx-auto px-4 py-3">
           <div className="flex items-end gap-2 rounded-2xl border border-border bg-card p-1.5 shadow-sm">
             <textarea

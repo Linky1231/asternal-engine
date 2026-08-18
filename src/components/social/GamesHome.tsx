@@ -385,7 +385,7 @@ function FeaturedBanner({ post, plays24, onPlay }: { post: PostWithMeta; plays24
         <div className="flex items-center gap-2">
           <button
             onClick={onPlay}
-            className="flex-1 h-11 rounded-xl bg-white text-primary font-display tracking-widest text-xs flex items-center justify-center gap-2 active:scale-95 transition shadow-[0_12px_28px_-10px_oklch(0.25_0.06_262/0.4)]"
+            className="flex-1 h-11 rounded-xl bg-white text-primary font-display tracking-widest text-xs flex items-center justify-center gap-2  transition "
           >
             <Play size={16} fill="currentColor" /> JUGAR
           </button>
@@ -410,7 +410,7 @@ function GamePlayModal({
 }) {
   return (
     <div
-      className="fixed inset-0 z-[90] bg-black/70 backdrop-blur-sm p-3 flex items-start justify-center pt-16 overflow-y-auto animate-in fade-in duration-200"
+      className="fixed inset-0 z-[90] bg-black/70  p-3 flex items-start justify-center pt-16 overflow-y-auto animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div
@@ -420,7 +420,7 @@ function GamePlayModal({
         <GameCard post={post} myId={myId} isMod={isMod} onChange={onChange} />
         <button
           onClick={onClose}
-          className="mt-3 w-full h-10 rounded-xl bg-white/10 text-white text-xs font-display tracking-widest border border-white/20 active:scale-95"
+          className="mt-3 w-full h-10 rounded-xl bg-white/10 text-white text-xs font-display tracking-widest border border-white/20 "
         >
           CERRAR
         </button>

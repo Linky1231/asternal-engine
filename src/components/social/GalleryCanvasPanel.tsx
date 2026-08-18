@@ -689,7 +689,7 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
   ];
 
   return (
-    <div className="w-full h-full flex flex-col rounded-2xl border border-border/40 panel overflow-hidden bg-muted/95 backdrop-blur-xl">
+    <div className="w-full h-full flex flex-col rounded-2xl border border-border/40 panel overflow-hidden bg-surface">
       {/* Top bar - compact but usable */}
       <div className="flex items-center justify-between px-2 py-0.5 border-b border-border/30 gap-1.5 shrink-0 bg-muted/50">
         <div className="flex items-center gap-1.5 min-w-0 flex-1">
@@ -812,7 +812,7 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
           {/* Floating layers panel - matches gallery canvas styling */}
           {layersOpen && (
             <div
-              className="absolute top-1 right-1 z-20 rounded-xl p-2.5 space-y-1.5 w-48 bg-muted/95 backdrop-blur-xl border border-border/40 shadow-xl"
+              className="absolute top-1 right-1 z-20 rounded-xl p-2.5 space-y-1.5 w-48 bg-surface border border-border/40 shadow-md"
             >
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-semibold tracking-wider text-foreground/80 inline-flex items-center gap-1.5">

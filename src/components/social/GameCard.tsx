@@ -215,7 +215,7 @@ export function GameCard({
           </>
         ) : null}
         <button
-          className="relative w-16 h-16 rounded-2xl bg-white/95 backdrop-blur grid place-items-center shadow-xl active:scale-95 hover:scale-105 transition-transform duration-200"
+          className="relative w-16 h-16 rounded-2xl bg-card grid place-items-center shadow-md active:scale-95 hover:scale-105 transition-transform duration-200"
           aria-label={needsPurchase ? "Comprar y jugar" : "Jugar"}
         >
           {loading ? <Loader2 size={20} className="animate-spin text-primary" /> :
@@ -352,7 +352,7 @@ export function GameCard({
       {/* Visor de capturas a pantalla completa */}
       {viewer !== null && post.signed_screenshots.length > 0 && (
         <div
-          className="fixed inset-0 z-[130] bg-black/90 backdrop-blur-sm grid place-items-center p-4 animate-in fade-in duration-200"
+          className="fixed inset-0 z-[130] bg-black/90  grid place-items-center p-4 animate-in fade-in duration-200"
           onClick={() => setViewer(null)}
         >
           <button
@@ -382,7 +382,7 @@ export function GameCard({
           )}
           <div
             onClick={e => e.stopPropagation()}
-            className="w-full max-w-2xl max-h-[80vh] rounded-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200"
+            className="w-full max-w-2xl max-h-[80vh] rounded-2xl overflow-hidden shadow-lg animate-in zoom-in-95 duration-200"
           >
             <img
               src={post.signed_screenshots[viewer]}
@@ -398,12 +398,12 @@ export function GameCard({
 
       {buyOpen && (
         <div
-          className="fixed inset-0 z-[120] bg-black/60 backdrop-blur-sm grid place-items-center p-4 animate-in fade-in duration-200"
+          className="fixed inset-0 z-[120] bg-black/60  grid place-items-center p-4 animate-in fade-in duration-200"
           onClick={() => buyState !== "loading" && setBuyOpen(false)}
         >
           <div
             onClick={e => e.stopPropagation()}
-            className="w-full max-w-sm panel rounded-3xl border border-primary/30 p-5 shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-4 duration-300 relative"
+            className="w-full max-w-sm panel rounded-3xl border border-primary/30 p-5 shadow-lg animate-in zoom-in-95 slide-in-from-bottom-4 duration-300 relative"
           >
             {buyState !== "loading" && (
               <button
@@ -440,7 +440,7 @@ export function GameCard({
                 <button
                   onClick={confirmPurchase}
                   disabled={buyState === "loading" || (balance !== null && balance < price)}
-                  className="mt-4 w-full h-11 rounded-2xl grad-brand text-primary-foreground font-display tracking-widest text-xs disabled:opacity-50 active:scale-[0.98] transition"
+                  className="mt-4 w-full h-11 rounded-2xl grad-brand text-primary-foreground font-display tracking-widest text-xs disabled:opacity-50 active:scale-[0.99] transition"
                 >
                   {buyState === "loading" ? <Loader2 size={16} className="animate-spin mx-auto" /> : "CONFIRMAR COMPRA"}
                 </button>
@@ -469,7 +469,7 @@ export function GameCard({
                 <p className="text-xs text-muted-foreground mt-1">{buyMsg}</p>
                 <button
                   onClick={() => setBuyOpen(false)}
-                  className="mt-4 w-full h-10 rounded-2xl border border-border font-display tracking-widest text-xs active:scale-[0.98] transition"
+                  className="mt-4 w-full h-10 rounded-2xl border border-border font-display tracking-widest text-xs active:scale-[0.99] transition"
                 >
                   ENTENDIDO
                 </button>

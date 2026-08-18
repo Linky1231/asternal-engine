@@ -124,8 +124,8 @@ function CreatorRobot() {
     <div className="relative">
       {/* Head */}
       <div className="w-12 h-11 rounded-[10px] bg-gradient-to-b from-white to-white/70 border-2 border-primary/25 shadow-lg flex items-center justify-center gap-[3px]">
-        <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_6px_oklch(0.55_0.14_262/0.55)]" />
-        <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_6px_oklch(0.55_0.14_262/0.55)]" />
+        <div className="w-2 h-2 rounded-full bg-primary " />
+        <div className="w-2 h-2 rounded-full bg-primary " />
       </div>
       {/* Neck */}
       <div className="w-1.5 h-2 bg-primary/20 mx-auto" />
@@ -227,7 +227,7 @@ function HeroScene() {
               <div className="w-5 h-8 rounded-t-lg rounded-b-sm grad-brand shadow-lg shadow-accent/30 rotate-12" />
             </div>
             {/* Disc */}
-            <div className="relative -mt-1 z-10 w-[250px] h-[54px] rounded-[50%] bg-gradient-to-b from-white/90 to-white/40 border border-white/70 shadow-[0_25px_60px_-15px_oklch(0.55_0.14_262/0.35)]">
+            <div className="relative -mt-1 z-10 w-[250px] h-[54px] rounded-[50%] bg-gradient-to-b from-white/90 to-white/40 border border-white/70 shadow-md">
               <div className="absolute inset-0 rounded-[50%] overflow-hidden opacity-40"
                 style={{
                   background:
@@ -538,7 +538,7 @@ function AuthPage() {
             <div style={{
               animation: loaded ? 'fade-in-up 500ms 300ms cubic-bezier(0.22,1,0.36,1) both' : 'none',
             }}>
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-primary/15 bg-white/50 backdrop-blur-sm text-[11px] font-display font-medium tracking-wide text-primary/80 shadow-sm -mt-1 lg:-mt-3">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-primary/15 bg-surface text-[11px] font-display font-medium tracking-wide text-primary/80 shadow-sm -mt-1 lg:-mt-3">
                 <Sparkles size={12} className="text-accent" />
                 Todo comienza con una idea
               </div>
@@ -575,7 +575,7 @@ function AuthPage() {
                 { icon: Users, label: "Comunidad activa", desc: "Remixa y colabora" },
               ].map((f, i) => (
                 <div key={f.label} className="group/card" style={{ animation: loaded ? `fade-in-up 900ms ${1000 + i * 280}ms cubic-bezier(0.16,1,0.3,1) both` : 'none' }}>
-                  <div className="p-2.5 rounded-xl border border-border/50 bg-white/40 backdrop-blur-sm transition-all duration-400 group-hover/card:bg-white/80 group-hover/card:border-primary/30 group-hover/card:shadow-lg group-hover/card:shadow-primary/5 group-hover/card:-translate-y-0.5">
+                  <div className="p-2.5 rounded-xl border border-border/50 bg-surface transition-all duration-400 group-hover/card:bg-white/80 group-hover/card:border-primary/30 group-hover/card:shadow-lg group-hover/card:shadow-primary/5 group-hover/card:-translate-y-0.5">
                     <div className="flex items-center gap-1.5 text-[12px] font-display font-semibold text-foreground mb-0.5 group-hover/card:text-primary transition-colors duration-300">
                       <f.icon size={12} className="text-primary/60 group-hover/card:text-primary transition-colors duration-300" />
                       {f.label}
@@ -593,8 +593,8 @@ function AuthPage() {
               animation: loaded ? 'fade-in-up 800ms 700ms cubic-bezier(0.22,1,0.36,1) both' : 'none',
             }}>
                 {/* Tarjeta premium: borde degradado + sombras en capas + radius 24px */}
-                <div className="relative rounded-3xl border border-primary/15 shadow-[0_30px_80px_-20px_oklch(0.55_0.14_262/0.28),0_10px_30px_-10px_oklch(0.55_0.14_262/0.16)]">
-                  <div className="relative bg-white/85 backdrop-blur-md rounded-3xl p-7 overflow-hidden group/form-card">
+                <div className="relative rounded-3xl border border-primary/15 shadow-md">
+                  <div className="relative bg-card rounded-3xl p-7 overflow-hidden group/form-card">
 
                     {/* Shine superior */}
                     <div className="absolute top-0 left-1/2 -translate-x-1/2 h-px w-3/4 bg-gradient-to-r from-transparent via-white/90 to-transparent" />
@@ -603,7 +603,7 @@ function AuthPage() {
 
                     {/* Header */}
                     <div className="text-center mb-6 relative">
-                      <div className="w-12 h-12 rounded-2xl grad-brand grid place-items-center mx-auto mb-3 shadow-lg shadow-primary/25 relative">
+                      <div className="w-12 h-12 rounded-2xl grad-brand grid place-items-center mx-auto mb-3  relative">
                         <div className="absolute inset-0 rounded-2xl bg-primary/20 blur-lg scale-125 animate-pulse" style={{ animationDuration: '3s' }} />
                         <Gamepad2 size={22} className="text-white relative" />
                       </div>
@@ -700,7 +700,7 @@ function AuthPage() {
                       {/* Submit button */}
                       <div style={{ animation: 'slide-in-up 300ms cubic-bezier(0.22,1,0.36,1) both', animationDelay: '240ms' }}>
                         <button disabled={busy}
-                          className="relative w-full py-2.5 rounded-xl grad-brand text-white text-sm font-display font-semibold tracking-wide shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 active:scale-[0.98] transition-all duration-300 disabled:opacity-50 overflow-hidden group/btn"
+                          className="relative w-full py-2.5 rounded-xl grad-brand text-white text-sm font-display font-semibold tracking-wide shadow-lg shadow-primary/20 hover:shadow-md hover:shadow-primary/30 active:scale-[0.98] transition-all duration-300 disabled:opacity-50 overflow-hidden group/btn"
                         >
                           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700 ease-in-out" />
                           <div className="absolute inset-0 bg-white/[0.06] translate-y-full group-hover/btn:translate-y-0 transition-transform duration-500" />

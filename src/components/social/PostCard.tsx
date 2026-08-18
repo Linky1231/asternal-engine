@@ -81,7 +81,7 @@ export const PostCard = memo(function PostCard({
           <Link to="/profile/$userId" params={{ userId: post.author_id }}
             className="relative shrink-0 transition-transform duration-150 ease-out active:scale-95 pointer-fine:group-hover:scale-[1.06]">
             {frame ? (
-              <div className="w-10 h-10 rounded-full p-[2px] shadow-[0_2px_10px_-2px_oklch(0.62_0.12_220/0.45)]" style={{ background: frameCss(frame) }}>
+              <div className="w-10 h-10 rounded-full p-[2px] " style={{ background: frameCss(frame) }}>
                 <div className="w-full h-full rounded-full overflow-hidden bg-background font-display text-xs text-primary-glow">
                   {avatarInner}
                 </div>

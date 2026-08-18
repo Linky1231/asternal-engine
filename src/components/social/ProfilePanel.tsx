@@ -233,7 +233,7 @@ export function ProfilePanel({
     <button
       type="button"
       onClick={() => viewingOwn && editing && fileRef.current?.click()}
-      className={`relative w-20 h-20 rounded-2xl overflow-hidden border-[3px] border-white block shadow-[0_12px_28px_-12px_oklch(0.5_0.13_266/0.35)] ${viewingOwn && editing ? "cursor-pointer active:scale-95" : ""}`}
+      className={`relative w-20 h-20 rounded-2xl overflow-hidden border-[3px] border-white block  ${viewingOwn && editing ? "cursor-pointer active:scale-95" : ""}`}
       aria-label="Avatar"
     >
       {/* w-full h-full sin size fijo: la foto rellena exactamente la caja

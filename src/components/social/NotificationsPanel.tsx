@@ -160,7 +160,7 @@ export function NotificationsPanel({ onClose }: { onClose: () => void }) {
       <div className="h-[3px] shrink-0 grad-brand" />
 
       {/* Cabecera */}
-      <header className="shrink-0 border-b border-border/60 bg-background/95 backdrop-blur-md px-3 sm:px-4 py-2.5 flex items-center gap-2.5">
+      <header className="shrink-0 border-b border-border/60 bg-background px-3 sm:px-4 py-2.5 flex items-center gap-2.5">
         <button
           onClick={onClose}
           aria-label="Cerrar notificaciones"

@@ -45,7 +45,7 @@ export function SubPageHeader({
   );
 
   return (
-    <header className="app-header sticky top-0 z-20 bg-background/90 backdrop-blur-xl border-b border-border/70">
+    <header className="app-header sticky top-0 z-20 bg-background border-b border-border/70">
       <div className="max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto flex items-center gap-2.5 px-3 py-2.5">
         {back}
         <div className="flex-1 min-w-0">

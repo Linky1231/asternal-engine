@@ -314,7 +314,7 @@ export function GlobalSearchPanel({
         exit={{ scale: 0.96, y: 10 }}
         transition={{ duration: 0.16, ease: "easeOut" }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-lg bg-card border border-border rounded-2xl shadow-xl flex flex-col overflow-hidden max-h-[90vh]"
+        className="w-full max-w-lg bg-card border border-border rounded-2xl shadow-md flex flex-col overflow-hidden max-h-[90vh]"
       >
         {/* Cabecera: buscador */}
         <div className="p-3 border-b border-border/60 flex items-center gap-2">

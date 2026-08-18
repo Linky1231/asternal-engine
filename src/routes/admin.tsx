@@ -151,7 +151,7 @@ function AdminPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-10 bg-background/90 backdrop-blur-xl border-b border-border/70">
+      <header className="sticky top-0 z-10 bg-background border-b border-border/70">
         <div className="max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto px-3 pt-2.5 pb-2.5">
           <div className="flex items-center gap-2.5">
             <Link to="/" aria-label="Volver al menú principal"

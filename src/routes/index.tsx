@@ -223,10 +223,10 @@ function HomePage() {
       {/* Header */}
       {/* bg casi opaco + blur reducido: el backdrop-blur-xl sobre un header
           sticky obligaba a re-desenfocar el fondo en cada frame de scroll → lag. */}
-      <header className="app-header sticky top-0 z-20 bg-background/95 backdrop-blur-md border-b border-border/70">
+      <header className="app-header sticky top-0 z-20 bg-background border-b border-border/70">
         <div className={`max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto flex items-center gap-2 sm:gap-2.5 px-3 sm:px-4 ${inPreview ? "pt-14 pb-3" : "py-2.5"}`}>
           <button onClick={() => navigate({ to: "/profile" })} title="Mi perfil"
-            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl overflow-hidden border border-slate-900/5 shadow-[0_8px_20px_-10px_oklch(0.5_0.13_266/0.35)] active:scale-95 transition shrink-0">
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl overflow-hidden border border-slate-900/5  active:scale-95 transition shrink-0">
             <Avatar p={me} className="w-full h-full" />
           </button>
           <div className="flex-1 min-w-0 header-name">
@@ -366,7 +366,7 @@ function HomePage() {
       {/* Floating CTA to editor */}
       <Link
         to="/editor"
-        className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-[max(1.25rem,env(safe-area-inset-right))] z-30 h-14 pl-4 pr-5 rounded-xl btn-grad shadow-[0_16px_40px_-14px_oklch(0.55_0.14_262/0.42)] flex items-center gap-2 active:scale-95 font-display tracking-widest text-xs"
+        className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-[max(1.25rem,env(safe-area-inset-right))] z-30 h-14 pl-4 pr-5 rounded-xl btn-grad  flex items-center gap-2 active:scale-95 font-display tracking-widest text-xs"
       >
         <Plus size={18} strokeWidth={2} /> CREAR
       </Link>
@@ -390,7 +390,7 @@ function HomePage() {
           <motion.div
             key="menu-drawer"
             onClick={e => e.stopPropagation()}
-            className="fixed right-0 top-0 z-[101] h-full w-[86vw] max-w-xs bg-card border-l border-border shadow-xl p-4 flex flex-col gap-0.5 overflow-y-auto"
+            className="fixed right-0 top-0 z-[101] h-full w-[86vw] max-w-xs bg-card border-l border-border shadow-md p-4 flex flex-col gap-0.5 overflow-y-auto"
             initial={{ x: "100%", opacity: 0.4 }}
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: "100%", opacity: 0 }}

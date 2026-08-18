@@ -76,7 +76,7 @@ export function CardMenu({
       <div
         ref={menuRef}
         role="menu"
-        className="fixed z-[86] panel border border-border rounded-xl p-1 text-xs shadow-xl"
+        className="fixed z-[86] panel border border-border rounded-xl p-1 text-xs shadow-md"
         style={{
           top,
           left,

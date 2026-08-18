@@ -1442,7 +1442,7 @@ function importProject(): Promise<Project | null> {
 
 function HelpModal({ onClose }: { onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 backdrop-blur-md p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 grid place-items-center bg-background p-4" onClick={onClose}>
       <div className="panel rounded-xl border border-primary/40 glow-border max-w-md w-full p-5 space-y-3" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <h2 className="font-display text-sm text-primary-glow glow-text tracking-[0.25em]">AYUDA RÁPIDA</h2>

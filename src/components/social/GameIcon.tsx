@@ -51,7 +51,7 @@ export function GameIcon({
       <div
         className={`relative aspect-square w-full ${radius} overflow-hidden ${
           hasCover
-            ? "border border-white/60 shadow-[0_14px_36px_-16px_oklch(0.5_0.13_266/0.4)] transition-shadow group-hover:shadow-[0_20px_44px_-16px_oklch(0.55_0.14_262/0.42)]"
+            ? "border border-white/60  transition-shadow group-hover:"
             : "tile-blueprint"
         }`}
       >
