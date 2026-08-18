@@ -1048,5 +1048,35 @@ create policy "post-media owner delete" on storage.objects
   for delete to authenticated using (bucket_id = 'post-media');
 
 -- ════════════════════════════════════════════════════════════════════
+--  HISTORIAL DE PUNTOS DE CONFIANZA
+-- ════════════════════════════════════════════════════════════════════
+create table if not exists public.trust_points_history (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null references public.profiles(id) on delete cascade,
+  modifier_id uuid references public.profiles(id) on delete set null,
+  action     text not null check (action in ('deduct', 'restore')),
+  amount     smallint not null check (amount > 0),
+  reason     text not null default '',
+  points_before smallint not null,
+  points_after  smallint not null,
+  created_at timestamptz not null default now()
+);
+
+alter table public.trust_points_history enable row level security;
+
+create policy "Users can read own trust history" on public.trust_points_history
+  for select using (auth.uid() = user_id);
+
+create policy "Mods can read trust history for any user" on public.trust_points_history
+  for select using (
+    exists (select 1 from public.user_roles where user_id = auth.uid() and role in ('admin', 'moderator'))
+  );
+
+create policy "Mods can insert trust history" on public.trust_points_history
+  for insert with check (
+    exists (select 1 from public.user_roles where user_id = auth.uid() and role in ('admin', 'moderator'))
+  );
+
+-- ════════════════════════════════════════════════════════════════════
 --  FIN DEL SCRIPT
 -- ════════════════════════════════════════════════════════════════════

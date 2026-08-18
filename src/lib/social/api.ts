@@ -1212,6 +1212,17 @@ export async function deductTrustPoints(
   const current = await getTrustPoints(targetUserId);
   const newPoints = Math.max(0, current - amount);
 
+  // Log history BEFORE updating
+  await supabase.from("trust_points_history" as never).insert({
+    user_id: targetUserId,
+    modifier_id: user.id,
+    action: "deduct",
+    amount,
+    reason: reason || "Sin razón especificada",
+    points_before: current,
+    points_after: newPoints,
+  } as never);
+
   // Update points
   const { error } = await supabase
     .from("profiles")
@@ -1247,14 +1258,53 @@ export async function restoreTrustPoints(
   targetUserId: string,
   amount: number,
 ): Promise<number> {
+  const { data: { user } } = await supabase.auth.getUser();
   const current = await getTrustPoints(targetUserId);
   const newPoints = Math.min(DEFAULT_TRUST_POINTS, current + amount);
+
+  // Log history BEFORE updating
+  if (user) {
+    await supabase.from("trust_points_history" as never).insert({
+      user_id: targetUserId,
+      modifier_id: user.id,
+      action: "restore",
+      amount,
+      reason: "Puntos restaurados por moderador",
+      points_before: current,
+      points_after: newPoints,
+    } as never);
+  }
+
   const { error } = await supabase
     .from("profiles")
     .update({ trust_points: newPoints } as never)
     .eq("id", targetUserId);
   if (error) throw error;
   return newPoints;
+}
+
+export type TrustHistoryEntry = {
+  id: string;
+  user_id: string;
+  modifier_id: string | null;
+  action: "deduct" | "restore";
+  amount: number;
+  reason: string;
+  points_before: number;
+  points_after: number;
+  created_at: string;
+};
+
+/** Fetch trust points history for a user (most recent first). */
+export async function fetchTrustHistory(userId: string): Promise<TrustHistoryEntry[]> {
+  const { data, error } = await supabase
+    .from("trust_points_history" as never)
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(50) as { data: TrustHistoryEntry[] | null; error: unknown };
+  if (error || !data) return [];
+  return data;
 }
 
 // ============ POLLS ============

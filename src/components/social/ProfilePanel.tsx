@@ -33,6 +33,8 @@ import { PostCard } from "./PostCard";
 import { UserName } from "./UserName";
 import { Avatar } from "./Avatar";
 import { SegmentedControl } from "@/components/ui/segmented";
+import { TrustPointsHistory } from "./TrustPointsHistory";
+import { SmartStatusPanel } from "./SmartStatusPanel";
 import { getUserCode } from "@/lib/social/avatar";
 
 const GENRES = ["Acción", "Aventura", "Puzzle", "RPG", "Estrategia", "Plataformas", "Casual", "Terror", "Simulación", "Deportes"];
@@ -90,6 +92,7 @@ export function ProfilePanel({
   const [shareOpen, setShareOpen] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [followList, setFollowList] = useState<null | { kind: "followers" | "following"; items: Profile[]; loading: boolean }>(null);
+  const [showTrustHistory, setShowTrustHistory] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -412,11 +415,12 @@ export function ProfilePanel({
           {/* Trust Points */}
           {!editing && (
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-card border border-border/40">
+              <button onClick={() => setShowTrustHistory(true)}
+                className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-card border border-border/40 hover:border-primary/30 hover:bg-primary/[0.02] transition active:scale-[0.98]">
                 <div className={`w-2 h-2 rounded-full ${trustPoints <= 3 ? "bg-red-500" : trustPoints <= 6 ? "bg-amber-500" : "bg-emerald-500"}`} />
                 <span className="text-[11px] font-semibold text-foreground/80 tabular-nums">{trustPoints}</span>
                 <span className="text-[10px] text-muted-foreground/50">puntos de confianza</span>
-              </div>
+              </button>
               {/* Moderator controls */}
               {isMod && !viewingOwn && (
                 <div className="flex items-center gap-1.5">
@@ -687,6 +691,15 @@ export function ProfilePanel({
           ) : posts.map(p => <PostCard key={p.id} post={p} myId={myId} isMod={isMod} onChange={loadContent} />)
         )}
       </div>
+
+      {/* Smart Status */}
+      <div className="px-3 py-1">
+        <SmartStatusPanel userId={userId} />
+      </div>
+
+      {showTrustHistory && (
+        <TrustPointsHistory userId={userId} onClose={() => setShowTrustHistory(false)} />
+      )}
     </div>
   );
 }
@@ -700,6 +713,11 @@ function FollowListModal({ list, myId, onClose, onChanged }: {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [items, setItems] = useState<Profile[]>(list.items);
   const [iFollow, setIFollow] = useState<Set<string>>(new Set());
+
+  // Sync items when parent re-renders with new data
+  useEffect(() => {
+    setItems(list.items);
+  }, [list.items]);
 
   // Estado "¿yo sigo a esta persona?" para cada perfil de la lista.
   useEffect(() => {
