@@ -1,12 +1,16 @@
 /**
  * Orión — asistente de IA para desarrolladores de juegos de Asternal.
  *
- * Se conecta a OmegaTech (API gratuita, sin clave) que usa GPT-4-mini.
+ * Usa VLY Integration (Freebuff) como servicio principal.
+ * OmegaTech como respaldo si VLY no está configurado.
  */
 import { ENGINE_KNOWLEDGE } from "./engine-knowledge";
 
-/** OmegaTech — API gratuita sin clave */
-// Lista de modelos en orden de preferencia (si uno falla, se intenta el siguiente)
+/** VLY Integration (Freebuff) — proxy vía Edge Function */
+const VLY_PROXY =
+  "https://gxpgczwkovertezeydkt.supabase.co/functions/v1/vly-ai-proxy";
+
+/** OmegaTech — respaldo gratuito sin clave */
 const OMEGATECH_MODELS = ["Gpt-4-mini", "Gpt-3.5-turbo", "Gemini"];
 const OMEGATECH_BASE = "https://api.omegatech.app/api/ai";
 const OMEGATECH_PROXY =
@@ -164,9 +168,30 @@ function buildSingleMessage(history: OrionMessage[]): string {
 
 const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd4cGdjendrb3ZlcnRlemV5ZGt0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU2MTk5NTUsImV4cCI6MjEwMTE5NTk1NX0.GGGjdgi2l2NmQBQ1pS8k37npT3p6hx9Sl5JF0DdQ9cM";
 
-/** Intenta un modelo vía proxy, luego directo. Devuelve { ok, answer?, model? }. */
-async function tryModel(modelName: string, message: string): Promise<{ ok: boolean; answer?: string; model?: string; error?: string }> {
-  // 1. Vía proxy (CORS-safe)
+/** Intenta VLY Integration (formato OpenAI-compatible: messages array). */
+async function tryVly(history: OrionMessage[]): Promise<OrionResult | null> {
+  const messages = buildOrionMessages(history);
+  try {
+    const res = await fetch(VLY_PROXY, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${ANON_KEY}` },
+      body: JSON.stringify({ messages, model: "gpt-4o-mini" }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json().catch(() => ({}));
+    // VLY returns OpenAI-compatible: { choices: [{ message: { content } }] }
+    const content = data?.choices?.[0]?.message?.content;
+    if (content) {
+      return { content, model: data?.model ?? "gpt-4o-mini", costUsd: 0, balanceUsd: 0 };
+    }
+    // Also handle error response
+    return null;
+  } catch { return null; }
+}
+
+/** Intenta OmegaTech (formato simple: message → answer). */
+async function tryOmegaTech(modelName: string, message: string): Promise<{ ok: boolean; answer?: string; model?: string }> {
+  // Vía proxy
   try {
     const res = await fetch(OMEGATECH_PROXY, {
       method: "POST",
@@ -177,9 +202,8 @@ async function tryModel(modelName: string, message: string): Promise<{ ok: boole
       const data = await res.json().catch(() => ({}));
       if (data?.answer) return { ok: true, answer: data.answer, model: data.model ?? modelName };
     }
-  } catch { /* proxy falló, intentar directo */ }
-
-  // 2. Directo
+  } catch { /* proxy falló */ }
+  // Directo
   try {
     const res = await fetch(`${OMEGATECH_BASE}/${modelName}`, {
       method: "POST",
@@ -189,33 +213,34 @@ async function tryModel(modelName: string, message: string): Promise<{ ok: boole
     if (res.ok) {
       const data = await res.json().catch(() => ({}));
       if (data?.answer) return { ok: true, answer: data.answer, model: data.model ?? modelName };
-      return { ok: false, error: data?.error };
     }
-    return { ok: false, error: `HTTP ${res.status}` };
-  } catch (e) {
-    return { ok: false, error: (e as Error).message };
-  }
+    return { ok: false };
+  } catch { return { ok: false }; }
 }
 
 /**
- * Envía una petición de chat a OmegaTech (gratuita, sin clave API).
- * Intenta varios modelos en orden; si todos fallan, lanza un error descriptivo.
+ * Envía una petición de chat a Orión.
+ * Primero intenta VLY Integration, luego OmegaTech como respaldo.
  */
 export async function orionChat(
   history: OrionMessage[],
   opts: { coding?: boolean; maxTokens?: number; temperature?: number } = {}
 ): Promise<OrionResult> {
-  const message = buildSingleMessage(history);
+  // 1. Intentar VLY Integration (Freebuff)
+  const vlyResult = await tryVly(history);
+  if (vlyResult) return vlyResult;
 
+  // 2. Respaldar con OmegaTech
+  const message = buildSingleMessage(history);
   for (const model of OMEGATECH_MODELS) {
-    const result = await tryModel(model, message);
+    const result = await tryOmegaTech(model, message);
     if (result.ok && result.answer) {
       return { content: result.answer, model: result.model ?? model, costUsd: 0, balanceUsd: 0 };
     }
   }
 
   throw new Error(
-    "Orión no está disponible en este momento. Los servidores de OmegaTech están temporalmente fuera de servicio. Inténtalo de nuevo más tarde."
+    "Orión no está disponible en este momento. Los servicios de IA están temporalmente fuera de servicio. Inténtalo de nuevo más tarde."
   );
 }
 
