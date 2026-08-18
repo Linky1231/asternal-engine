@@ -419,7 +419,7 @@ function HomePage() {
             <CategoryHeader label="SOCIAL" />
             <MenuItem icon={<MessageCircle size={16} className="text-primary-glow"/>} label="Chats" onClick={() => { setChatOpen(true); closeMenu(); }} />
             <MenuItem icon={<Bot size={16} className="text-primary-glow"/>} label="Asistencia · Orión" onClick={() => { setOrionOpen(true); closeMenu(); }} />
-            <MenuItem icon={<Search size={16}/>} label="Buscar" onClick={() => { setShowSearch(s => !s); closeMenu(); }} />
+            <MenuLink icon={<Search size={16} className="text-primary-glow"/>} label="Buscar" to="/search" onClick={closeMenu} />
             <MenuItem icon={<Bell size={16}/>} label="Notificaciones" onClick={() => { setMenuOpen(false); setNotifOpen(true); }} />
 
             {/* Categoría: COMUNIDAD */}
