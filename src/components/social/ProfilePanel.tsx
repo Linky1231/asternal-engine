@@ -14,6 +14,10 @@ import {
   fetchUserPosts,
   fetchUserGames,
   updateMyProfile,
+  getTrustPoints,
+  deductTrustPoints,
+  restoreTrustPoints,
+  DEFAULT_TRUST_POINTS,
   uploadAvatar,
   uploadBanner,
   getMyProfile,
@@ -48,6 +52,7 @@ export function ProfilePanel({
   const [editing, setEditing] = useState(false);
   const [showMore, setShowMore] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
+  const [showQR, setShowQR] = useState(false);
 
   // form state
   const [username, setUsername] = useState("");
@@ -78,6 +83,10 @@ export function ProfilePanel({
   const [contentLoading, setContentLoading] = useState(false);
   const [follow, setFollow] = useState<FollowStats>({ followers: 0, following: 0, i_follow: false });
   const [followBusy, setFollowBusy] = useState(false);
+  const [trustPoints, setTrustPoints] = useState<number>(DEFAULT_TRUST_POINTS);
+  const [trustBusy, setTrustBusy] = useState(false);
+  const [trustDeductAmt, setTrustDeductAmt] = useState(1);
+  const [trustReason, setTrustReason] = useState("");
   const [shareOpen, setShareOpen] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [followList, setFollowList] = useState<null | { kind: "followers" | "following"; items: Profile[]; loading: boolean }>(null);
@@ -121,7 +130,7 @@ export function ProfilePanel({
 
   const loadFollow = async () => { try { setFollow(await getFollowStats(userId)); } catch { /* ignore */ } };
 
-  useEffect(() => { load(); loadContent(); loadFollow(); /* eslint-disable-next-line */ }, [userId]);
+  useEffect(() => { load(); loadContent(); loadFollow(); getTrustPoints(userId).then(setTrustPoints).catch(() => {}); /* eslint-disable-next-line */ }, [userId]);
 
   const toggleFollow = async () => {
     if (followBusy) return;
@@ -131,6 +140,34 @@ export function ProfilePanel({
       else await followUser(userId);
       await loadFollow();
     } finally { setFollowBusy(false); }
+  };
+
+  const handleDeductTrust = async () => {
+    if (trustBusy || !isMod || viewingOwn) return;
+    if (trustDeductAmt < 1) return;
+    const reason = trustReason.trim() || "Sin razón especificada";
+    if (!confirm(`¿Quitar ${trustDeductAmt} punto(s) de confianza a @${profile?.username}?\nRazón: ${reason}`)) return;
+    setTrustBusy(true);
+    try {
+      const result = await deductTrustPoints(userId, trustDeductAmt, reason);
+      setTrustPoints(result.newPoints);
+      if (result.banned) {
+        alert(`@${profile?.username} alcanzó 0 puntos y fue baneado.`);
+      }
+      setTrustReason("");
+      setTrustDeductAmt(1);
+    } catch (e) { alert((e as Error).message); }
+    finally { setTrustBusy(false); }
+  };
+
+  const handleRestoreTrust = async () => {
+    if (trustBusy || !isMod || viewingOwn) return;
+    setTrustBusy(true);
+    try {
+      const newPts = await restoreTrustPoints(userId, 1);
+      setTrustPoints(newPts);
+    } catch (e) { alert((e as Error).message); }
+    finally { setTrustBusy(false); }
   };
 
   // ─── Compartir perfil: enlace directo + compartir en el chat grupal ───
@@ -331,6 +368,10 @@ export function ProfilePanel({
                 <div className="mt-12 flex items-center gap-2">
                   <button onClick={() => setEditing(true)}
                     className="h-9 px-3 rounded-lg border border-border bg-surface text-xs font-medium active:scale-95">Editar</button>
+                  <button onClick={() => setShowQR(v => !v)}
+                    className={`h-9 px-2.5 rounded-lg border text-xs font-medium active:scale-95 flex items-center gap-1 ${showQR ? "border-primary/30 bg-primary/10 text-primary" : "border-border bg-surface text-muted-foreground hover:text-foreground"}`}>
+                    <QrCode size={13} />
+                  </button>
                   {shareMenu}
                 </div>
               )
@@ -339,6 +380,10 @@ export function ProfilePanel({
                 <button onClick={toggleFollow} disabled={followBusy}
                   className={`h-9 px-3 rounded-lg text-xs font-semibold flex items-center gap-1.5 active:scale-95 disabled:opacity-60 ${follow.i_follow ? "border border-border bg-surface text-foreground" : "bg-primary text-white"}`}>
                   {followBusy ? <Loader2 size={12} className="animate-spin"/> : follow.i_follow ? <><UserCheck size={12}/> Siguiendo</> : <><UserPlus size={12}/> Seguir</>}
+                </button>
+                <button onClick={() => setShowQR(v => !v)}
+                  className={`h-9 px-2.5 rounded-lg border text-xs font-medium active:scale-95 flex items-center gap-1 ${showQR ? "border-primary/30 bg-primary/10 text-primary" : "border-border bg-surface text-muted-foreground hover:text-foreground"}`}>
+                  <QrCode size={13} />
                 </button>
                 {shareMenu}
               </div>
@@ -363,6 +408,48 @@ export function ProfilePanel({
           )}
 
           {followList && <FollowListModal list={followList} myId={myId} onClose={() => setFollowList(null)} onChanged={loadFollow} />}
+
+          {/* Trust Points */}
+          {!editing && (
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-card border border-border/40">
+                <div className={`w-2 h-2 rounded-full ${trustPoints <= 3 ? "bg-red-500" : trustPoints <= 6 ? "bg-amber-500" : "bg-emerald-500"}`} />
+                <span className="text-[11px] font-semibold text-foreground/80 tabular-nums">{trustPoints}</span>
+                <span className="text-[10px] text-muted-foreground/50">puntos de confianza</span>
+              </div>
+              {/* Moderator controls */}
+              {isMod && !viewingOwn && (
+                <div className="flex items-center gap-1.5">
+                  <button onClick={handleRestoreTrust} disabled={trustBusy || trustPoints >= DEFAULT_TRUST_POINTS}
+                    className="h-7 px-2 rounded-md border border-border/50 bg-surface text-[10px] font-medium text-emerald-600 hover:bg-emerald-50 active:scale-95 transition disabled:opacity-40">
+                    +1
+                  </button>
+                  <button onClick={handleDeductTrust} disabled={trustBusy || trustPoints <= 0}
+                    className="h-7 px-2 rounded-md border border-border/50 bg-surface text-[10px] font-medium text-red-500 hover:bg-red-50 active:scale-95 transition disabled:opacity-40">
+                    -{trustDeductAmt}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Trust deduction form (moderator only) */}
+          {!editing && isMod && !viewingOwn && (
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30 border border-border/30">
+              <input type="number" min={1} max={10} value={trustDeductAmt}
+                onChange={e => setTrustDeductAmt(Math.max(1, Math.min(10, parseInt(e.target.value) || 1)))}
+                className="w-12 h-7 px-1.5 rounded-md bg-card border border-border/50 text-[11px] text-center font-mono outline-none focus:border-primary/40"
+              />
+              <input value={trustReason} onChange={e => setTrustReason(e.target.value)}
+                placeholder="Razón…"
+                className="flex-1 h-7 px-2.5 rounded-md bg-card border border-border/50 text-[11px] outline-none focus:border-primary/40 placeholder:text-muted-foreground/30"
+              />
+              <button onClick={handleDeductTrust} disabled={trustBusy}
+                className="h-7 px-2.5 rounded-md bg-red-500 text-white text-[10px] font-semibold active:scale-95 transition disabled:opacity-50">
+                {trustBusy ? "…" : "Quitar"}
+              </button>
+            </div>
+          )}
 
           {/* Social links (Plus feature, always shown if present and Plus active) */}
           {!editing && isPlusActive(profile) && profile.social_links && (
@@ -408,13 +495,10 @@ export function ProfilePanel({
             </div>
           )}
 
-          {/* QR Code: enlace al perfil del usuario */}
-          {!editing && (
-            <div className="flex flex-col items-center gap-2 pt-3 border-t border-border/30">
-              <div className="flex items-center gap-1.5 text-[10px] font-mono text-muted-foreground/50">
-                <QrCode size={11} /> Escanear para ver perfil
-              </div>
-              <div className="p-2 rounded-xl border border-border/40 bg-card">
+          {/* QR Code: se muestra solo al tocar el botón QR */}
+          {!editing && showQR && (
+            <div className="flex flex-col items-center gap-2 pt-3 border-t border-border/30 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="p-2.5 rounded-xl border border-border/40 bg-card">
                 <img
                   src={`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(typeof window !== "undefined" ? `${window.location.origin}/profile/${userId}` : `/profile/${userId}`)}&size=120x120&margin=4&format=svg`}
                   alt={`QR de ${profile.username}`}

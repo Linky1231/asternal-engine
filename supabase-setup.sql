@@ -88,6 +88,7 @@ create table if not exists public.profiles (
   post_effect text,
   creator_card_style jsonb,
   featured_post_id uuid,
+  trust_points smallint not null default 10,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -969,12 +970,13 @@ begin
     v_code := 'AST-' || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 6));
     exit when not exists (select 1 from public.profiles where user_code = v_code);
   end loop;
-  insert into public.profiles (id, username, display_name, user_code)
+  insert into public.profiles (id, username, display_name, user_code, trust_points)
   values (
     new.id,
     coalesce(new.raw_user_meta_data->>'username', split_part(new.email, '@', 1)),
     new.raw_user_meta_data->>'display_name',
-    v_code
+    v_code,
+    10
   )
   on conflict (id) do nothing;
   -- Auto-asignar rol admin a la cuenta propietaria

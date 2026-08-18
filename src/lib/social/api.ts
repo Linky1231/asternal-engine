@@ -47,6 +47,8 @@ export type Profile = {
   profile_background?: string | null;
   post_effect?: string | null;
   creator_card_style?: CreatorCardStyle | null;
+  // Trust
+  trust_points?: number | null;
 };
 
 export function isPlusActive(p: Profile | null | undefined): boolean {
@@ -1177,6 +1179,82 @@ export async function banEmail(email: string, reason?: string): Promise<void> {
 export async function unbanEmail(id: string): Promise<void> {
   const { error } = await supabase.from("banned_emails").delete().eq("id", id);
   if (error) throw error;
+}
+
+// ============ TRUST POINTS ============
+
+/** Default trust points for new users */
+export const DEFAULT_TRUST_POINTS = 10;
+
+/** Get trust points for a user (returns default if column doesn't exist) */
+export async function getTrustPoints(userId: string): Promise<number> {
+  try {
+    const { data } = await supabase.from("profiles").select("trust_points").eq("id", userId).maybeSingle();
+    if (data && typeof (data as Record<string, unknown>).trust_points === "number") {
+      return (data as Record<string, unknown>).trust_points as number;
+    }
+    return DEFAULT_TRUST_POINTS;
+  } catch {
+    return DEFAULT_TRUST_POINTS;
+  }
+}
+
+/** Moderator: deduct trust points from a user. Auto-bans when reaching 0. */
+export async function deductTrustPoints(
+  targetUserId: string,
+  amount: number,
+  reason: string,
+): Promise<{ newPoints: number; banned: boolean }> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  // Get current points
+  const current = await getTrustPoints(targetUserId);
+  const newPoints = Math.max(0, current - amount);
+
+  // Update points
+  const { error } = await supabase
+    .from("profiles")
+    .update({ trust_points: newPoints } as never)
+    .eq("id", targetUserId);
+  if (error) throw error;
+
+  // Auto-ban if reaching 0
+  let banned = false;
+  if (newPoints <= 0) {
+    try {
+      const { data: targetProfile } = await supabase
+        .from("profiles")
+        .select("username")
+        .eq("id", targetUserId)
+        .maybeSingle();
+      const targetUsername = (targetProfile as Record<string, unknown>)?.username as string | null;
+      if (targetUsername) {
+        await banEmail(
+          `${targetUsername}@trust-ban.local`,
+          `Auto-ban: trust points reached 0 (${reason})`,
+        );
+      }
+      banned = true;
+    } catch { /* noop */ }
+  }
+
+  return { newPoints, banned };
+}
+
+/** Moderator: restore trust points to a user */
+export async function restoreTrustPoints(
+  targetUserId: string,
+  amount: number,
+): Promise<number> {
+  const current = await getTrustPoints(targetUserId);
+  const newPoints = Math.min(DEFAULT_TRUST_POINTS, current + amount);
+  const { error } = await supabase
+    .from("profiles")
+    .update({ trust_points: newPoints } as never)
+    .eq("id", targetUserId);
+  if (error) throw error;
+  return newPoints;
 }
 
 // ============ POLLS ============
