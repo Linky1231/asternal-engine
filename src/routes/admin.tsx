@@ -119,6 +119,7 @@ function AdminPage() {
     if (!confirm("¿Quitar del baneo?")) return;
     setBusy(id);
     try { await unbanEmail(id); await load(); } finally { setBusy(null); }
+  };
 
   const deductTrust = async (userId: string, username: string) => {
     const amt = trustDeductAmt[userId] || 1;
