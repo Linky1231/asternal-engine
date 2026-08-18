@@ -1,25 +1,23 @@
 // omega-proxy: Edge Function para proyectar llamadas a OmegaTech API
-// desde el navegador (CORS-safe).
+// desde el navegador (CORS-safe). Soporta múltiples modelos.
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+const OMEGA_BASE = "https://api.omegatech.app/api/ai";
 
-const OMEGA_URL = "https://api.omegatech.app/api/ai/Gpt-4-mini";
+const corsHeaders: Record<string, string> = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
 
-serve(async (req: Request): Promise<Response> => {
-  const corsHeaders: Record<string, string> = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
-  };
-
+Deno.serve(async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const { message } = await req.json();
-
-    const omegaRes = await fetch(OMEGA_URL, {
+    const { message, model } = await req.json();
+    const modelName = model || "Gpt-4-mini";
+    const omegaRes = await fetch(`${OMEGA_BASE}/${modelName}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message }),

@@ -6,7 +6,9 @@
 import { ENGINE_KNOWLEDGE } from "./engine-knowledge";
 
 /** OmegaTech — API gratuita sin clave */
-const OMEGATECH_DIRECT = "https://api.omegatech.app/api/ai/Gpt-4-mini";
+// Lista de modelos en orden de preferencia (si uno falla, se intenta el siguiente)
+const OMEGATECH_MODELS = ["Gpt-4-mini", "Gpt-3.5-turbo", "Gemini"];
+const OMEGATECH_BASE = "https://api.omegatech.app/api/ai";
 const OMEGATECH_PROXY =
   "https://gxpgczwkovertezeydkt.supabase.co/functions/v1/omega-proxy";
 
@@ -160,9 +162,44 @@ function buildSingleMessage(history: OrionMessage[]): string {
   return parts.join("\n\n---\n\n");
 }
 
+const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd4cGdjendrb3ZlcnRlemV5ZGt0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU2MTk5NTUsImV4cCI6MjEwMTE5NTk1NX0.GGGjdgi2l2NmQBQ1pS8k37npT3p6hx9Sl5JF0DdQ9cM";
+
+/** Intenta un modelo vía proxy, luego directo. Devuelve { ok, answer?, model? }. */
+async function tryModel(modelName: string, message: string): Promise<{ ok: boolean; answer?: string; model?: string; error?: string }> {
+  // 1. Vía proxy (CORS-safe)
+  try {
+    const res = await fetch(OMEGATECH_PROXY, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${ANON_KEY}` },
+      body: JSON.stringify({ message, model: modelName }),
+    });
+    if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      if (data?.answer) return { ok: true, answer: data.answer, model: data.model ?? modelName };
+    }
+  } catch { /* proxy falló, intentar directo */ }
+
+  // 2. Directo
+  try {
+    const res = await fetch(`${OMEGATECH_BASE}/${modelName}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message }),
+    });
+    if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      if (data?.answer) return { ok: true, answer: data.answer, model: data.model ?? modelName };
+      return { ok: false, error: data?.error };
+    }
+    return { ok: false, error: `HTTP ${res.status}` };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
+}
+
 /**
  * Envía una petición de chat a OmegaTech (gratuita, sin clave API).
- * OmegaTech usa un endpoint simple: POST con { message } → { answer }.
+ * Intenta varios modelos en orden; si todos fallan, lanza un error descriptivo.
  */
 export async function orionChat(
   history: OrionMessage[],
@@ -170,61 +207,16 @@ export async function orionChat(
 ): Promise<OrionResult> {
   const message = buildSingleMessage(history);
 
-  let res: Response;
-  // Intentar vía proxy de Supabase (CORS-safe), luego directo como respaldo.
-  try {
-    const anonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd4cGdjendrb3ZlcnRlemV5ZGt0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU2MTk5NTUsImV4cCI6MjEwMTE5NTk1NX0.GGGjdgi2l2NmQBQ1pS8k37npT3p6hx9Sl5JF0DdQ9cM";
-    res = await fetch(OMEGATECH_PROXY, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${anonKey}`,
-      },
-      body: JSON.stringify({ message }),
-    });
-  } catch {
-    try {
-      res = await fetch(OMEGATECH_DIRECT, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message }),
-      });
-    } catch {
-      throw new Error(
-        "No se pudo conectar con Orión. Comprueba tu conexión a internet e inténtalo de nuevo."
-      );
+  for (const model of OMEGATECH_MODELS) {
+    const result = await tryModel(model, message);
+    if (result.ok && result.answer) {
+      return { content: result.answer, model: result.model ?? model, costUsd: 0, balanceUsd: 0 };
     }
   }
 
-  if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    const code = res.status;
-    if (code === 429) {
-      throw new Error("Límite de peticiones alcanzado. Espera unos segundos y reintenta.");
-    }
-    throw new Error(`Orión respondió con un error (${code}).${detail ? ` ${detail}` : ""}`);
-  }
-
-  const data = (await res.json()) as {
-    success?: boolean;
-    answer?: string;
-    model?: string;
-    error?: string;
-  };
-
-  if (data.error) {
-    throw new Error(`Orión: ${data.error}`);
-  }
-
-  const content = data.answer ?? "";
-  if (!content) throw new Error("Orión no devolvió ninguna respuesta.");
-
-  return {
-    content,
-    model: data.model ?? "gpt-4-mini",
-    costUsd: 0,
-    balanceUsd: 0,
-  };
+  throw new Error(
+    "Orión no está disponible en este momento. Los servidores de OmegaTech están temporalmente fuera de servicio. Inténtalo de nuevo más tarde."
+  );
 }
 
 /**
