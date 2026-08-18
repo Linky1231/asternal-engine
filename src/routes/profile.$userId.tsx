@@ -19,7 +19,7 @@ function ProfileByIdPage() {
   useEffect(() => {
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { navigate({ to: "/auth" }); return; }
+      if (!session) { navigate({ to: "/auth", search: { returnTo: `/profile/${userId}` } }); return; }
       setMyId(session.user.id);
       setMod(await checkMod());
     })();

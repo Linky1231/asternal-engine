@@ -22,7 +22,7 @@ function ProfilePage() {
   useEffect(() => {
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { navigate({ to: "/auth" }); return; }
+      if (!session) { navigate({ to: "/auth", search: { returnTo: "/profile" } }); return; }
       setMyId(session.user.id);
       setMe(await getMyProfile());
       setMod(await checkMod());

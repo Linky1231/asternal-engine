@@ -4,7 +4,7 @@ import {
   Loader2, Camera, Save, Gamepad2, Newspaper, CheckCircle2, Star, ChevronRight,
   ImagePlus, MapPin, Cake, Palette, Tag, Sparkles as SparklesIcon, Eye, EyeOff,
   Heart, MessageCircle, ChevronDown, ChevronUp, Share2, Link2, Check,
-  Youtube, Instagram, Globe, UserPlus, UserCheck, X, Fingerprint, Copy,
+  Youtube, Instagram, Globe, UserPlus, UserCheck, X, Fingerprint, Copy, QrCode,
 } from "lucide-react";
 import {
   type Profile,
@@ -405,6 +405,27 @@ export function ProfilePanel({
                   #{t}
                 </span>
               ))}
+            </div>
+          )}
+
+          {/* QR Code: enlace al perfil del usuario */}
+          {!editing && (
+            <div className="flex flex-col items-center gap-2 pt-3 border-t border-border/30">
+              <div className="flex items-center gap-1.5 text-[10px] font-mono text-muted-foreground/50">
+                <QrCode size={11} /> Escanear para ver perfil
+              </div>
+              <div className="p-2 rounded-xl border border-border/40 bg-card">
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(typeof window !== "undefined" ? `${window.location.origin}/profile/${userId}` : `/profile/${userId}`)}&size=120x120&margin=4&format=svg`}
+                  alt={`QR de ${profile.username}`}
+                  width={120}
+                  height={120}
+                  className="block"
+                />
+              </div>
+              <div className="text-[9px] font-mono text-muted-foreground/40 text-center">
+                {typeof window !== "undefined" ? `${window.location.origin}/profile/${userId}` : `/profile/${userId}`}
+              </div>
             </div>
           )}
 

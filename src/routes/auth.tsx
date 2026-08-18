@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useSearch, Link } from "@tanstack/react-router";
 import { useEffect, useState, useRef } from "react";
 import { supabase, clearSupabaseCredentials } from "@/integrations/supabase/client";
 import {
@@ -27,6 +27,9 @@ function friendlyAuthError(msg: string): string {
 }
 
 export const Route = createFileRoute("/auth")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    returnTo: typeof search.returnTo === "string" ? search.returnTo : "/",
+  }),
   head: () => ({ meta: [{ title: "Asternal — Acceso a la plataforma" }] }),
   component: AuthPage,
 });
@@ -392,6 +395,7 @@ function Logo({ loaded }: { loaded: boolean }) {
 /* ─── Main ─── */
 function AuthPage() {
   const navigate = useNavigate();
+  const { returnTo } = useSearch({ from: "/auth" });
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const email = useFieldState();
   const password = useFieldState();
@@ -408,7 +412,7 @@ function AuthPage() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data?.session) navigate({ to: "/" });
+      if (data?.session) navigate({ to: returnTo || "/" });
     });
     requestAnimationFrame(() => setLoaded(true));
   }, [navigate]);
@@ -472,14 +476,14 @@ function AuthPage() {
         });
         if (error) throw error;
         setSuccessMsg("Cuenta creada correctamente");
-        setTimeout(() => navigate({ to: "/" }), 1000);
+        setTimeout(() => navigate({ to: returnTo || "/" }), 1000);
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email: resolveLoginEmail(email.value),
           password: password.value,
         });
         if (error) throw error;
-        navigate({ to: "/" });
+        navigate({ to: returnTo || "/" });
       }
     } catch (e) {
       const msg = (e as Error).message;
@@ -733,6 +737,16 @@ function AuthPage() {
                     </form>
 
                     <div className="mt-5 pt-4 border-t border-border/40">
+                      {returnTo && returnTo.startsWith("/profile/") && (
+                        <div className="mb-3 p-3 rounded-xl border border-primary/20 bg-primary/[0.04] text-center">
+                          <p className="text-[11px] text-primary font-medium">
+                            Inicia sesión o crea una cuenta para ver este perfil
+                          </p>
+                          <p className="text-[9px] text-muted-foreground mt-1 font-mono">
+                            Serás redirigido al perfil después de iniciar sesión
+                          </p>
+                        </div>
+                      )}
                       <p className="text-[10px] text-muted-foreground/30 text-center font-mono tracking-wider">
                         Tus creaciones se sincronizan en la nube
                       </p>
