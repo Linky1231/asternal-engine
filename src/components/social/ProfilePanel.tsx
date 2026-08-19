@@ -5,7 +5,7 @@ import {
   ImagePlus, MapPin, Cake, Palette, Tag, Sparkles as SparklesIcon, Eye, EyeOff,
   Heart, MessageCircle, ChevronDown, ChevronUp, Share2, Link2, Check,
   Youtube, Instagram, Globe, UserPlus, UserCheck, X, Fingerprint, Copy, QrCode,
-  MoreVertical, Shield,
+  MoreVertical, Shield, Trophy,
 } from "lucide-react";
 import {
   type Profile,
@@ -36,6 +36,7 @@ import { Avatar } from "./Avatar";
 import { SegmentedControl } from "@/components/ui/segmented";
 import { TrustPointsHistory } from "./TrustPointsHistory";
 import { SmartStatusPanel } from "./SmartStatusPanel";
+import { PortfolioPanel } from "./PortfolioPanel";
 import { getUserCode } from "@/lib/social/avatar";
 
 const GENRES = ["Acción", "Aventura", "Puzzle", "RPG", "Estrategia", "Plataformas", "Casual", "Terror", "Simulación", "Deportes"];
@@ -95,6 +96,7 @@ export function ProfilePanel({
   const [followList, setFollowList] = useState<null | { kind: "followers" | "following"; items: Profile[]; loading: boolean }>(null);
   const [showTrustMenu, setShowTrustMenu] = useState(false);
   const [showTrustPanel, setShowTrustPanel] = useState(false);
+  const [showPortfolio, setShowPortfolio] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -181,7 +183,7 @@ export function ProfilePanel({
     setShareOpen(false);
     try {
       sessionStorage.setItem("asternal_chat_share", shareLink);
-      window.dispatchEvent(new CustomEvent("asternal_share_chat", { detail: shareLink }));
+      window.dispatchEvent(new CustomEvent("asternal_share_chat", { detail: { text: shareLink, view: "group" as const } }));
     } catch { /* noop */ }
     navigate({ to: "/" });
   };
@@ -189,9 +191,9 @@ export function ProfilePanel({
     setShareOpen(false);
     try {
       sessionStorage.setItem("asternal_chat_share", shareLink);
-      window.dispatchEvent(new CustomEvent("asternal_share_chat", { detail: shareLink }));
+      window.dispatchEvent(new CustomEvent("asternal_share_chat", { detail: { text: shareLink, view: "dms" as const } }));
     } catch { /* noop */ }
-    navigate({ to: "/", search: { direct: userId } });
+    navigate({ to: "/" });
   };
   const copyLink = async () => {
     setShareOpen(false);
@@ -213,7 +215,7 @@ export function ProfilePanel({
           </button>
           <button onClick={shareDirect}
             className="flex w-full items-center gap-2 px-3 py-2 rounded-md text-xs hover:bg-muted/60 transition-colors text-left">
-            <MessageCircle size={14} className="text-emerald-500 shrink-0" /> Compartir en chat directo
+            <MessageCircle size={14} className="text-primary shrink-0" /> Compartir en chat directo
           </button>
           <button onClick={() => void copyLink()}
             className="flex w-full items-center gap-2 px-3 py-2 rounded-md text-xs hover:bg-muted/60 transition-colors text-left">
@@ -404,6 +406,10 @@ export function ProfilePanel({
                           className="flex w-full items-center gap-2 px-3 py-2 rounded-md text-xs hover:bg-muted/60 transition-colors text-left">
                           <Shield size={14} className="text-primary shrink-0" /> Puntos de confianza
                         </button>
+                        <button onClick={() => { setShowTrustMenu(false); setShowPortfolio(true); }}
+                          className="flex w-full items-center gap-2 px-3 py-2 rounded-md text-xs hover:bg-muted/60 transition-colors text-left">
+                          <Trophy size={14} className="text-primary shrink-0" /> Portafolio
+                        </button>
                       </div>
                     )}
                   </div>
@@ -430,6 +436,10 @@ export function ProfilePanel({
                       <button onClick={() => { setShowTrustMenu(false); setShowTrustPanel(true); }}
                         className="flex w-full items-center gap-2 px-3 py-2 rounded-md text-xs hover:bg-muted/60 transition-colors text-left">
                         <Shield size={14} className="text-primary shrink-0" /> Puntos de confianza
+                      </button>
+                      <button onClick={() => { setShowTrustMenu(false); setShowPortfolio(true); }}
+                        className="flex w-full items-center gap-2 px-3 py-2 rounded-md text-xs hover:bg-muted/60 transition-colors text-left">
+                        <Trophy size={14} className="text-primary shrink-0" /> Portafolio
                       </button>
                     </div>
                   )}
@@ -710,6 +720,16 @@ export function ProfilePanel({
           viewingOwn={viewingOwn}
           onClose={() => setShowTrustPanel(false)}
           onTrustChange={setTrustPoints}
+        />
+      )}
+
+      {/* Portfolio panel (from three-dot menu) */}
+      {showPortfolio && (
+        <PortfolioPanel
+          userId={userId}
+          profile={profile}
+          viewingOwn={viewingOwn}
+          onClose={() => setShowPortfolio(false)}
         />
       )}
     </div>

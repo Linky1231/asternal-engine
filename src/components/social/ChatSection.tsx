@@ -883,7 +883,7 @@ function GiftCard({
   );
 }
 
-export default function ChatSection({ myId, onClose, initialText }: { myId: string | null; onClose: () => void; initialText?: string }) {
+export default function ChatSection({ myId, onClose, initialText, initialView }: { myId: string | null; onClose: () => void; initialText?: string; initialView?: "group" | "dms" | "groups" }) {
   const [chatInfo, setChatInfo] = useState<{ id: string; name: string; memberCount: number; memberOk?: boolean; local?: boolean } | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [senders, setSenders] = useState<Map<string, Profile>>(new Map());
@@ -961,7 +961,7 @@ export default function ChatSection({ myId, onClose, initialText }: { myId: stri
   const [expiringId, setExpiringId] = useState<string | null>(null);
   const [myClaims, setMyClaims] = useState<Map<string, number>>(new Map());
   // Chats individuales (DMs), grupos personalizados y menciones @usuario
-  const [view, setView] = useState<"group" | "dms" | "groups">("group");
+  const [view, setView] = useState<"group" | "dms" | "groups">(initialView ?? "group");
   const [dmList, setDmList] = useState<DmChat[]>([]);
   const [dmLoading, setDmLoading] = useState(false);
   const [activeDm, setActiveDm] = useState<DmChat | null>(null);

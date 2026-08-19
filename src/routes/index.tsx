@@ -100,10 +100,12 @@ function HomePage() {
   const [showSearch, setShowSearch] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [chatInitialView, setChatInitialView] = useState<"group" | "dms" | "groups" | undefined>(undefined);
   const [chatRetryNonce, setChatRetryNonce] = useState(0);
   const [orionOpen, setOrionOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [chatShareText, setChatShareText] = useState<string | null>(null);
+  const [chatShareView, setChatShareView] = useState<"group" | "dms" | "groups" | undefined>(undefined);
   const [inPreview, setInPreview] = useState(false);
 
   // When the app runs embedded in the Freebuff preview (inside an iframe), the
@@ -127,9 +129,13 @@ function HomePage() {
     } catch { /* noop */ }
     // También escuchar CustomEvents para compartir en tiempo real (sin depender de remount)
     const handler = (e: Event) => {
-      const text = (e as CustomEvent<string>).detail;
-      if (text) {
-        setChatShareText(text);
+      const d = (e as CustomEvent).detail;
+      if (typeof d === "string") {
+        setChatShareText(d);
+        setChatOpen(true);
+      } else if (d && typeof d === "object") {
+        setChatShareText(d.text ?? null);
+        setChatShareView(d.view ?? undefined);
         setChatOpen(true);
       }
     };
@@ -463,8 +469,9 @@ function HomePage() {
           <ChatSection
             key={chatRetryNonce}
             myId={myId}
-            onClose={() => { setChatOpen(false); setChatShareText(null); }}
+            onClose={() => { setChatOpen(false); setChatShareText(null); setChatShareView(undefined); }}
             initialText={chatShareText ?? undefined}
+            initialView={chatShareView}
           />
         </ChatBoundary>
       )}
