@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import {
   Star, Palette, Rocket, Link2, Check, Loader2,
   Youtube, Instagram, Music2, Globe, Gift, Sparkles as SparklesIcon,
-  Wand2, IdCard,
+  Wand2,
 } from "lucide-react";
 
 import { SubPageHeader } from "@/components/social/SubPageHeader";
@@ -11,10 +11,9 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   getMyProfile, claimPlusOrbes, updatePlusSettings,
   isPlusActive,
-  type Profile, type SocialLinks, type CreatorCardStyle,
+  type Profile, type SocialLinks,
 } from "@/lib/social/api";
-import { UserName } from "@/components/social/UserName";
-import { Avatar } from "@/components/social/Avatar";
+
 
 export const Route = createFileRoute("/plus")({
   head: () => ({
@@ -53,13 +52,7 @@ const POST_EFFECTS: { id: string; label: string }[] = [
   { id: "fade-up",  label: "Elegante" },
 ];
 
-const CARD_THEMES: { id: NonNullable<CreatorCardStyle["theme"]>; label: string; bg: string; fg: string }[] = [
-  { id: "dark",   label: "Dark",   bg: "linear-gradient(135deg, #1a1a2e, #16213e)", fg: "#ffffff" },
-  { id: "light",  label: "Light",  bg: "linear-gradient(135deg, #f8f9fa, #e9ecef)", fg: "#212529" },
-  { id: "neon",   label: "Neon",   bg: "linear-gradient(135deg, #12121e, #1a0033)", fg: "#2FD9D2" },
-  { id: "aurora", label: "Aurora", bg: "linear-gradient(135deg, #667eea, #764ba2, #f093fb)", fg: "#ffffff" },
-  { id: "sunset", label: "Sunset", bg: "linear-gradient(135deg, #ff9a9e, #fad0c4)", fg: "#3a1a1a" },
-];
+
 
 function PlusPage() {
   const navigate = useNavigate();
@@ -135,13 +128,6 @@ function PlusPage() {
     await updatePlusSettings({ post_effect: id });
     setMe({ ...me, post_effect: id });
   };
-  const setCardTheme = async (theme: NonNullable<CreatorCardStyle["theme"]>) => {
-    if (!me) return;
-    const next: CreatorCardStyle = { ...(me.creator_card_style ?? {}), theme };
-    await updatePlusSettings({ creator_card_style: next });
-    setMe({ ...me, creator_card_style: next });
-  };
-
   const saveSocials = async () => {
     setSavedSocials("saving");
     await updatePlusSettings({ social_links: socials });
@@ -252,26 +238,6 @@ function PlusPage() {
           </div>
         </FeatureCard>
 
-        {/* Creator card — NEW */}
-        <FeatureCard icon={<IdCard size={18} />} title="Tarjeta de creador"
-          desc="Tu identidad como desarrollador en un vistazo." locked={!isPlus}>
-          <CreatorCardPreview profile={me} />
-          <div className="grid grid-cols-5 md:grid-cols-10 gap-2 mt-3">
-            {CARD_THEMES.map(t => {
-              const active = (me?.creator_card_style?.theme ?? "dark") === t.id;
-              return (
-                <button key={t.id} onClick={() => setCardTheme(t.id)} disabled={!isPlus}
-                  className={`aspect-square rounded-lg border-2 relative overflow-hidden transition ${active ? "border-foreground" : "border-transparent"} disabled:opacity-40`}
-                  style={{ background: t.bg }}>
-                  <span className="absolute inset-0 grid place-items-center text-[9px] font-display" style={{ color: t.fg }}>
-                    {t.label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </FeatureCard>
-
         {/* Frames */}
         <FeatureCard icon={<Palette size={18} />} title="Marcos premium"
           desc="Marco animado para tu foto de perfil." locked={!isPlus}>
@@ -340,28 +306,6 @@ function PlusPage() {
           <Link to="/" className="text-[11px] text-muted-foreground underline">Volver al inicio</Link>
         </div>
       </main>
-    </div>
-  );
-}
-
-function CreatorCardPreview({ profile }: { profile: Profile | null }) {
-  const theme = profile?.creator_card_style?.theme ?? "dark";
-  const themeCfg = CARD_THEMES.find(t => t.id === theme) ?? CARD_THEMES[0];
-  return (
-    <div className="relative rounded-2xl overflow-hidden p-4 flex items-center gap-3"
-      style={{ background: themeCfg.bg, color: themeCfg.fg, minHeight: 110 }}>
-      <Avatar p={profile} size={64} rounded="xl" className="ring-2 ring-white/30" />
-      <div className="min-w-0 flex-1">
-        <div className="text-base font-display font-semibold truncate">
-          <UserName p={profile} size="md" showBadge={false} />
-        </div>
-        <div className="text-[11px] opacity-80 font-mono truncate">@{profile?.username ?? "?"}</div>
-        <div className="text-[10px] opacity-70 mt-1 truncate">{profile?.bio ?? "Creador en Asternal"}</div>
-      </div>
-      <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded-full text-[9px] font-display"
-        style={{ background: "rgba(255,255,255,0.15)" }}>
-        <Star size={9} fill="currentColor" /> PLUS
-      </div>
     </div>
   );
 }
