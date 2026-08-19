@@ -174,7 +174,7 @@ export function generateSmartStatus(data: AnalysisData): SmartStatus {
       status: {
         severity: "normal",
         title: "Recurso acumulado",
-        message: `Tienes ${data.orbes.toLocaleString()} orbes. Considera usarlos en el Centro Plus o en mejoras de perfil.`,
+        message: `Tienes ${data.orbes.toLocaleString()} orbes. Sigue participando en la comunidad para hacer crecer tus recursos.`,
         area: "cuenta",
       },
     });

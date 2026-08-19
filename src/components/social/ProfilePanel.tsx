@@ -5,6 +5,7 @@ import {
   ImagePlus, MapPin, Cake, Palette, Tag, Sparkles as SparklesIcon, Eye, EyeOff,
   Heart, MessageCircle, ChevronDown, ChevronUp, Share2, Link2, Check,
   Youtube, Instagram, Globe, UserPlus, UserCheck, X, Fingerprint, Copy, QrCode,
+  MoreVertical, Shield,
 } from "lucide-react";
 import {
   type Profile,
@@ -92,7 +93,8 @@ export function ProfilePanel({
   const [shareOpen, setShareOpen] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [followList, setFollowList] = useState<null | { kind: "followers" | "following"; items: Profile[]; loading: boolean }>(null);
-  const [showTrustHistory, setShowTrustHistory] = useState(false);
+  const [showTrustMenu, setShowTrustMenu] = useState(false);
+  const [showTrustPanel, setShowTrustPanel] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -376,6 +378,24 @@ export function ProfilePanel({
                     <QrCode size={13} />
                   </button>
                   {shareMenu}
+                  <div className="relative">
+                    <button onClick={() => setShowTrustMenu(v => !v)}
+                      className="h-9 w-9 rounded-lg border border-border bg-surface grid place-items-center text-muted-foreground hover:text-foreground active:scale-95 transition">
+                      <MoreVertical size={14} />
+                    </button>
+                    {showTrustMenu && (
+                      <div className="absolute right-0 top-full mt-1.5 z-30 rounded-lg border border-border bg-surface p-1 min-w-[200px] shadow-md animate-in fade-in slide-in-from-top-1 duration-150">
+                        <button onClick={() => { setShowTrustMenu(false); setShowTrustPanel(true); }}
+                          className="flex w-full items-center gap-2 px-3 py-2 rounded-md text-xs hover:bg-muted/60 transition-colors text-left">
+                          <Shield size={14} className="text-primary shrink-0" /> Puntos de confianza
+                        </button>
+                        <button onClick={() => { setShowTrustMenu(false); setShareOpen(true); }}
+                          className="flex w-full items-center gap-2 px-3 py-2 rounded-md text-xs hover:bg-muted/60 transition-colors text-left">
+                          <Share2 size={14} className="text-primary shrink-0" /> Compartir perfil
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )
             ) : (
@@ -389,6 +409,24 @@ export function ProfilePanel({
                   <QrCode size={13} />
                 </button>
                 {shareMenu}
+                <div className="relative">
+                  <button onClick={() => setShowTrustMenu(v => !v)}
+                    className="h-9 w-9 rounded-lg border border-border bg-surface grid place-items-center text-muted-foreground hover:text-foreground active:scale-95 transition">
+                    <MoreVertical size={14} />
+                  </button>
+                  {showTrustMenu && (
+                    <div className="absolute right-0 top-full mt-1.5 z-30 rounded-lg border border-border bg-surface p-1 min-w-[200px] shadow-md animate-in fade-in slide-in-from-top-1 duration-150">
+                      <button onClick={() => { setShowTrustMenu(false); setShowTrustPanel(true); }}
+                        className="flex w-full items-center gap-2 px-3 py-2 rounded-md text-xs hover:bg-muted/60 transition-colors text-left">
+                        <Shield size={14} className="text-primary shrink-0" /> Puntos de confianza
+                      </button>
+                      <button onClick={() => { setShowTrustMenu(false); setShareOpen(true); }}
+                        className="flex w-full items-center gap-2 px-3 py-2 rounded-md text-xs hover:bg-muted/60 transition-colors text-left">
+                        <Share2 size={14} className="text-primary shrink-0" /> Compartir perfil
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -412,48 +450,7 @@ export function ProfilePanel({
 
           {followList && <FollowListModal list={followList} myId={myId} onClose={() => setFollowList(null)} onChanged={loadFollow} />}
 
-          {/* Trust Points */}
-          {!editing && (
-            <div className="flex items-center gap-3">
-              <button onClick={() => setShowTrustHistory(true)}
-                className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-card border border-border/40 hover:border-primary/30 hover:bg-primary/[0.02] transition active:scale-[0.98]">
-                <div className={`w-2 h-2 rounded-full ${trustPoints <= 3 ? "bg-red-500" : trustPoints <= 6 ? "bg-amber-500" : "bg-emerald-500"}`} />
-                <span className="text-[11px] font-semibold text-foreground/80 tabular-nums">{trustPoints}</span>
-                <span className="text-[10px] text-muted-foreground/50">puntos de confianza</span>
-              </button>
-              {/* Moderator controls */}
-              {isMod && !viewingOwn && (
-                <div className="flex items-center gap-1.5">
-                  <button onClick={handleRestoreTrust} disabled={trustBusy || trustPoints >= DEFAULT_TRUST_POINTS}
-                    className="h-7 px-2 rounded-md border border-border/50 bg-surface text-[10px] font-medium text-emerald-600 hover:bg-emerald-50 active:scale-95 transition disabled:opacity-40">
-                    +1
-                  </button>
-                  <button onClick={handleDeductTrust} disabled={trustBusy || trustPoints <= 0}
-                    className="h-7 px-2 rounded-md border border-border/50 bg-surface text-[10px] font-medium text-red-500 hover:bg-red-50 active:scale-95 transition disabled:opacity-40">
-                    -{trustDeductAmt}
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
 
-          {/* Trust deduction form (moderator only) */}
-          {!editing && isMod && !viewingOwn && (
-            <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30 border border-border/30">
-              <input type="number" min={1} max={10} value={trustDeductAmt}
-                onChange={e => setTrustDeductAmt(Math.max(1, Math.min(10, parseInt(e.target.value) || 1)))}
-                className="w-12 h-7 px-1.5 rounded-md bg-card border border-border/50 text-[11px] text-center font-mono outline-none focus:border-primary/40"
-              />
-              <input value={trustReason} onChange={e => setTrustReason(e.target.value)}
-                placeholder="Razón…"
-                className="flex-1 h-7 px-2.5 rounded-md bg-card border border-border/50 text-[11px] outline-none focus:border-primary/40 placeholder:text-muted-foreground/30"
-              />
-              <button onClick={handleDeductTrust} disabled={trustBusy}
-                className="h-7 px-2.5 rounded-md bg-red-500 text-white text-[10px] font-semibold active:scale-95 transition disabled:opacity-50">
-                {trustBusy ? "…" : "Quitar"}
-              </button>
-            </div>
-          )}
 
           {/* Social links (Plus feature, always shown if present and Plus active) */}
           {!editing && isPlusActive(profile) && profile.social_links && (
@@ -697,9 +694,136 @@ export function ProfilePanel({
         <SmartStatusPanel userId={userId} />
       </div>
 
-      {showTrustHistory && (
-        <TrustPointsHistory userId={userId} onClose={() => setShowTrustHistory(false)} />
+      {/* Trust Points panel (full, from three-dot menu) */}
+      {showTrustPanel && (
+        <TrustPointsPanel
+          userId={userId}
+          trustPoints={trustPoints}
+          isMod={isMod}
+          viewingOwn={viewingOwn}
+          onClose={() => setShowTrustPanel(false)}
+          onTrustChange={setTrustPoints}
+        />
       )}
+    </div>
+  );
+}
+
+/** Panel completo de puntos de confianza — se abre desde el menú de tres puntos */
+function TrustPointsPanel({ userId, trustPoints, isMod, viewingOwn, onClose, onTrustChange }: {
+  userId: string;
+  trustPoints: number;
+  isMod: boolean;
+  viewingOwn: boolean;
+  onClose: () => void;
+  onTrustChange: (pts: number) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [deductAmt, setDeductAmt] = useState(1);
+  const [reason, setReason] = useState("");
+
+  const handleDeduct = async () => {
+    if (busy || !isMod || viewingOwn || deductAmt < 1) return;
+    const r = reason.trim() || "Sin razón especificada";
+    if (!confirm(`¿Quitar ${deductAmt} punto(s) de confianza?\nRazón: ${r}`)) return;
+    setBusy(true);
+    try {
+      const result = await deductTrustPoints(userId, deductAmt, r);
+      onTrustChange(result.newPoints);
+      if (result.banned) alert("El usuario alcanzó 0 puntos y fue baneado.");
+      setReason(""); setDeductAmt(1);
+    } catch (e) { alert((e as Error).message); }
+    finally { setBusy(false); }
+  };
+
+  const handleRestore = async () => {
+    if (busy || !isMod || viewingOwn) return;
+    setBusy(true);
+    try {
+      const newPts = await restoreTrustPoints(userId, 1);
+      onTrustChange(newPts);
+    } catch (e) { alert((e as Error).message); }
+    finally { setBusy(false); }
+  };
+
+  const level = trustPoints <= 2 ? "crítico" : trustPoints <= 5 ? "bajo" : "normal";
+  const levelColor = trustPoints <= 2 ? "text-red-500" : trustPoints <= 6 ? "text-amber-500" : "text-emerald-500";
+  const levelBg = trustPoints <= 2 ? "bg-red-50 border-red-200/60" : trustPoints <= 6 ? "bg-amber-50 border-amber-200/60" : "bg-emerald-50 border-emerald-200/60";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <button aria-label="Cerrar" onClick={onClose}
+        className="absolute inset-0 bg-black/60 backdrop-blur-[2px] animate-in fade-in duration-200" />
+      <div className="relative w-full sm:max-w-md rounded-t-2xl sm:rounded-lg border border-border bg-surface shadow-md animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-2 duration-300 max-h-[85vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-border/60">
+          <div className="w-9 h-9 rounded-lg grid place-items-center shrink-0" style={{ background: "var(--gradient-plus)" }}>
+            <Shield size={16} className="text-white" />
+          </div>
+          <div className="flex-1">
+            <div className="text-sm font-display font-semibold">Puntos de confianza</div>
+            <div className="text-[10px] text-muted-foreground">Nivel de reputación en la plataforma</div>
+          </div>
+          <button onClick={onClose}
+            className="w-8 h-8 rounded-md border border-border grid place-items-center text-muted-foreground hover:text-foreground active:scale-95 transition">
+            <X size={14} />
+          </button>
+        </div>
+
+        {/* Score display */}
+        <div className={`mx-4 mt-4 p-4 rounded-xl border ${levelBg} text-center`}
+          >
+          <div className="text-4xl font-display font-bold tabular-nums" style={{ color: "var(--primary)" }}>{trustPoints}</div>
+          <div className="text-[11px] text-muted-foreground mt-1">de 10 puntos</div>
+          <div className={`text-[10px] font-semibold uppercase tracking-wider mt-2 ${levelColor}`}>Nivel: {level}</div>
+          <div className="w-full h-1.5 rounded-full bg-muted/40 mt-3">
+            <div className="h-full rounded-full transition-all duration-500"
+              style={{ width: `${(trustPoints / DEFAULT_TRUST_POINTS) * 100}%`, background: trustPoints <= 2 ? "#ef4444" : trustPoints <= 6 ? "#f59e0b" : "#10b981" }} />
+          </div>
+        </div>
+
+        {/* Info */}
+        <div className="mx-4 mt-3 p-3 rounded-xl bg-muted/20 border border-border/30">
+          <p className="text-[11px] text-muted-foreground leading-relaxed">
+            Los puntos de confianza reflejan tu comportamiento en la plataforma. Si llegan a 0, tu cuenta será bloqueada automáticamente. Los moderadores pueden ajustar puntos según las reglas de la comunidad.
+          </p>
+        </div>
+
+        {/* Moderator controls */}
+        {isMod && !viewingOwn && (
+          <div className="mx-4 mt-3 p-3 rounded-xl bg-muted/30 border border-border/30 space-y-2">
+            <div className="text-[10px] font-mono uppercase tracking-wider text-primary-glow">Control de moderador</div>
+            <div className="flex items-center gap-2">
+              <button onClick={handleRestore} disabled={busy || trustPoints >= DEFAULT_TRUST_POINTS}
+                className="h-8 px-3 rounded-md border border-border/50 bg-surface text-[11px] font-medium text-emerald-600 hover:bg-emerald-50 active:scale-95 transition disabled:opacity-40">
+                Restaurar +1
+              </button>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="number" min={1} max={10} value={deductAmt}
+                onChange={e => setDeductAmt(Math.max(1, Math.min(10, parseInt(e.target.value) || 1)))}
+                className="w-14 h-8 px-1.5 rounded-md bg-card border border-border/50 text-[11px] text-center font-mono outline-none focus:border-primary/40"
+              />
+              <input value={reason} onChange={e => setReason(e.target.value)}
+                placeholder="Razón para quitar puntos…"
+                className="flex-1 h-8 px-2.5 rounded-md bg-card border border-border/50 text-[11px] outline-none focus:border-primary/40 placeholder:text-muted-foreground/30"
+              />
+              <button onClick={handleDeduct} disabled={busy || trustPoints <= 0}
+                className="h-8 px-3 rounded-md bg-red-500 text-white text-[10px] font-semibold active:scale-95 transition disabled:opacity-50">
+                {busy ? "…" : "Quitar"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* History link */}
+        <div className="px-4 pb-4 pt-3">
+          <button onClick={() => { onClose(); }}
+            className="w-full text-center text-[11px] text-muted-foreground hover:text-primary transition py-2">
+            Ver historial completo de puntos
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
