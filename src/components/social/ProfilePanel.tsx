@@ -826,7 +826,7 @@ function QRCustomizer({ userId, username, qrStyle, isPlus, viewingOwn }: {
 
       {/* Panel de personalización — solo usuarios Plus en su propio perfil */}
       {canCustomize && (
-        <>
+        <div className="space-y-3">
           {/* Presets de color */}
           <div>
             <div className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider mb-1.5">Color</div>
@@ -882,7 +882,7 @@ function QRCustomizer({ userId, username, qrStyle, isPlus, viewingOwn }: {
               ))}
             </div>
           </div>
-        </>
+        </div>
       )}
 
       {/* Acciones */}
