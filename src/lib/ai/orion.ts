@@ -2,19 +2,17 @@
  * Orión — asistente de IA para desarrolladores de juegos de Asternal.
  *
  * Usa VLY Integration (Freebuff) como servicio principal.
- * OmegaTech como respaldo si VLY no está configurado.
+ * OmegaTech como respaldo si VLY no está disponible.
  */
 import { ENGINE_KNOWLEDGE } from "./engine-knowledge";
 
-/** VLY Integration (Freebuff) — proxy vía Edge Function */
-const VLY_PROXY =
-  "https://gxpgczwkovertezeydkt.supabase.co/functions/v1/vly-ai-proxy";
+/** VLY Integration — gateway directo (OpenAI-compatible) */
+const VLY_GATEWAY = "https://integrations.vly.ai/v1/llm/chat/completions";
+const VLY_TOKEN = "sk_ae7ab002fe96d25409052e0db06fc906eb3b34d098762378af114911bf70cff4";
 
 /** OmegaTech — respaldo gratuito sin clave */
 const OMEGATECH_MODELS = ["Gpt-4-mini", "Gpt-3.5-turbo", "Gemini"];
 const OMEGATECH_BASE = "https://api.omegatech.app/api/ai";
-const OMEGATECH_PROXY =
-  "https://gxpgczwkovertezeydkt.supabase.co/functions/v1/omega-proxy";
 
 /** La API de OmegaTech no requiere clave. Se mantiene getOrionApiKey por compatibilidad. */
 export function getOrionApiKey(): string {
@@ -166,50 +164,48 @@ function buildSingleMessage(history: OrionMessage[]): string {
   return parts.join("\n\n---\n\n");
 }
 
-const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd4cGdjendrb3ZlcnRlemV5ZGt0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU2MTk5NTUsImV4cCI6MjEwMTE5NTk1NX0.GGGjdgi2l2NmQBQ1pS8k37npT3p6hx9Sl5JF0DdQ9cM";
-
-/** Intenta VLY Integration (formato OpenAI-compatible: messages array). */
+/**
+ * Intenta VLY Integration — llama directamente al gateway VLY
+ * (formato OpenAI-compatible: messages array → choices[0].message.content).
+ * El gateway VLY funciona dentro del entorno de ejecución de Freebuff.
+ */
 async function tryVly(history: OrionMessage[]): Promise<OrionResult | null> {
   const messages = buildOrionMessages(history);
   try {
-    const res = await fetch(VLY_PROXY, {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
+    const res = await fetch(VLY_GATEWAY, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${ANON_KEY}` },
-      body: JSON.stringify({ messages, model: "gpt-4o-mini" }),
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${VLY_TOKEN}`,
+      },
+      body: JSON.stringify({ model: "gpt-4o-mini", messages }),
+      signal: controller.signal,
     });
+    clearTimeout(timeout);
     if (!res.ok) return null;
     const data = await res.json().catch(() => ({}));
-    // VLY returns OpenAI-compatible: { choices: [{ message: { content } }] }
     const content = data?.choices?.[0]?.message?.content;
     if (content) {
       return { content, model: data?.model ?? "gpt-4o-mini", costUsd: 0, balanceUsd: 0 };
     }
-    // Also handle error response
     return null;
   } catch { return null; }
 }
 
 /** Intenta OmegaTech (formato simple: message → answer). */
 async function tryOmegaTech(modelName: string, message: string): Promise<{ ok: boolean; answer?: string; model?: string }> {
-  // Vía proxy
   try {
-    const res = await fetch(OMEGATECH_PROXY, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${ANON_KEY}` },
-      body: JSON.stringify({ message, model: modelName }),
-    });
-    if (res.ok) {
-      const data = await res.json().catch(() => ({}));
-      if (data?.answer) return { ok: true, answer: data.answer, model: data.model ?? modelName };
-    }
-  } catch { /* proxy falló */ }
-  // Directo
-  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
     const res = await fetch(`${OMEGATECH_BASE}/${modelName}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message }),
+      signal: controller.signal,
     });
+    clearTimeout(timeout);
     if (res.ok) {
       const data = await res.json().catch(() => ({}));
       if (data?.answer) return { ok: true, answer: data.answer, model: data.model ?? modelName };
@@ -245,8 +241,7 @@ export async function orionChat(
 }
 
 /**
- * Chat con "streaming" sintético: OmegaTech no soporta SSE,
- * así que hace la petición completa y entrega el texto de una vez.
+ * Chat con "streaming" sintético: entrega el texto completo de una vez.
  * onDelta recibe el texto completo como un solo fragmento.
  */
 export async function orionChatStream(

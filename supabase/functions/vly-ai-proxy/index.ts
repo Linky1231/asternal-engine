@@ -1,5 +1,5 @@
 // vly-ai-proxy: Edge Function que proyecta llamadas al gateway VLY AI
-// desde el navegador. OpenAI-compatible: POST /v1/chat/completions
+// OpenAI-compatible: POST /v1/llm/chat/completions
 
 const VLY_GATEWAY = "https://integrations.vly.ai/v1/llm/chat/completions";
 
@@ -17,13 +17,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
   try {
     const { messages, model } = await req.json();
 
-    // Read VLY_INTEGRATION_KEY from Deno env (set via Supabase Dashboard → Edge Functions → Secrets)
     const vlyKey = Deno.env.get("VLY_INTEGRATION_KEY");
 
     if (!vlyKey) {
       return new Response(
         JSON.stringify({
-          error: "VLY_INTEGRATION_KEY no está configurado en los secrets de Edge Functions. Ve a Dashboard → Edge Functions → vly-ai-proxy → Settings → Secrets y añade VLY_INTEGRATION_KEY.",
+          error: "VLY_INTEGRATION_KEY no está configurado en los secrets de Edge Functions.",
         }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
