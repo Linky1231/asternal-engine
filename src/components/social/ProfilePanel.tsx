@@ -179,8 +179,19 @@ export function ProfilePanel({
   const shareLink = typeof window !== "undefined" ? window.location.origin + "/profile/" + userId : "";
   const shareToChat = () => {
     setShareOpen(false);
-    try { sessionStorage.setItem("asternal_chat_share", shareLink); } catch { /* noop */ }
+    try {
+      sessionStorage.setItem("asternal_chat_share", shareLink);
+      window.dispatchEvent(new CustomEvent("asternal_share_chat", { detail: shareLink }));
+    } catch { /* noop */ }
     navigate({ to: "/" });
+  };
+  const shareDirect = () => {
+    setShareOpen(false);
+    try {
+      sessionStorage.setItem("asternal_chat_share", shareLink);
+      window.dispatchEvent(new CustomEvent("asternal_share_chat", { detail: shareLink }));
+    } catch { /* noop */ }
+    navigate({ to: "/", search: { direct: userId } });
   };
   const copyLink = async () => {
     setShareOpen(false);
@@ -195,10 +206,14 @@ export function ProfilePanel({
         <Share2 size={13} /> Compartir
       </button>
       {shareOpen && (
-        <div className="absolute right-0 top-full mt-1.5 z-30 rounded-lg border border-border bg-surface p-1 min-w-[210px] shadow-md">
+        <div className="absolute right-0 top-full mt-1.5 z-30 rounded-lg border border-border bg-surface p-1 min-w-[220px] shadow-md">
           <button onClick={shareToChat}
             className="flex w-full items-center gap-2 px-3 py-2 rounded-md text-xs hover:bg-muted/60 transition-colors text-left">
-            <MessageCircle size={14} className="text-primary shrink-0" /> Compartir en el chat grupal
+            <MessageCircle size={14} className="text-primary shrink-0" /> Compartir en chat grupal
+          </button>
+          <button onClick={shareDirect}
+            className="flex w-full items-center gap-2 px-3 py-2 rounded-md text-xs hover:bg-muted/60 transition-colors text-left">
+            <MessageCircle size={14} className="text-emerald-500 shrink-0" /> Compartir en chat directo
           </button>
           <button onClick={() => void copyLink()}
             className="flex w-full items-center gap-2 px-3 py-2 rounded-md text-xs hover:bg-muted/60 transition-colors text-left">
@@ -389,10 +404,6 @@ export function ProfilePanel({
                           className="flex w-full items-center gap-2 px-3 py-2 rounded-md text-xs hover:bg-muted/60 transition-colors text-left">
                           <Shield size={14} className="text-primary shrink-0" /> Puntos de confianza
                         </button>
-                        <button onClick={() => { setShowTrustMenu(false); setShareOpen(true); }}
-                          className="flex w-full items-center gap-2 px-3 py-2 rounded-md text-xs hover:bg-muted/60 transition-colors text-left">
-                          <Share2 size={14} className="text-primary shrink-0" /> Compartir perfil
-                        </button>
                       </div>
                     )}
                   </div>
@@ -419,10 +430,6 @@ export function ProfilePanel({
                       <button onClick={() => { setShowTrustMenu(false); setShowTrustPanel(true); }}
                         className="flex w-full items-center gap-2 px-3 py-2 rounded-md text-xs hover:bg-muted/60 transition-colors text-left">
                         <Shield size={14} className="text-primary shrink-0" /> Puntos de confianza
-                      </button>
-                      <button onClick={() => { setShowTrustMenu(false); setShareOpen(true); }}
-                        className="flex w-full items-center gap-2 px-3 py-2 rounded-md text-xs hover:bg-muted/60 transition-colors text-left">
-                        <Share2 size={14} className="text-primary shrink-0" /> Compartir perfil
                       </button>
                     </div>
                   )}

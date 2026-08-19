@@ -125,6 +125,16 @@ function HomePage() {
         setChatOpen(true);
       }
     } catch { /* noop */ }
+    // También escuchar CustomEvents para compartir en tiempo real (sin depender de remount)
+    const handler = (e: Event) => {
+      const text = (e as CustomEvent<string>).detail;
+      if (text) {
+        setChatShareText(text);
+        setChatOpen(true);
+      }
+    };
+    window.addEventListener("asternal_share_chat", handler);
+    return () => window.removeEventListener("asternal_share_chat", handler);
   }, []);
 
   // Al cambiar de apartado del encabezado (JUEGOS/FEED/GALERÍA/EVENTOS/PERFIL)
