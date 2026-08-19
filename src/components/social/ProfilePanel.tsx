@@ -779,8 +779,8 @@ function QRCustomizer({ userId, username }: { userId: string; username: string }
     <div className="space-y-3 animate-in fade-in duration-200">
       {/* Preview */}
       <div className="flex flex-col items-center gap-2">
-        <div className="p-3 rounded-xl border border-border/40 bg-card shadow-sm" style={{ background: style.bg }}>
-          <img src={qrSrc} alt={`QR de ${username}`} width={style.size || 180} height={style.size || 180} className="block" style={{ borderRadius: style.cornerStyle === "rounded" ? 12 : style.cornerStyle === "dots" ? "50%" : 0 }} />
+        <div className="border border-border/40 bg-card shadow-sm" style={{ background: style.bg, borderRadius: style.cornerStyle === "rounded" ? 16 : style.cornerStyle === "dots" ? "50%" : 8, padding: style.cornerStyle === "dots" ? 24 : style.cornerStyle === "rounded" ? 12 : 12 }}>
+          <img src={qrSrc} alt={`QR de ${username}`} width={style.size || 180} height={style.size || 180} className="block" />
         </div>
         <div className="text-[9px] font-mono text-muted-foreground/40 text-center truncate max-w-[200px]">{profileUrl}</div>
       </div>
