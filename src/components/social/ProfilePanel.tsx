@@ -5,7 +5,7 @@ import {
   ImagePlus, MapPin, Cake, Palette, Tag, Sparkles as SparklesIcon, Eye, EyeOff,
   Heart, MessageCircle, ChevronDown, ChevronUp, Share2, Link2, Check,
   Youtube, Instagram, Globe, UserPlus, UserCheck, X, Fingerprint, Copy, QrCode,
-  MoreVertical, Shield, Trophy,
+  MoreVertical, Shield, Trophy, Download,
 } from "lucide-react";
 import {
   type Profile,
@@ -513,21 +513,10 @@ export function ProfilePanel({
             </div>
           )}
 
-          {/* QR Code: se muestra solo al tocar el botón QR */}
+          {/* QR Code: personalizable */}
           {!editing && showQR && (
-            <div className="flex flex-col items-center gap-2 pt-3 border-t border-border/30 animate-in fade-in slide-in-from-top-2 duration-200">
-              <div className="p-2.5 rounded-xl border border-border/40 bg-card">
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(typeof window !== "undefined" ? `${window.location.origin}/profile/${userId}` : `/profile/${userId}`)}&size=120x120&margin=4&format=svg`}
-                  alt={`QR de ${profile.username}`}
-                  width={120}
-                  height={120}
-                  className="block"
-                />
-              </div>
-              <div className="text-[9px] font-mono text-muted-foreground/40 text-center">
-                {typeof window !== "undefined" ? `${window.location.origin}/profile/${userId}` : `/profile/${userId}`}
-              </div>
+            <div className="pt-3 border-t border-border/30 animate-in fade-in slide-in-from-top-2 duration-200">
+              <QRCustomizer userId={userId} username={profile.username ?? "user"} />
             </div>
           )}
 
@@ -732,6 +721,137 @@ export function ProfilePanel({
           onClose={() => setShowPortfolio(false)}
         />
       )}
+    </div>
+  );
+}
+
+/** Panel personalizable de código QR */
+function QRCustomizer({ userId, username }: { userId: string; username: string }) {
+  const profileUrl = typeof window !== "undefined" ? `${window.location.origin}/profile/${userId}` : `/profile/${userId}`;
+  const storageKey = `qr_style_${userId}`;
+  const [style, setStyle] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(storageKey) || "null") ?? { fg: "#000000", bg: "#ffffff", size: 180, cornerStyle: "square" }; }
+    catch { return { fg: "#000000", bg: "#ffffff", size: 180, cornerStyle: "square" as const }; }
+  });
+  const [copied, setCopied] = useState(false);
+
+  const persist = (next: typeof style) => { setStyle(next); localStorage.setItem(storageKey, JSON.stringify(next)); };
+
+  const PRESETS = [
+    { label: "Clásico", fg: "#000000", bg: "#ffffff" },
+    { label: "Azul", fg: "#2563eb", bg: "#f0f7ff" },
+    { label: "Oscuro", fg: "#ffffff", bg: "#1a1a2e" },
+    { label: "Primario", fg: "var(--primary)", bg: "#ffffff" },
+    { label: "Gradiente", fg: "#6366f1", bg: "#f5f3ff" },
+    { label: "Rosa", fg: "#ec4899", bg: "#fdf2f8" },
+  ] as const;
+
+  const SIZES = [120, 160, 200, 240] as const;
+  const CORNERS = [
+    { id: "square", label: "Cuadrados" },
+    { id: "rounded", label: "Redondeados" },
+    { id: "dots", label: "Puntos" },
+  ] as const;
+
+  const qrSrc = (() => {
+    const fg = style.fg.startsWith("#") ? style.fg.replace("#", "") : "000000";
+    const bg = style.bg.startsWith("#") ? style.bg.replace("#", "") : "ffffff";
+    const sz = style.size || 180;
+    return `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(profileUrl)}&size=${sz}x${sz}&margin=6&format=svg&color=${fg}&bgcolor=${bg}`;
+  })();
+
+  const handleDownload = async () => {
+    try {
+      const res = await fetch(qrSrc);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = `qr_${username}.svg`; a.click();
+      URL.revokeObjectURL(url);
+    } catch { /* noop */ }
+  };
+
+  const handleCopy = async () => {
+    try { await navigator.clipboard.writeText(profileUrl); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch { /* noop */ }
+  };
+
+  return (
+    <div className="space-y-3 animate-in fade-in duration-200">
+      {/* Preview */}
+      <div className="flex flex-col items-center gap-2">
+        <div className="p-3 rounded-xl border border-border/40 bg-card shadow-sm" style={{ background: style.bg }}>
+          <img src={qrSrc} alt={`QR de ${username}`} width={style.size || 180} height={style.size || 180} className="block" style={{ borderRadius: style.cornerStyle === "rounded" ? 12 : style.cornerStyle === "dots" ? "50%" : 0 }} />
+        </div>
+        <div className="text-[9px] font-mono text-muted-foreground/40 text-center truncate max-w-[200px]">{profileUrl}</div>
+      </div>
+
+      {/* Presets de color */}
+      <div>
+        <div className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider mb-1.5">Color</div>
+        <div className="flex gap-1.5 flex-wrap">
+          {PRESETS.map(p => {
+            const active = style.fg === p.fg && style.bg === p.bg;
+            return (
+              <button key={p.label} onClick={() => persist({ ...style, fg: p.fg, bg: p.bg })}
+                className={`h-8 px-2.5 rounded-lg text-[10px] font-medium border transition active:scale-95 ${active ? "border-primary/40 bg-primary/10 text-primary" : "border-border/40 bg-surface text-muted-foreground hover:text-foreground"}`}>
+                {p.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Colores personalizados */}
+      <div className="flex gap-3 items-center">
+        <label className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+          <span>Color</span>
+          <input type="color" value={style.fg.startsWith("#") ? style.fg : "#000000"} onChange={e => persist({ ...style, fg: e.target.value })}
+            className="w-6 h-6 rounded border-0 cursor-pointer bg-transparent" />
+        </label>
+        <label className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+          <span>Fondo</span>
+          <input type="color" value={style.bg.startsWith("#") ? style.bg : "#ffffff"} onChange={e => persist({ ...style, bg: e.target.value })}
+            className="w-6 h-6 rounded border-0 cursor-pointer bg-transparent" />
+        </label>
+      </div>
+
+      {/* Tamaño */}
+      <div>
+        <div className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider mb-1.5">Tamaño</div>
+        <div className="flex gap-1.5">
+          {SIZES.map(s => (
+            <button key={s} onClick={() => persist({ ...style, size: s })}
+              className={`h-8 px-2.5 rounded-lg text-[10px] font-mono border transition active:scale-95 ${style.size === s ? "border-primary/40 bg-primary/10 text-primary" : "border-border/40 bg-surface text-muted-foreground hover:text-foreground"}`}>
+              {s}px
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Estilo de esquinas */}
+      <div>
+        <div className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider mb-1.5">Estilo</div>
+        <div className="flex gap-1.5">
+          {CORNERS.map(c => (
+            <button key={c.id} onClick={() => persist({ ...style, cornerStyle: c.id })}
+              className={`h-8 px-2.5 rounded-lg text-[10px] font-medium border transition active:scale-95 ${style.cornerStyle === c.id ? "border-primary/40 bg-primary/10 text-primary" : "border-border/40 bg-surface text-muted-foreground hover:text-foreground"}`}>
+              {c.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Acciones */}
+      <div className="flex gap-2">
+        <button onClick={handleDownload}
+          className="flex-1 h-9 rounded-lg border border-border/50 bg-surface text-[11px] font-medium flex items-center justify-center gap-1.5 active:scale-95 transition hover:bg-muted/40">
+          <Download size={12} /> Descargar
+        </button>
+        <button onClick={handleCopy}
+          className="flex-1 h-9 rounded-lg border border-border/50 bg-surface text-[11px] font-medium flex items-center justify-center gap-1.5 active:scale-95 transition hover:bg-muted/40">
+          {copied ? <><Check size={12} className="text-primary" /> Copiado</> : <><Link2 size={12} /> Copiar enlace</>}
+        </button>
+      </div>
     </div>
   );
 }
