@@ -784,7 +784,7 @@ function TrustPointsPanel({ userId, trustPoints, isMod, viewingOwn, onClose, onT
       <div className="relative w-full sm:max-w-md rounded-t-2xl sm:rounded-lg border border-border bg-surface shadow-md animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-2 duration-300 max-h-[85vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-border/60">
-          <div className="w-9 h-9 rounded-lg grid place-items-center shrink-0" style={{ background: "var(--gradient-plus)" }}>
+          <div className="w-9 h-9 rounded-lg grid place-items-center shrink-0" style={{ background: "var(--gradient)" }}>
             <Shield size={16} className="text-white" />
           </div>
           <div className="flex-1">
@@ -822,7 +822,7 @@ function TrustPointsPanel({ userId, trustPoints, isMod, viewingOwn, onClose, onT
             <div className="text-[10px] font-mono uppercase tracking-wider text-primary-glow">Control de moderador</div>
             <div className="flex items-center gap-2">
               <button onClick={handleRestore} disabled={busy || trustPoints >= DEFAULT_TRUST_POINTS}
-                className="h-8 px-3 rounded-md border border-border/50 bg-surface text-[11px] font-medium text-emerald-600 hover:bg-emerald-50 active:scale-95 transition disabled:opacity-40">
+                className="h-8 px-3 rounded-md border border-border/50 bg-surface text-[11px] font-medium text-primary hover:bg-primary/10 active:scale-95 transition disabled:opacity-40">
                 Restaurar +1
               </button>
             </div>

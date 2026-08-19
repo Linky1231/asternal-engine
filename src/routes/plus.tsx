@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
   Star, Palette, Rocket, Link2, Check, Loader2,
-  Youtube, Instagram, Music2, Globe, Gift, Sparkles as SparklesIcon,
+  Youtube, Instagram, Music2, Globe, Gift,
   Wand2,
 } from "lucide-react";
 
@@ -44,13 +44,6 @@ const NAME_EFFECTS: { id: string; label: string }[] = [
 // Fondos de perfil eliminados por petición del usuario.
 
 
-const POST_EFFECTS: { id: string; label: string }[] = [
-  { id: "sparkle",  label: "Destellos" },
-  { id: "wave",     label: "Ondas" },
-  { id: "confetti", label: "Confeti" },
-  { id: "glow",     label: "Resplandor" },
-  { id: "fade-up",  label: "Elegante" },
-];
 
 
 
@@ -123,11 +116,6 @@ function PlusPage() {
     setMe({ ...me, name_effect: id });
   };
 
-  const setPostFx = async (id: string | null) => {
-    if (!me) return;
-    await updatePlusSettings({ post_effect: id });
-    setMe({ ...me, post_effect: id });
-  };
   const saveSocials = async () => {
     setSavedSocials("saving");
     await updatePlusSettings({ social_links: socials });
@@ -220,23 +208,6 @@ function PlusPage() {
 
         {/* Fondos de perfil eliminados por petición del usuario */}
 
-
-        {/* Post entrance effects — NEW */}
-        <FeatureCard icon={<SparklesIcon size={18} />} title="Efectos al publicar"
-          desc="Tus próximas publicaciones aparecerán con animación." locked={!isPlus}>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-            <button onClick={() => setPostFx(null)} disabled={!isPlus}
-              className={`h-11 rounded-xl border-2 text-xs font-display transition ${!me?.post_effect ? "border-foreground" : "border-border"} disabled:opacity-40`}>
-              Ninguno
-            </button>
-            {POST_EFFECTS.map(fx => (
-              <button key={fx.id} onClick={() => setPostFx(fx.id)} disabled={!isPlus}
-                className={`h-11 rounded-xl border-2 text-xs font-display transition ${me?.post_effect === fx.id ? "border-foreground" : "border-border"} disabled:opacity-40`}>
-                {fx.label}
-              </button>
-            ))}
-          </div>
-        </FeatureCard>
 
         {/* Frames */}
         <FeatureCard icon={<Palette size={18} />} title="Marcos premium"
