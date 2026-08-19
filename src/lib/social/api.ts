@@ -15,6 +15,13 @@ export type CreatorCardStyle = {
   tagline?: string;
 };
 
+export type QRStyle = {
+  fg?: string;
+  bg?: string;
+  size?: number;
+  cornerStyle?: "square" | "rounded" | "dots";
+};
+
 export type Profile = {
   id: string;
   username: string;
@@ -49,6 +56,8 @@ export type Profile = {
   creator_card_style?: CreatorCardStyle | null;
   // Trust
   trust_points?: number | null;
+  // QR customization
+  qr_style?: QRStyle | null;
 };
 
 export function isPlusActive(p: Profile | null | undefined): boolean {
@@ -1333,6 +1342,7 @@ export async function updatePlusSettings(patch: {
   profile_background?: string | null;
   post_effect?: string | null;
   creator_card_style?: CreatorCardStyle;
+  qr_style?: QRStyle | null;
 }): Promise<Profile> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
@@ -1344,6 +1354,7 @@ export async function updatePlusSettings(patch: {
   if (patch.profile_background !== undefined) clean.profile_background = patch.profile_background;
   if (patch.post_effect !== undefined) clean.post_effect = patch.post_effect;
   if (patch.creator_card_style !== undefined) clean.creator_card_style = patch.creator_card_style;
+  if (patch.qr_style !== undefined) clean.qr_style = patch.qr_style;
   const { data, error } = await supabase.from("profiles").update(clean as never).eq("id", user.id).select().single();
   if (error) throw error;
   return data as Profile;

@@ -23,6 +23,7 @@ import {
   uploadBanner,
   getMyProfile,
   isPlusActive,
+  updatePlusSettings,
   getFollowStats,
   followUser,
   unfollowUser,
@@ -516,7 +517,7 @@ export function ProfilePanel({
           {/* QR Code: personalizable */}
           {!editing && showQR && (
             <div className="pt-3 border-t border-border/30 animate-in fade-in slide-in-from-top-2 duration-200">
-              <QRCustomizer userId={userId} username={profile.username ?? "user"} />
+              <QRCustomizer userId={userId} username={profile.username ?? "user"} qrStyle={profile.qr_style ?? null} isPlus={viewingOwn && isPlusActive(profile)} viewingOwn={viewingOwn} />
             </div>
           )}
 
@@ -725,17 +726,32 @@ export function ProfilePanel({
   );
 }
 
-/** Panel personalizable de código QR */
-function QRCustomizer({ userId, username }: { userId: string; username: string }) {
+/** Panel de código QR — personalizable solo para Plus, sincronizado con DB */
+function QRCustomizer({ userId, username, qrStyle, isPlus, viewingOwn }: {
+  userId: string; username: string; qrStyle: import("@/lib/social/api").QRStyle | null;
+  isPlus: boolean; viewingOwn: boolean;
+}) {
   const profileUrl = typeof window !== "undefined" ? `${window.location.origin}/profile/${userId}` : `/profile/${userId}`;
-  const storageKey = `qr_style_${userId}`;
-  const [style, setStyle] = useState(() => {
-    try { return JSON.parse(localStorage.getItem(storageKey) || "null") ?? { fg: "#000000", bg: "#ffffff", size: 180, cornerStyle: "square" }; }
-    catch { return { fg: "#000000", bg: "#ffffff", size: 180, cornerStyle: "square" as const }; }
-  });
+  const defaultStyle = { fg: "#000000", bg: "#ffffff", size: 180, cornerStyle: "square" as const };
+  const [style, setStyle] = useState<Required<import("@/lib/social/api").QRStyle> & { cornerStyle: string }>(
+    qrStyle ? { ...defaultStyle, ...qrStyle } : defaultStyle
+  );
   const [copied, setCopied] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const persist = (next: typeof style) => { setStyle(next); localStorage.setItem(storageKey, JSON.stringify(next)); };
+  // Sync from DB when qrStyle prop changes (e.g. viewing another user's profile)
+  useEffect(() => {
+    if (qrStyle) setStyle({ ...defaultStyle, ...qrStyle });
+  }, [qrStyle?.fg, qrStyle?.bg, qrStyle?.size, qrStyle?.cornerStyle]);
+
+  const persist = async (next: typeof style) => {
+    setStyle(next);
+    if (viewingOwn && isPlus) {
+      setSaving(true);
+      try { await updatePlusSettings({ qr_style: next }); } catch { /* noop */ }
+      finally { setSaving(false); }
+    }
+  };
 
   const PRESETS = [
     { label: "Clásico", fg: "#000000", bg: "#ffffff" },
@@ -775,6 +791,8 @@ function QRCustomizer({ userId, username }: { userId: string; username: string }
     try { await navigator.clipboard.writeText(profileUrl); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch { /* noop */ }
   };
 
+  const canCustomize = viewingOwn && isPlus;
+
   return (
     <div className="space-y-3 animate-in fade-in duration-200">
       {/* Preview */}
@@ -785,61 +803,87 @@ function QRCustomizer({ userId, username }: { userId: string; username: string }
         <div className="text-[9px] font-mono text-muted-foreground/40 text-center truncate max-w-[200px]">{profileUrl}</div>
       </div>
 
-      {/* Presets de color */}
-      <div>
-        <div className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider mb-1.5">Color</div>
-        <div className="flex gap-1.5 flex-wrap">
-          {PRESETS.map(p => {
-            const active = style.fg === p.fg && style.bg === p.bg;
-            return (
-              <button key={p.label} onClick={() => persist({ ...style, fg: p.fg, bg: p.bg })}
-                className={`h-8 px-2.5 rounded-lg text-[10px] font-medium border transition active:scale-95 ${active ? "border-primary/40 bg-primary/10 text-primary" : "border-border/40 bg-surface text-muted-foreground hover:text-foreground"}`}>
-                {p.label}
-              </button>
-            );
-          })}
+      {/* Botón de guardar (solo Plus propio) */}
+      {canCustomize && (
+        <div className="text-center">
+          {saving && <span className="text-[10px] text-muted-foreground/50">Guardando…</span>}
         </div>
-      </div>
+      )}
 
-      {/* Colores personalizados */}
-      <div className="flex gap-3 items-center">
-        <label className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-          <span>Color</span>
-          <input type="color" value={style.fg.startsWith("#") ? style.fg : "#000000"} onChange={e => persist({ ...style, fg: e.target.value })}
-            className="w-6 h-6 rounded border-0 cursor-pointer bg-transparent" />
-        </label>
-        <label className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-          <span>Fondo</span>
-          <input type="color" value={style.bg.startsWith("#") ? style.bg : "#ffffff"} onChange={e => persist({ ...style, bg: e.target.value })}
-            className="w-6 h-6 rounded border-0 cursor-pointer bg-transparent" />
-        </label>
-      </div>
-
-      {/* Tamaño */}
-      <div>
-        <div className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider mb-1.5">Tamaño</div>
-        <div className="flex gap-1.5">
-          {SIZES.map(s => (
-            <button key={s} onClick={() => persist({ ...style, size: s })}
-              className={`h-8 px-2.5 rounded-lg text-[10px] font-mono border transition active:scale-95 ${style.size === s ? "border-primary/40 bg-primary/10 text-primary" : "border-border/40 bg-surface text-muted-foreground hover:text-foreground"}`}>
-              {s}px
-            </button>
-          ))}
+      {/* Aviso para usuarios no-Plus */}
+      {!canCustomize && !viewingOwn && (
+        <div className="text-center text-[10px] text-muted-foreground/50">
+          Escanea para ver el perfil de {username}
         </div>
-      </div>
+      )}
 
-      {/* Estilo de esquinas */}
-      <div>
-        <div className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider mb-1.5">Estilo</div>
-        <div className="flex gap-1.5">
-          {CORNERS.map(c => (
-            <button key={c.id} onClick={() => persist({ ...style, cornerStyle: c.id })}
-              className={`h-8 px-2.5 rounded-lg text-[10px] font-medium border transition active:scale-95 ${style.cornerStyle === c.id ? "border-primary/40 bg-primary/10 text-primary" : "border-border/40 bg-surface text-muted-foreground hover:text-foreground"}`}>
-              {c.label}
-            </button>
-          ))}
+      {!canCustomize && viewingOwn && (
+        <div className="text-center py-2 px-3 rounded-lg bg-primary/5 border border-primary/15">
+          <div className="text-[11px] text-primary font-medium">Personaliza tu QR con Plus</div>
+          <div className="text-[10px] text-muted-foreground/50 mt-0.5">Cambia colores, estilos y tamaño</div>
         </div>
-      </div>
+      )}
+
+      {/* Panel de personalización — solo usuarios Plus en su propio perfil */}
+      {canCustomize && (
+        <>
+          {/* Presets de color */}
+          <div>
+            <div className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider mb-1.5">Color</div>
+            <div className="flex gap-1.5 flex-wrap">
+              {PRESETS.map(p => {
+                const active = style.fg === p.fg && style.bg === p.bg;
+                return (
+                  <button key={p.label} onClick={() => persist({ ...style, fg: p.fg, bg: p.bg })}
+                    className={`h-8 px-2.5 rounded-lg text-[10px] font-medium border transition active:scale-95 ${active ? "border-primary/40 bg-primary/10 text-primary" : "border-border/40 bg-surface text-muted-foreground hover:text-foreground"}`}>
+                    {p.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Colores personalizados */}
+          <div className="flex gap-3 items-center">
+            <label className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+              <span>Color</span>
+              <input type="color" value={style.fg.startsWith("#") ? style.fg : "#000000"} onChange={e => persist({ ...style, fg: e.target.value })}
+                className="w-6 h-6 rounded border-0 cursor-pointer bg-transparent" />
+            </label>
+            <label className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+              <span>Fondo</span>
+              <input type="color" value={style.bg.startsWith("#") ? style.bg : "#ffffff"} onChange={e => persist({ ...style, bg: e.target.value })}
+                className="w-6 h-6 rounded border-0 cursor-pointer bg-transparent" />
+            </label>
+          </div>
+
+          {/* Tamaño */}
+          <div>
+            <div className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider mb-1.5">Tamaño</div>
+            <div className="flex gap-1.5">
+              {SIZES.map(s => (
+                <button key={s} onClick={() => persist({ ...style, size: s })}
+                  className={`h-8 px-2.5 rounded-lg text-[10px] font-mono border transition active:scale-95 ${style.size === s ? "border-primary/40 bg-primary/10 text-primary" : "border-border/40 bg-surface text-muted-foreground hover:text-foreground"}`}>
+                  {s}px
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Estilo de esquinas */}
+          <div>
+            <div className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider mb-1.5">Estilo</div>
+            <div className="flex gap-1.5">
+              {CORNERS.map(c => (
+                <button key={c.id} onClick={() => persist({ ...style, cornerStyle: c.id })}
+                  className={`h-8 px-2.5 rounded-lg text-[10px] font-medium border transition active:scale-95 ${style.cornerStyle === c.id ? "border-primary/40 bg-primary/10 text-primary" : "border-border/40 bg-surface text-muted-foreground hover:text-foreground"}`}>
+                  {c.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Acciones */}
       <div className="flex gap-2">
