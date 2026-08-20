@@ -321,7 +321,7 @@ export function StoreSection({ myId, isMod: _isMod, onRefresh }: {
           <button
             onClick={() => setStoreTab("shop")}
             className={`flex-1 h-9 rounded-lg text-[11px] font-semibold tracking-wide flex items-center justify-center gap-1.5 transition-all ${
-              storeTab === "shop" ? "bg-card shadow-sm border border-border/40 text-foreground" : "text-muted-foreground hover:text-foreground"
+              storeTab === "shop" ? "grad-brand text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
             }`}
           >
             <Store size={13} /> Tienda
@@ -329,7 +329,7 @@ export function StoreSection({ myId, isMod: _isMod, onRefresh }: {
           <button
             onClick={() => setStoreTab("gallery")}
             className={`flex-1 h-9 rounded-lg text-[11px] font-semibold tracking-wide flex items-center justify-center gap-1.5 transition-all ${
-              storeTab === "gallery" ? "bg-card shadow-sm border border-border/40 text-foreground" : "text-muted-foreground hover:text-foreground"
+              storeTab === "gallery" ? "grad-brand text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
             }`}
           >
             <Palette size={13} /> Galería
