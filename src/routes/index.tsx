@@ -477,7 +477,7 @@ function HomePage() {
 
             {/* Categoría: COMUNIDAD */}
             <CategoryHeader label="COMUNIDAD" />
-            <MenuItem icon={<Trophy size={16} className="text-primary-glow"/>} label="Eventos" onClick={() => { setTab("events"); closeMenu(); }} />
+            <MenuLink icon={<Trophy size={16} className="text-primary-glow"/>} label="Eventos" to="/events" onClick={closeMenu} />
             <MenuLink icon={<BarChart3 size={16} className="text-primary-glow"/>} label="Historial" to="/history" onClick={closeMenu} />
             <MenuLink icon={<Megaphone size={16} className="text-primary-glow"/>} label="Panel de Orbes" to="/orbes" onClick={closeMenu} />
             {(mod || admin) && (
