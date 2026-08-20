@@ -258,16 +258,17 @@ export function ProfilePanel({
       if (avatarFile) avatar_url = await uploadAvatar(avatarFile);
       if (bannerFile) banner_url = await uploadBanner(bannerFile);
       const interests = interestsRaw.split(",").map(s => s.trim()).filter(Boolean).slice(0, 10);
-      const updated = await updateMyProfile({
+      await updateMyProfile({
         username, display_name: displayName, bio,
         pronouns, location, status_emoji: statusEmoji, status_text: statusText,
         accent_color: accentColor, favorite_genre: favoriteGenre, custom_title: customTitle,
-        birthday: birthday || null, show_orbes: showOrbes, interests,
+        birthday: birthday || undefined, show_orbes: showOrbes, interests,
         ...(avatar_url ? { avatar_url } : {}),
         ...(banner_url ? { banner_url } : {}),
       });
+      const updated = await getMyProfile();
       setProfile(updated);
-      onProfileChange?.(updated);
+      if (updated) onProfileChange?.(updated);
       setEditing(false);
       setAvatarFile(null); setBannerFile(null);
       setSaved(true);

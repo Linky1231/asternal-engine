@@ -12,7 +12,7 @@ export function hasSupabaseConfig(): boolean { return true; }
 export function isSchemaMissing(): boolean { return false; }
 export function getSupabaseUrl(): string | undefined { return undefined; }
 export function getSupabaseAnonKey(): string | undefined { return undefined; }
-export function saveSupabaseCredentials(): { ok: boolean } { return { ok: true }; }
+export function saveSupabaseCredentials(_url?: string, _key?: string): { ok: boolean; error?: string } { return { ok: true }; }
 export function clearSupabaseCredentials(): void {}
 
 // Minimal auth interface matching what components use
@@ -20,13 +20,13 @@ const auth = {
   async getUser() {
     try {
       const profile = await _convex.query(api.profiles.getMyProfile, {});
-      if (profile) return { data: { user: { id: profile.userId } } };
+      if (profile) return { data: { user: { id: profile.userId, email: profile.username ? `${profile.username}@asternal.app` : undefined } } };
     } catch {}
     return { data: { user: null } };
   },
   async getSession() {
     const u = await auth.getUser();
-    return { data: { session: u.data.user ? { user: u.data.user } : null } };
+    return { data: { session: u.data.user ? { user: u.data.user, access_token: "convex-session" } : null } };
   },
   onAuthStateChange(callback: (...args: any[]) => void) {
     return { data: { subscription: { unsubscribe: () => {} } } };
@@ -40,6 +40,7 @@ const auth = {
   },
   async signOut() { return { error: null }; },
   async resetPasswordForEmail(email: string) { return { data: null, error: null }; },
+  async updateUser(_opts: { password?: string }) { return { data: { user: null }, error: null }; },
 };
 
 // Minimal from() builder that routes to Convex
@@ -104,4 +105,8 @@ export const supabase = {
     }),
   },
   rpc: async (fn: string, params?: any) => ({ data: null, error: null }),
+  channel: (_name: string) => ({
+    on: (_event: string, _filter: any, callback: any) => ({ subscribe: () => {} }),
+    subscribe: () => {},
+  }),
 };

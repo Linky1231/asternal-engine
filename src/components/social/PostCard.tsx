@@ -58,7 +58,7 @@ export const PostCard = memo(function PostCard({
     catch { navigator.clipboard.writeText(url); alert("Enlace copiado"); }
   };
   const vote = async (i: number) => {
-    if (!post.poll) return;
+    if (!post.poll?.id) return;
     await votePoll(post.poll.id, i);
     onChange();
   };
@@ -195,7 +195,7 @@ export const PostCard = memo(function PostCard({
             )}
             <div className="min-w-0 flex-1">
               <div className="text-[9px] font-display tracking-[0.18em] text-primary-glow uppercase">Juego fijado</div>
-              <div className="text-sm font-display truncate mt-0.5">{post.pinned_game.title}</div>
+              <div className="text-sm font-display truncate mt-0.5">{post.pinned_game?.title}</div>
             </div>
             <span className="w-7 h-7 rounded-full bg-primary/10 grid place-items-center text-primary-glow transition-transform duration-300 ease-out pointer-fine:group-hover/game:translate-x-0.5">▶</span>
           </Link>
@@ -326,7 +326,7 @@ function PollView({ poll, onVote }: { poll: NonNullable<PostWithMeta["poll"]>; o
         <div className="text-sm font-display leading-snug">{poll.question}</div>
       </div>
       {poll.options.map((opt, i) => {
-        const count = poll.votes[i] ?? 0;
+        const count = (poll.votes as any)?.[i] ?? 0;
         const pct = poll.total ? Math.round((count / poll.total) * 100) : 0;
         const mine = poll.my_vote === i;
         return (
@@ -339,7 +339,7 @@ function PollView({ poll, onVote }: { poll: NonNullable<PostWithMeta["poll"]>; o
             <div className="relative flex items-center justify-between px-3 py-2.5 text-xs gap-2">
               <span className={`flex items-center gap-2 ${mine ? "font-semibold text-primary-glow" : ""}`}>
                 {mine && <span className="w-4 h-4 rounded-full bg-primary grid place-items-center"><span className="w-1.5 h-1.5 rounded-full bg-white" /></span>}
-                {opt}
+                {opt.label ?? opt}
               </span>
               {voted && <span className="tabular-nums text-muted-foreground font-medium">{pct}% · {count}</span>}
             </div>

@@ -35,7 +35,7 @@ export function daysUntilPlusExpires(p: Profile | null | undefined): number | nu
 }
 
 export type MediaType = "none"|"image"|"video"|"link";
-export type PollData = { question: string; options: { label: string; votes: number }[]; myVote?: number };
+export type PollData = { id?: string; question: string; options: { label: string; votes: number }[]; myVote?: number; my_vote?: number; votes?: Record<number, number>; total?: number; };
 export type PostRow = {
   id: string; author_id: string; content: string; media_urls: string[]; media_type: MediaType;
   link_url?: string|null; category?: string|null; cover_url?: string|null; screenshots: string[];
@@ -46,14 +46,18 @@ export type PostRow = {
   comments_count: number; created_at: string; updated_at: string; deleted_at?: string|null;
 };
 export type PostWithMeta = PostRow & {
-  author?: Profile|null; signed_media?: string[]; signed_cover?: string|null;
+  author?: Profile|null; signed_media: string[]; signed_cover?: string|null;
   is_repost?: boolean; repost_by?: Profile|null; repost_quote?: string|null;
-  poll?: PollData|null; tags?: string[]; my_reaction?: string|null;
+  poll?: PollData|null; tags: string[]; my_reaction?: string|null;
+  favorites: number; reposts_count: number; my_like: boolean; my_favorite: boolean; my_repost: boolean;
+  owned: boolean; signed_screenshots: string[]; signed_documents: { path?: string; url?: string; name: string }[];
+  pinned_game?: PostWithMeta | null; locked_content?: string; is_unlocked?: boolean;
+  unlock_reactions_goal?: number; unlock_at?: string; seller?: Profile | null; title?: string;
 };
 export type CommentRow = {
   id: string; post_id: string; author_id: string; parent_id?: string|null;
   content: string; created_at: string; updated_at: string; deleted_at?: string|null;
-  author?: Profile|null;
+  author?: Profile|null; my_like?: boolean; likes?: number; replies?: CommentRow[];
 };
 
 // ════ HELPERS ════
@@ -80,7 +84,7 @@ function docToProfile(doc: any): Profile {
   };
 }
 
-function docToPost(doc: any): PostRow {
+function docToPost(doc: any): PostWithMeta {
   if (!doc) return null as any;
   return {
     id: doc._id, author_id: doc.authorId, content: doc.content ?? "",
@@ -97,6 +101,9 @@ function docToPost(doc: any): PostRow {
     created_at: new Date(doc.createdAt).toISOString(),
     updated_at: new Date(doc.updatedAt).toISOString(),
     deleted_at: doc.deletedAt ? new Date(doc.deletedAt).toISOString() : null,
+    signed_media: [], signed_screenshots: [], signed_documents: [],
+    favorites: 0, reposts_count: 0, my_like: false, my_favorite: false, my_repost: false,
+    owned: false, tags: [],
   };
 }
 
@@ -108,6 +115,9 @@ async function getMeId(): Promise<string | null> {
 // ════ STORAGE ════
 
 export async function signMediaUrls(paths: string[]): Promise<string[]> { return paths.filter(Boolean); }
+export async function getMyOrbes(): Promise<number> { const meId = await getMeId(); return meId ? ((await convex.query(api.profiles.getByUserId, { userId: meId }))?.orbes ?? 0) : 0; }
+export async function uploadAvatar(file: File): Promise<string> { const meId = await getMeId(); if (!meId) throw new Error("Not authenticated"); return uploadMedia(file, meId); }
+export async function uploadBanner(file: File): Promise<string> { const meId = await getMeId(); if (!meId) throw new Error("Not authenticated"); return uploadMedia(file, meId); }
 
 export async function uploadMedia(file: File, userId: string): Promise<string> {
   const uploadUrl = await convex.mutation(api.storage.generateUploadUrl, {});
@@ -145,6 +155,7 @@ export async function fetchFeed(opts: { search?: string; tag?: string; category?
 export async function createPost(input: {
   content: string; files?: File[]; coverFile?: File; screenshotFiles?: File[];
   category?: string; text_color?: string; html_content?: string; link_url?: string;
+  mediaType?: string; tags?: string[]; documents?: { path: string; name: string }[] | File[]; pinnedGameId?: string | null; linkUrl?: string; textColor?: string | null; htmlContent?: string | null; lockedContent?: string | null; unlockReactionsGoal?: number | null; unlockAt?: string | null; poll?: any;
 }): Promise<string> {
   const meId = await getMeId(); if (!meId) throw new Error("Not authenticated");
   const mediaUrls: string[] = [];
@@ -199,7 +210,7 @@ export async function blockUser(blockedId: string) {
 // ════ NOTIFICATIONS ════
 
 export type NotifType = "comment"|"reply"|"reaction"|"repost"|"mention"|"follow"|"like"|"favorite"|"game";
-export async function pushNotification(_opts: { user_id: string; type: NotifType; post_id?: string; comment_id?: string }) {}
+export async function pushNotification(_opts: { user_id?: string; userId?: string; type: NotifType; post_id?: string; comment_id?: string }) {}
 export async function fetchNotifications() {
   const meId = await getMeId(); return meId ? convex.query(api.social.getNotifications, { userId: meId }) : [];
 }
@@ -217,7 +228,7 @@ export async function getMyProfile(): Promise<Profile | null> { return docToProf
 export async function isMod(): Promise<boolean> { const meId = await getMeId(); return meId ? (await convex.query(api.profiles.getRole, { userId: meId })).some(r => r === "admin" || r === "moderator") : false; }
 export async function isAdmin(): Promise<boolean> { const meId = await getMeId(); return meId ? (await convex.query(api.profiles.getRole, { userId: meId })).includes("admin") : false; }
 
-export async function updateMyProfile(patch: { display_name?: string; bio?: string; pronouns?: string; location?: string; status_text?: string; status_emoji?: string; accent_color?: string; favorite_genre?: string; custom_title?: string; birthday?: string; show_orbes?: boolean; theme_mode?: string; interests?: string[]; social_links?: SocialLinks; show_plus_badge?: boolean; avatar_frame?: string | null; name_effect?: string | null; profile_background?: string | null; post_effect?: string | null; creator_card_style?: CreatorCardStyle; qr_style?: QRStyle | null }) {
+export async function updateMyProfile(patch: { username?: string; display_name?: string; bio?: string; pronouns?: string; location?: string; status_text?: string; status_emoji?: string; accent_color?: string; favorite_genre?: string; custom_title?: string; birthday?: string; show_orbes?: boolean; theme_mode?: string; interests?: string[]; social_links?: SocialLinks; show_plus_badge?: boolean; avatar_frame?: string | null; name_effect?: string | null; profile_background?: string | null; post_effect?: string | null; creator_card_style?: CreatorCardStyle; qr_style?: QRStyle | null; avatar_url?: string; banner_url?: string }) {
   const meId = await getMeId(); if (!meId) throw new Error("Not authenticated");
   const cp: Record<string, unknown> = {};
   const map: [string, string][] = [["display_name","displayName"],["bio","bio"],["pronouns","pronouns"],["location","location"],["status_text","statusText"],["status_emoji","statusEmoji"],["accent_color","accentColor"],["favorite_genre","favoriteGenre"],["custom_title","customTitle"],["birthday","birthday"],["show_orbes","showOrbes"],["theme_mode","themeMode"],["interests","interests"],["social_links","socialLinks"],["show_plus_badge","showPlusBadge"],["avatar_frame","avatarFrame"],["name_effect","nameEffect"],["profile_background","profileBackground"],["post_effect","postEffect"],["creator_card_style","creatorCardStyle"],["qr_style","qrStyle"]];
@@ -230,18 +241,23 @@ export async function updatePlusSettings(patch: { show_plus_badge?: boolean; ava
 export async function fetchProfileById(userId: string): Promise<Profile | null> { return docToProfile(await convex.query(api.profiles.getByUserId, { userId })); }
 export async function fetchUserPosts(userId: string, opts: { games?: boolean; artwork?: boolean } = {}): Promise<PostWithMeta[]> { const category = opts.games ? "game" : opts.artwork ? "artwork" : undefined; return (await convex.query(api.posts.getByAuthor, { authorId: userId, category, limit: 50 })).map(docToPost) as PostWithMeta[]; }
 export async function fetchUserGames(userId: string): Promise<PostWithMeta[]> { return fetchUserPosts(userId, { games: true }); }
+export async function fetchGames(_opts?: { search?: string }): Promise<PostWithMeta[]> { const raw = await convex.query(api.posts.getGames, { limit: 50 }); return raw.map(docToPost) as PostWithMeta[]; }
 
 // ════ GAMES ════
 
 export const GAME_GENRES = ["Acción","Aventura","Puzzle","RPG","Estrategia","Deportes","Carreras","Simulación","Terror","Plataformas","Retro","Casual"];
 
-export async function publishGame(input: { title: string; description: string; files?: File[]; coverFile?: File; screenshotFiles?: File[]; genre?: string; price_orbes?: number }): Promise<string> { return createPost({ content: `🎮 ${input.title}\n\n${input.description}`, files: input.files, coverFile: input.coverFile, screenshotFiles: input.screenshotFiles, category: "game" }); }
-export async function updateGame(postId: string, input: { title?: string; description?: string; genre?: string; price_orbes?: number }) { if (input.title || input.description) await convex.mutation(api.posts.update, { postId, patch: { content: `🎮 ${input.title}\n\n${input.description ?? ""}` } }); }
+export async function publishGame(input: { title: string; description: string; files?: File[]; coverFile?: File; screenshotFiles?: File[]; genre?: string; price_orbes?: number; project?: unknown; tags?: string[]; allowRemix?: boolean; gameGenre?: string | null }): Promise<string> { return createPost({ content: `🎮 ${input.title}\n\n${input.description}`, files: input.files, coverFile: input.coverFile, screenshotFiles: input.screenshotFiles, category: "game" }); }
+export async function updateGame(postId: string, input: { title?: string; description?: string; genre?: string; price_orbes?: number; tags?: string[]; coverFile?: File | null; removeCover?: boolean; screenshotFiles?: File[]; keepScreenshots?: string[]; allowRemix?: boolean; gameGenre?: string | null }) { if (input.title || input.description) await convex.mutation(api.posts.update, { postId, patch: { content: `🎮 ${input.title}\n\n${input.description ?? ""}` } }); }
 export async function purchaseGame(postId: string): Promise<{ ok: boolean; paid?: number; balance?: number; free?: boolean; already_owned?: boolean }> { const meId = await getMeId(); if (!meId) throw new Error("Not authenticated"); return convex.mutation(api.commerce.purchaseGame, { postId, buyerId: meId }); }
 export async function recordGamePlay(postId: string): Promise<void> { const meId = await getMeId(); await convex.mutation(api.posts.recordPlay, { userId: meId ?? undefined, postId }); }
 export async function fetchGamePlayCounts24h(_ids: string[]): Promise<{ counts: Record<string, number>; cloud: boolean }> { return { counts: {}, cloud: true }; }
 export async function remixGame(post: PostWithMeta): Promise<{ cloudId: string; name: string }> { const id = await createPost({ content: `🎮 Remix: ${post.content.split("\n")[0] ?? "Untitled"}`, category: "game" }); return { cloudId: id, name: post.content.split("\n")[0] ?? "Untitled" }; }
 export async function loadGameProject(url: string): Promise<unknown> { return (await fetch(url)).json(); }
+
+// ════ ORBE TRANSACTIONS ════
+export type OrbeTx = { id: string; kind: string; amount: number; post_id?: string | null; description: string; created_at: string };
+export async function fetchAllOrbeTransactions(): Promise<OrbeTx[]> { const meId = await getMeId(); if (!meId) return []; return [] as OrbeTx[]; }
 
 // ════ CLOUD PROJECTS ════
 
@@ -278,14 +294,14 @@ export async function fetchMyGamesLite(): Promise<{ id: string; title: string }[
 // ════ ARTWORKS ════
 
 export async function fetchArtworks(_opts: { search?: string } = {}): Promise<PostWithMeta[]> { return (await convex.query(api.posts.getGames, { category: "artwork", limit: 50 })).map(docToPost) as PostWithMeta[]; }
-export async function publishArtwork(input: { title: string; description: string; files?: File[]; coverFile?: File; price_orbes?: number }): Promise<string> { return createPost({ content: `🎨 ${input.title}\n\n${input.description}`, files: input.files, coverFile: input.coverFile, category: "artwork" }); }
+export async function publishArtwork(input: { title: string; description?: string; files?: File[]; coverFile?: File; price_orbes?: number; imageDataUrl?: string }): Promise<string> { return createPost({ content: `🎨 ${input.title}\n\n${input.description ?? ""}`, files: input.files, coverFile: input.coverFile, category: "artwork" }); }
 export async function purchaseArtwork(postId: string) { return purchaseGame(postId); }
 export async function resellArtwork(postId: string, price: number) { const meId = await getMeId(); if (!meId) throw new Error("Not authenticated"); return convex.mutation(api.commerce.resellArtwork, { postId, userId: meId, price }); }
 export async function fetchMyArtworks(): Promise<PostWithMeta[]> { return fetchUserPosts((await getMeId()) ?? "", { artwork: true }); }
 
 // ════ EVENTS ════
 
-export type EventItem = { id: string; title: string; description: string; banner_url: string | null; starts_at: string; ends_at: string; prize_pool: number | null; prize_description: string | null; rules: string | null; status: string; created_by: string | null; created_at: string };
+export type EventItem = { id: string; title: string; description: string; banner_url: string | null; starts_at: string; ends_at: string; prize_pool: number | null; prize_description: string | null; rules: string | null; status: string; created_by: string | null; created_at: string; participant_count?: number; submission_count?: number; my_registered?: boolean };
 export async function fetchEvents(): Promise<EventItem[]> { return (await convex.query(api.commerce.getEvents, {})).map((d: any) => ({ id: d._id, title: d.title, description: d.description, banner_url: d.bannerUrl ?? null, starts_at: new Date(d.startsAt).toISOString(), ends_at: new Date(d.endsAt).toISOString(), prize_pool: d.prizePool ?? null, prize_description: d.prizeDescription ?? null, rules: d.rules ?? null, status: d.status, created_by: d.createdBy ?? null, created_at: new Date(d.createdAt).toISOString() })); }
 export async function createEvent(_input: any): Promise<string> { return ""; }
 export async function submitToEvent(_eid: string, _pid: string): Promise<void> {}
@@ -299,7 +315,7 @@ export async function listEventParticipants(_eid: string): Promise<EventParticip
 // ════ FOLLOWS ════
 
 export type FollowStats = { followers: number; following: number; i_follow: boolean };
-export async function getFollowStats(userId: string): Promise<FollowStats> { const meId = await getMeId(); return convex.query(api.social.getFollowStats, { userId, myId: meId ?? undefined }); }
+export async function getFollowStats(userId: string): Promise<FollowStats> { const meId = await getMeId(); const r: any = await convex.query(api.social.getFollowStats, { userId, myId: meId ?? undefined }); return { followers: r.followers ?? 0, following: r.following ?? 0, i_follow: r.iFollow ?? r.i_follow ?? false }; }
 export async function followUser(userId: string): Promise<void> { const meId = await getMeId(); if (!meId) throw new Error("Not authenticated"); await convex.mutation(api.social.toggleFollow, { followerId: meId, followingId: userId }); }
 export async function unfollowUser(userId: string): Promise<void> { return followUser(userId); }
 export async function fetchFollowers(userId: string): Promise<Profile[]> { return (await convex.query(api.social.getFollowers, { userId })).map(docToProfile); }

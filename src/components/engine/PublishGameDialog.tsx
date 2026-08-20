@@ -123,11 +123,11 @@ export function PublishGameDialog({
           screenshotFiles: newShots,
           keepScreenshots: keptShotPaths(),
           allowRemix,
-          priceOrbes,
+          price_orbes: priceOrbes,
           gameGenre: genre.trim() || null,
         });
       } else if (project) {
-        await publishGame({ project, title: title.trim(), description: description.trim(), tags, coverFile, screenshotFiles: newShots, allowRemix, priceOrbes, gameGenre: genre.trim() || null });
+        await publishGame({ project, title: title.trim(), description: description.trim(), tags, coverFile: coverFile ?? undefined, screenshotFiles: newShots, allowRemix, price_orbes: priceOrbes, gameGenre: genre.trim() || null });
       }
       setDone(true);
       setTimeout(() => {

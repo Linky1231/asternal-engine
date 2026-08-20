@@ -6,7 +6,7 @@ export const attachSupabaseAuth = {
   client: () => ({
     async next(ctx?: { headers?: Record<string, string> }) {
       const { data } = await supabase.auth.getSession()
-      const token = data.session?.access_token
+      const token = (data.session as any)?.access_token
       return ctx?.headers
         ? { headers: token ? { ...ctx.headers, Authorization: `Bearer ${token}` } : ctx.headers }
         : undefined
