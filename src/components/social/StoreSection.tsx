@@ -598,7 +598,7 @@ export function StoreSection({ myId, isMod: _isMod, onRefresh }: {
                   key={id} onClick={() => setShopFilter(id)}
                   className={`h-7 px-3 rounded-lg text-[10px] font-semibold tracking-wide transition-all ${
                     shopFilter === id
-                      ? "bg-primary/10 text-primary border border-primary/20"
+                      ? "bg-foreground/8 text-foreground border border-foreground/15"
                       : "bg-muted/40 text-muted-foreground border border-transparent hover:text-foreground"
                   }`}
                 >
@@ -622,7 +622,7 @@ export function StoreSection({ myId, isMod: _isMod, onRefresh }: {
                   key={id} onClick={() => setCategoryFilter(id)}
                   className={`h-7 px-2.5 rounded-lg text-[10px] font-semibold tracking-wide flex items-center gap-1 transition-all ${
                     categoryFilter === id
-                      ? "bg-primary/10 text-primary border border-primary/20"
+                      ? "bg-foreground/8 text-foreground border border-foreground/15"
                       : "bg-muted/40 text-muted-foreground border border-transparent hover:text-foreground"
                   }`}
                 >
@@ -747,7 +747,7 @@ function GallerySubSection({
             key={id} onClick={() => setFilter(id)}
             className={`h-7 px-3 rounded-lg text-[10px] font-semibold tracking-wide flex items-center gap-1 transition-all ${
               filter === id
-                ? "bg-primary/10 text-primary border border-primary/20"
+                ? "bg-foreground/8 text-foreground border border-foreground/15"
                 : "bg-muted/40 text-muted-foreground border border-transparent hover:text-foreground"
             }`}
           >
