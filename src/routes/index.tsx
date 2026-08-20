@@ -18,7 +18,6 @@ import OrionPanel from "@/components/ai/OrionPanel";
 import { ForumSection } from "@/components/social/ForumSection";
 import { StoreSection } from "@/components/social/StoreSection";
 import { EventsSection } from "@/components/social/EventsSection";
-import { SegmentedControl } from "@/components/ui/segmented";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -275,24 +274,10 @@ function HomePage() {
           </div>
         )}
 
-        {/* Tabs principales */}
-        <div className="max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto px-3 pb-2.5">
-          <SegmentedControl
-            items={[
-              { id: "games", label: <span className="hidden min-[380px]:inline">JUEGOS</span>, icon: <Gamepad2 size={14} className="shrink-0" />, title: "Juegos" },
-              { id: "feed", label: <span className="hidden min-[380px]:inline">FEED</span>, icon: <Newspaper size={14} className="shrink-0" />, title: "Feed" },
-              { id: "gallery", label: <span className="hidden min-[380px]:inline">TIENDA</span>, icon: <Store size={14} className="shrink-0" />, title: "Tienda" },
-              { id: "events", label: <span className="hidden min-[380px]:inline">EVENTOS</span>, icon: <Trophy size={14} className="shrink-0" />, title: "Eventos" },
-              { id: "profile", label: <span className="hidden min-[380px]:inline">PERFIL</span>, icon: <User size={14} className="shrink-0" />, title: "Perfil" },
-            ]}
-            value={tab}
-            onChange={setTab}
-          />
-        </div>
       </header>
 
       {/* Content */}
-      <main className="flex-1 max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto w-full px-3 py-3 space-y-3 pb-24">
+      <main className="flex-1 max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto w-full px-3 py-3 space-y-3 pb-20">
         {/* mode="wait" en vez de popLayout: el popLayout mantiene las dos pestañas
             montadas y posicionadas de forma absoluta durante la transición (más DOM,
             más medición de layout). Con wait solo existe una a la vez y el fade es
@@ -541,6 +526,37 @@ function HomePage() {
 
       {/* Full-screen panel de notificaciones */}
       {notifOpen && <NotificationsPanel onClose={() => setNotifOpen(false)} />}
+
+      {/* Bottom Navigation */}
+      <nav className="fixed bottom-0 inset-x-0 z-30 bg-background/95 backdrop-blur-md border-t border-border/70 safe-area-bottom">
+        <div className="max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto flex items-center justify-around px-2 py-1">
+          {([
+            { id: "games" as Tab, icon: <Gamepad2 size={18} />, label: "Juegos" },
+            { id: "feed" as Tab, icon: <Newspaper size={18} />, label: "Feed" },
+            { id: "gallery" as Tab, icon: <Store size={18} />, label: "Tienda" },
+            { id: "events" as Tab, icon: <Trophy size={18} />, label: "Eventos" },
+            { id: "profile" as Tab, icon: <User size={18} />, label: "Perfil" },
+          ]).map(item => (
+            <button
+              key={item.id}
+              onClick={() => setTab(item.id)}
+              className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all ${
+                tab === item.id
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <div className={`relative ${tab === item.id ? "scale-110" : ""}`}>
+                {item.icon}
+                {tab === item.id && (
+                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />
+                )}
+              </div>
+              <span className="text-[9px] font-semibold tracking-wide">{item.label}</span>
+            </button>
+          ))}
+        </div>
+      </nav>
 
     </div>
   );

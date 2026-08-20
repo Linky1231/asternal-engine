@@ -104,7 +104,7 @@ function AssetCard({
       {/* Cover image — se adapta sin recortar */}
       <div className="relative w-full bg-gradient-to-br from-primary/5 to-primary/10 overflow-hidden">
         {imgSrc ? (
-          <div className="relative w-full aspect-square cursor-pointer" onClick={() => onViewImage(imgSrc, titleText)}>
+          <div className="relative w-full max-h-[280px] bg-gradient-to-br from-primary/5 to-primary/10 overflow-hidden cursor-pointer" onClick={() => onViewImage(imgSrc, titleText)}>
             <img src={imgSrc} alt=""
               className="w-full h-full object-contain group-hover:opacity-90 transition-opacity duration-300" />
             {/* Zoom badge */}
@@ -785,7 +785,7 @@ function GallerySubSection({
               <div key={p.id} className="rounded-xl border border-border/40 bg-card overflow-hidden hover:border-primary/20 transition-all group">
                 {/* Image — se adapta sin recortar */}
                 {(p.signed_cover || p.signed_media?.[0]) && (
-                  <div className="relative w-full aspect-square bg-gradient-to-br from-primary/5 to-primary/10 overflow-hidden cursor-pointer"
+                  <div className="relative w-full max-h-[50vh] bg-gradient-to-br from-primary/5 to-primary/10 overflow-hidden cursor-pointer"
                     onClick={() => onViewImage(p.signed_cover || p.signed_media?.[0] || '', (lines[0] || 'Obra').replace(/^🎮🎨\s*/, '').slice(0, 60))}>
                     <img src={p.signed_cover || p.signed_media?.[0]} alt=""
                       className="w-full h-full object-contain group-hover:opacity-90 transition-opacity duration-300" />
