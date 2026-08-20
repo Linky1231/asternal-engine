@@ -41,11 +41,10 @@ function ProfilePage() {
         subtitle={me ? `@${me.username ?? "…"}` : undefined}
         right={
           me?.show_orbes !== false ? (
-            <Link to="/orbes" title="Panel de Orbes"
-              className="flex items-center gap-1.5 h-9 px-3 rounded-lg bg-primary/10 text-primary border border-primary/15 hover:bg-primary/15 active:scale-95 transition">
+            <div title="Orbes" className="flex items-center gap-1.5 h-9 px-3 rounded-lg bg-primary/10 text-primary border border-primary/15 select-none">
               <Sparkles size={14} className="text-primary" fill="currentColor" />
               <span className="text-xs font-display font-semibold tabular-nums">{me?.orbes ?? 0}</span>
-            </Link>
+            </div>
           ) : undefined
         }
       />

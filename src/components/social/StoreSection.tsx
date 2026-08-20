@@ -120,11 +120,11 @@ function AssetCard({
         {/* Price badge */}
         <div className="absolute top-2 right-2">
           {isFree ? (
-            <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-500/90 text-white backdrop-blur-sm">
+            <span className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 border border-emerald-500/15">
               GRATIS
             </span>
           ) : (
-            <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-primary/90 text-white backdrop-blur-sm flex items-center gap-1">
+            <span className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-primary/10 text-primary border border-primary/15 flex items-center gap-1 tabular-nums">
               <Sparkles size={10} /> {post.price_orbes}
             </span>
           )}
@@ -790,7 +790,7 @@ function GallerySubSection({
                     </div>
                     {(p.price_orbes ?? 0) > 0 && (
                       <div className="absolute top-2 right-2">
-                        <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-primary/90 text-white backdrop-blur-sm flex items-center gap-1">
+                        <span className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-primary/10 text-primary border border-primary/15 flex items-center gap-1 tabular-nums">
                           <Sparkles size={10} /> {p.price_orbes}
                         </span>
                       </div>

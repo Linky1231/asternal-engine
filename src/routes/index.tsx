@@ -250,14 +250,13 @@ function HomePage() {
             <div className="text-[10px] sm:text-[11px] text-ink-3 truncate mt-1">@{me?.username ?? "…"}</div>
           </div>
           {typeof me?.orbes === "number" && me?.show_orbes !== false && (
-            <Link
-              to="/orbes"
-              title={`${me.orbes} orbes · Ver panel`}
-              className="flex items-center gap-1.5 h-8 sm:h-9 px-2 sm:px-2.5 rounded-lg bg-primary/10 text-primary border border-primary/15 hover:bg-primary/15 active:scale-95 transition shrink-0"
+            <div
+              title={`${me.orbes} orbes`}
+              className="flex items-center gap-1.5 h-8 sm:h-9 px-2 sm:px-2.5 rounded-lg bg-primary/10 text-primary border border-primary/15 shrink-0 select-none"
             >
               <Sparkles size={12} className="text-primary shrink-0" fill="currentColor" />
               <span className="text-[11px] sm:text-xs font-display font-semibold tabular-nums">{me.orbes}</span>
-            </Link>
+            </div>
           )}
           <button onClick={() => setMenuOpen(true)} title="Menú"
             className="w-9 h-9 rounded-lg border border-line-strong bg-card text-ink-2 grid place-items-center hover:bg-muted/60 hover:text-foreground active:scale-95 transition shrink-0">
