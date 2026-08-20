@@ -545,42 +545,40 @@ export function StoreSection({ myId, isMod: _isMod, onRefresh }: {
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* Sub-tabs: Tienda / Galería */}
-      <div className="flex items-center gap-2">
-        <div className="flex gap-1 p-1 bg-muted/40 rounded-xl flex-1">
-          <button
-            onClick={() => setStoreTab("shop")}
-            className={`flex-1 h-9 rounded-lg text-[11px] font-semibold tracking-wide flex items-center justify-center gap-1.5 transition-all ${
-              storeTab === "shop" ? "grad-brand text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Store size={13} /> Tienda
-          </button>
-          <button
-            onClick={() => setStoreTab("gallery")}
-            className={`flex-1 h-9 rounded-lg text-[11px] font-semibold tracking-wide flex items-center justify-center gap-1.5 transition-all ${
-              storeTab === "gallery" ? "grad-brand text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Palette size={13} /> Galería
-          </button>
-        </div>
-
-        {/* Publish button */}
-        {myId && (
-          <button
-            onClick={() => setPublishOpen(true)}
-            className="h-9 px-3 rounded-lg bg-primary/10 text-primary text-[11px] font-semibold flex items-center gap-1.5 hover:bg-primary/15 transition border border-primary/15 shrink-0"
-          >
-            <Plus size={13} /> Vender
-          </button>
-        )}
+      <div className="flex gap-1 p-1 bg-muted/40 rounded-xl">
+        <button
+          onClick={() => setStoreTab("shop")}
+          className={`flex-1 h-10 rounded-lg text-[11px] font-semibold tracking-wide flex items-center justify-center gap-1.5 transition-all ${
+            storeTab === "shop" ? "grad-brand text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Store size={13} /> Tienda
+        </button>
+        <button
+          onClick={() => setStoreTab("gallery")}
+          className={`flex-1 h-10 rounded-lg text-[11px] font-semibold tracking-wide flex items-center justify-center gap-1.5 transition-all ${
+            storeTab === "gallery" ? "grad-brand text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Palette size={13} /> Galería
+        </button>
       </div>
+
+      {/* Vender — acción independiente */}
+      {myId && (
+        <button
+          onClick={() => setPublishOpen(true)}
+          className="w-full h-10 rounded-xl grad-brand text-primary-foreground text-[11px] font-semibold flex items-center justify-center gap-1.5 shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
+        >
+          <Plus size={14} /> Publicar asset en la tienda
+        </button>
+      )}
 
       <AnimatePresence mode="wait">
         {storeTab === "shop" ? (
-          <motion.div key="shop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }} className="space-y-5">
+          <motion.div key="shop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }} className="space-y-4">
 
             {/* Search — full width */}
             <div className="relative">
@@ -594,7 +592,7 @@ export function StoreSection({ myId, isMod: _isMod, onRefresh }: {
 
             {/* Price filters — level 1 */}
             <div>
-              <div className="text-[9px] font-semibold text-muted-foreground/50 uppercase tracking-wider mb-2 px-0.5">Ordenar por</div>
+              <div className="text-[9px] font-semibold text-muted-foreground/50 uppercase tracking-wider mb-1.5 px-0.5">Ordenar por</div>
               <div className="flex gap-1.5 flex-wrap">
                 {([["all", "Todos"], ["free", "Gratis"], ["paid", "De pago"], ["popular", "Populares"]] as const).map(([id, label]) => (
                   <button
@@ -613,7 +611,7 @@ export function StoreSection({ myId, isMod: _isMod, onRefresh }: {
 
             {/* Categories — level 2, visually secondary */}
             <div>
-              <div className="text-[9px] font-semibold text-muted-foreground/50 uppercase tracking-wider mb-2 px-0.5">Categoría</div>
+              <div className="text-[9px] font-semibold text-muted-foreground/50 uppercase tracking-wider mb-1.5 px-0.5">Categoría</div>
               <div className="flex gap-1.5 flex-wrap">
                 {([
                   ["all", "Todos", Package],
