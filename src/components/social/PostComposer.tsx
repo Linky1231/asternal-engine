@@ -178,7 +178,7 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
                 ["announcement", "Anuncio"],
               ] as const).map(([val, label]) => (
                 <button key={val} onClick={() => setPostType(val)}
-                  className={`h-7 px-2.5 rounded-lg text-[10px] font-semibold transition-all ${postType === val ? "bg-primary/15 text-primary border border-primary/25" : "bg-background text-muted-foreground border border-border/50 hover:border-primary/20"}`}>
+                  className={`h-7 px-2.5 rounded-lg text-[10px] font-semibold transition-all ${postType === val ? "grad-brand text-primary-foreground border border-transparent shadow-sm" : "bg-background text-muted-foreground border border-border/50 hover:border-primary/20"}`}>
                   {label}
                 </button>
               ))}
