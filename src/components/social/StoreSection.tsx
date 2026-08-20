@@ -5,6 +5,7 @@ import {
   Store, Palette, Package, Sparkles, X, Loader2, Heart, Search,
   DollarSign, Gift, Eye, ShoppingCart, Star, TrendingUp, Clock,
   Upload, Plus, CheckCircle2, AlertTriangle, ExternalLink, EyeOff, ShieldCheck,
+  Gamepad2, Layers,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import {
@@ -116,27 +117,48 @@ function PublishAssetDialog({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState(0);
-  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [libraryItems, setLibraryItems] = useState<Array<{ id: string; name: string; preset: Record<string, unknown> }>>([]);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [loadingLib, setLoadingLib] = useState(true);
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 
+  useEffect(() => {
+    if (!open) return;
+    setLoadingLib(true);
+    (async () => {
+      try {
+        const { pullAssetLibraryFromCloud } = await import("@/lib/engine/cloud-sync");
+        const items = await pullAssetLibraryFromCloud();
+        setLibraryItems((items ?? []).map((i) => ({ id: i.id, name: i.name, preset: i.preset as Record<string, unknown> })));
+      } catch {
+        setLibraryItems([]);
+      } finally {
+        setLoadingLib(false);
+      }
+    })();
+  }, [open]);
+
+  const selectedItem = libraryItems.find(i => i.id === selectedItemId);
+
   const handlePublish = async () => {
+    if (!selectedItem) { setError("Selecciona un asset de tu biblioteca"); return; }
     if (!title.trim()) { setError("Escribe un título"); return; }
     setPublishing(true); setError(null);
     try {
-      // Create as artwork with image
-      const composite = coverFile ? URL.createObjectURL(coverFile) : "";
+      const texture = selectedItem.preset.texture as string | undefined | null;
+      const coverDataUrl = texture || "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
       await publishArtwork({
         title: title.trim(),
-        imageDataUrl: composite || "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+        imageDataUrl: coverDataUrl,
         priceOrbes: price,
       });
       setDone(true);
       setTimeout(() => {
         onPublished();
         onClose();
-        setDone(false); setTitle(""); setDescription(""); setPrice(0); setCoverFile(null);
+        setDone(false); setTitle(""); setDescription(""); setPrice(0); setSelectedItemId(null);
       }, 1200);
     } catch (e) { setError((e as Error).message); setPublishing(false); }
   };
@@ -145,9 +167,12 @@ function PublishAssetDialog({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
-      <div className="w-full max-w-md rounded-2xl bg-card border border-border/50 p-5 space-y-4 shadow-xl" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between">
-          <h3 className="font-display text-sm font-bold">Publicar en la Tienda</h3>
+      <div className="w-full max-w-md max-h-[85vh] rounded-2xl bg-card border border-border/50 flex flex-col shadow-xl" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-5 pb-3 shrink-0">
+          <div>
+            <h3 className="font-display text-sm font-bold">Publicar en la Tienda</h3>
+            <p className="text-[10px] text-muted-foreground/60 mt-0.5">Solo se pueden publicar assets de tu biblioteca del editor</p>
+          </div>
           <button onClick={onClose} className="w-7 h-7 rounded-lg hover:bg-muted grid place-items-center"><X size={14} /></button>
         </div>
 
@@ -157,32 +182,83 @@ function PublishAssetDialog({
             <div className="text-sm font-semibold">¡Publicado!</div>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="flex-1 overflow-y-auto p-5 pt-0 space-y-3">
+            {/* Library assets selector */}
             <div>
-              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Título *</label>
-              <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Nombre del asset"
-                className="w-full h-10 px-3 mt-1 rounded-lg bg-muted/40 border border-border/40 text-sm outline-none focus:border-primary/40 transition" />
+              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Asset de la biblioteca *</label>
+              {loadingLib ? (
+                <div className="flex items-center justify-center py-8 gap-2">
+                  <Loader2 size={16} className="animate-spin text-primary/40" />
+                  <span className="text-xs text-muted-foreground/50">Cargando biblioteca…</span>
+                </div>
+              ) : libraryItems.length === 0 ? (
+                <div className="py-8 text-center space-y-2">
+                  <div className="w-12 h-12 mx-auto rounded-xl bg-muted/30 border border-border/30 grid place-items-center">
+                    <Package size={18} className="text-muted-foreground/25" />
+                  </div>
+                  <div className="text-xs text-muted-foreground/60">No tienes assets en la biblioteca</div>
+                  <div className="text-[10px] text-muted-foreground/40">Guarda recursos en el editor para venderlos aquí</div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-2 mt-1.5 max-h-[180px] overflow-y-auto pr-1">
+                  {libraryItems.map(item => {
+                    const tex = item.preset.texture as string | undefined | null;
+                    const kind = (item.preset.kind as string) || "entity";
+                    const isSelected = selectedItemId === item.id;
+                    return (
+                      <button key={item.id} onClick={() => setSelectedItemId(item.id)}
+                        className={`relative rounded-xl border p-2 text-left transition-all ${
+                          isSelected
+                            ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20"
+                            : "border-border/40 bg-muted/20 hover:border-primary/20"
+                        }`}>
+                        <div className="w-full aspect-square rounded-lg bg-muted/40 flex items-center justify-center overflow-hidden mb-1.5">
+                          {tex ? (
+                            <img src={tex} alt={item.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <Layers size={16} className="text-muted-foreground/30" />
+                          )}
+                        </div>
+                        <div className="text-[10px] font-medium truncate" title={item.name}>{item.name}</div>
+                        <div className="text-[9px] text-muted-foreground/40 uppercase">{kind}</div>
+                        {isSelected && (
+                          <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-primary grid place-items-center">
+                            <CheckCircle2 size={10} className="text-white" />
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-            <div>
-              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Descripción</label>
-              <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Describe tu asset..."
-                rows={3} className="w-full px-3 mt-1 rounded-lg bg-muted/40 border border-border/40 text-sm outline-none focus:border-primary/40 transition resize-none" />
-            </div>
-            <div>
-              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Precio en orbes</label>
-              <div className="flex items-center gap-2 mt-1">
-                <input type="number" min={0} value={price} onChange={e => setPrice(Number(e.target.value))}
-                  className="w-24 h-10 px-3 rounded-lg bg-muted/40 border border-border/40 text-sm outline-none focus:border-primary/40 transition" />
-                <span className="text-xs text-muted-foreground">0 = Gratis</span>
-              </div>
-            </div>
-            <div>
-              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Portada</label>
-              <input type="file" accept="image/*" onChange={e => setCoverFile(e.target.files?.[0] ?? null)}
-                className="w-full mt-1 text-xs text-muted-foreground file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/15 file:cursor-pointer" />
-            </div>
+
+            {selectedItem && (
+              <>
+                <div>
+                  <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Título *</label>
+                  <input value={title} onChange={e => setTitle(e.target.value)} placeholder={selectedItem.name || "Nombre del asset"}
+                    className="w-full h-10 px-3 mt-1 rounded-lg bg-muted/40 border border-border/40 text-sm outline-none focus:border-primary/40 transition" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Descripción</label>
+                  <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Describe tu asset..."
+                    rows={2} className="w-full px-3 mt-1 rounded-lg bg-muted/40 border border-border/40 text-sm outline-none focus:border-primary/40 transition resize-none" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Precio en orbes</label>
+                  <div className="flex items-center gap-2 mt-1">
+                    <input type="number" min={0} value={price} onChange={e => setPrice(Number(e.target.value))}
+                      className="w-24 h-10 px-3 rounded-lg bg-muted/40 border border-border/40 text-sm outline-none focus:border-primary/40 transition" />
+                    <span className="text-xs text-muted-foreground">0 = Gratis</span>
+                  </div>
+                </div>
+              </>
+            )}
+
             {error && <div className="text-xs text-red-500 flex items-center gap-1.5"><AlertTriangle size={12} /> {error}</div>}
-            <button onClick={handlePublish} disabled={publishing || !title.trim()}
+
+            <button onClick={handlePublish} disabled={publishing || !selectedItem || !title.trim()}
               className="w-full h-10 rounded-lg bg-primary text-white text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.98] transition disabled:opacity-50">
               {publishing ? <><Loader2 size={14} className="animate-spin" /> Publicando…</> : <><Upload size={14} /> Publicar</>}
             </button>
