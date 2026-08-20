@@ -398,19 +398,26 @@ export function StoreSection({ myId, isMod: _isMod, onRefresh }: {
 
   const handleBuy = () => { setBuyPost(null); load(); onRefresh?.(); };
 
-  // Filter artworks for shop
-  const shopItems = artworks.filter(a => {
-    if (shopFilter === "free") return !a.price_orbes || a.price_orbes === 0;
-    if (shopFilter === "paid") return (a.price_orbes ?? 0) > 0;
-    return true;
-  }).filter(a => {
-    if (!searchQ.trim()) return true;
-    const q = searchQ.toLowerCase();
-    return a.content.toLowerCase().includes(q) || a.author?.username?.toLowerCase().includes(q);
-  }).sort((a, b) => {
-    if (shopFilter === "popular") return (b.likes ?? 0) - (a.likes ?? 0);
-    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-  });
+  // Tienda: solo assets del editor (tienen asset_preset)
+  const shopItems = artworks
+    .filter(a => !!a.asset_preset)
+    .filter(a => {
+      if (shopFilter === "free") return !a.price_orbes || a.price_orbes === 0;
+      if (shopFilter === "paid") return (a.price_orbes ?? 0) > 0;
+      return true;
+    }).filter(a => {
+      if (!searchQ.trim()) return true;
+      const q = searchQ.toLowerCase();
+      return a.content.toLowerCase().includes(q) || a.author?.username?.toLowerCase().includes(q);
+    }).sort((a, b) => {
+      if (shopFilter === "popular") return (b.likes ?? 0) - (a.likes ?? 0);
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
+
+  // Galería: solo obras de arte tradicionales (sin asset_preset)
+  const galleryItems = artworks
+    .filter(a => !a.asset_preset)
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   return (
     <div className="space-y-4">
@@ -515,7 +522,7 @@ export function StoreSection({ myId, isMod: _isMod, onRefresh }: {
           </motion.div>
         ) : (
           <motion.div key="gallery" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
-            <GallerySubSection artworks={artworks} loading={loading} myId={myId} profile={profile} onRefresh={load} />
+            <GallerySubSection artworks={galleryItems} loading={loading} myId={myId} profile={profile} onRefresh={load} />
           </motion.div>
         )}
       </AnimatePresence>
