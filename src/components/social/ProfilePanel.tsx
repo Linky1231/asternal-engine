@@ -258,17 +258,16 @@ export function ProfilePanel({
       if (avatarFile) avatar_url = await uploadAvatar(avatarFile);
       if (bannerFile) banner_url = await uploadBanner(bannerFile);
       const interests = interestsRaw.split(",").map(s => s.trim()).filter(Boolean).slice(0, 10);
-      await updateMyProfile({
+      const updated = await updateMyProfile({
         username, display_name: displayName, bio,
         pronouns, location, status_emoji: statusEmoji, status_text: statusText,
         accent_color: accentColor, favorite_genre: favoriteGenre, custom_title: customTitle,
-        birthday: birthday || undefined, show_orbes: showOrbes, interests,
+        birthday: birthday || null, show_orbes: showOrbes, interests,
         ...(avatar_url ? { avatar_url } : {}),
         ...(banner_url ? { banner_url } : {}),
       });
-      const updated = await getMyProfile();
       setProfile(updated);
-      if (updated) onProfileChange?.(updated);
+      onProfileChange?.(updated);
       setEditing(false);
       setAvatarFile(null); setBannerFile(null);
       setSaved(true);
@@ -827,7 +826,7 @@ function QRCustomizer({ userId, username, qrStyle, isPlus, viewingOwn }: {
 
       {/* Panel de personalización — solo usuarios Plus en su propio perfil */}
       {canCustomize && (
-        <div className="space-y-3">
+        <>
           {/* Presets de color */}
           <div>
             <div className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider mb-1.5">Color</div>
@@ -883,7 +882,7 @@ function QRCustomizer({ userId, username, qrStyle, isPlus, viewingOwn }: {
               ))}
             </div>
           </div>
-        </div>
+        </>
       )}
 
       {/* Acciones */}

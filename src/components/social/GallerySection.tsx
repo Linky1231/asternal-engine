@@ -96,7 +96,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
     try {
       const composite = savedSprite.frames?.[0]?.composite;
       if (!composite) throw new Error("No hay imagen en el dibujo");
-      await publishArtwork({ title: pubTitle.trim(), imageDataUrl: composite, price_orbes: pubPrice });
+      await publishArtwork({ title: pubTitle.trim(), imageDataUrl: composite, priceOrbes: pubPrice });
       setPubDone(true);
       setTimeout(() => { setSavedSprite(null); setPubDone(false); setPublishing(false); load(); }, 1200);
     } catch (e) { setPubErr((e as Error).message); setPublishing(false); }

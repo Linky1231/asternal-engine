@@ -8,13 +8,7 @@
  * @module
  */
 
-import type * as chats from "../chats.js";
-import type * as commerce from "../commerce.js";
 import type * as functions from "../functions.js";
-import type * as posts from "../posts.js";
-import type * as profiles from "../profiles.js";
-import type * as social from "../social.js";
-import type * as storage from "../storage.js";
 
 import type {
   ApiFromModules,
@@ -23,13 +17,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
-  chats: typeof chats;
-  commerce: typeof commerce;
   functions: typeof functions;
-  posts: typeof posts;
-  profiles: typeof profiles;
-  social: typeof social;
-  storage: typeof storage;
 }>;
 
 /**
