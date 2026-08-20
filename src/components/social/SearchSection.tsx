@@ -269,7 +269,7 @@ export function SearchSection() {
     { id: "users", icon: <Users size={11} />, label: "Usuarios", count: counts.users },
     { id: "games", icon: <Gamepad2 size={11} />, label: "Juegos", count: counts.games },
     { id: "posts", icon: <Newspaper size={11} />, label: "Publicaciones", count: counts.posts },
-    { id: "gallery", icon: <Palette size={11} />, label: "Galería", count: counts.gallery },
+    { id: "gallery", icon: <Palette size={11} />, label: "Tienda", count: counts.gallery },
   ];
 
   return (
@@ -396,7 +396,7 @@ export function SearchSection() {
           {/* Gallery */}
           {filtered.gallery.length > 0 && (
             <div>
-              <SectionHeader icon={<Palette size={13} />} label="Galería" count={filtered.gallery.length} />
+              <SectionHeader icon={<Palette size={13} />} label="Tienda" count={filtered.gallery.length} />
               <div className="space-y-1.5">
                 {filtered.gallery.slice(0, tab === "all" ? 4 : 30).map(a => (
                   <GalleryRow key={a.id} post={a} query={q} />

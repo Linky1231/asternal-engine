@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { Avatar } from "@/components/social/Avatar";
 import { Component, useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Gamepad2, Newspaper, Search, LogOut, Wrench, Plus, ShieldCheck, User, Sparkles, Star, Menu, MessageCircle, Bell, X, Home, Users, Flame, MessageSquare, Palette, Trophy, BarChart3, ChevronRight, Megaphone, Bot } from "lucide-react";
+import { Gamepad2, Newspaper, Search, LogOut, Wrench, Plus, ShieldCheck, User, Sparkles, Star, Menu, MessageCircle, Bell, X, Home, Users, Flame, MessageSquare, Palette, Trophy, BarChart3, ChevronRight, Megaphone, Bot, Store } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { fetchFeed, fetchGames, getMyProfile, isMod, isAdmin, type PostWithMeta, type Profile } from "@/lib/social/api";
@@ -16,7 +16,7 @@ import { NotificationsPanel } from "@/components/social/NotificationsPanel";
 import ChatSection from "@/components/social/ChatSection";
 import OrionPanel from "@/components/ai/OrionPanel";
 import { ForumSection } from "@/components/social/ForumSection";
-import { GallerySection } from "@/components/social/GallerySection";
+import { StoreSection } from "@/components/social/StoreSection";
 import { EventsSection } from "@/components/social/EventsSection";
 import { SegmentedControl } from "@/components/ui/segmented";
 
@@ -282,7 +282,7 @@ function HomePage() {
             items={[
               { id: "games", label: <span className="hidden min-[380px]:inline">JUEGOS</span>, icon: <Gamepad2 size={14} className="shrink-0" />, title: "Juegos" },
               { id: "feed", label: <span className="hidden min-[380px]:inline">FEED</span>, icon: <Newspaper size={14} className="shrink-0" />, title: "Feed" },
-              { id: "gallery", label: <span className="hidden min-[380px]:inline">GALERÍA</span>, icon: <Palette size={14} className="shrink-0" />, title: "Galería" },
+              { id: "gallery", label: <span className="hidden min-[380px]:inline">TIENDA</span>, icon: <Store size={14} className="shrink-0" />, title: "Tienda" },
               { id: "events", label: <span className="hidden min-[380px]:inline">EVENTOS</span>, icon: <Trophy size={14} className="shrink-0" />, title: "Eventos" },
               { id: "profile", label: <span className="hidden min-[380px]:inline">PERFIL</span>, icon: <User size={14} className="shrink-0" />, title: "Perfil" },
             ]}
@@ -359,7 +359,7 @@ function HomePage() {
                 </motion.div>
               </div>
             ) : tab === "gallery" ? (
-              <GallerySection myId={myId} isMod={mod} />
+              <StoreSection myId={myId} isMod={mod} />
             ) : tab === "events" ? (
               <EventsSection isAdmin={admin} />
             ) : (

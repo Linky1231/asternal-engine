@@ -628,7 +628,7 @@ export function ProfilePanel({
         items={[
           { id: "games", label: <>JUEGOS · {games.length}</>, icon: <Gamepad2 size={13} className="hidden sm:block shrink-0" /> },
           { id: "posts", label: <>POSTS · {posts.length}</>, icon: <Newspaper size={13} className="hidden sm:block shrink-0" /> },
-          { id: "gallery", label: <>GALERÍA · {artworks.length}</>, icon: <Palette size={13} className="hidden sm:block shrink-0" /> },
+          { id: "gallery", label: <>TIENDA · {artworks.length}</>, icon: <Palette size={13} className="hidden sm:block shrink-0" /> },
         ]}
         value={tab}
         onChange={setTab}
