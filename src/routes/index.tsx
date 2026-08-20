@@ -477,6 +477,7 @@ function HomePage() {
 
             {/* Categoría: COMUNIDAD */}
             <CategoryHeader label="COMUNIDAD" />
+            <MenuItem icon={<Trophy size={16} className="text-primary-glow"/>} label="Eventos" onClick={() => { setTab("events"); closeMenu(); }} />
             <MenuLink icon={<BarChart3 size={16} className="text-primary-glow"/>} label="Historial" to="/history" onClick={closeMenu} />
             <MenuLink icon={<Megaphone size={16} className="text-primary-glow"/>} label="Panel de Orbes" to="/orbes" onClick={closeMenu} />
             {(mod || admin) && (
@@ -524,27 +525,41 @@ function HomePage() {
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 inset-x-0 z-30 bg-background/95 backdrop-blur-md border-t border-border/70 safe-area-bottom">
         <div className="max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto px-3 pt-2 pb-3">
-          {/* Tabs with gray selector */}
+          {/* Tabs with gray selector — Juegos | Feed | +CREAR | Tienda | Perfil */}
           <div className="flex bg-muted/60 rounded-xl p-0.5 relative">
-            {/* Sliding pill */}
-            <div
-              className="absolute top-0.5 bottom-0.5 rounded-[10px] bg-white shadow-sm transition-all duration-300 ease-out will-change-transform"
-              style={{
-                left: tab === "games" ? "2px" : tab === "feed" ? "calc(20% + 1px)" : tab === "events" ? "calc(60% - 1px)" : tab === "profile" ? "calc(80% - 1px)" : "calc(40%)",
-                width: "calc(20% - 2px)",
-              }}
-            />
-            {/* Left tabs */}
+            {/* Left side pill (Juegos or Feed) */}
+            {(tab === "games" || tab === "feed") && (
+              <div
+                className="absolute top-0.5 bottom-0.5 rounded-[10px] bg-white shadow-sm transition-all duration-300 ease-out will-change-transform"
+                style={{
+                  left: tab === "games" ? "2px" : "calc(20% + 1px)",
+                  width: "calc(20% - 2px)",
+                }}
+              />
+            )}
+            {/* Right side pill (Tienda or Profile) */}
+            {(tab === "gallery" || tab === "profile") && (
+              <div
+                className="absolute top-0.5 bottom-0.5 rounded-[10px] bg-white shadow-sm transition-all duration-300 ease-out will-change-transform"
+                style={{
+                  left: tab === "gallery" ? "calc(60% - 1px)" : "calc(80% - 1px)",
+                  width: "calc(20% - 2px)",
+                }}
+              />
+            )}
+
+            {/* Juegos */}
             <button
               onClick={() => setTab("games")}
-              className={`relative z-10 flex-1 flex flex-col items-center gap-0.5 py-2 rounded-[10px] transition-colors duration-200 ${tab === "games" ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              className={`relative z-10 flex-1 flex flex-col items-center gap-0.5 py-2 rounded-[10px] transition-colors duration-200 ${tab === "games" ? "text-foreground" : "text-muted-foreground/80 hover:text-foreground"}`}
             >
               <Gamepad2 size={18} />
               <span className="text-[9px] font-semibold tracking-wide">Juegos</span>
             </button>
+            {/* Feed */}
             <button
               onClick={() => setTab("feed")}
-              className={`relative z-10 flex-1 flex flex-col items-center gap-0.5 py-2 rounded-[10px] transition-colors duration-200 ${tab === "feed" ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              className={`relative z-10 flex-1 flex flex-col items-center gap-0.5 py-2 rounded-[10px] transition-colors duration-200 ${tab === "feed" ? "text-foreground" : "text-muted-foreground/80 hover:text-foreground"}`}
             >
               <Newspaper size={18} />
               <span className="text-[9px] font-semibold tracking-wide">Feed</span>
@@ -561,17 +576,18 @@ function HomePage() {
               <span className="text-[9px] font-bold tracking-wide text-primary mt-0.5">Crear</span>
             </Link>
 
-            {/* Right tabs */}
+            {/* Tienda (antes Eventos) */}
             <button
-              onClick={() => setTab("events")}
-              className={`relative z-10 flex-1 flex flex-col items-center gap-0.5 py-2 rounded-[10px] transition-colors duration-200 ${tab === "events" ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              onClick={() => setTab("gallery")}
+              className={`relative z-10 flex-1 flex flex-col items-center gap-0.5 py-2 rounded-[10px] transition-colors duration-200 ${tab === "gallery" ? "text-foreground" : "text-muted-foreground/80 hover:text-foreground"}`}
             >
-              <Trophy size={18} />
-              <span className="text-[9px] font-semibold tracking-wide">Eventos</span>
+              <Store size={18} />
+              <span className="text-[9px] font-semibold tracking-wide">Tienda</span>
             </button>
+            {/* Perfil */}
             <button
               onClick={() => setTab("profile")}
-              className={`relative z-10 flex-1 flex flex-col items-center gap-0.5 py-2 rounded-[10px] transition-colors duration-200 ${tab === "profile" ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              className={`relative z-10 flex-1 flex flex-col items-center gap-0.5 py-2 rounded-[10px] transition-colors duration-200 ${tab === "profile" ? "text-foreground" : "text-muted-foreground/80 hover:text-foreground"}`}
             >
               <User size={18} />
               <span className="text-[9px] font-semibold tracking-wide">Perfil</span>
