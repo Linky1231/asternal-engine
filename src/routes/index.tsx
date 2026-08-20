@@ -34,7 +34,7 @@ export const Route = createFileRoute("/")({
   component: HomePage,
 });
 
-type Tab = "games" | "feed" | "gallery" | "events" | "profile";
+type Tab = "games" | "feed" | "gallery" | "profile";
 type FeedSub = "forYou" | "following" | "explore";
 
 /**
@@ -105,6 +105,7 @@ function HomePage() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [chatShareText, setChatShareText] = useState<string | null>(null);
   const [chatShareView, setChatShareView] = useState<"group" | "dms" | "groups" | undefined>(undefined);
+  const [eventsOpen, setEventsOpen] = useState(false);
   const [inPreview, setInPreview] = useState(false);
 
   // When the app runs embedded in the Freebuff preview (inside an iframe), the
@@ -403,8 +404,6 @@ function HomePage() {
               </div>
             ) : tab === "gallery" ? (
               <StoreSection myId={myId} isMod={mod} />
-            ) : tab === "events" ? (
-              <EventsSection isAdmin={admin} />
             ) : (
               <motion.div
                 initial={{ opacity: 0 }}
@@ -477,7 +476,7 @@ function HomePage() {
 
             {/* Categoría: COMUNIDAD */}
             <CategoryHeader label="COMUNIDAD" />
-            <MenuLink icon={<Trophy size={16} className="text-primary-glow"/>} label="Eventos" to="/events" onClick={closeMenu} />
+            <MenuItem icon={<Trophy size={16} className="text-primary-glow"/>} label="Eventos" onClick={() => { setEventsOpen(true); closeMenu(); }} />
             <MenuLink icon={<BarChart3 size={16} className="text-primary-glow"/>} label="Historial" to="/history" onClick={closeMenu} />
             <MenuLink icon={<Megaphone size={16} className="text-primary-glow"/>} label="Panel de Orbes" to="/orbes" onClick={closeMenu} />
             {(mod || admin) && (
@@ -521,6 +520,44 @@ function HomePage() {
 
       {/* Full-screen panel de notificaciones */}
       {notifOpen && <NotificationsPanel onClose={() => setNotifOpen(false)} />}
+
+      {/* Full-screen panel de Eventos */}
+      <AnimatePresence>
+        {eventsOpen && (
+          <motion.div
+            key="events-panel"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="fixed inset-0 z-[90] bg-background flex flex-col"
+            style={{ height: "100dvh" }}
+          >
+            <header className="shrink-0 border-b border-border/60 bg-background">
+              <div className="max-w-2xl md:max-w-3xl mx-auto flex items-center gap-2.5 px-4 py-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 text-primary grid place-items-center shrink-0">
+                  <Trophy size={18} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-base font-display font-semibold text-foreground">Eventos</h2>
+                  <p className="text-xs text-muted-foreground">Participa en concursos y gana premios</p>
+                </div>
+                <button
+                  onClick={() => setEventsOpen(false)}
+                  className="w-9 h-9 rounded-xl border border-border/70 bg-background grid place-items-center active:scale-95 transition shrink-0"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </header>
+            <div className="flex-1 overflow-y-auto no-scrollbar">
+              <div className="max-w-2xl md:max-w-3xl mx-auto px-4 py-4">
+                <EventsSection isAdmin={admin} />
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 inset-x-0 z-30 bg-background/95 backdrop-blur-md border-t border-border/70 safe-area-bottom">
