@@ -5,7 +5,7 @@ import {
   Store, Palette, Package, Sparkles, X, Loader2, Heart, Search,
   DollarSign, Gift, Eye, ShoppingCart, Star, TrendingUp, Clock,
   Upload, Plus, CheckCircle2, AlertTriangle, ExternalLink, EyeOff, ShieldCheck,
-  Gamepad2, Layers,
+  Gamepad2, Layers, User, Box, Skull, CircleDollarSign, Flag, Flower2,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import {
@@ -374,6 +374,7 @@ export function StoreSection({ myId, isMod: _isMod, onRefresh }: {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [searchQ, setSearchQ] = useState("");
   const [shopFilter, setShopFilter] = useState<"all" | "free" | "paid" | "popular">("all");
+  const [categoryFilter, setCategoryFilter] = useState<"all" | "player" | "platform" | "enemy" | "coin" | "goal" | "decor">("all");
   const [balance, setBalance] = useState<number | null>(null);
 
   // Dialogs
@@ -401,6 +402,13 @@ export function StoreSection({ myId, isMod: _isMod, onRefresh }: {
   // Tienda: solo assets del editor (tienen asset_preset)
   const shopItems = artworks
     .filter(a => !!a.asset_preset)
+    .filter(a => {
+      if (categoryFilter !== "all") {
+        const kind = (a.asset_preset as Record<string, unknown> | null)?.kind;
+        if (kind !== categoryFilter) return false;
+      }
+      return true;
+    })
     .filter(a => {
       if (shopFilter === "free") return !a.price_orbes || a.price_orbes === 0;
       if (shopFilter === "paid") return (a.price_orbes ?? 0) > 0;
@@ -466,7 +474,7 @@ export function StoreSection({ myId, isMod: _isMod, onRefresh }: {
               />
             </div>
 
-            {/* Filter pills */}
+            {/* Price filter pills */}
             <div className="flex gap-1.5 flex-wrap">
               {([["all", "Todos"], ["free", "Gratis"], ["paid", "De pago"], ["popular", "Populares"]] as const).map(([id, label]) => (
                 <button
@@ -478,6 +486,30 @@ export function StoreSection({ myId, isMod: _isMod, onRefresh }: {
                   }`}
                 >
                   {label}
+                </button>
+              ))}
+            </div>
+
+            {/* Category filter — tipo de asset */}
+            <div className="flex gap-1.5 flex-wrap">
+              {([
+                ["all", "Todos", Package],
+                ["player", "Jugadores", User],
+                ["platform", "Plataformas", Box],
+                ["enemy", "Enemigos", Skull],
+                ["coin", "Monedas", CircleDollarSign],
+                ["goal", "Metas", Flag],
+                ["decor", "Decoración", Flower2],
+              ] as const).map(([id, label, Icon]) => (
+                <button
+                  key={id} onClick={() => setCategoryFilter(id)}
+                  className={`h-7 px-2.5 rounded-lg text-[10px] font-semibold tracking-wide flex items-center gap-1 transition-all ${
+                    categoryFilter === id
+                      ? "bg-primary/10 text-primary border border-primary/20"
+                      : "bg-muted/40 text-muted-foreground border border-transparent hover:text-foreground"
+                  }`}
+                >
+                  <Icon size={10} /> {label}
                 </button>
               ))}
             </div>
