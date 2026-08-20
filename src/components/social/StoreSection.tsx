@@ -545,7 +545,7 @@ export function StoreSection({ myId, isMod: _isMod, onRefresh }: {
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Sub-tabs: Tienda / Galería */}
       <div className="flex items-center gap-2">
         <div className="flex gap-1 p-1 bg-muted/40 rounded-xl flex-1">
@@ -580,8 +580,9 @@ export function StoreSection({ myId, isMod: _isMod, onRefresh }: {
 
       <AnimatePresence mode="wait">
         {storeTab === "shop" ? (
-          <motion.div key="shop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }} className="space-y-4">
-            {/* Search + Filters */}
+          <motion.div key="shop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }} className="space-y-5">
+
+            {/* Search — full width */}
             <div className="relative">
               <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/30 pointer-events-none" />
               <input
@@ -591,48 +592,54 @@ export function StoreSection({ myId, isMod: _isMod, onRefresh }: {
               />
             </div>
 
-            {/* Price filter pills */}
-            <div className="flex gap-1.5 flex-wrap">
-              {([["all", "Todos"], ["free", "Gratis"], ["paid", "De pago"], ["popular", "Populares"]] as const).map(([id, label]) => (
-                <button
-                  key={id} onClick={() => setShopFilter(id)}
-                  className={`h-7 px-3 rounded-lg text-[10px] font-semibold tracking-wide transition-all ${
-                    shopFilter === id
-                      ? "grad-brand text-primary-foreground border border-transparent shadow-sm"
-                      : "bg-muted/40 text-muted-foreground border border-transparent hover:text-foreground"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
+            {/* Price filters — level 1 */}
+            <div>
+              <div className="text-[9px] font-semibold text-muted-foreground/50 uppercase tracking-wider mb-2 px-0.5">Ordenar por</div>
+              <div className="flex gap-1.5 flex-wrap">
+                {([["all", "Todos"], ["free", "Gratis"], ["paid", "De pago"], ["popular", "Populares"]] as const).map(([id, label]) => (
+                  <button
+                    key={id} onClick={() => setShopFilter(id)}
+                    className={`h-7 px-3 rounded-lg text-[10px] font-semibold tracking-wide transition-all ${
+                      shopFilter === id
+                        ? "grad-brand text-primary-foreground border border-transparent shadow-sm"
+                        : "bg-muted/40 text-muted-foreground border border-transparent hover:text-foreground"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {/* Category filter — tipo de asset */}
-            <div className="flex gap-1.5 flex-wrap">
-              {([
-                ["all", "Todos", Package],
-                ["player", "Jugadores", User],
-                ["platform", "Plataformas", Box],
-                ["enemy", "Enemigos", Skull],
-                ["coin", "Monedas", CircleDollarSign],
-                ["goal", "Metas", Flag],
-                ["decor", "Decoración", Flower2],
-              ] as const).map(([id, label, Icon]) => (
-                <button
-                  key={id} onClick={() => setCategoryFilter(id)}
-                  className={`h-7 px-2.5 rounded-lg text-[10px] font-semibold tracking-wide flex items-center gap-1 transition-all ${
-                    categoryFilter === id
-                      ? "grad-brand text-primary-foreground border border-transparent shadow-sm"
-                      : "bg-muted/40 text-muted-foreground border border-transparent hover:text-foreground"
-                  }`}
-                >
-                  <Icon size={10} /> {label}
-                </button>
-              ))}
+            {/* Categories — level 2, visually secondary */}
+            <div>
+              <div className="text-[9px] font-semibold text-muted-foreground/50 uppercase tracking-wider mb-2 px-0.5">Categoría</div>
+              <div className="flex gap-1.5 flex-wrap">
+                {([
+                  ["all", "Todos", Package],
+                  ["player", "Jugadores", User],
+                  ["platform", "Plataformas", Box],
+                  ["enemy", "Enemigos", Skull],
+                  ["coin", "Monedas", CircleDollarSign],
+                  ["goal", "Metas", Flag],
+                  ["decor", "Decoración", Flower2],
+                ] as const).map(([id, label, Icon]) => (
+                  <button
+                    key={id} onClick={() => setCategoryFilter(id)}
+                    className={`h-7 px-2.5 rounded-lg text-[10px] font-semibold tracking-wide flex items-center gap-1 transition-all ${
+                      categoryFilter === id
+                        ? "grad-brand text-primary-foreground border border-transparent shadow-sm"
+                        : "bg-muted/40 text-muted-foreground border border-transparent hover:text-foreground"
+                    }`}
+                  >
+                    <Icon size={10} /> {label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Stats bar */}
-            <div className="flex items-center gap-3 text-[10px] text-muted-foreground/60">
+            <div className="flex items-center gap-3 text-[10px] text-muted-foreground/60 pt-1 border-t border-border/30">
               <span>{shopItems.length} assets</span>
               {balance !== null && (
                 <span className="flex items-center gap-1 ml-auto">
