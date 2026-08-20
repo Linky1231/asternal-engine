@@ -6,6 +6,7 @@ import {
   DollarSign, Gift, Eye, ShoppingCart, Star, TrendingUp, Clock,
   Upload, Plus, CheckCircle2, AlertTriangle, ExternalLink, EyeOff, ShieldCheck,
   Gamepad2, Layers, User, Box, Skull, CircleDollarSign, Flag, Flower2,
+  MessageCircle, Bookmark,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import {
@@ -17,18 +18,41 @@ import { CommentSection } from "@/components/social/CommentSection";
 
 type StoreTab = "shop" | "gallery";
 
+function timeAgo(iso: string) {
+  const s = Math.max(1, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60); if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60); if (h < 24) return `${h}h`;
+  const d = Math.floor(h / 24); return `${d}d`;
+}
+
 /* ═══════════════════════════════════════════════════════
-   ASSET CARD — for the Shop sub-tab
+   ASSET CARD — Mini-publicación completa
    ═══════════════════════════════════════════════════════ */
 function AssetCard({
-  post, myId, onBuy, onLike,
+  post, myId, onBuy, onRefresh,
 }: {
   post: PostWithMeta; myId: string | null;
-  onBuy: (p: PostWithMeta) => void; onLike: (p: PostWithMeta) => void;
+  onBuy: (p: PostWithMeta) => void; onRefresh: () => void;
 }) {
+  const [openComments, setOpenComments] = useState(false);
   const author = post.author;
   const isFree = !post.price_orbes || post.price_orbes === 0;
   const isOwn = post.author_id === myId;
+
+  // Parse content: first line = title, rest = description + hashtags
+  const lines = post.content.split("\n");
+  const titleText = (lines[0] || "Asset").replace(/^🎮🎨\s*/, "").slice(0, 60);
+  const descLines = lines.slice(1).filter(l => l.trim() && !l.startsWith("#"));
+  const description = descLines.join(" ").trim();
+  const hashtags = post.tags?.length
+    ? post.tags
+    : lines.filter(l => l.startsWith("#")).flatMap(l => l.match(/#[\w-]+/g) ?? []);
+
+  const react = async (type: "like" | "favorite") => {
+    await toggleReaction({ postId: post.id, type });
+    onRefresh();
+  };
 
   return (
     <div className="rounded-xl border border-border/40 bg-card overflow-hidden hover:border-primary/25 transition-all duration-200 group">
@@ -57,23 +81,39 @@ function AssetCard({
         </div>
       </div>
 
-      {/* Info */}
+      {/* Info — mini-publicación */}
       <div className="p-3 space-y-2">
-        <div className="text-sm font-semibold truncate group-hover:text-primary transition-colors">
-          {          (post.content.split("\n")[0] || "Asset").replace(/^🎮🎨\s*/, "").slice(0, 50)}
-        </div>
-
+        {/* Author */}
         {author && (
-          <div className="flex items-center gap-2">
-            <Avatar p={author} className="w-5 h-5" />
-            <span className="text-[11px] text-muted-foreground truncate">@{author.username}</span>
-          </div>
+          <Link to="/profile/$userId" params={{ userId: post.author_id }} className="flex items-center gap-2 hover:opacity-80 transition">
+            <Avatar p={author} className="w-6 h-6" />
+            <div>
+              <div className="text-[11px] font-semibold leading-tight">@{author.username}</div>
+              <div className="text-[9px] text-muted-foreground/50">{timeAgo(post.created_at)}</div>
+            </div>
+          </Link>
         )}
 
-        <div className="flex items-center gap-3 text-[10px] text-muted-foreground/60">
-          <span className="flex items-center gap-0.5"><Heart size={9} /> {post.likes}</span>
-          <span className="flex items-center gap-0.5"><Eye size={9} /> {post.comments_count}</span>
+        {/* Title */}
+        <div className="text-sm font-bold leading-snug group-hover:text-primary transition-colors">
+          {titleText}
         </div>
+
+        {/* Description */}
+        {description && (
+          <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-3">
+            {description}
+          </p>
+        )}
+
+        {/* Hashtags */}
+        {hashtags.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {hashtags.slice(0, 5).map((tag, i) => (
+              <span key={i} className="text-[9px] text-primary/70 font-medium">{tag.startsWith("#") ? tag : `#${tag}`}</span>
+            ))}
+          </div>
+        )}
 
         {/* Asset preset attributes */}
         {(() => {
@@ -85,7 +125,7 @@ function AssetCard({
           const h = ap.h as number | undefined;
           const hasScripts = Array.isArray(ap.scripts) && ap.scripts.length > 0;
           return (
-            <div className="flex flex-wrap gap-1 pt-0.5">
+            <div className="flex flex-wrap gap-1">
               {k && <span className="px-1.5 py-0.5 rounded text-[8px] font-semibold uppercase tracking-wider bg-primary/8 text-primary/70 border border-primary/10">{k.toUpperCase()}</span>}
               {c && <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-medium bg-muted/40 border border-border/30"><span className="w-2 h-2 rounded-sm shrink-0" style={{ backgroundColor: c }} />color</span>}
               {w && h && <span className="px-1.5 py-0.5 rounded text-[8px] font-mono text-muted-foreground/50 bg-muted/30 border border-border/20">{w}×{h}</span>}
@@ -97,7 +137,27 @@ function AssetCard({
           );
         })()}
 
-        {/* Action */}
+        {/* Stats */}
+        <div className="flex items-center gap-3 text-[10px] text-muted-foreground/60">
+          <button onClick={() => react("like")} className={`flex items-center gap-1 transition ${post.my_like ? "text-red-500" : "hover:text-red-400"}`}>
+            <Heart size={11} className={post.my_like ? "fill-current" : ""} /> {post.likes}
+          </button>
+          <button onClick={() => setOpenComments(!openComments)} className="flex items-center gap-1 hover:text-primary transition">
+            <MessageCircle size={11} /> {post.comments_count}
+          </button>
+          <button onClick={() => react("favorite")} className={`flex items-center gap-1 transition ${post.my_favorite ? "text-amber-500" : "hover:text-amber-400"}`}>
+            <Bookmark size={11} className={post.my_favorite ? "fill-current" : ""} /> {post.favorites}
+          </button>
+        </div>
+
+        {/* Comments section */}
+        {openComments && (
+          <div className="pt-2 border-t border-border/30">
+            <CommentSection postId={post.id} myId={myId} isMod={false} onChange={onRefresh} />
+          </div>
+        )}
+
+        {/* Buy / Info */}
         <div className="flex gap-2 pt-1">
           {isOwn ? (
             <span className="flex-1 h-8 rounded-lg bg-muted/50 grid place-items-center text-[10px] text-muted-foreground font-medium">
@@ -105,7 +165,7 @@ function AssetCard({
             </span>
           ) : (
             <button
-              onClick={() => isFree ? onBuy(post) : onBuy(post)}
+              onClick={() => onBuy(post)}
               className={`flex-1 h-8 rounded-lg text-[11px] font-semibold flex items-center justify-center gap-1.5 transition active:scale-[0.97] ${
                 isFree
                   ? "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/15 border border-emerald-500/20"
@@ -116,12 +176,6 @@ function AssetCard({
               {isFree ? "Descargar" : `${post.price_orbes} orbes`}
             </button>
           )}
-          <button
-            onClick={() => onLike(post)}
-            className="w-8 h-8 rounded-lg border border-border/40 grid place-items-center hover:bg-muted/50 transition"
-          >
-            <Heart size={13} className={post.my_like ? "text-red-500 fill-red-500" : "text-muted-foreground/50"} />
-          </button>
         </div>
       </div>
     </div>
@@ -138,6 +192,7 @@ function PublishAssetDialog({
 }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [tagsInput, setTagsInput] = useState("");
   const [price, setPrice] = useState(0);
   const [libraryItems, setLibraryItems] = useState<Array<{ id: string; name: string; preset: Record<string, unknown> }>>([]);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
@@ -171,17 +226,20 @@ function PublishAssetDialog({
     try {
       const texture = selectedItem.preset.texture as string | undefined | null;
       const coverDataUrl = texture || "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+      const parsedTags = tagsInput.split(/[, ]+/).map(t => t.replace(/^#/, '').trim()).filter(Boolean);
       await publishArtwork({
         title: title.trim(),
+        description: description.trim() || undefined,
         imageDataUrl: coverDataUrl,
         priceOrbes: price,
         assetPreset: { ...selectedItem.preset, id: undefined },
+        tags: parsedTags.length ? parsedTags : undefined,
       });
       setDone(true);
       setTimeout(() => {
         onPublished();
         onClose();
-        setDone(false); setTitle(""); setDescription(""); setPrice(0); setSelectedItemId(null);
+        setDone(false); setTitle(""); setDescription(""); setTagsInput(""); setPrice(0); setSelectedItemId(null);
       }, 1200);
     } catch (e) { setError((e as Error).message); setPublishing(false); }
   };
@@ -266,7 +324,13 @@ function PublishAssetDialog({
                 <div>
                   <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Descripción</label>
                   <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Describe tu asset..."
-                    rows={2} className="w-full px-3 mt-1 rounded-lg bg-muted/40 border border-border/40 text-sm outline-none focus:border-primary/40 transition resize-none" />
+                    rows={3} className="w-full px-3 mt-1 rounded-lg bg-muted/40 border border-border/40 text-sm outline-none focus:border-primary/40 transition resize-none" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Hashtags</label>
+                  <input value={tagsInput} onChange={e => setTagsInput(e.target.value)} placeholder="plataforma, pixel-art, aventura..."
+                    className="w-full h-9 px-3 mt-1 rounded-lg bg-muted/40 border border-border/40 text-sm outline-none focus:border-primary/40 transition" />
+                  <div className="text-[9px] text-muted-foreground/40 mt-1">Separados por comas. Se publicarán como #hashtags</div>
                 </div>
                 <div>
                   <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Precio en orbes</label>
@@ -545,7 +609,7 @@ export function StoreSection({ myId, isMod: _isMod, onRefresh }: {
                     <AssetCard
                       post={p} myId={myId}
                       onBuy={setBuyPost}
-                      onLike={() => toggleReaction({ postId: p.id, type: "like" }).then(load)}
+                      onRefresh={load}
                     />
                   </div>
                 ))}
@@ -595,6 +659,7 @@ function GallerySubSection({
   profile: Profile | null; onRefresh: () => void;
 }) {
   const [detailPost, setDetailPost] = useState<PostWithMeta | null>(null);
+  const [openCommentsId, setOpenCommentsId] = useState<string | null>(null);
   const [filter, setFilter] = useState<"recent" | "popular" | "free">("recent");
 
   const items = artworks
@@ -606,6 +671,11 @@ function GallerySubSection({
       if (filter === "popular") return (b.likes ?? 0) - (a.likes ?? 0);
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
+
+  const react = async (postId: string, type: "like" | "favorite") => {
+    await toggleReaction({ postId, type });
+    onRefresh();
+  };
 
   return (
     <div className="space-y-4">
@@ -634,52 +704,91 @@ function GallerySubSection({
           No hay obras en la galería aún
         </div>
       ) : (
-        <div className="space-y-2">
-          {items.map(p => (
-            <div key={p.id} className="flex items-center gap-3 p-3 rounded-xl border border-border/40 bg-card hover:border-primary/20 transition-all group">
-              {p.signed_cover ? (
-                <img src={p.signed_cover} alt="" className="w-14 h-14 rounded-lg object-cover shrink-0" />
-              ) : p.signed_media?.[0] ? (
-                <img src={p.signed_media[0]} alt="" className="w-14 h-14 rounded-lg object-cover shrink-0" />
-              ) : (
-                <div className="w-14 h-14 rounded-lg bg-primary/5 grid place-items-center shrink-0">
-                  <Palette size={18} className="text-primary/20" />
-                </div>
-              )}
-              <div className="min-w-0 flex-1">
-                <div className="text-sm font-semibold truncate group-hover:text-primary transition-colors">
-                  {(p.content.split("\n")[0] || "Sin título").replace(/^🎮🎨\s*/, "").slice(0, 50)}
-                </div>
-                <div className="flex items-center gap-2 mt-0.5 text-[10px] text-muted-foreground/60">
-                  <span>@{p.author?.username ?? "…"}</span>
-                  <span>·</span>
-                  <span className="flex items-center gap-0.5"><Heart size={8} /> {p.likes}</span>
-                  {(p.price_orbes ?? 0) > 0 && (
-                    <span className="flex items-center gap-0.5"><Sparkles size={8} className="text-primary" /> {p.price_orbes}</span>
+        <div className="space-y-3">
+          {items.map(p => {
+            const lines = p.content.split("\n");
+            const titleText = (lines[0] || "Sin título").replace(/^🎮🎨\s*/, "").slice(0, 60);
+            const descLines = lines.slice(1).filter(l => l.trim() && !l.startsWith("#"));
+            const description = descLines.join(" ").trim();
+            const hashtags = p.tags?.length
+              ? p.tags
+              : lines.filter(l => l.startsWith("#")).flatMap(l => l.match(/#[\w-]+/g) ?? []);
+            const isOpen = openCommentsId === p.id;
+
+            return (
+              <div key={p.id} className="rounded-xl border border-border/40 bg-card overflow-hidden hover:border-primary/20 transition-all group">
+                {/* Image */}
+                {(p.signed_cover || p.signed_media?.[0]) && (
+                  <div className="relative w-full aspect-[16/9] bg-gradient-to-br from-primary/5 to-primary/10 overflow-hidden">
+                    <img src={p.signed_cover || p.signed_media?.[0]} alt=""
+                      className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300" />
+                    {(p.price_orbes ?? 0) > 0 && (
+                      <div className="absolute top-2 right-2">
+                        <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-primary/90 text-white backdrop-blur-sm flex items-center gap-1">
+                          <Sparkles size={10} /> {p.price_orbes}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="p-3 space-y-2">
+                  {/* Author */}
+                  <Link to="/profile/$userId" params={{ userId: p.author_id }} className="flex items-center gap-2 hover:opacity-80 transition">
+                    <Avatar p={p.author} className="w-6 h-6" />
+                    <div>
+                      <div className="text-[11px] font-semibold leading-tight">@{p.author?.username ?? "…"}</div>
+                      <div className="text-[9px] text-muted-foreground/50">{timeAgo(p.created_at)}</div>
+                    </div>
+                  </Link>
+
+                  {/* Title */}
+                  <div className="text-sm font-bold leading-snug group-hover:text-primary transition-colors">
+                    {titleText}
+                  </div>
+
+                  {/* Description */}
+                  {description && (
+                    <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-3">
+                      {description}
+                    </p>
+                  )}
+
+                  {/* Hashtags */}
+                  {hashtags.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {hashtags.slice(0, 5).map((tag, i) => (
+                        <span key={i} className="text-[9px] text-primary/70 font-medium">{tag.startsWith("#") ? tag : `#${tag}`}</span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Stats + Actions */}
+                  <div className="flex items-center gap-3 text-[10px] text-muted-foreground/60">
+                    <button onClick={() => react(p.id, "like")} className={`flex items-center gap-1 transition ${p.my_like ? "text-red-500" : "hover:text-red-400"}`}>
+                      <Heart size={11} className={p.my_like ? "fill-current" : ""} /> {p.likes}
+                    </button>
+                    <button onClick={() => setOpenCommentsId(isOpen ? null : p.id)} className={`flex items-center gap-1 transition ${isOpen ? "text-primary" : "hover:text-primary"}`}>
+                      <MessageCircle size={11} /> {p.comments_count}
+                    </button>
+                    <button onClick={() => react(p.id, "favorite")} className={`flex items-center gap-1 transition ${p.my_favorite ? "text-amber-500" : "hover:text-amber-400"}`}>
+                      <Bookmark size={11} className={p.my_favorite ? "fill-current" : ""} /> {p.favorites}
+                    </button>
+                    {(p.price_orbes ?? 0) > 0 && (
+                      <span className="flex items-center gap-0.5 ml-auto"><Sparkles size={10} className="text-primary" /> {p.price_orbes}</span>
+                    )}
+                  </div>
+
+                  {/* Comments */}
+                  {isOpen && (
+                    <div className="pt-2 border-t border-border/30">
+                      <CommentSection postId={p.id} myId={myId} isMod={false} onChange={onRefresh} />
+                    </div>
                   )}
                 </div>
               </div>
-              <button onClick={() => setDetailPost(p)}
-                className="w-7 h-7 rounded-lg border border-border/40 grid place-items-center hover:bg-muted/50 transition shrink-0">
-                <Eye size={12} className="text-muted-foreground/40" />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Detail Modal */}
-      {detailPost && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={() => setDetailPost(null)}>
-          <div className="w-full max-w-lg max-h-[85vh] bg-card rounded-t-2xl sm:rounded-2xl overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="sticky top-0 bg-card/90 backdrop-blur-sm border-b border-border/30 px-4 py-3 flex items-center justify-between z-10">
-              <h3 className="font-display text-sm font-bold truncate">Detalle</h3>
-              <button onClick={() => setDetailPost(null)} className="w-7 h-7 rounded-lg hover:bg-muted grid place-items-center"><X size={14} /></button>
-            </div>
-            <div className="p-4">
-              <CommentSection postId={detailPost.id} myId={myId} isMod={false} onChange={() => {}} />
-            </div>
-          </div>
+            );
+          })}
         </div>
       )}
     </div>

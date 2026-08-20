@@ -1400,9 +1400,11 @@ export async function fetchArtworks(opts: { search?: string } = {}): Promise<Pos
 
 export async function publishArtwork(input: {
   title: string;
+  description?: string;
   imageDataUrl: string;
   priceOrbes: number;
   assetPreset?: Record<string, unknown> | null;
+  tags?: string[];
 }): Promise<PostRow> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
@@ -1414,7 +1416,12 @@ export async function publishArtwork(input: {
   });
   const path = await uploadMedia(file, user.id);
 
-  const content = `🎨 ${input.title}`;
+  // Build rich content: title + description + hashtags
+  const lines = [`🎨 ${input.title}`];
+  if (input.description?.trim()) lines.push(input.description.trim());
+  if (input.tags?.length) lines.push(input.tags.map(t => `#${t}`).join(" "));
+  const content = lines.join("\n\n");
+
   const { data: post, error } = await supabase.from("posts").insert({
     author_id: user.id,
     content,
@@ -1426,6 +1433,12 @@ export async function publishArtwork(input: {
     asset_preset: input.assetPreset ?? null,
   } as never).select().single();
   if (error) throw error;
+
+  // Save hashtags to post_tags
+  if (input.tags?.length && post) {
+    await upsertTagsFor(post.id, input.tags);
+  }
+
   return post as PostRow;
 }
 
