@@ -6,7 +6,7 @@ import {
   DollarSign, Gift, Eye, ShoppingCart, Star, TrendingUp, Clock,
   Upload, Plus, CheckCircle2, AlertTriangle, ExternalLink, EyeOff, ShieldCheck,
   Gamepad2, Layers, User, Box, Skull, CircleDollarSign, Flag, Flower2,
-  MessageCircle, Bookmark,
+  MessageCircle, Bookmark, Download, ZoomIn,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import {
@@ -17,6 +17,49 @@ import {
 import { CommentSection } from "@/components/social/CommentSection";
 
 type StoreTab = "shop" | "gallery";
+
+/* ═══════════════════════════════════════════════════════
+   IMAGE VIEWER — Lightbox para ver imágenes completas
+   ═══════════════════════════════════════════════════════ */
+function ImageViewer({
+  src, alt, onClose,
+}: {
+  src: string; alt: string; onClose: () => void;
+}) {
+  if (!src) return null;
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex flex-col"
+      onClick={onClose}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 shrink-0">
+        <span className="text-white/60 text-xs font-medium truncate max-w-[70%]">{alt || "Vista completa"}</span>
+        <div className="flex items-center gap-2">
+          <a href={src} download target="_blank" rel="noopener"
+            onClick={e => e.stopPropagation()}
+            className="w-8 h-8 rounded-lg bg-white/10 grid place-items-center hover:bg-white/20 transition">
+            <Download size={14} className="text-white/70" />
+          </a>
+          <button onClick={onClose}
+            className="w-8 h-8 rounded-lg bg-white/10 grid place-items-center hover:bg-white/20 transition">
+            <X size={14} className="text-white/70" />
+          </button>
+        </div>
+      </div>
+      {/* Image — se adapta al tamaño de pantalla sin recortar */}
+      <div className="flex-1 flex items-center justify-center px-4 pb-4 overflow-auto" onClick={e => e.stopPropagation()}>
+        <img
+          src={src} alt={alt}
+          className="max-w-full max-h-full object-contain rounded-lg select-none"
+          style={{ width: "auto", height: "auto" }}
+          draggable={false}
+        />
+      </div>
+    </motion.div>
+  );
+}
 
 function timeAgo(iso: string) {
   const s = Math.max(1, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
@@ -30,10 +73,11 @@ function timeAgo(iso: string) {
    ASSET CARD — Mini-publicación completa
    ═══════════════════════════════════════════════════════ */
 function AssetCard({
-  post, myId, onBuy, onRefresh,
+  post, myId, onBuy, onRefresh, onViewImage,
 }: {
   post: PostWithMeta; myId: string | null;
   onBuy: (p: PostWithMeta) => void; onRefresh: () => void;
+  onViewImage: (src: string, alt: string) => void;
 }) {
   const [openComments, setOpenComments] = useState(false);
   const author = post.author;
@@ -48,6 +92,7 @@ function AssetCard({
   const hashtags = post.tags?.length
     ? post.tags
     : lines.filter(l => l.startsWith("#")).flatMap(l => l.match(/#[\w-]+/g) ?? []);
+  const imgSrc = post.signed_cover || post.signed_media?.[0] || null;
 
   const react = async (type: "like" | "favorite") => {
     await toggleReaction({ postId: post.id, type });
@@ -56,14 +101,19 @@ function AssetCard({
 
   return (
     <div className="rounded-xl border border-border/40 bg-card overflow-hidden hover:border-primary/25 transition-all duration-200 group">
-      {/* Cover image */}
-      <div className="relative w-full aspect-[4/3] bg-gradient-to-br from-primary/5 to-primary/10 overflow-hidden">
-        {post.signed_cover ? (
-          <img src={post.signed_cover} alt="" className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300" />
-        ) : post.signed_media?.[0] ? (
-          <img src={post.signed_media[0]} alt="" className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300" />
+      {/* Cover image — se adapta sin recortar */}
+      <div className="relative w-full bg-gradient-to-br from-primary/5 to-primary/10 overflow-hidden">
+        {imgSrc ? (
+          <div className="relative w-full cursor-pointer" onClick={() => onViewImage(imgSrc, titleText)}>
+            <img src={imgSrc} alt=""
+              className="w-full h-auto max-h-[320px] object-contain group-hover:opacity-90 transition-opacity duration-300" />
+            {/* Zoom badge */}
+            <div className="absolute bottom-2 right-2 w-7 h-7 rounded-lg bg-black/40 backdrop-blur-sm grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <ZoomIn size={13} className="text-white" />
+            </div>
+          </div>
         ) : (
-          <div className="w-full h-full grid place-items-center">
+          <div className="w-full h-40 grid place-items-center">
             <Package size={32} className="text-primary/20" />
           </div>
         )}
@@ -138,15 +188,15 @@ function AssetCard({
         })()}
 
         {/* Stats */}
-        <div className="flex items-center gap-3 text-[10px] text-muted-foreground/60">
-          <button onClick={() => react("like")} className={`flex items-center gap-1 transition ${post.my_like ? "text-red-500" : "hover:text-red-400"}`}>
-            <Heart size={11} className={post.my_like ? "fill-current" : ""} /> {post.likes}
+        <div className="flex items-center gap-4 text-xs text-muted-foreground/70 pt-1">
+          <button onClick={() => react("like")} className={`flex items-center gap-1.5 transition ${post.my_like ? "text-red-500" : "hover:text-red-400"}`}>
+            <Heart size={14} className={post.my_like ? "fill-current" : ""} /> {post.likes}
           </button>
-          <button onClick={() => setOpenComments(!openComments)} className="flex items-center gap-1 hover:text-primary transition">
-            <MessageCircle size={11} /> {post.comments_count}
+          <button onClick={() => setOpenComments(!openComments)} className="flex items-center gap-1.5 hover:text-primary transition">
+            <MessageCircle size={14} /> {post.comments_count}
           </button>
-          <button onClick={() => react("favorite")} className={`flex items-center gap-1 transition ${post.my_favorite ? "text-amber-500" : "hover:text-amber-400"}`}>
-            <Bookmark size={11} className={post.my_favorite ? "fill-current" : ""} /> {post.favorites}
+          <button onClick={() => react("favorite")} className={`flex items-center gap-1.5 transition ${post.my_favorite ? "text-amber-500" : "hover:text-amber-400"}`}>
+            <Bookmark size={14} className={post.my_favorite ? "fill-current" : ""} /> {post.favorites}
           </button>
         </div>
 
@@ -445,6 +495,9 @@ export function StoreSection({ myId, isMod: _isMod, onRefresh }: {
   const [publishOpen, setPublishOpen] = useState(false);
   const [buyPost, setBuyPost] = useState<PostWithMeta | null>(null);
   const [detailPost, setDetailPost] = useState<PostWithMeta | null>(null);
+  const [viewImageSrc, setViewImageSrc] = useState<string | null>(null);
+  const [viewImageAlt, setViewImageAlt] = useState("");
+  const openImageViewer = (src: string, alt: string) => { setViewImageSrc(src); setViewImageAlt(alt); };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -610,6 +663,7 @@ export function StoreSection({ myId, isMod: _isMod, onRefresh }: {
                       post={p} myId={myId}
                       onBuy={setBuyPost}
                       onRefresh={load}
+                      onViewImage={openImageViewer}
                     />
                   </div>
                 ))}
@@ -618,7 +672,7 @@ export function StoreSection({ myId, isMod: _isMod, onRefresh }: {
           </motion.div>
         ) : (
           <motion.div key="gallery" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
-            <GallerySubSection artworks={galleryItems} loading={loading} myId={myId} profile={profile} onRefresh={load} />
+            <GallerySubSection artworks={galleryItems} loading={loading} myId={myId} profile={profile} onRefresh={load} onViewImage={openImageViewer} />
           </motion.div>
         )}
       </AnimatePresence>
@@ -645,6 +699,13 @@ export function StoreSection({ myId, isMod: _isMod, onRefresh }: {
           </div>
         </div>
       )}
+
+      {/* Image Viewer / Lightbox */}
+      <AnimatePresence>
+        {viewImageSrc && (
+          <ImageViewer src={viewImageSrc} alt={viewImageAlt} onClose={() => setViewImageSrc(null)} />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -653,12 +714,12 @@ export function StoreSection({ myId, isMod: _isMod, onRefresh }: {
    GALLERY SUB-SECTION — inside the Store
    ═══════════════════════════════════════════════════════ */
 function GallerySubSection({
-  artworks, loading, myId, profile, onRefresh,
+  artworks, loading, myId, profile, onRefresh, onViewImage,
 }: {
   artworks: PostWithMeta[]; loading: boolean; myId: string | null;
   profile: Profile | null; onRefresh: () => void;
+  onViewImage: (src: string, alt: string) => void;
 }) {
-  const [detailPost, setDetailPost] = useState<PostWithMeta | null>(null);
   const [openCommentsId, setOpenCommentsId] = useState<string | null>(null);
   const [filter, setFilter] = useState<"recent" | "popular" | "free">("recent");
 
@@ -717,11 +778,16 @@ function GallerySubSection({
 
             return (
               <div key={p.id} className="rounded-xl border border-border/40 bg-card overflow-hidden hover:border-primary/20 transition-all group">
-                {/* Image */}
+                {/* Image — se adapta sin recortar */}
                 {(p.signed_cover || p.signed_media?.[0]) && (
-                  <div className="relative w-full aspect-[16/9] bg-gradient-to-br from-primary/5 to-primary/10 overflow-hidden">
+                  <div className="relative w-full bg-gradient-to-br from-primary/5 to-primary/10 overflow-hidden cursor-pointer"
+                    onClick={() => onViewImage(p.signed_cover || p.signed_media?.[0] || '', (lines[0] || 'Obra').replace(/^🎮🎨\s*/, '').slice(0, 60))}>
                     <img src={p.signed_cover || p.signed_media?.[0]} alt=""
-                      className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300" />
+                      className="w-full h-auto max-h-[400px] object-contain group-hover:opacity-90 transition-opacity duration-300" />
+                    {/* Zoom badge */}
+                    <div className="absolute bottom-2 right-2 w-7 h-7 rounded-lg bg-black/40 backdrop-blur-sm grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <ZoomIn size={13} className="text-white" />
+                    </div>
                     {(p.price_orbes ?? 0) > 0 && (
                       <div className="absolute top-2 right-2">
                         <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-primary/90 text-white backdrop-blur-sm flex items-center gap-1">
@@ -764,15 +830,15 @@ function GallerySubSection({
                   )}
 
                   {/* Stats + Actions */}
-                  <div className="flex items-center gap-3 text-[10px] text-muted-foreground/60">
-                    <button onClick={() => react(p.id, "like")} className={`flex items-center gap-1 transition ${p.my_like ? "text-red-500" : "hover:text-red-400"}`}>
-                      <Heart size={11} className={p.my_like ? "fill-current" : ""} /> {p.likes}
+                  <div className="flex items-center gap-4 text-xs text-muted-foreground/70 pt-1">
+                    <button onClick={() => react(p.id, "like")} className={`flex items-center gap-1.5 transition ${p.my_like ? "text-red-500" : "hover:text-red-400"}`}>
+                      <Heart size={14} className={p.my_like ? "fill-current" : ""} /> {p.likes}
                     </button>
-                    <button onClick={() => setOpenCommentsId(isOpen ? null : p.id)} className={`flex items-center gap-1 transition ${isOpen ? "text-primary" : "hover:text-primary"}`}>
-                      <MessageCircle size={11} /> {p.comments_count}
+                    <button onClick={() => setOpenCommentsId(isOpen ? null : p.id)} className={`flex items-center gap-1.5 transition ${isOpen ? "text-primary" : "hover:text-primary"}`}>
+                      <MessageCircle size={14} /> {p.comments_count}
                     </button>
-                    <button onClick={() => react(p.id, "favorite")} className={`flex items-center gap-1 transition ${p.my_favorite ? "text-amber-500" : "hover:text-amber-400"}`}>
-                      <Bookmark size={11} className={p.my_favorite ? "fill-current" : ""} /> {p.favorites}
+                    <button onClick={() => react(p.id, "favorite")} className={`flex items-center gap-1.5 transition ${p.my_favorite ? "text-amber-500" : "hover:text-amber-400"}`}>
+                      <Bookmark size={14} className={p.my_favorite ? "fill-current" : ""} /> {p.favorites}
                     </button>
                     {(p.price_orbes ?? 0) > 0 && (
                       <span className="flex items-center gap-0.5 ml-auto"><Sparkles size={10} className="text-primary" /> {p.price_orbes}</span>
@@ -791,6 +857,7 @@ function GallerySubSection({
           })}
         </div>
       )}
-    </div>
+
+          </div>
   );
 }
