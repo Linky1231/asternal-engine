@@ -107,6 +107,7 @@ export type PostRow = {
   unlock_reactions_goal?: number | null;
   unlock_at?: string | null;
   entrance_effect?: string | null;
+  asset_preset?: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -131,6 +132,7 @@ export type PostWithMeta = PostRow & {
   is_unlocked?: boolean;
   owned?: boolean;
   seller?: Profile | null;
+  asset_preset?: Record<string, unknown> | null;
 };
 
 
@@ -1400,6 +1402,7 @@ export async function publishArtwork(input: {
   title: string;
   imageDataUrl: string;
   priceOrbes: number;
+  assetPreset?: Record<string, unknown> | null;
 }): Promise<PostRow> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
@@ -1420,6 +1423,7 @@ export async function publishArtwork(input: {
     category: "artwork",
     price_orbes: Math.max(0, Math.floor(input.priceOrbes)),
     cover_url: null,
+    asset_preset: input.assetPreset ?? null,
   } as never).select().single();
   if (error) throw error;
   return post as PostRow;

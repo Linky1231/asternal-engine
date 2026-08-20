@@ -75,6 +75,28 @@ function AssetCard({
           <span className="flex items-center gap-0.5"><Eye size={9} /> {post.comments_count}</span>
         </div>
 
+        {/* Asset preset attributes */}
+        {(() => {
+          const ap = post.asset_preset as Record<string, unknown> | null | undefined;
+          if (!ap) return null;
+          const k = ap.kind as string | undefined;
+          const c = ap.color as string | undefined;
+          const w = ap.w as number | undefined;
+          const h = ap.h as number | undefined;
+          const hasScripts = Array.isArray(ap.scripts) && ap.scripts.length > 0;
+          return (
+            <div className="flex flex-wrap gap-1 pt-0.5">
+              {k && <span className="px-1.5 py-0.5 rounded text-[8px] font-semibold uppercase tracking-wider bg-primary/8 text-primary/70 border border-primary/10">{k.toUpperCase()}</span>}
+              {c && <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-medium bg-muted/40 border border-border/30"><span className="w-2 h-2 rounded-sm shrink-0" style={{ backgroundColor: c }} />color</span>}
+              {w && h && <span className="px-1.5 py-0.5 rounded text-[8px] font-mono text-muted-foreground/50 bg-muted/30 border border-border/20">{w}×{h}</span>}
+              {!!ap.solid && <span className="px-1.5 py-0.5 rounded text-[8px] font-medium bg-amber-500/8 text-amber-600 border border-amber-500/10">solid</span>}
+              {!!ap.texture && <span className="px-1.5 py-0.5 rounded text-[8px] font-medium bg-violet-500/8 text-violet-600 border border-violet-500/10">textura</span>}
+              {!!ap.moving && <span className="px-1.5 py-0.5 rounded text-[8px] font-medium bg-cyan-500/8 text-cyan-600 border border-cyan-500/10">móvil</span>}
+              {hasScripts && <span className="px-1.5 py-0.5 rounded text-[8px] font-medium bg-emerald-500/8 text-emerald-600 border border-emerald-500/10">scripts</span>}
+            </div>
+          );
+        })()}
+
         {/* Action */}
         <div className="flex gap-2 pt-1">
           {isOwn ? (
@@ -153,6 +175,7 @@ function PublishAssetDialog({
         title: title.trim(),
         imageDataUrl: coverDataUrl,
         priceOrbes: price,
+        assetPreset: { ...selectedItem.preset, id: undefined },
       });
       setDone(true);
       setTimeout(() => {

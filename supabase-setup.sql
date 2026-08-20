@@ -1078,5 +1078,10 @@ create policy "Mods can insert trust history" on public.trust_points_history
   );
 
 -- ════════════════════════════════════════════════════════════════════
+--  ASSET PRESET DATA (editor resources sold in the Tienda)
+-- ════════════════════════════════════════════════════════════════════
+alter table public.posts add column if not exists asset_preset jsonb;
+
+-- ════════════════════════════════════════════════════════════════════
 --  FIN DEL SCRIPT
 -- ════════════════════════════════════════════════════════════════════
