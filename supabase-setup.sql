@@ -1081,6 +1081,7 @@ create policy "Mods can insert trust history" on public.trust_points_history
 --  ASSET PRESET DATA (editor resources sold in the Tienda)
 -- ════════════════════════════════════════════════════════════════════
 alter table public.posts add column if not exists asset_preset jsonb;
+alter table public.posts add column if not exists post_type varchar(30) default null;
 
 -- ════════════════════════════════════════════════════════════════════
 --  FIN DEL SCRIPT

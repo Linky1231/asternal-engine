@@ -25,9 +25,10 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
   const [unlockGoal, setUnlockGoal] = useState<number | "">("");
   const [unlockAt, setUnlockAt] = useState("");
   const [pinnedGameId, setPinnedGameId] = useState<string>("");
+  const [postType, setPostType] = useState("");
   const [myGames, setMyGames] = useState<{ id: string; title: string }[]>([]);
 
-  const [panel, setPanel] = useState<null | "link" | "tags" | "html" | "poll" | "unlock" | "game" | "color">(null);
+  const [panel, setPanel] = useState<null | "link" | "tags" | "html" | "poll" | "unlock" | "game" | "color" | "type">(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
@@ -79,6 +80,7 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
         htmlContent: htmlContent.trim() || null,
         documents,
         pinnedGameId: pinnedGameId || null,
+        postType: postType || null,
         lockedContent: lockedContent.trim() || null,
         unlockReactionsGoal: typeof unlockGoal === "number" ? unlockGoal : null,
         unlockAt: unlockAt || null,
@@ -88,7 +90,7 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
       setContent(""); setFiles([]); setLinkUrl(""); setTagInput("");
       setDocuments([]); setHtmlContent(""); setTextColor("");
       setPoll(null); setLockedContent(""); setUnlockGoal(""); setUnlockAt("");
-      setPinnedGameId(""); setPanel(null); setExpanded(false);
+      setPinnedGameId(""); setPostType(""); setPanel(null); setExpanded(false);
       onCreated();
     } catch (e) { setErr((e as Error).message); }
     finally { setBusy(false); }
@@ -158,6 +160,29 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
             <LinkIcon size={14} className="text-muted-foreground" />
             <input value={linkUrl} onChange={e => setLinkUrl(e.target.value)} placeholder="https://…"
               className="flex-1 bg-transparent text-xs outline-none" />
+          </div>
+        )}
+
+        {panel === "type" && (
+          <div className="bg-input/40 rounded-xl px-3 py-2 space-y-2 border border-border/50">
+            <div className="text-xs font-medium flex items-center gap-2"><Sparkles size={13} className="text-primary" /> ¿Qué estás compartiendo?</div>
+            <div className="flex flex-wrap gap-1.5">
+              {([
+                ["", "General"],
+                ["update", "Actualización"],
+                ["progress", "Progreso"],
+                ["tutorial", "Tutorial"],
+                ["question", "Pregunta"],
+                ["resource", "Recurso"],
+                ["achievement", "Logro"],
+                ["announcement", "Anuncio"],
+              ] as const).map(([val, label]) => (
+                <button key={val} onClick={() => setPostType(val)}
+                  className={`h-7 px-2.5 rounded-lg text-[10px] font-semibold transition-all ${postType === val ? "bg-primary/15 text-primary border border-primary/25" : "bg-background text-muted-foreground border border-border/50 hover:border-primary/20"}`}>
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
@@ -268,6 +293,7 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
           <Chip active={panel === "color"} onClick={() => setPanel(panel === "color" ? null : "color")} title="Color del texto"><Palette size={15} />{expanded && <span>Color</span>}</Chip>
           <Chip active={panel === "html"} onClick={() => setPanel(panel === "html" ? null : "html")} title="HTML"><Code2 size={15} />{expanded && <span>HTML</span>}</Chip>
           <Chip active={panel === "unlock"} onClick={() => setPanel(panel === "unlock" ? null : "unlock")} title="Desbloqueable"><Lock size={15} />{expanded && <span>Desbloqueable</span>}</Chip>
+          <Chip active={panel === "type"} onClick={() => setPanel(panel === "type" ? null : "type")} title="Tipo"><Sparkles size={15} />{expanded && <span>Tipo</span>}</Chip>
           <Chip active={panel === "tags"} onClick={() => setPanel(panel === "tags" ? null : "tags")} title="Etiquetas"><Tag size={15} />{expanded && <span>Etiquetas</span>}</Chip>
         </div>
 

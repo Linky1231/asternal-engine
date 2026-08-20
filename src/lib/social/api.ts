@@ -108,6 +108,7 @@ export type PostRow = {
   unlock_at?: string | null;
   entrance_effect?: string | null;
   asset_preset?: Record<string, unknown> | null;
+  post_type?: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -133,6 +134,7 @@ export type PostWithMeta = PostRow & {
   owned?: boolean;
   seller?: Profile | null;
   asset_preset?: Record<string, unknown> | null;
+  post_type?: string | null;
 };
 
 
@@ -352,6 +354,7 @@ export async function createPost(input: {
   htmlContent?: string | null;
   documents?: File[];
   pinnedGameId?: string | null;
+  postType?: string | null;
   lockedContent?: string | null;
   unlockReactionsGoal?: number | null;
   unlockAt?: string | null;
@@ -389,6 +392,7 @@ export async function createPost(input: {
     document_paths: docPaths,
     document_names: docNames,
     pinned_game_id: input.pinnedGameId || null,
+    post_type: input.postType || null,
     locked_content: input.lockedContent || null,
     unlock_reactions_goal: input.unlockReactionsGoal ?? null,
     unlock_at: input.unlockAt || null,

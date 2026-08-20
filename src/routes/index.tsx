@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { Avatar } from "@/components/social/Avatar";
 import { Component, useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Gamepad2, Newspaper, Search, LogOut, Wrench, Plus, ShieldCheck, User, Sparkles, Star, Menu, MessageCircle, Bell, X, Home, Users, Flame, MessageSquare, Palette, Trophy, BarChart3, ChevronRight, Megaphone, Bot, Store } from "lucide-react";
+import { Gamepad2, Newspaper, Search, LogOut, Wrench, Plus, ShieldCheck, User, Sparkles, Star, Menu, MessageCircle, Bell, X, Home, Users, Flame, MessageSquare, Compass, Palette, Trophy, BarChart3, ChevronRight, Megaphone, Bot, Store, FileText, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { fetchFeed, fetchGames, getMyProfile, isMod, isAdmin, type PostWithMeta, type Profile } from "@/lib/social/api";
@@ -36,7 +36,7 @@ export const Route = createFileRoute("/")({
 });
 
 type Tab = "games" | "feed" | "gallery" | "events" | "profile";
-type FeedSub = "forYou" | "following" | "trending" | "forums";
+type FeedSub = "forYou" | "following" | "explore";
 
 /**
  * Aisla el chat: si algo falla dentro de él (error inesperado de render o
@@ -333,23 +333,82 @@ function HomePage() {
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.12, ease: "easeOut" }}
                 >
-                  {feedSub === "forums" ? (
-                    <ForumSection isAdmin={admin} isMod={mod} />
-                  ) : loading ? <SkeletonList /> : (() => {
+                  {loading ? <SkeletonList /> : (() => {
                     const filtered = filterFeed(posts, feedSub, myId);
                     if (filtered.length === 0) {
                       return (
-                        <div className="text-center text-xs text-muted-foreground py-10">
-                          {feedSub === "forYou"
-                            ? "Sé el primero en publicar o sigue a creadores para ver su contenido aquí."
-                            : feedSub === "following"
-                            ? "Interactúa con publicaciones (like, favorito) para poblar esta sección."
-                            : feedSub === "trending"
-                            ? "Aún no hay tendencias. ¡Publica algo!"
-                            : ""}
+                        <div className="text-center text-xs text-muted-foreground py-10 space-y-2">
+                          <div className="text-2xl mb-1">{feedSub === "forYou" ? "🎯" : feedSub === "following" ? "👥" : "🔭"}</div>
+                          <div className="font-medium text-foreground/70">
+                            {feedSub === "forYou"
+                              ? "Tu feed personalizado"
+                              : feedSub === "following"
+                              ? "Contenido de tus seguidos"
+                              : "Descubre contenido nuevo"}
+                          </div>
+                          <div className="text-[11px] text-muted-foreground/60 max-w-[260px] mx-auto">
+                            {feedSub === "forYou"
+                              ? "Publica, sigue creadores yerra para construir tu feed."
+                              : feedSub === "following"
+                              ? "Sigue a desarrolladores para ver sus actualizaciones aquí."
+                              : "Explora proyectos, tutoriales y publicaciones destacadas de la comunidad."}
+                          </div>
                         </div>
                       );
                     }
+
+                    // In explore tab, show some extra sections
+                    if (feedSub === "explore") {
+                      const gamesPosts = filtered.filter(p => p.pinned_game);
+                      const tutorials = filtered.filter(p => p.tags.some(t => ["tutorial","guide","tip","howto"].includes(t)));
+                      const withMedia = filtered.filter(p => (p.media_type === "image" || p.media_type === "video") && !gamesPosts.includes(p) && !tutorials.includes(p));
+
+                      return (
+                        <div className="space-y-6">
+                          {gamesPosts.length > 0 && (
+                            <div>
+                              <h3 className="text-xs font-display font-bold tracking-wider text-primary/80 uppercase mb-3 flex items-center gap-2">
+                                <Gamepad2 size={13} /> Proyectos destacados
+                              </h3>
+                              <div className="space-y-3">
+                                {gamesPosts.slice(0, 3).map((p, i) => (
+                                  <div key={p.id} className="card-enter" style={{ animationDelay: `${i * 30}ms` }}>
+                                    <PostCard post={p} myId={myId} isMod={mod} onChange={onFeedChange} />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {tutorials.length > 0 && (
+                            <div>
+                              <h3 className="text-xs font-display font-bold tracking-wider text-primary/80 uppercase mb-3 flex items-center gap-2">
+                                <FileText size={13} /> Tutoriales y guías
+                              </h3>
+                              <div className="space-y-3">
+                                {tutorials.slice(0, 3).map((p, i) => (
+                                  <div key={p.id} className="card-enter" style={{ animationDelay: `${i * 30}ms` }}>
+                                    <PostCard post={p} myId={myId} isMod={mod} onChange={onFeedChange} />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          <div>
+                            <h3 className="text-xs font-display font-bold tracking-wider text-primary/80 uppercase mb-3 flex items-center gap-2">
+                              <TrendingUp size={13} /> Contenido popular
+                            </h3>
+                            <div className="space-y-3">
+                              {filtered.slice(0, 8).map((p, i) => (
+                                <div key={p.id} className="card-enter" style={{ animationDelay: `${i * 25}ms` }}>
+                                  <PostCard post={p} myId={myId} isMod={mod} onChange={onFeedChange} />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+
                     return filtered.map((p, i) => (
                       <div key={p.id} className="card-enter mb-3 last:mb-0" style={{ animationDelay: `${Math.min(i * 25, 180)}ms` }}>
                         <PostCard post={p} myId={myId} isMod={mod} onChange={onFeedChange} />
@@ -540,10 +599,9 @@ function CategoryHeader({ label }: { label: string }) {
 // extremo" es imposible por construcción.
 function FeedSubTabs({ value, onChange }: { value: FeedSub; onChange: (v: FeedSub) => void }) {
   const items: { id: FeedSub; label: string; icon: React.ReactNode }[] = [
-    { id: "forYou", label: "Para ti", icon: <Home size={13} /> },
+    { id: "forYou", label: "Para ti", icon: <Compass size={13} /> },
     { id: "following", label: "Seguidos", icon: <Users size={13} /> },
-    { id: "trending", label: "Tendencias", icon: <Flame size={13} /> },
-    { id: "forums", label: "Foros", icon: <MessageSquare size={13} /> },
+    { id: "explore", label: "Explorar", icon: <Flame size={13} /> },
   ];
   return (
     <div className="flex gap-1.5 pt-1 pb-2">
@@ -654,7 +712,8 @@ function filterFeed(posts: PostWithMeta[], sub: FeedSub, myId: string | null): P
     return scored.map(x => x.p);
   }
 
-  if (sub === "trending") {
+  if (sub === "explore") {
+    // Mix of trending + media-rich + project-linked posts for discovery
     return [...posts]
       .map(p => {
         const likes = p.likes ?? 0;
@@ -662,9 +721,15 @@ function filterFeed(posts: PostWithMeta[], sub: FeedSub, myId: string | null): P
         const comments = p.comments_count ?? 0;
         const reposts = p.reposts_count ?? 0;
         const ageH = Math.max(1, (now - new Date(p.created_at).getTime()) / 36e5);
-        // Trending favours raw velocity
         const velocity = (likes + favs * 3 + comments * 2 + reposts * 5) / Math.pow(ageH + 1, 0.6);
-        return { p, score: velocity };
+        const hasMedia = p.media_type === "image" || p.media_type === "video" || !!p.cover_url;
+        const hasProject = !!p.pinned_game;
+        const mediaBoost = hasMedia ? 1.5 : 1;
+        const projectBoost = hasProject ? 1.3 : 1;
+        const hasTags = p.tags.length > 0;
+        const tagBoost = hasTags ? 1.1 : 1;
+        const score = velocity * mediaBoost * projectBoost * tagBoost;
+        return { p, score };
       })
       .sort((a, b) => b.score - a.score)
       .map(x => x.p);
