@@ -527,26 +527,26 @@ function HomePage() {
         <div className="max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto px-3 pt-2 pb-3">
           {/* Tabs with gray selector — Juegos | Feed | +CREAR | Tienda | Perfil */}
           <div className="flex bg-muted/60 rounded-xl p-0.5 relative">
-            {/* Left side pill (Juegos or Feed) */}
-            {(tab === "games" || tab === "feed") && (
-              <div
-                className="absolute top-0.5 bottom-0.5 rounded-[10px] bg-white shadow-sm transition-all duration-300 ease-out will-change-transform"
-                style={{
-                  left: tab === "games" ? "2px" : "calc(20% + 1px)",
-                  width: "calc(20% - 2px)",
-                }}
-              />
-            )}
-            {/* Right side pill (Tienda or Profile) */}
-            {(tab === "gallery" || tab === "profile") && (
-              <div
-                className="absolute top-0.5 bottom-0.5 rounded-[10px] bg-white shadow-sm transition-all duration-300 ease-out will-change-transform"
-                style={{
-                  left: tab === "gallery" ? "calc(60% - 1px)" : "calc(80% - 1px)",
-                  width: "calc(20% - 2px)",
-                }}
-              />
-            )}
+            {/* Left side pill */}
+            <div
+              className="absolute top-0.5 bottom-0.5 rounded-[10px] bg-white shadow-sm transition-all duration-300 ease-out will-change-transform"
+              style={{
+                left: tab === "games" ? "2px" : "calc(20% + 1px)",
+                width: "calc(20% - 2px)",
+                opacity: (tab === "games" || tab === "feed") ? 1 : 0,
+                pointerEvents: "none" as const,
+              }}
+            />
+            {/* Right side pill */}
+            <div
+              className="absolute top-0.5 bottom-0.5 rounded-[10px] bg-white shadow-sm transition-all duration-300 ease-out will-change-transform"
+              style={{
+                left: tab === "gallery" ? "calc(60% - 1px)" : "calc(80% - 1px)",
+                width: "calc(20% - 2px)",
+                opacity: (tab === "gallery" || tab === "profile") ? 1 : 0,
+                pointerEvents: "none" as const,
+              }}
+            />
 
             {/* Juegos */}
             <button
