@@ -104,9 +104,9 @@ function AssetCard({
       {/* Cover image — se adapta sin recortar */}
       <div className="relative w-full bg-gradient-to-br from-primary/5 to-primary/10 overflow-hidden">
         {imgSrc ? (
-          <div className="relative w-full cursor-pointer" onClick={() => onViewImage(imgSrc, titleText)}>
+          <div className="relative w-full aspect-square cursor-pointer" onClick={() => onViewImage(imgSrc, titleText)}>
             <img src={imgSrc} alt=""
-              className="w-full h-auto max-h-[320px] object-contain group-hover:opacity-90 transition-opacity duration-300" />
+              className="w-full h-full object-contain group-hover:opacity-90 transition-opacity duration-300" />
             {/* Zoom badge */}
             <div className="absolute bottom-2 right-2 w-7 h-7 rounded-lg bg-black/40 backdrop-blur-sm grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity">
               <ZoomIn size={13} className="text-white" />
@@ -780,10 +780,10 @@ function GallerySubSection({
               <div key={p.id} className="rounded-xl border border-border/40 bg-card overflow-hidden hover:border-primary/20 transition-all group">
                 {/* Image — se adapta sin recortar */}
                 {(p.signed_cover || p.signed_media?.[0]) && (
-                  <div className="relative w-full bg-gradient-to-br from-primary/5 to-primary/10 overflow-hidden cursor-pointer"
+                  <div className="relative w-full aspect-square bg-gradient-to-br from-primary/5 to-primary/10 overflow-hidden cursor-pointer"
                     onClick={() => onViewImage(p.signed_cover || p.signed_media?.[0] || '', (lines[0] || 'Obra').replace(/^🎮🎨\s*/, '').slice(0, 60))}>
                     <img src={p.signed_cover || p.signed_media?.[0]} alt=""
-                      className="w-full h-auto max-h-[400px] object-contain group-hover:opacity-90 transition-opacity duration-300" />
+                      className="w-full h-full object-contain group-hover:opacity-90 transition-opacity duration-300" />
                     {/* Zoom badge */}
                     <div className="absolute bottom-2 right-2 w-7 h-7 rounded-lg bg-black/40 backdrop-blur-sm grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity">
                       <ZoomIn size={13} className="text-white" />
