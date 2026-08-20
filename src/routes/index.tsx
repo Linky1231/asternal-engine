@@ -422,13 +422,7 @@ function HomePage() {
         </AnimatePresence>
       </main>
 
-      {/* Floating CTA to editor */}
-      <Link
-        to="/editor"
-        className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-[max(1.25rem,env(safe-area-inset-right))] z-30 h-14 pl-4 pr-5 rounded-xl btn-grad  flex items-center gap-2 active:scale-95 font-display tracking-widest text-xs"
-      >
-        <Plus size={18} strokeWidth={2} /> CREAR
-      </Link>
+
 
       {/* Menu drawer — dos AnimatePresence separados (el fragment <> no desmonta en exit) */}
       <AnimatePresence>
@@ -529,30 +523,59 @@ function HomePage() {
 
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 inset-x-0 z-30 bg-background/95 backdrop-blur-md border-t border-border/70 safe-area-bottom">
-        <div className="max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto flex items-center justify-around px-2 py-1">
+        <div className="max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto flex items-center justify-around px-2 pt-1 pb-2">
+          {/* Left tabs */}
           {([
-            { id: "games" as Tab, icon: <Gamepad2 size={18} />, label: "Juegos" },
-            { id: "feed" as Tab, icon: <Newspaper size={18} />, label: "Feed" },
-            { id: "gallery" as Tab, icon: <Store size={18} />, label: "Tienda" },
-            { id: "events" as Tab, icon: <Trophy size={18} />, label: "Eventos" },
-            { id: "profile" as Tab, icon: <User size={18} />, label: "Perfil" },
+            { id: "games" as Tab, icon: <Gamepad2 size={20} />, label: "Juegos" },
+            { id: "feed" as Tab, icon: <Newspaper size={20} />, label: "Feed" },
           ]).map(item => (
             <button
               key={item.id}
               onClick={() => setTab(item.id)}
-              className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all ${
+              className={`flex flex-col items-center gap-0.5 px-4 py-1 rounded-xl transition-all ${
                 tab === item.id
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              <div className={`relative ${tab === item.id ? "scale-110" : ""}`}>
+              <div className="relative">
                 {item.icon}
-                {tab === item.id && (
-                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />
-                )}
+                {tab === item.id && <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-5 h-0.5 rounded-full bg-primary" />}
               </div>
-              <span className="text-[9px] font-semibold tracking-wide">{item.label}</span>
+              <span className="text-[10px] font-semibold tracking-wide">{item.label}</span>
+            </button>
+          ))}
+
+          {/* Center CREAR button */}
+          <Link
+            to="/editor"
+            className="flex flex-col items-center -mt-4"
+          >
+            <div className="w-14 h-14 rounded-2xl grad-brand shadow-lg flex items-center justify-center active:scale-95 transition-transform">
+              <Plus size={24} strokeWidth={2.5} className="text-white" />
+            </div>
+            <span className="text-[10px] font-bold tracking-wide text-primary mt-0.5">Crear</span>
+          </Link>
+
+          {/* Right tabs */}
+          {([
+            { id: "events" as Tab, icon: <Trophy size={20} />, label: "Eventos" },
+            { id: "profile" as Tab, icon: <User size={20} />, label: "Perfil" },
+          ]).map(item => (
+            <button
+              key={item.id}
+              onClick={() => setTab(item.id)}
+              className={`flex flex-col items-center gap-0.5 px-4 py-1 rounded-xl transition-all ${
+                tab === item.id
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <div className="relative">
+                {item.icon}
+                {tab === item.id && <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-5 h-0.5 rounded-full bg-primary" />}
+              </div>
+              <span className="text-[10px] font-semibold tracking-wide">{item.label}</span>
             </button>
           ))}
         </div>
