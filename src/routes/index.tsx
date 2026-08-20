@@ -523,61 +523,60 @@ function HomePage() {
 
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 inset-x-0 z-30 bg-background/95 backdrop-blur-md border-t border-border/70 safe-area-bottom">
-        <div className="max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto flex items-center justify-around px-2 pt-1 pb-2">
-          {/* Left tabs */}
-          {([
-            { id: "games" as Tab, icon: <Gamepad2 size={20} />, label: "Juegos" },
-            { id: "feed" as Tab, icon: <Newspaper size={20} />, label: "Feed" },
-          ]).map(item => (
+        <div className="max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto px-3 pt-2 pb-3">
+          {/* Tabs with gray selector */}
+          <div className="flex bg-muted/60 rounded-xl p-0.5 relative">
+            {/* Sliding pill */}
+            <div
+              className="absolute top-0.5 bottom-0.5 rounded-[10px] bg-white shadow-sm transition-all duration-300 ease-out will-change-transform"
+              style={{
+                left: tab === "games" ? "2px" : tab === "feed" ? "calc(20% + 1px)" : tab === "events" ? "calc(60% - 1px)" : tab === "profile" ? "calc(80% - 1px)" : "calc(40%)",
+                width: "calc(20% - 2px)",
+              }}
+            />
+            {/* Left tabs */}
             <button
-              key={item.id}
-              onClick={() => setTab(item.id)}
-              className={`flex flex-col items-center gap-0.5 px-4 py-1 rounded-xl transition-all ${
-                tab === item.id
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
+              onClick={() => setTab("games")}
+              className={`relative z-10 flex-1 flex flex-col items-center gap-0.5 py-2 rounded-[10px] transition-colors duration-200 ${tab === "games" ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
             >
-              <div className="relative">
-                {item.icon}
-                {tab === item.id && <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-5 h-0.5 rounded-full bg-primary" />}
-              </div>
-              <span className="text-[10px] font-semibold tracking-wide">{item.label}</span>
+              <Gamepad2 size={18} />
+              <span className="text-[9px] font-semibold tracking-wide">Juegos</span>
             </button>
-          ))}
-
-          {/* Center CREAR button */}
-          <Link
-            to="/editor"
-            className="flex flex-col items-center -mt-4"
-          >
-            <div className="w-14 h-14 rounded-2xl grad-brand shadow-lg flex items-center justify-center active:scale-95 transition-transform">
-              <Plus size={24} strokeWidth={2.5} className="text-white" />
-            </div>
-            <span className="text-[10px] font-bold tracking-wide text-primary mt-0.5">Crear</span>
-          </Link>
-
-          {/* Right tabs */}
-          {([
-            { id: "events" as Tab, icon: <Trophy size={20} />, label: "Eventos" },
-            { id: "profile" as Tab, icon: <User size={20} />, label: "Perfil" },
-          ]).map(item => (
             <button
-              key={item.id}
-              onClick={() => setTab(item.id)}
-              className={`flex flex-col items-center gap-0.5 px-4 py-1 rounded-xl transition-all ${
-                tab === item.id
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
+              onClick={() => setTab("feed")}
+              className={`relative z-10 flex-1 flex flex-col items-center gap-0.5 py-2 rounded-[10px] transition-colors duration-200 ${tab === "feed" ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
             >
-              <div className="relative">
-                {item.icon}
-                {tab === item.id && <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-5 h-0.5 rounded-full bg-primary" />}
-              </div>
-              <span className="text-[10px] font-semibold tracking-wide">{item.label}</span>
+              <Newspaper size={18} />
+              <span className="text-[9px] font-semibold tracking-wide">Feed</span>
             </button>
-          ))}
+
+            {/* Center CREAR button */}
+            <Link
+              to="/editor"
+              className="relative z-10 flex-1 flex flex-col items-center justify-center -mt-3"
+            >
+              <div className="w-12 h-12 rounded-2xl grad-brand shadow-lg flex items-center justify-center active:scale-95 transition-transform">
+                <Plus size={22} strokeWidth={2.5} className="text-white" />
+              </div>
+              <span className="text-[9px] font-bold tracking-wide text-primary mt-0.5">Crear</span>
+            </Link>
+
+            {/* Right tabs */}
+            <button
+              onClick={() => setTab("events")}
+              className={`relative z-10 flex-1 flex flex-col items-center gap-0.5 py-2 rounded-[10px] transition-colors duration-200 ${tab === "events" ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              <Trophy size={18} />
+              <span className="text-[9px] font-semibold tracking-wide">Eventos</span>
+            </button>
+            <button
+              onClick={() => setTab("profile")}
+              className={`relative z-10 flex-1 flex flex-col items-center gap-0.5 py-2 rounded-[10px] transition-colors duration-200 ${tab === "profile" ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              <User size={18} />
+              <span className="text-[9px] font-semibold tracking-wide">Perfil</span>
+            </button>
+          </div>
         </div>
       </nav>
 
