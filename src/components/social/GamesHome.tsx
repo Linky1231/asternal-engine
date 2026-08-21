@@ -497,7 +497,7 @@ function FeaturedBanner({ post, plays24, onPlay }: { post: PostWithMeta; plays24
             <div className="absolute inset-0 grad-brand" />
             {/* Marca de agua: icono de juego translúcido de fondo */}
             <div className="absolute inset-0 grid place-items-center">
-              <Joystick size={150} strokeWidth={1} className="text-white/[0.13] drop-shadow-[0_12px_32px_rgba(0,0,0,0.35)]" />
+              <Gamepad2 size={180} strokeWidth={1} className="text-white/[0.15] drop-shadow-[0_12px_32px_rgba(0,0,0,0.35)]" />
             </div>
           </>
         )}

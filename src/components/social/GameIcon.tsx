@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Sparkles, Lock, Joystick } from "lucide-react";
+import { Sparkles, Lock, Gamepad2 } from "lucide-react";
 import type { PostWithMeta } from "@/lib/social/api";
 
 function extractTitle(content: string): string {
@@ -95,7 +95,7 @@ function TileMark() {
     <span className="absolute inset-0 grid place-items-center pointer-events-none" aria-hidden>
       {/* halo suave: profundidad sin caja ni recuadro genérico */}
       <span className="absolute w-14 h-14 rounded-full bg-primary/10 blur-xl" />
-      <Joystick size={22} strokeWidth={1.5} className="relative text-primary/70" />
+      <Gamepad2 size={28} strokeWidth={1.5} className="relative text-primary/70" />
     </span>
   );
 }
