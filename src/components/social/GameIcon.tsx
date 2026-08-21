@@ -96,7 +96,7 @@ function TileMark() {
     <span className="absolute inset-0 grid place-items-center pointer-events-none" aria-hidden>
       {/* halo suave: profundidad sin caja ni recuadro genérico */}
       <span className="absolute w-14 h-14 rounded-full bg-muted/40 blur-xl" />
-      <FaGamepad size={38} className="relative text-muted-foreground/50" />
+      <FaGamepad size={46} className="relative text-muted-foreground/50" />
     </span>
   );
 }
