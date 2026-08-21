@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Play, Flame, Rocket, Heart, Sparkles as SparklesIcon, Users, ChevronRight, Gamepad2, Trophy, Joystick, Crown, CloudOff, Loader2, CheckCircle2, Star, Pause } from "lucide-react";
+import { Play, Flame, Rocket, Heart, Sparkles as SparklesIcon, Users, ChevronRight, Gamepad2, Trophy, Joystick, Crown, CloudOff, Loader2, CheckCircle2, Star, Bookmark } from "lucide-react";
 import type { PostWithMeta } from "@/lib/social/api";
 import { fetchGamePlayCounts24h, toggleReaction } from "@/lib/social/api";
 import { SUPABASE_ACCESS_TOKEN, runGamePlaysSchemaSetup } from "@/lib/supabase/setup";
@@ -117,7 +117,20 @@ export function GamesHome({
     });
     const brandNew = [...scored].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-    return { featured, continuePlaying, recommended, trends: { hot, growing, rated, new: brandNew } };
+    // Para ti: games whose genre matches games the current user has published
+    const myGenres = new Set(
+      games
+        .filter(g => g.author_id === myId && g.game_genre)
+        .map(g => g.game_genre!)
+    );
+    const forYou = myGenres.size > 0
+      ? [...scored]
+          .filter(g => g.author_id !== myId && g.game_genre && myGenres.has(g.game_genre))
+          .sort((a, b) => (b.likes + b.favorites * 2 + b.comments_count) - (a.likes + a.favorites * 2 + a.comments_count))
+          .slice(0, 12)
+      : [];
+
+    return { featured, continuePlaying, recommended, forYou, trends: { hot, growing, rated, new: brandNew } };
   }, [games, myId, playCounts]);
 
   if (!sections) {
@@ -137,7 +150,7 @@ export function GamesHome({
     );
   }
 
-  const { featured, continuePlaying, recommended, trends } = sections;
+  const { featured, continuePlaying, recommended, forYou, trends } = sections;
   const trendList = trends[trend];
 
   const featuredIds = getFeaturedGameIds();
@@ -149,9 +162,12 @@ export function GamesHome({
 
   return (
     <div className="space-y-5">
-      {/* 0. Curated featured games header — cinematic */}
+      {/* 0. Curated featured games header */}
       {curatedGames.length > 0 && (
-        <CuratedHeader games={curatedGames} onOpen={openGame} onLike={(id) => { toggleReaction({ postId: id, type: "like" }); onChange(); }} />
+        <CuratedHeader games={curatedGames} onOpen={openGame}
+          onLike={(id) => { toggleReaction({ postId: id, type: "like" }); onChange(); }}
+          onFavorite={(id) => { toggleReaction({ postId: id, type: "favorite" }); onChange(); }}
+        />
       )}
 
       {/* 1. Banner destacado */}
@@ -163,21 +179,28 @@ export function GamesHome({
       )}
       <Ranking24 games={ranking24} totalGames={games.length} onOpen={openGame} />
 
-      {/* 3. Continuar jugando */}
+      {/* 3. Continuar jugando — moved up */}
       {continuePlaying.length > 0 && (
         <Section title="Continuar jugando" subtitle="Retoma donde lo dejaste">
           <IconRow games={continuePlaying} onOpen={openGame} />
         </Section>
       )}
 
-      {/* 4. Recomendados para ti */}
+      {/* 4. Para ti — based on user's published game genres */}
+      {forYou.length > 0 && (
+        <Section title="Para ti" subtitle="Basado en los juegos que publicas">
+          <IconRow games={forYou} onOpen={openGame} />
+        </Section>
+      )}
+
+      {/* 5. Recomendados */}
       {recommended.length > 0 && (
         <Section title="Recomendados para ti" subtitle="En base a lo que juega la comunidad">
           <IconRow games={recommended} onOpen={openGame} />
         </Section>
       )}
 
-      {/* 5. Tendencias */}
+      {/* 6. Tendencias */}
       <div className="space-y-2">
         <div className="flex items-end justify-between px-1">
           <div>
@@ -353,10 +376,11 @@ function Ranking24({ games, totalGames, onOpen }: {
  * Layout per wireframe: large square image LEFT, title + description RIGHT,
  * action bar at bottom (like circle + play bar). Auto-rotates.
  */
-function CuratedHeader({ games, onOpen, onLike }: {
+function CuratedHeader({ games, onOpen, onLike, onFavorite }: {
   games: PostWithMeta[];
   onOpen: (g: PostWithMeta) => void;
   onLike: (postId: string) => void;
+  onFavorite: (postId: string) => void;
 }) {
   const [active, setActive] = useState(0);
   const pauseRef = useRef(false);
@@ -407,11 +431,11 @@ function CuratedHeader({ games, onOpen, onLike }: {
         onTouchEnd={onLeave}
       >
         {/* Main content area: image left + text right */}
-        <div className="flex gap-4 p-4 pb-3">
+        <div className="flex gap-3.5 p-3.5 pb-2">
           {/* Left: large square game cover */}
           <button
             onClick={() => onOpen(g)}
-            className="relative w-[42%] aspect-square shrink-0 rounded-xl overflow-hidden bg-gradient-to-br from-primary/5 to-primary/10 border border-border/30 group-hover:border-primary/30 transition-colors active:scale-[0.97]"
+            className="relative w-[38%] aspect-square shrink-0 rounded-xl overflow-hidden bg-gradient-to-br from-primary/5 to-primary/10 border border-border/30 group-hover:border-primary/30 transition-colors active:scale-[0.97]"
           >
             {hasCover ? (
               <img
@@ -446,7 +470,7 @@ function CuratedHeader({ games, onOpen, onLike }: {
                 </div>
               )}
               {desc && (
-                <p className="text-[12px] text-muted-foreground/70 leading-relaxed line-clamp-4 mt-1.5">
+                <p className="text-[11px] text-muted-foreground/70 leading-relaxed line-clamp-3 mt-1">
                   {desc}
                 </p>
               )}
@@ -454,32 +478,44 @@ function CuratedHeader({ games, onOpen, onLike }: {
           </div>
         </div>
 
-        {/* Action bar at bottom — matches wireframe: circle (like) + bar (play) */}
-        <div className="flex items-center gap-2.5 px-4 pb-4">
-          {/* Like button — circle */}
+        {/* Action bar at bottom */}
+        <div className="flex items-center gap-2 px-3.5 pb-3">
+          {/* Like button */}
           <button
             onClick={() => onLike(g.id)}
-            className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition-all active:scale-90 ${
+            className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90 ${
               g.my_like
                 ? "bg-red-500/15 text-red-500"
                 : "bg-muted/60 text-muted-foreground hover:bg-red-500/10 hover:text-red-400"
             }`}
           >
-            <Heart size={16} fill={g.my_like ? "currentColor" : "none"} />
+            <Heart size={14} fill={g.my_like ? "currentColor" : "none"} />
           </button>
-          <span className="text-[11px] tabular-nums text-muted-foreground font-mono">
+          <span className="text-[10px] tabular-nums text-muted-foreground font-mono">
             {g.likes}
           </span>
+
+          {/* Favorite/bookmark button */}
+          <button
+            onClick={() => onFavorite(g.id)}
+            className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90 ${
+              g.my_favorite
+                ? "bg-amber-500/15 text-amber-500"
+                : "bg-muted/60 text-muted-foreground hover:bg-amber-500/10 hover:text-amber-500"
+            }`}
+          >
+            <Bookmark size={14} fill={g.my_favorite ? "currentColor" : "none"} />
+          </button>
 
           {/* Spacer */}
           <div className="flex-1" />
 
-          {/* Play button — horizontal bar */}
+          {/* Play button */}
           <button
             onClick={() => onOpen(g)}
-            className="shrink-0 h-9 px-5 rounded-full grad-brand text-white font-display tracking-widest text-[11px] flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-sm"
+            className="shrink-0 h-8 px-4 rounded-full grad-brand text-white font-display tracking-widest text-[10px] flex items-center justify-center gap-1.5 active:scale-95 transition-transform shadow-sm"
           >
-            <Play size={13} fill="currentColor" /> JUGAR
+            <Play size={12} fill="currentColor" /> JUGAR
           </button>
         </div>
       </div>
