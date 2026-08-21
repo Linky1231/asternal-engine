@@ -1,12 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "@tanstack/react-router";
-import { Play, Flame, Rocket, Heart, Sparkles as SparklesIcon, Users, ChevronRight, Gamepad2, Trophy, Joystick, Crown, CloudOff, Loader2, CheckCircle2, Star } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { Play, Flame, Rocket, Heart, Sparkles as SparklesIcon, Users, ChevronRight, Gamepad2, Trophy, Joystick, Crown, CloudOff, Loader2, CheckCircle2, Star, Pause } from "lucide-react";
 import type { PostWithMeta } from "@/lib/social/api";
-import { fetchGamePlayCounts24h } from "@/lib/social/api";
+import { fetchGamePlayCounts24h, toggleReaction } from "@/lib/social/api";
 import { SUPABASE_ACCESS_TOKEN, runGamePlaysSchemaSetup } from "@/lib/supabase/setup";
 import { getFeaturedGameIds } from "@/lib/social/featured-games";
 import { GameIcon } from "./GameIcon";
-import { GameCard } from "./GameCard";
 
 function extractTitle(content: string): string {
   const line = content.split("\n")[0] || "Juego";
@@ -20,16 +19,18 @@ export function GamesHome({
 }: {
   games: PostWithMeta[]; myId: string | null; isMod: boolean; onChange: () => void;
 }) {
-  const [selected, setSelected] = useState<PostWithMeta | null>(null);
+  const navigate = useNavigate();
   const [trend, setTrend] = useState<TrendTab>("hot");
   const [playCounts, setPlayCounts] = useState<Record<string, number>>({});
-  // Estado de la sincronización del ranking: null = comprobando, true = nube OK,
-  // false = la tabla game_plays no existe (solo hay conteo local del navegador).
   const [rankCloud, setRankCloud] = useState<boolean | null>(null);
   const [installing, setInstalling] = useState(false);
   const [installMsg, setInstallMsg] = useState<string | null>(null);
 
-  // Cuenta real de jugadas en las últimas 24h para el ranking.
+  // Navigate to game page
+  const openGame = useCallback((g: PostWithMeta) => {
+    navigate({ to: "/game/$postId", params: { postId: g.id } });
+  }, [navigate]);
+
   useEffect(() => {
     let alive = true;
     if (!games.length) { setPlayCounts({}); setRankCloud(false); return; }
@@ -39,8 +40,6 @@ export function GamesHome({
     return () => { alive = false; };
   }, [games]);
 
-  // Instala la tabla game_plays (ranking sincronizado) con un clic, usando el
-  // token de acceso de Supabase si está disponible (Keys). Si no, guía al diálogo.
   const installRankingTable = async () => {
     setInstalling(true);
     setInstallMsg(null);
@@ -64,8 +63,6 @@ export function GamesHome({
     }
   };
 
-  // Ranking de los más jugados en las últimas 24 horas (real). Solo el TOP 3:
-  // el podio debe ser corto y selectivo, no una lista larga.
   const ranking24 = useMemo(() => {
     return [...games]
       .map(g => ({ g, n: playCounts[g.id] ?? 0 }))
@@ -94,8 +91,6 @@ export function GamesHome({
     const now = Date.now();
     const week = 1000 * 60 * 60 * 24 * 7;
 
-    // «Más jugados hoy»: primero por jugadas reales (24h); si aún no hay
-    // datos, cae al compromiso por interacciones.
     const playsOf = (g: PostWithMeta) => playCounts[g.id] ?? 0;
     const hot = [...scored].sort((a, b) => {
       const pa = playsOf(a), pb = playsOf(b);
@@ -145,7 +140,6 @@ export function GamesHome({
   const { featured, continuePlaying, recommended, trends } = sections;
   const trendList = trends[trend];
 
-  // Featured games selected by admins/mods
   const featuredIds = getFeaturedGameIds();
   const curatedGames = useMemo(() => {
     if (!featuredIds.length) return [];
@@ -155,35 +149,31 @@ export function GamesHome({
 
   return (
     <div className="space-y-5">
-      {/* 0. Curated featured games header */}
+      {/* 0. Curated featured games header — cinematic */}
       {curatedGames.length > 0 && (
-        <CuratedHeader games={curatedGames} onOpen={setSelected} />
+        <CuratedHeader games={curatedGames} onOpen={openGame} onLike={(id) => { toggleReaction({ postId: id, type: "like" }); onChange(); }} />
       )}
 
       {/* 1. Banner destacado */}
-      <FeaturedBanner post={featured} plays24={playCounts[featured.id] ?? 0} onPlay={() => setSelected(featured)} />
+      <FeaturedBanner post={featured} plays24={playCounts[featured.id] ?? 0} onPlay={() => openGame(featured)} />
 
-      {/* 2. Ranking · Más jugados en las últimas 24h */}
+      {/* 2. Ranking */}
       {rankCloud === false && games.length > 0 && (
-        <RankingSyncBanner
-          installing={installing}
-          message={installMsg}
-          onInstall={installRankingTable}
-        />
+        <RankingSyncBanner installing={installing} message={installMsg} onInstall={installRankingTable} />
       )}
-      <Ranking24 games={ranking24} totalGames={games.length} onOpen={setSelected} />
+      <Ranking24 games={ranking24} totalGames={games.length} onOpen={openGame} />
 
       {/* 3. Continuar jugando */}
       {continuePlaying.length > 0 && (
         <Section title="Continuar jugando" subtitle="Retoma donde lo dejaste">
-          <IconRow games={continuePlaying} onOpen={setSelected} />
+          <IconRow games={continuePlaying} onOpen={openGame} />
         </Section>
       )}
 
       {/* 4. Recomendados para ti */}
       {recommended.length > 0 && (
         <Section title="Recomendados para ti" subtitle="En base a lo que juega la comunidad">
-          <IconRow games={recommended} onOpen={setSelected} />
+          <IconRow games={recommended} onOpen={openGame} />
         </Section>
       )}
 
@@ -203,14 +193,10 @@ export function GamesHome({
         </div>
         <div className="grid grid-cols-4 xs:grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-3 gap-y-4 pt-1">
           {trendList.slice(0, 18).map(g => (
-            <GameIcon key={g.id} post={g} onOpen={() => setSelected(g)} />
+            <GameIcon key={g.id} post={g} onOpen={() => openGame(g)} />
           ))}
         </div>
       </div>
-
-      {selected && (
-        <GamePlayModal post={selected} myId={myId} isMod={isMod} onClose={() => setSelected(null)} onChange={onChange} />
-      )}
     </div>
   );
 }
@@ -362,11 +348,20 @@ function Ranking24({ games, totalGames, onOpen }: {
   );
 }
 
-function CuratedHeader({ games, onOpen }: { games: PostWithMeta[]; onOpen: (g: PostWithMeta) => void }) {
+/**
+ * Cinematic featured games carousel.
+ * Full-width cover image with gradient overlay, game info + action buttons.
+ * Auto-advances every 5s, pauses on hover/touch.
+ * Like button is directly on the card, play button navigates to game page.
+ */
+function CuratedHeader({ games, onOpen, onLike }: {
+  games: PostWithMeta[];
+  onOpen: (g: PostWithMeta) => void;
+  onLike: (postId: string) => void;
+}) {
   const [active, setActive] = useState(0);
-  const [paused, setPaused] = useState(false);
   const pauseRef = useRef(false);
-  const [fadeKey, setFadeKey] = useState(0);
+  const [paused, setPaused] = useState(false);
   const len = games.length;
 
   useEffect(() => {
@@ -374,7 +369,6 @@ function CuratedHeader({ games, onOpen }: { games: PostWithMeta[]; onOpen: (g: P
     const id = setInterval(() => {
       if (!pauseRef.current) {
         setActive(i => (i + 1) % len);
-        setFadeKey(k => k + 1);
       }
     }, 5000);
     return () => clearInterval(id);
@@ -382,17 +376,18 @@ function CuratedHeader({ games, onOpen }: { games: PostWithMeta[]; onOpen: (g: P
 
   const onEnter = () => { pauseRef.current = true; setPaused(true); };
   const onLeave = () => { pauseRef.current = false; setPaused(false); };
-  const goTo = (i: number) => { setActive(i); setFadeKey(k => k + 1); };
+  const goTo = (i: number) => { setActive(i); };
 
   if (len === 0) return null;
 
   const g = games[active];
   const title = (g.content.split("\n")[0] || "Juego").replace(/^🎮\s*/, "").trim() || "Juego";
-  const desc = g.content.split("\n").slice(1).join(" ").trim().slice(0, 120);
+  const desc = g.content.split("\n").slice(1).join(" ").trim().slice(0, 160);
   const hasCover = !!g.signed_cover;
 
   return (
     <section className="space-y-3">
+      {/* Label */}
       <div className="flex items-center gap-2 px-1">
         <div className="w-6 h-6 rounded-lg bg-primary/10 border border-primary/20 grid place-items-center">
           <Star size={12} className="text-primary" fill="currentColor" />
@@ -403,63 +398,101 @@ function CuratedHeader({ games, onOpen }: { games: PostWithMeta[]; onOpen: (g: P
         </div>
       </div>
 
-      <button
+      {/* Full-width cinematic card */}
+      <div
+        className="relative w-full rounded-2xl overflow-hidden border border-border/50 bg-card group cursor-pointer active:scale-[0.99] transition-transform duration-300"
         onClick={() => onOpen(g)}
         onMouseEnter={onEnter}
         onMouseLeave={onLeave}
         onTouchStart={onEnter}
         onTouchEnd={onLeave}
-        className="w-full rounded-2xl border border-border/50 bg-card overflow-hidden hover:border-primary/30 hover:shadow-md active:scale-[0.99] transition-all duration-300 group text-left"
       >
-        {/* Horizontal layout: image left + text right */}
-        <div className="flex gap-4 p-4">
-          {/* Left: square game cover with rounded corners */}
-          <div className="relative w-28 h-28 sm:w-32 sm:h-32 shrink-0 rounded-xl overflow-hidden bg-gradient-to-br from-primary/5 to-primary/10 border border-border/30">
-            {hasCover ? (
-              <img
-                key={fadeKey}
-                src={g.signed_cover ?? undefined}
-                alt={title}
-                className="w-full h-full object-cover animate-in fade-in duration-500 group-hover:scale-[1.04] transition-transform"
-              />
-            ) : (
-              <div key={fadeKey} className="w-full h-full grid place-items-center animate-in fade-in duration-500">
-                <Joystick size={36} strokeWidth={1.5} className="text-primary/25" />
+        {/* Background cover image */}
+        <div className="relative w-full aspect-[16/10] sm:aspect-[2/1]">
+          {hasCover ? (
+            <img
+              key={active}
+              src={g.signed_cover ?? undefined}
+              alt={title}
+              className="absolute inset-0 w-full h-full object-cover animate-in fade-in duration-500"
+            />
+          ) : (
+            <div key={active} className="absolute inset-0 animate-in fade-in duration-500" style={{ background: "var(--gradient-asternal-soft)" }}>
+              <div className="absolute inset-0 grid place-items-center">
+                <Joystick size={80} strokeWidth={1} className="text-white/15" />
               </div>
-            )}
-          </div>
-
-          {/* Right: name + description + stats */}
-          <div className="flex-1 min-w-0 flex flex-col justify-center py-0.5">
-            <div className="font-display text-base sm:text-lg font-bold leading-tight line-clamp-1 group-hover:text-primary transition-colors">
-              {title}
             </div>
-            {g.author && (
-              <div className="text-[11px] text-muted-foreground font-mono mt-0.5">
-                @{g.author.username ?? "jugador"}
+          )}
+
+          {/* Dark gradient overlay from bottom */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+
+          {/* Price badge top-right */}
+          {((g.price_orbes ?? 0) > 0) && (
+            <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/95 shadow-md backdrop-blur border border-primary/20">
+              <SparklesIcon size={12} className={g.owned ? "text-emerald-500" : "text-primary"} fill="currentColor" />
+              <span className="text-[11px] font-display font-semibold tracking-wide">
+                {g.owned ? "TUYO" : `${g.price_orbes}`}
+              </span>
+            </div>
+          )}
+
+          {/* Content overlay at bottom */}
+          <div className="absolute inset-x-0 bottom-0 p-4 space-y-3">
+            {/* Title + author */}
+            <div>
+              <div className="text-white font-display text-lg sm:text-xl font-bold leading-tight drop-shadow-lg">
+                {title}
               </div>
-            )}
-            {desc && (
-              <p className="text-[11px] text-muted-foreground/80 leading-relaxed mt-2 line-clamp-3">
-                {desc}
-              </p>
-            )}
-            <div className="flex items-center gap-3 mt-2.5">
-              <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                <Heart size={11} className="text-red-400" /> {g.likes}
+              {g.author && (
+                <div className="text-white/70 text-[11px] font-mono mt-0.5">
+                  @{g.author.username ?? "jugador"}
+                </div>
+              )}
+              {desc && (
+                <p className="text-white/60 text-[11px] leading-relaxed mt-1.5 line-clamp-2 max-w-md">
+                  {desc}
+                </p>
+              )}
+            </div>
+
+            {/* Action buttons row */}
+            <div className="flex items-center gap-2">
+              {/* Play button */}
+              <button
+                onClick={(e) => { e.stopPropagation(); onOpen(g); }}
+                className="flex-1 sm:flex-none sm:w-44 h-11 rounded-xl grad-brand text-white font-display tracking-widest text-xs flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-transform"
+              >
+                <Play size={16} fill="currentColor" /> JUGAR
+              </button>
+
+              {/* Like button */}
+              <button
+                onClick={(e) => { e.stopPropagation(); onLike(g.id); }}
+                className={`shrink-0 w-11 h-11 rounded-xl flex items-center justify-center transition-all active:scale-95 ${
+                  g.my_like
+                    ? "bg-red-500/20 border border-red-500/30 text-red-400"
+                    : "bg-white/15 border border-white/20 text-white hover:bg-white/25"
+                }`}
+              >
+                <Heart size={18} fill={g.my_like ? "currentColor" : "none"} />
+              </button>
+            </div>
+
+            {/* Stats row */}
+            <div className="flex items-center gap-3 text-white/70 text-[11px]">
+              <span className="flex items-center gap-1">
+                <Heart size={11} fill="currentColor" className={g.my_like ? "text-red-400" : ""} /> {g.likes}
               </span>
               {g.comments_count > 0 && (
-                <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                <span className="flex items-center gap-1">
                   <Users size={11} /> {g.comments_count}
                 </span>
               )}
-              <span className="ml-auto text-[9px] font-display tracking-widest text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-                VER JUEGO →
-              </span>
             </div>
           </div>
         </div>
-      </button>
+      </div>
 
       {/* Navigation dots + progress */}
       {len > 1 && (
@@ -500,9 +533,6 @@ function FeaturedBanner({ post, plays24, onPlay }: { post: PostWithMeta; plays24
   const active = plays24 && plays24 > 0 ? plays24 : 1 + Math.floor((post.likes + post.comments_count) * 1.3);
   return (
     <div className="relative">
-      {/* Halo de brillo aparte: sombra estática con pulso SOLO de opacidad
-          (capa compuesta por la GPU). Antes se animaba box-shadow en el propio
-          banner y cada frame se repintaba el banner entero → lag al hacer scroll. */}
       <div className="banner-glow-halo absolute -inset-3 rounded-[32px]" aria-hidden />
       <div className="banner-glow relative rounded-3xl overflow-hidden border border-white/70">
         <div className="relative aspect-[16/10] w-full md:aspect-[21/9]">
@@ -515,14 +545,9 @@ function FeaturedBanner({ post, plays24, onPlay }: { post: PostWithMeta; plays24
             </div>
           </div>
         )}
-        {/* Overlay azul de marca SOLO sobre portadas (nunca negro): da contraste
-            al título sin desaturar a gris. Sin portada NO se aplica: el degradado
-            oficial de la página se ve completo, con solo un scrim sutil abajo
-            para que el texto blanco siga legible. */}
         {hasCover && <div className="absolute inset-0 banner-overlay-deep" />}
         {!hasCover && <div className="absolute inset-0 bg-gradient-to-t from-ink/30 via-ink/5 to-transparent" />}
         {hasCover && <div className="banner-shine" />}
-        {/* Textura de grano sutil sobre el degradado: nunca plano, nunca “de algoritmo”. */}
         <div className="absolute inset-0 pointer-events-none noise-overlay opacity-[0.16] mix-blend-overlay" />
         <div className="badge-glow absolute top-3 left-3 flex items-center gap-1.5 px-2.5 h-6 rounded-full bg-primary/95 text-primary-foreground text-[10px] font-display tracking-widest ring-1 ring-white/30 ring-inset">
           <Crown size={11} fill="currentColor" /> JUEGO MÁS JUGADO
@@ -551,32 +576,6 @@ function FeaturedBanner({ post, plays24, onPlay }: { post: PostWithMeta; plays24
           <span className="flex items-center gap-1"><Heart size={11} fill="currentColor" /> {post.likes}</span>
         </div>
       </div>
-      </div>
-    </div>
-  );
-}
-
-function GamePlayModal({
-  post, myId, isMod, onClose, onChange,
-}: {
-  post: PostWithMeta; myId: string | null; isMod: boolean; onClose: () => void; onChange: () => void;
-}) {
-  return (
-    <div
-      className="fixed inset-0 z-[90] bg-black/70  p-3 flex items-start justify-center pt-16 overflow-y-auto animate-in fade-in duration-200"
-      onClick={onClose}
-    >
-      <div
-        onClick={e => e.stopPropagation()}
-        className="w-full max-w-lg animate-in zoom-in-95 slide-in-from-bottom-4 duration-300"
-      >
-        <GameCard post={post} myId={myId} isMod={isMod} onChange={onChange} />
-        <button
-          onClick={onClose}
-          className="mt-3 w-full h-10 rounded-xl bg-white/10 text-white text-xs font-display tracking-widest border border-white/20 "
-        >
-          CERRAR
-        </button>
       </div>
     </div>
   );

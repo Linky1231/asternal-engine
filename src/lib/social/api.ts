@@ -868,6 +868,20 @@ export async function fetchGames(opts: { search?: string } = {}): Promise<PostWi
   return fetchFeed({ ...opts, category: "game" });
 }
 
+export async function fetchGameById(postId: string): Promise<PostWithMeta | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  const me = user?.id ?? null;
+  const { data, error } = await supabase
+    .from("posts")
+    .select("*")
+    .eq("id", postId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (error || !data) return null;
+  const enriched = await enrichPosts([data as PostRow], me);
+  return enriched[0] ?? null;
+}
+
 export async function loadGameProject(signedUrl: string): Promise<unknown> {
   const res = await fetch(signedUrl);
   if (!res.ok) throw new Error("No se pudo cargar el juego");
