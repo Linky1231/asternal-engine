@@ -366,30 +366,33 @@ function CuratedHeader({ games, onOpen }: { games: PostWithMeta[]; onOpen: (g: P
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
   const pauseRef = useRef(false);
+  const [fadeKey, setFadeKey] = useState(0);
   const len = games.length;
 
-  // Auto-advance every 4s, pauses on hover
   useEffect(() => {
     if (len <= 1) return;
     const id = setInterval(() => {
-      if (!pauseRef.current) setActive(i => (i + 1) % len);
-    }, 4000);
+      if (!pauseRef.current) {
+        setActive(i => (i + 1) % len);
+        setFadeKey(k => k + 1);
+      }
+    }, 5000);
     return () => clearInterval(id);
   }, [len]);
 
-  // Keep ref in sync
   const onEnter = () => { pauseRef.current = true; setPaused(true); };
   const onLeave = () => { pauseRef.current = false; setPaused(false); };
+  const goTo = (i: number) => { setActive(i); setFadeKey(k => k + 1); };
 
   if (len === 0) return null;
 
-  // Single card carousel: shows one featured game as a full-width card
   const g = games[active];
   const title = (g.content.split("\n")[0] || "Juego").replace(/^🎮\s*/, "").trim() || "Juego";
+  const desc = g.content.split("\n").slice(1).join(" ").trim().slice(0, 120);
   const hasCover = !!g.signed_cover;
 
   return (
-    <section className="space-y-2.5">
+    <section className="space-y-3">
       <div className="flex items-center gap-2 px-1">
         <div className="w-6 h-6 rounded-lg bg-primary/10 border border-primary/20 grid place-items-center">
           <Star size={12} className="text-primary" fill="currentColor" />
@@ -406,56 +409,65 @@ function CuratedHeader({ games, onOpen }: { games: PostWithMeta[]; onOpen: (g: P
         onMouseLeave={onLeave}
         onTouchStart={onEnter}
         onTouchEnd={onLeave}
-        className="relative w-full rounded-2xl overflow-hidden border border-border/40 bg-card hover:border-primary/30 hover:shadow-md active:scale-[0.99] transition-all duration-300 group text-left"
+        className="w-full rounded-2xl border border-border/50 bg-card overflow-hidden hover:border-primary/30 hover:shadow-md active:scale-[0.99] transition-all duration-300 group text-left"
       >
-        <div className="relative aspect-[16/9] w-full bg-gradient-to-br from-primary/5 to-primary/10 overflow-hidden">
-          {hasCover ? (
-            <img
-              src={g.signed_cover ?? undefined}
-              alt={title}
-              className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-700"
-            />
-          ) : (
-            <div className="w-full h-full grad-brand-soft flex items-center justify-center">
-              <Joystick size={48} strokeWidth={1.5} className="text-primary/20" />
-            </div>
-          )}
-          {/* Dark gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent pointer-events-none" />
-          {/* Title + author */}
-          <div className="absolute inset-x-0 bottom-0 p-4 space-y-1.5">
-            <div className="text-white font-display text-lg sm:text-xl font-bold leading-tight drop-shadow-md">
+        {/* Horizontal layout: image left + text right */}
+        <div className="flex gap-4 p-4">
+          {/* Left: square game cover with rounded corners */}
+          <div className="relative w-28 h-28 sm:w-32 sm:h-32 shrink-0 rounded-xl overflow-hidden bg-gradient-to-br from-primary/5 to-primary/10 border border-border/30">
+            {hasCover ? (
+              <img
+                key={fadeKey}
+                src={g.signed_cover ?? undefined}
+                alt={title}
+                className="w-full h-full object-cover animate-in fade-in duration-500 group-hover:scale-[1.04] transition-transform"
+              />
+            ) : (
+              <div key={fadeKey} className="w-full h-full grid place-items-center animate-in fade-in duration-500">
+                <Joystick size={36} strokeWidth={1.5} className="text-primary/25" />
+              </div>
+            )}
+          </div>
+
+          {/* Right: name + description + stats */}
+          <div className="flex-1 min-w-0 flex flex-col justify-center py-0.5">
+            <div className="font-display text-base sm:text-lg font-bold leading-tight line-clamp-1 group-hover:text-primary transition-colors">
               {title}
             </div>
-            <div className="text-white/70 text-[11px] font-mono">
-              @{g.author?.username ?? "jugador"}
-            </div>
-            <div className="flex items-center gap-3 pt-1">
-              <span className="flex items-center gap-1 text-white/80 text-[11px]">
-                <Heart size={11} fill="currentColor" /> {g.likes}
+            {g.author && (
+              <div className="text-[11px] text-muted-foreground font-mono mt-0.5">
+                @{g.author.username ?? "jugador"}
+              </div>
+            )}
+            {desc && (
+              <p className="text-[11px] text-muted-foreground/80 leading-relaxed mt-2 line-clamp-3">
+                {desc}
+              </p>
+            )}
+            <div className="flex items-center gap-3 mt-2.5">
+              <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                <Heart size={11} className="text-red-400" /> {g.likes}
               </span>
               {g.comments_count > 0 && (
-                <span className="flex items-center gap-1 text-white/80 text-[11px]">
+                <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
                   <Users size={11} /> {g.comments_count}
                 </span>
               )}
-              <span className="ml-auto text-white/50 text-[10px] font-display tracking-widest">
+              <span className="ml-auto text-[9px] font-display tracking-widest text-primary opacity-0 group-hover:opacity-100 transition-opacity">
                 VER JUEGO →
               </span>
             </div>
           </div>
-          {/* Shine effect */}
-          <div className="banner-shine" />
         </div>
       </button>
 
-      {/* Navigation dots */}
+      {/* Navigation dots + progress */}
       {len > 1 && (
-        <div className="flex items-center justify-center gap-2 pt-0.5">
+        <div className="flex items-center justify-center gap-2">
           {games.map((_, i) => (
             <button
               key={i}
-              onClick={(e) => { e.stopPropagation(); setActive(i); }}
+              onClick={(e) => { e.stopPropagation(); goTo(i); }}
               onMouseEnter={onEnter}
               onMouseLeave={onLeave}
               className={`transition-all duration-300 rounded-full ${
@@ -466,13 +478,12 @@ function CuratedHeader({ games, onOpen }: { games: PostWithMeta[]; onOpen: (g: P
               aria-label={`Ir al juego ${i + 1}`}
             />
           ))}
-          {/* Progress bar */}
-          <div className="ml-2 h-0.5 w-12 rounded-full bg-primary/10 overflow-hidden">
+          <div className="ml-1 h-0.5 w-10 rounded-full bg-primary/10 overflow-hidden">
             <div
               className="h-full bg-primary/50 rounded-full"
               style={{
                 width: paused ? "0%" : "100%",
-                transition: paused ? "none" : "width 4s linear",
+                transition: paused ? "none" : "width 5s linear",
                 transformOrigin: "left",
               }}
             />
