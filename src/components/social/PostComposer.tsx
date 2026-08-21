@@ -3,7 +3,7 @@ import { Avatar } from "./Avatar";
 import { createPost, fetchMyGamesLite, getMyProfile, type MediaType, type Profile } from "@/lib/social/api";
 import {
   Image as ImageIcon, Film, Link as LinkIcon, X, Send, Loader2, Tag,
-  FileText, Code2, Palette, BarChart3, Lock, Gamepad2, Plus, Trash2, Sparkles,
+  FileText, Code2, Palette, BarChart3, Lock, Gamepad2, Plus, Trash2, Share2, Sparkles,
 } from "lucide-react";
 
 type Poll = { question: string; options: string[] };
@@ -25,7 +25,7 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
   const [unlockGoal, setUnlockGoal] = useState<number | "">("");
   const [unlockAt, setUnlockAt] = useState("");
   const [pinnedGameId, setPinnedGameId] = useState<string>("");
-  const [postType, setPostType] = useState("");
+  const [postTypes, setPostTypes] = useState<string[]>([]);
   const [myGames, setMyGames] = useState<{ id: string; title: string }[]>([]);
 
   const [panel, setPanel] = useState<null | "link" | "tags" | "html" | "poll" | "unlock" | "game" | "color" | "type">(null);
@@ -80,7 +80,7 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
         htmlContent: htmlContent.trim() || null,
         documents,
         pinnedGameId: pinnedGameId || null,
-        postType: postType || null,
+        postType: postTypes.length ? postTypes.join(",") : null,
         lockedContent: lockedContent.trim() || null,
         unlockReactionsGoal: typeof unlockGoal === "number" ? unlockGoal : null,
         unlockAt: unlockAt || null,
@@ -90,7 +90,7 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
       setContent(""); setFiles([]); setLinkUrl(""); setTagInput("");
       setDocuments([]); setHtmlContent(""); setTextColor("");
       setPoll(null); setLockedContent(""); setUnlockGoal(""); setUnlockAt("");
-      setPinnedGameId(""); setPostType(""); setPanel(null); setExpanded(false);
+      setPinnedGameId(""); setPostTypes([]); setPanel(null); setExpanded(false);
       onCreated();
     } catch (e) { setErr((e as Error).message); }
     finally { setBusy(false); }
@@ -165,10 +165,9 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
 
         {panel === "type" && (
           <div className="bg-input/40 rounded-xl px-3 py-2 space-y-2 border border-border/50">
-            <div className="text-xs font-medium flex items-center gap-2"><Sparkles size={13} className="text-primary" /> ¿Qué estás compartiendo?</div>
+            <div className="text-xs font-medium flex items-center gap-2"><Share2 size={13} className="text-primary" /> ¿Qué estás compartiendo?</div>
             <div className="flex flex-wrap gap-1.5">
               {([
-                ["", "General"],
                 ["update", "Actualización"],
                 ["progress", "Progreso"],
                 ["tutorial", "Tutorial"],
@@ -176,12 +175,15 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
                 ["resource", "Recurso"],
                 ["achievement", "Logro"],
                 ["announcement", "Anuncio"],
-              ] as const).map(([val, label]) => (
-                <button key={val} onClick={() => setPostType(val)}
-                  className={`h-7 px-2.5 rounded-lg text-[10px] font-semibold transition-all ${postType === val ? "grad-brand text-primary-foreground border border-transparent shadow-sm" : "bg-background text-muted-foreground border border-border/50 hover:border-primary/20"}`}>
-                  {label}
-                </button>
-              ))}
+              ] as const).map(([val, label]) => {
+                const active = postTypes.includes(val);
+                return (
+                  <button key={val} onClick={() => setPostTypes(prev => active ? prev.filter(t => t !== val) : [...prev, val])}
+                    className={`h-7 px-2.5 rounded-lg text-[10px] font-semibold transition-all ${active ? "grad-brand text-primary-foreground border border-transparent shadow-sm" : "bg-background text-muted-foreground border border-border/50 hover:border-primary/20"}`}>
+                    {active && <span className="mr-1">✓</span>}{label}
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
@@ -293,7 +295,7 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
           <Chip active={panel === "color"} onClick={() => setPanel(panel === "color" ? null : "color")} title="Color del texto"><Palette size={15} />{expanded && <span>Color</span>}</Chip>
           <Chip active={panel === "html"} onClick={() => setPanel(panel === "html" ? null : "html")} title="HTML"><Code2 size={15} />{expanded && <span>HTML</span>}</Chip>
           <Chip active={panel === "unlock"} onClick={() => setPanel(panel === "unlock" ? null : "unlock")} title="Desbloqueable"><Lock size={15} />{expanded && <span>Desbloqueable</span>}</Chip>
-          <Chip active={panel === "type"} onClick={() => setPanel(panel === "type" ? null : "type")} title="Tipo"><Sparkles size={15} />{expanded && <span>Tipo</span>}</Chip>
+          <Chip active={panel === "type"} onClick={() => setPanel(panel === "type" ? null : "type")} title="Tipo"><Share2 size={15} />{expanded && <span>Tipo</span>}{postTypes.length > 0 && <span className="ml-0.5 px-1 py-0 rounded text-[8px] font-mono font-bold bg-white/20">{postTypes.length}</span>}</Chip>
           <Chip active={panel === "tags"} onClick={() => setPanel(panel === "tags" ? null : "tags")} title="Etiquetas"><Tag size={15} />{expanded && <span>Etiquetas</span>}</Chip>
         </div>
 
