@@ -112,55 +112,57 @@ export function GamesHome({
   }, [games, myId, playCounts]);
 
   // ── "Para ti" algoritmo avanzado ───────────────────────────────────
+  // Basado en los juegos que el usuario ha JUGADO (owned), no publicado.
   const forYou = useMemo(() => {
-    if (!games.length || !myId) return { items: [], userGenres: [] };
+    if (!games.length) return { items: [], userGenres: [] };
 
-    // 1. Géneros de los juegos que YO he publicado
-    const myGames = games.filter(g => g.author_id === myId);
+    // 1. Géneros de los juegos que YO he JUGADO (owned o los míos)
+    const myPlayed = games.filter(g => g.owned === true || g.author_id === myId);
     const genreCounts: Record<string, number> = {};
-    for (const g of myGames) {
+    for (const g of myPlayed) {
       const genre = g.game_genre?.trim();
       if (genre) genreCounts[genre] = (genreCounts[genre] || 0) + 1;
     }
-    // Géneros ordenados por frecuencia (más usado primero)
     const userGenres = Object.entries(genreCounts)
       .sort((a, b) => b[1] - a[1])
       .map(([g]) => g);
 
-    if (!userGenres.length) return { items: [], userGenres: [] };
+    // Si no hay géneros conocidos, devolver trending popular como fallback
+    if (!userGenres.length) {
+      const fallback = [...games]
+        .sort((a, b) => (b.likes + b.favorites * 2 + b.comments_count) - (a.likes + a.favorites * 2 + a.comments_count))
+        .slice(0, 12);
+      return { items: fallback, userGenres: [] };
+    }
 
-    // 2. Scoring avanzado de juegos de OTROS usuarios
+    // 2. Scoring avanzado de juegos que NO he jugado
     const now = Date.now();
     const day = 1000 * 60 * 60 * 24;
     const week = day * 7;
+    const playedIds = new Set(myPlayed.map(g => g.id));
+    const candidates = games.filter(g => !playedIds.has(g.id));
 
-    const otherGames = games.filter(g => g.author_id !== myId);
-
-    const scored = otherGames.map(g => {
+    const scored = candidates.map(g => {
       let score = 0;
       const genre = g.game_genre?.trim();
       const isGenreMatch = genre && userGenres.includes(genre);
-      const genreRank = genre ? userGenres.indexOf(genre) : -1; // 0 = más usado
+      const genreRank = genre ? userGenres.indexOf(genre) : -1;
 
-      // Peso del género: más puntos si coincide, bonus si es el favorito
       if (isGenreMatch) {
-        score += 30 * (1 / (genreRank + 1)); // El género #1 vale 30, #2 vale 15, etc.
-        score += 10 * (genreCounts[genre!] || 1); // Bonus por frecuencia
+        score += 30 * (1 / (genreRank + 1));
+        score += 10 * (genreCounts[genre!] || 1);
       }
 
-      // Engagement: likes, favoritos, comentarios
       score += g.likes * 1;
       score += g.favorites * 2;
       score += g.comments_count * 1.5;
       const playCount = playCounts[g.id] ?? 0;
       score += playCount * 3;
 
-      // Recencia: decay exponencial — juegos nuevos ganan puntos extra
       const age = now - new Date(g.created_at).getTime();
-      if (age < day) score += 20;          // <1 día
-      else if (age < week) score += 12;     // <1 semana
-      else if (age < week * 4) score += 6;  // <1 mes
-      // Sin bonus para juegos más viejos
+      if (age < day) score += 20;
+      else if (age < week) score += 12;
+      else if (age < week * 4) score += 6;
 
       return { g, score, isGenreMatch };
     });
@@ -428,16 +430,16 @@ function ForYouSection({ items, userGenres, activeGenre, onSelectGenre, onOpen, 
     <section className="space-y-2.5">
       {/* Header */}
       <div className="flex items-center gap-2 px-1">
-        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500/15 to-primary/10 border border-violet-500/20 grid place-items-center">
-          <Target size={14} className="text-violet-500" />
+        <div className="w-7 h-7 rounded-lg grad-brand grid place-items-center">
+          <Target size={14} className="text-white" />
         </div>
         <div className="flex-1 min-w-0">
           <div className="font-display text-base leading-tight">Para ti</div>
-          <div className="text-[11px] text-muted-foreground">Basado en tus géneros favoritos</div>
+          <div className="text-[11px] text-muted-foreground">{userGenres.length ? "Basado en tus géneros favoritos" : "Los más populares de la comunidad"}</div>
         </div>
-        <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-violet-500/10 border border-violet-500/15">
-          <Zap size={11} className="text-violet-500" fill="currentColor" />
-          <span className="text-[10px] font-display font-semibold text-violet-500">IA</span>
+        <div className="flex items-center gap-1 px-2 py-1 rounded-full grad-brand">
+          <Zap size={11} className="text-white" fill="currentColor" />
+          <span className="text-[10px] font-display font-semibold text-white">IA</span>
         </div>
       </div>
 
@@ -448,8 +450,8 @@ function ForYouSection({ items, userGenres, activeGenre, onSelectGenre, onOpen, 
             onClick={() => onSelectGenre(null)}
             className={`shrink-0 flex items-center gap-1 px-3 h-7 rounded-lg text-[11px] font-medium transition-all duration-200 active:scale-[0.96] ${
               activeGenre === null
-                ? "bg-violet-500 text-white shadow-sm shadow-violet-500/25"
-                : "bg-card border border-line-strong text-ink-2 hover:border-violet-500/30 hover:text-violet-500"
+                ? "grad-brand text-white shadow-sm"
+                : "bg-card border border-line-strong text-ink-2 hover:border-primary/30 hover:text-primary"
             }`}
           >
             <Sparkles size={11} /> Todos
@@ -460,8 +462,8 @@ function ForYouSection({ items, userGenres, activeGenre, onSelectGenre, onOpen, 
               onClick={() => onSelectGenre(activeGenre === g ? null : g)}
               className={`shrink-0 flex items-center gap-1 px-3 h-7 rounded-lg text-[11px] font-medium transition-all duration-200 active:scale-[0.96] ${
                 activeGenre === g
-                  ? "bg-violet-500 text-white shadow-sm shadow-violet-500/25"
-                  : "bg-card border border-line-strong text-ink-2 hover:border-violet-500/30 hover:text-violet-500"
+                  ? "grad-brand text-white shadow-sm"
+                  : "bg-card border border-line-strong text-ink-2 hover:border-primary/30 hover:text-primary"
               }`}
             >
               {g}
