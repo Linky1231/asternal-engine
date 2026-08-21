@@ -430,9 +430,7 @@ function ForYouSection({ items, userGenres, activeGenre, onSelectGenre, onOpen, 
     <section className="space-y-2.5">
       {/* Header */}
       <div className="flex items-center gap-2 px-1">
-        <div className="w-7 h-7 rounded-lg grad-brand grid place-items-center">
-          <Target size={14} className="text-white" />
-        </div>
+        <SparklesIcon size={18} className="text-primary" />
         <div className="flex-1 min-w-0">
           <div className="font-display text-base leading-tight">Para ti</div>
           <div className="text-[11px] text-muted-foreground">{userGenres.length ? "Basado en tus géneros favoritos" : "Los más populares de la comunidad"}</div>
