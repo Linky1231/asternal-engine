@@ -429,6 +429,14 @@ export async function updatePost(id: string, patch: { content?: string; category
 }
 
 export async function deletePost(id: string) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+  // Verify ownership or moderator status before deleting
+  const { data: post } = await supabase.from("posts").select("author_id").eq("id", id).single();
+  if (!post) throw new Error("Publicación no encontrada");
+  const { data: role } = await supabase.from("user_roles").select("role").eq("user_id", user.id).maybeSingle();
+  const isMod = role && (role.role === "moderator" || role.role === "admin");
+  if (post.author_id !== user.id && !isMod) throw new Error("No tienes permiso para borrar esta publicación");
   const { error } = await supabase.from("posts").update({ deleted_at: new Date().toISOString() }).eq("id", id);
   if (error) throw error;
 }
