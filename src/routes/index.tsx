@@ -564,15 +564,18 @@ function HomePage() {
         <div className="max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto px-3 pt-2 pb-3">
           {/* Tabs with gray selector — Juegos | Feed | +CREAR | Tienda | Perfil */}
           <div className="flex bg-muted/60 rounded-xl p-0.5 relative">
-            {/* Single sliding pill — smoothly transitions across all tab positions */}
+            {/* Single sliding pill — GPU-composited transform, no layout reflow */}
             <div
-              className="absolute top-0.5 bottom-0.5 rounded-[10px] bg-white shadow-sm transition-all duration-300 ease-out will-change-transform"
+              className="absolute top-0.5 bottom-0.5 w-[calc(20%-2px)] rounded-[10px] bg-white shadow-sm will-change-transform"
               style={{
-                left: tab === "games" ? "2px"
-                  : tab === "feed" ? "calc(20% + 1px)"
-                  : tab === "gallery" ? "calc(60% - 1px)"
-                  : "calc(80% - 1px)",
-                width: "calc(20% - 2px)",
+                left: 0,
+                transform: `translateX(${
+                  tab === "games" ? 0
+                  : tab === "feed" ? 100
+                  : tab === "gallery" ? 300
+                  : 400
+                }%)`,
+                transition: "transform 280ms cubic-bezier(0.22, 1, 0.36, 1)",
                 pointerEvents: "none" as const,
               }}
             />
@@ -580,7 +583,7 @@ function HomePage() {
             {/* Juegos */}
             <button
               onClick={() => setTab("games")}
-              className={`relative z-10 flex-1 flex flex-col items-center gap-0.5 py-2 rounded-[10px] transition-colors duration-200 ${tab === "games" ? "text-foreground" : "text-muted-foreground/80 hover:text-foreground"}`}
+              className={`relative z-10 flex-1 flex flex-col items-center gap-0.5 py-2 rounded-[10px] ${tab === "games" ? "text-foreground" : "text-muted-foreground/80"}`}
             >
               <Gamepad2 size={18} />
               <span className="text-[9px] font-semibold tracking-wide">Juegos</span>
@@ -588,7 +591,7 @@ function HomePage() {
             {/* Feed */}
             <button
               onClick={() => setTab("feed")}
-              className={`relative z-10 flex-1 flex flex-col items-center gap-0.5 py-2 rounded-[10px] transition-colors duration-200 ${tab === "feed" ? "text-foreground" : "text-muted-foreground/80 hover:text-foreground"}`}
+              className={`relative z-10 flex-1 flex flex-col items-center gap-0.5 py-2 rounded-[10px] ${tab === "feed" ? "text-foreground" : "text-muted-foreground/80"}`}
             >
               <Newspaper size={18} />
               <span className="text-[9px] font-semibold tracking-wide">Feed</span>
@@ -608,7 +611,7 @@ function HomePage() {
             {/* Tienda (antes Eventos) */}
             <button
               onClick={() => setTab("gallery")}
-              className={`relative z-10 flex-1 flex flex-col items-center gap-0.5 py-2 rounded-[10px] transition-colors duration-200 ${tab === "gallery" ? "text-foreground" : "text-muted-foreground/80 hover:text-foreground"}`}
+              className={`relative z-10 flex-1 flex flex-col items-center gap-0.5 py-2 rounded-[10px] ${tab === "gallery" ? "text-foreground" : "text-muted-foreground/80"}`}
             >
               <Store size={18} />
               <span className="text-[9px] font-semibold tracking-wide">Tienda</span>
@@ -616,7 +619,7 @@ function HomePage() {
             {/* Perfil */}
             <button
               onClick={() => setTab("profile")}
-              className={`relative z-10 flex-1 flex flex-col items-center gap-0.5 py-2 rounded-[10px] transition-colors duration-200 ${tab === "profile" ? "text-foreground" : "text-muted-foreground/80 hover:text-foreground"}`}
+              className={`relative z-10 flex-1 flex flex-col items-center gap-0.5 py-2 rounded-[10px] ${tab === "profile" ? "text-foreground" : "text-muted-foreground/80"}`}
             >
               <User size={18} />
               <span className="text-[9px] font-semibold tracking-wide">Perfil</span>
