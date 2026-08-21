@@ -349,10 +349,9 @@ function Ranking24({ games, totalGames, onOpen }: {
 }
 
 /**
- * Cinematic featured games carousel.
- * Full-width cover image with gradient overlay, game info + action buttons.
- * Auto-advances every 5s, pauses on hover/touch.
- * Like button is directly on the card, play button navigates to game page.
+ * Featured games spotlight carousel.
+ * Layout per wireframe: large square image LEFT, title + description RIGHT,
+ * action bar at bottom (like circle + play bar). Auto-rotates.
  */
 function CuratedHeader({ games, onOpen, onLike }: {
   games: PostWithMeta[];
@@ -382,8 +381,9 @@ function CuratedHeader({ games, onOpen, onLike }: {
 
   const g = games[active];
   const title = (g.content.split("\n")[0] || "Juego").replace(/^🎮\s*/, "").trim() || "Juego";
-  const desc = g.content.split("\n").slice(1).join(" ").trim().slice(0, 160);
+  const desc = g.content.split("\n").slice(1).join(" ").trim();
   const hasCover = !!g.signed_cover;
+  const price = g.price_orbes ?? 0;
 
   return (
     <section className="space-y-3">
@@ -398,99 +398,89 @@ function CuratedHeader({ games, onOpen, onLike }: {
         </div>
       </div>
 
-      {/* Full-width cinematic card */}
+      {/* Spotlight card — matches wireframe */}
       <div
-        className="relative w-full rounded-2xl overflow-hidden border border-border/50 bg-card group cursor-pointer active:scale-[0.99] transition-transform duration-300"
-        onClick={() => onOpen(g)}
+        className="w-full rounded-2xl border border-border/60 bg-card overflow-hidden active:scale-[0.99] transition-transform duration-300 select-none"
         onMouseEnter={onEnter}
         onMouseLeave={onLeave}
         onTouchStart={onEnter}
         onTouchEnd={onLeave}
       >
-        {/* Background cover image */}
-        <div className="relative w-full aspect-[16/10] sm:aspect-[2/1]">
-          {hasCover ? (
-            <img
-              key={active}
-              src={g.signed_cover ?? undefined}
-              alt={title}
-              className="absolute inset-0 w-full h-full object-cover animate-in fade-in duration-500"
-            />
-          ) : (
-            <div key={active} className="absolute inset-0 animate-in fade-in duration-500" style={{ background: "var(--gradient-asternal-soft)" }}>
-              <div className="absolute inset-0 grid place-items-center">
-                <Joystick size={80} strokeWidth={1} className="text-white/15" />
+        {/* Main content area: image left + text right */}
+        <div className="flex gap-4 p-4 pb-3">
+          {/* Left: large square game cover */}
+          <button
+            onClick={() => onOpen(g)}
+            className="relative w-[42%] aspect-square shrink-0 rounded-xl overflow-hidden bg-gradient-to-br from-primary/5 to-primary/10 border border-border/30 group-hover:border-primary/30 transition-colors active:scale-[0.97]"
+          >
+            {hasCover ? (
+              <img
+                key={active}
+                src={g.signed_cover ?? undefined}
+                alt={title}
+                className="absolute inset-0 w-full h-full object-cover animate-in fade-in duration-500 group-hover:scale-[1.03] transition-transform duration-500"
+              />
+            ) : (
+              <div key={active} className="absolute inset-0 grid place-items-center animate-in fade-in duration-500">
+                <Joystick size={40} strokeWidth={1.2} className="text-primary/20" />
               </div>
-            </div>
-          )}
+            )}
+            {/* Subtle inner shadow for depth */}
+            <div className="absolute inset-0 shadow-[inset_0_0_20px_rgba(0,0,0,0.06)] pointer-events-none" />
+          </button>
 
-          {/* Dark gradient overlay from bottom */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-
-          {/* Price badge top-right */}
-          {((g.price_orbes ?? 0) > 0) && (
-            <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/95 shadow-md backdrop-blur border border-primary/20">
-              <SparklesIcon size={12} className={g.owned ? "text-emerald-500" : "text-primary"} fill="currentColor" />
-              <span className="text-[11px] font-display font-semibold tracking-wide">
-                {g.owned ? "TUYO" : `${g.price_orbes}`}
-              </span>
-            </div>
-          )}
-
-          {/* Content overlay at bottom */}
-          <div className="absolute inset-x-0 bottom-0 p-4 space-y-3">
-            {/* Title + author */}
-            <div>
-              <div className="text-white font-display text-lg sm:text-xl font-bold leading-tight drop-shadow-lg">
-                {title}
-              </div>
+          {/* Right: title + author + description */}
+          <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+            <div className="space-y-1">
+              <button
+                onClick={() => onOpen(g)}
+                className="text-left w-full"
+              >
+                <div className="font-display text-[15px] sm:text-base font-bold leading-snug line-clamp-1 text-foreground hover:text-primary transition-colors">
+                  {title}
+                </div>
+              </button>
               {g.author && (
-                <div className="text-white/70 text-[11px] font-mono mt-0.5">
+                <div className="text-[11px] text-muted-foreground font-mono">
                   @{g.author.username ?? "jugador"}
                 </div>
               )}
               {desc && (
-                <p className="text-white/60 text-[11px] leading-relaxed mt-1.5 line-clamp-2 max-w-md">
+                <p className="text-[12px] text-muted-foreground/70 leading-relaxed line-clamp-4 mt-1.5">
                   {desc}
                 </p>
               )}
             </div>
-
-            {/* Action buttons row */}
-            <div className="flex items-center gap-2">
-              {/* Play button */}
-              <button
-                onClick={(e) => { e.stopPropagation(); onOpen(g); }}
-                className="flex-1 sm:flex-none sm:w-44 h-11 rounded-xl grad-brand text-white font-display tracking-widest text-xs flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-transform"
-              >
-                <Play size={16} fill="currentColor" /> JUGAR
-              </button>
-
-              {/* Like button */}
-              <button
-                onClick={(e) => { e.stopPropagation(); onLike(g.id); }}
-                className={`shrink-0 w-11 h-11 rounded-xl flex items-center justify-center transition-all active:scale-95 ${
-                  g.my_like
-                    ? "bg-red-500/20 border border-red-500/30 text-red-400"
-                    : "bg-white/15 border border-white/20 text-white hover:bg-white/25"
-                }`}
-              >
-                <Heart size={18} fill={g.my_like ? "currentColor" : "none"} />
-              </button>
-            </div>
-
-            {/* Stats row */}
-            <div className="flex items-center gap-3 text-white/70 text-[11px]">
-              <span className="flex items-center gap-1">
-                <Heart size={11} fill="currentColor" className={g.my_like ? "text-red-400" : ""} /> {g.likes}
-              </span>
-              {g.comments_count > 0 && (
-                <span className="flex items-center gap-1">
-                  <Users size={11} /> {g.comments_count}
-                </span>
-              )}
-            </div>
           </div>
+        </div>
+
+        {/* Action bar at bottom — matches wireframe: circle (like) + bar (play) */}
+        <div className="flex items-center gap-2.5 px-4 pb-4">
+          {/* Like button — circle */}
+          <button
+            onClick={() => onLike(g.id)}
+            className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition-all active:scale-90 ${
+              g.my_like
+                ? "bg-red-500/15 text-red-500"
+                : "bg-muted/60 text-muted-foreground hover:bg-red-500/10 hover:text-red-400"
+            }`}
+          >
+            <Heart size={16} fill={g.my_like ? "currentColor" : "none"} />
+          </button>
+          <span className="text-[11px] tabular-nums text-muted-foreground font-mono">
+            {g.likes}
+          </span>
+
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          {/* Play button — horizontal bar */}
+          <button
+            onClick={() => onOpen(g)}
+            className="shrink-0 h-9 px-5 rounded-full grad-brand text-white font-display tracking-widest text-[11px] flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-sm"
+          >
+            <Play size={13} fill="currentColor" /> JUGAR
+          </button>
         </div>
       </div>
 
