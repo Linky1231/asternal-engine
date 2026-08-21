@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Play, Flame, Rocket, Heart, Sparkles as SparklesIcon, Sparkles, Users, ChevronRight, Gamepad2, Trophy, Joystick, Crown, CloudOff, Loader2, CheckCircle2, Compass } from "lucide-react";
+import { FaGamepad } from "react-icons/fa";
 import type { PostWithMeta } from "@/lib/social/api";
 import { fetchGamePlayCounts24h } from "@/lib/social/api";
 import { SUPABASE_ACCESS_TOKEN, runGamePlaysSchemaSetup } from "@/lib/supabase/setup";
@@ -14,40 +15,7 @@ function extractTitle(content: string): string {
 
 type TrendTab = "hot" | "growing" | "rated" | "new";
 
-/** Icono de mando realista con botones, cruceta y sticks — no simplificado. */
-function GamepadSvg({ size = 64, className = "" }: { size?: number; className?: string }) {
-  return (
-    <svg width={size} height={size * 0.55} viewBox="0 0 120 66" fill="none" className={className}>
-      {/* Cuerpo principal */}
-      <path
-        d="M20 18C20 12 25 8 32 8h56c7 0 12 4 12 10v18c0 6-3 10-8 14l-14 12c-3 2.5-7 4-12 4H46c-5 0-9-1.5-12-4L20 42V18z"
-        fill="currentColor" fillOpacity="0.12"
-        stroke="currentColor" strokeWidth="2" strokeLinejoin="round"
-      />
-      {/* Grips laterales */}
-      <path d="M20 38c-4 2-8 6-8 12v4c0 2 1 3 3 3 3 0 6-2 8-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none" />
-      <path d="M100 38c4 2 8 6 8 12v4c0 2-1 3-3 3-3 0-6-2-8-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none" />
-      {/* D-Pad */}
-      <rect x="32" y="22" width="6" height="16" rx="1.5" fill="currentColor" fillOpacity="0.3" />
-      <rect x="27" y="27" width="16" height="6" rx="1.5" fill="currentColor" fillOpacity="0.3" />
-      {/* Botones derecha (AB) */}
-      <circle cx="82" cy="24" r="4" fill="currentColor" fillOpacity="0.35" stroke="currentColor" strokeWidth="1.5" />
-      <circle cx="92" cy="30" r="4" fill="currentColor" fillOpacity="0.35" stroke="currentColor" strokeWidth="1.5" />
-      {/* Botones XY */}
-      <circle cx="72" cy="30" r="4" fill="currentColor" fillOpacity="0.35" stroke="currentColor" strokeWidth="1.5" />
-      <circle cx="82" cy="36" r="4" fill="currentColor" fillOpacity="0.35" stroke="currentColor" strokeWidth="1.5" />
-      {/* Stick izquierdo */}
-      <circle cx="42" cy="38" r="5" fill="currentColor" fillOpacity="0.2" stroke="currentColor" strokeWidth="1.5" />
-      <circle cx="42" cy="38" r="2" fill="currentColor" fillOpacity="0.4" />
-      {/* Stick derecho */}
-      <circle cx="72" cy="42" r="5" fill="currentColor" fillOpacity="0.2" stroke="currentColor" strokeWidth="1.5" />
-      <circle cx="72" cy="42" r="2" fill="currentColor" fillOpacity="0.4" />
-      {/* Botones centrales (Start/Select) */}
-      <ellipse cx="54" cy="32" rx="3" ry="1.5" fill="currentColor" fillOpacity="0.3" />
-      <ellipse cx="62" cy="32" rx="3" ry="1.5" fill="currentColor" fillOpacity="0.3" />
-    </svg>
-  );
-}
+
 
 export function GamesHome({
   games, myId, isMod, onChange,
@@ -532,7 +500,7 @@ function FeaturedBanner({ post, plays24, onPlay }: { post: PostWithMeta; plays24
             <div className="absolute inset-0 grad-brand" />
             {/* Marca de agua: icono de juego translúcido de fondo */}
             <div className="absolute inset-0 grid place-items-center">
-              <GamepadSvg size={180} className="text-white/[0.15]" />
+              <FaGamepad size={180} className="text-white/[0.18]" />
             </div>
           </>
         )}
