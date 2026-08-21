@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Play, Flame, Rocket, Heart, Sparkles as SparklesIcon, Sparkles, Users, ChevronRight, Gamepad2, Trophy, Joystick, Crown, CloudOff, Loader2, CheckCircle2, Target, Zap } from "lucide-react";
+import { Play, Flame, Rocket, Heart, Sparkles as SparklesIcon, Sparkles, Users, ChevronRight, Gamepad2, Trophy, Joystick, Crown, CloudOff, Loader2, CheckCircle2, Compass } from "lucide-react";
 import type { PostWithMeta } from "@/lib/social/api";
 import { fetchGamePlayCounts24h } from "@/lib/social/api";
 import { SUPABASE_ACCESS_TOKEN, runGamePlaysSchemaSetup } from "@/lib/supabase/setup";
@@ -465,7 +465,7 @@ function ForYouSection({ items, userGenres, activeGenre, onSelectGenre, onOpen, 
     <section className="space-y-2.5">
       {/* Header */}
       <div className="flex items-center gap-2 px-1">
-        <SparklesIcon size={18} className="text-primary" />
+        <Compass size={18} className="text-primary" />
         <div className="flex-1 min-w-0">
           <div className="font-display text-base leading-tight">Para ti</div>
           <div className="text-[11px] text-muted-foreground">{userGenres.length ? "Basado en tus géneros favoritos" : "Los más populares de la comunidad"}</div>
