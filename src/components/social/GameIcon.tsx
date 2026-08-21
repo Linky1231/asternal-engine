@@ -95,8 +95,8 @@ function TileMark() {
   return (
     <span className="absolute inset-0 grid place-items-center pointer-events-none" aria-hidden>
       {/* halo suave: profundidad sin caja ni recuadro genérico */}
-      <span className="absolute w-14 h-14 rounded-full bg-primary/10 blur-xl" />
-      <FaGamepad size={38} className="relative text-primary/70" />
+      <span className="absolute w-14 h-14 rounded-full bg-muted/40 blur-xl" />
+      <FaGamepad size={38} className="relative text-muted-foreground/50" />
     </span>
   );
 }
@@ -106,13 +106,13 @@ function CornerTicks() {
   return (
     <span className="absolute inset-0 pointer-events-none" aria-hidden>
       {/* Esquina superior-izquierda */}
-      <span className="absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 border-primary/25 rounded-tl-sm" />
+      <span className="absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 border-border/60 rounded-tl-sm" />
       {/* Esquina superior-derecha */}
-      <span className="absolute top-0 right-0 w-2 h-2 border-t-2 border-r-2 border-primary/25 rounded-tr-sm" />
+      <span className="absolute top-0 right-0 w-2 h-2 border-t-2 border-r-2 border-border/60 rounded-tr-sm" />
       {/* Esquina inferior-izquierda */}
-      <span className="absolute bottom-0 left-0 w-2 h-2 border-b-2 border-l-2 border-primary/25 rounded-bl-sm" />
+      <span className="absolute bottom-0 left-0 w-2 h-2 border-b-2 border-l-2 border-border/60 rounded-bl-sm" />
       {/* Esquina inferior-derecha */}
-      <span className="absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2 border-primary/25 rounded-br-sm" />
+      <span className="absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2 border-border/60 rounded-br-sm" />
     </span>
   );
 }
