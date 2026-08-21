@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Play, Flame, Rocket, Heart, Sparkles as SparklesIcon, Users, ChevronRight, Gamepad2, Trophy, Joystick, Crown, CloudOff, Loader2, CheckCircle2, Star } from "lucide-react";
 import type { PostWithMeta } from "@/lib/social/api";
@@ -363,6 +363,31 @@ function Ranking24({ games, totalGames, onOpen }: {
 }
 
 function CuratedHeader({ games, onOpen }: { games: PostWithMeta[]; onOpen: (g: PostWithMeta) => void }) {
+  const [active, setActive] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const pauseRef = useRef(false);
+  const len = games.length;
+
+  // Auto-advance every 4s, pauses on hover
+  useEffect(() => {
+    if (len <= 1) return;
+    const id = setInterval(() => {
+      if (!pauseRef.current) setActive(i => (i + 1) % len);
+    }, 4000);
+    return () => clearInterval(id);
+  }, [len]);
+
+  // Keep ref in sync
+  const onEnter = () => { pauseRef.current = true; setPaused(true); };
+  const onLeave = () => { pauseRef.current = false; setPaused(false); };
+
+  if (len === 0) return null;
+
+  // Single card carousel: shows one featured game as a full-width card
+  const g = games[active];
+  const title = (g.content.split("\n")[0] || "Juego").replace(/^🎮\s*/, "").trim() || "Juego";
+  const hasCover = !!g.signed_cover;
+
   return (
     <section className="space-y-2.5">
       <div className="flex items-center gap-2 px-1">
@@ -371,47 +396,89 @@ function CuratedHeader({ games, onOpen }: { games: PostWithMeta[]; onOpen: (g: P
         </div>
         <div>
           <div className="font-display text-[13px] font-bold leading-tight">Destacados por el equipo</div>
-          <div className="text-[10px] text-muted-foreground">Selección curada por los moderadores</div>
+          <div className="text-[10px] text-muted-foreground">Selección curada por el equipo</div>
         </div>
       </div>
-      <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-3 px-3 pb-1">
-        {games.map((g, i) => {
-          const title = (g.content.split("\n")[0] || "Juego").replace(/^🎮\s*/, "").trim() || "Juego";
-          return (
+
+      <button
+        onClick={() => onOpen(g)}
+        onMouseEnter={onEnter}
+        onMouseLeave={onLeave}
+        onTouchStart={onEnter}
+        onTouchEnd={onLeave}
+        className="relative w-full rounded-2xl overflow-hidden border border-border/40 bg-card hover:border-primary/30 hover:shadow-md active:scale-[0.99] transition-all duration-300 group text-left"
+      >
+        <div className="relative aspect-[16/9] w-full bg-gradient-to-br from-primary/5 to-primary/10 overflow-hidden">
+          {hasCover ? (
+            <img
+              src={g.signed_cover ?? undefined}
+              alt={title}
+              className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-700"
+            />
+          ) : (
+            <div className="w-full h-full grad-brand-soft flex items-center justify-center">
+              <Joystick size={48} strokeWidth={1.5} className="text-primary/20" />
+            </div>
+          )}
+          {/* Dark gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent pointer-events-none" />
+          {/* Title + author */}
+          <div className="absolute inset-x-0 bottom-0 p-4 space-y-1.5">
+            <div className="text-white font-display text-lg sm:text-xl font-bold leading-tight drop-shadow-md">
+              {title}
+            </div>
+            <div className="text-white/70 text-[11px] font-mono">
+              @{g.author?.username ?? "jugador"}
+            </div>
+            <div className="flex items-center gap-3 pt-1">
+              <span className="flex items-center gap-1 text-white/80 text-[11px]">
+                <Heart size={11} fill="currentColor" /> {g.likes}
+              </span>
+              {g.comments_count > 0 && (
+                <span className="flex items-center gap-1 text-white/80 text-[11px]">
+                  <Users size={11} /> {g.comments_count}
+                </span>
+              )}
+              <span className="ml-auto text-white/50 text-[10px] font-display tracking-widest">
+                VER JUEGO →
+              </span>
+            </div>
+          </div>
+          {/* Shine effect */}
+          <div className="banner-shine" />
+        </div>
+      </button>
+
+      {/* Navigation dots */}
+      {len > 1 && (
+        <div className="flex items-center justify-center gap-2 pt-0.5">
+          {games.map((_, i) => (
             <button
-              key={g.id}
-              onClick={() => onOpen(g)}
-              className="shrink-0 w-[140px] sm:w-[160px] rounded-2xl overflow-hidden border border-border/50 bg-card hover:border-primary/40 hover:shadow-md active:scale-[0.97] transition-all duration-200 group"
-              style={{ animationDelay: `${i * 50}ms` }}
-            >
-              <div className="relative aspect-[4/3] w-full bg-gradient-to-br from-primary/5 to-primary/10 overflow-hidden">
-                {g.signed_cover ? (
-                  <img src={g.signed_cover} alt={title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                ) : (
-                  <div className="w-full h-full grid place-items-center">
-                    <Joystick size={32} className="text-primary/15" />
-                  </div>
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
-                <div className="absolute bottom-2 left-2 right-2">
-                  <div className="text-white text-[11px] font-display font-semibold leading-tight drop-shadow-md line-clamp-1">{title}</div>
-                  <div className="text-white/70 text-[9px] font-mono truncate">@{g.author?.username ?? "jugador"}</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 px-2.5 py-2">
-                <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                  <Heart size={10} /> {g.likes}
-                </div>
-                {g.comments_count > 0 && (
-                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                    <Users size={10} /> {g.comments_count}
-                  </div>
-                )}
-              </div>
-            </button>
-          );
-        })}
-      </div>
+              key={i}
+              onClick={(e) => { e.stopPropagation(); setActive(i); }}
+              onMouseEnter={onEnter}
+              onMouseLeave={onLeave}
+              className={`transition-all duration-300 rounded-full ${
+                i === active
+                  ? "w-6 h-2 bg-primary"
+                  : "w-2 h-2 bg-primary/25 hover:bg-primary/40"
+              }`}
+              aria-label={`Ir al juego ${i + 1}`}
+            />
+          ))}
+          {/* Progress bar */}
+          <div className="ml-2 h-0.5 w-12 rounded-full bg-primary/10 overflow-hidden">
+            <div
+              className="h-full bg-primary/50 rounded-full"
+              style={{
+                width: paused ? "0%" : "100%",
+                transition: paused ? "none" : "width 4s linear",
+                transformOrigin: "left",
+              }}
+            />
+          </div>
+        </div>
+      )}
     </section>
   );
 }
