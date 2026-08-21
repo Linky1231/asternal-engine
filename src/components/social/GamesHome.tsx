@@ -436,7 +436,7 @@ function ForYouSection({ items, userGenres, activeGenre, onSelectGenre, onOpen, 
         <Compass size={18} className="text-primary" />
         <div className="flex-1 min-w-0">
           <div className="font-display text-base leading-tight">Para ti</div>
-          <div className="text-[11px] text-muted-foreground">{userGenres.length ? "Basado en tus géneros favoritos" : "Los más populares de la comunidad"}</div>
+          <div className="text-[11px] text-muted-foreground">{userGenres.length ? "Basado en tus preferencias" : "Los más populares de la comunidad"}</div>
         </div>
 
       </div>
