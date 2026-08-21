@@ -179,28 +179,21 @@ export function GamesHome({
       )}
       <Ranking24 games={ranking24} totalGames={games.length} onOpen={openGame} />
 
-      {/* 3. Continuar jugando — moved up */}
+      {/* 3. Continuar jugando */}
       {continuePlaying.length > 0 && (
         <Section title="Continuar jugando" subtitle="Retoma donde lo dejaste">
           <IconRow games={continuePlaying} onOpen={openGame} />
         </Section>
       )}
 
-      {/* 4. Para ti — based on user's published game genres */}
+      {/* 4. Para ti — basado en géneros del usuario */}
       {forYou.length > 0 && (
         <Section title="Para ti" subtitle="Basado en los juegos que publicas">
           <IconRow games={forYou} onOpen={openGame} />
         </Section>
       )}
 
-      {/* 5. Recomendados */}
-      {recommended.length > 0 && (
-        <Section title="Recomendados para ti" subtitle="En base a lo que juega la comunidad">
-          <IconRow games={recommended} onOpen={openGame} />
-        </Section>
-      )}
-
-      {/* 6. Tendencias */}
+      {/* 5. Tendencias — populares */}
       <div className="space-y-2">
         <div className="flex items-end justify-between px-1">
           <div>
@@ -220,6 +213,13 @@ export function GamesHome({
           ))}
         </div>
       </div>
+
+      {/* 6. Recomendados — abajo */}
+      {recommended.length > 0 && (
+        <Section title="Recomendados para ti" subtitle="En base a lo que juega la comunidad">
+          <IconRow games={recommended} onOpen={openGame} />
+        </Section>
+      )}
     </div>
   );
 }
