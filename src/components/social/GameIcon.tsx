@@ -95,8 +95,8 @@ function TileMark() {
   return (
     <span className="absolute inset-0 grid place-items-center pointer-events-none" aria-hidden>
       {/* halo suave: profundidad sin caja ni recuadro genérico */}
-      <span className="absolute w-14 h-14 rounded-full bg-blue-100/60 dark:bg-blue-900/20 blur-xl" />
-      <FaGamepad size={46} className="relative text-blue-400/60 dark:text-blue-500/40" />
+      <span className="absolute w-14 h-14 rounded-full bg-primary/[0.06] dark:bg-primary/[0.04] blur-xl" />
+      <FaGamepad size={46} className="relative text-primary/[0.28] dark:text-primary/[0.20]" />
     </span>
   );
 }
@@ -106,13 +106,13 @@ function CornerTicks() {
   return (
     <span className="absolute inset-0 pointer-events-none" aria-hidden>
       {/* Esquina superior-izquierda */}
-      <span className="absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 border-blue-300/30 dark:border-blue-500/20 rounded-tl-sm" />
+      <span className="absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 border-primary/20 dark:border-primary/10 rounded-tl-sm" />
       {/* Esquina superior-derecha */}
-      <span className="absolute top-0 right-0 w-2 h-2 border-t-2 border-r-2 border-blue-300/30 dark:border-blue-500/20 rounded-tr-sm" />
+      <span className="absolute top-0 right-0 w-2 h-2 border-t-2 border-r-2 border-primary/20 dark:border-primary/10 rounded-tr-sm" />
       {/* Esquina inferior-izquierda */}
-      <span className="absolute bottom-0 left-0 w-2 h-2 border-b-2 border-l-2 border-blue-300/30 dark:border-blue-500/20 rounded-bl-sm" />
+      <span className="absolute bottom-0 left-0 w-2 h-2 border-b-2 border-l-2 border-primary/20 dark:border-primary/10 rounded-bl-sm" />
       {/* Esquina inferior-derecha */}
-      <span className="absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2 border-blue-300/30 dark:border-blue-500/20 rounded-br-sm" />
+      <span className="absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2 border-primary/20 dark:border-primary/10 rounded-br-sm" />
     </span>
   );
 }
