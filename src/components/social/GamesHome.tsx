@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Play, Flame, Rocket, Heart, Sparkles as SparklesIcon, Users, ChevronRight, Gamepad2, Trophy, Joystick, Crown, CloudOff, Loader2, CheckCircle2 } from "lucide-react";
+import { Play, Flame, Rocket, Heart, Sparkles as SparklesIcon, Users, ChevronRight, Gamepad2, Trophy, Joystick, Crown, CloudOff, Loader2, CheckCircle2, Star } from "lucide-react";
 import type { PostWithMeta } from "@/lib/social/api";
 import { fetchGamePlayCounts24h } from "@/lib/social/api";
 import { SUPABASE_ACCESS_TOKEN, runGamePlaysSchemaSetup } from "@/lib/supabase/setup";
+import { getFeaturedGameIds } from "@/lib/social/featured-games";
 import { GameIcon } from "./GameIcon";
 import { GameCard } from "./GameCard";
 
@@ -130,8 +131,21 @@ export function GamesHome({
   const { featured, continuePlaying, recommended, trends } = sections;
   const trendList = trends[trend];
 
+  // Featured games selected by admins/mods
+  const featuredIds = getFeaturedGameIds();
+  const curatedGames = useMemo(() => {
+    if (!featuredIds.length) return [];
+    const byId = new Map(games.map(g => [g.id, g]));
+    return featuredIds.map(id => byId.get(id)).filter((g): g is PostWithMeta => !!g);
+  }, [games, featuredIds]);
+
   return (
     <div className="space-y-5">
+      {/* 0. Curated featured games header */}
+      {curatedGames.length > 0 && (
+        <CuratedHeader games={curatedGames} onOpen={setSelected} />
+      )}
+
       {/* 1. Banner destacado */}
       <FeaturedBanner post={featured} plays24={playCounts[featured.id] ?? 0} onPlay={() => setSelected(featured)} />
 
@@ -326,6 +340,60 @@ function Ranking24({ games, totalGames, onOpen }: {
               <span className="shrink-0 flex items-center gap-1 px-2 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-display font-semibold tabular-nums">
                 <Flame size={10} fill="currentColor" /> {n}
               </span>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function CuratedHeader({ games, onOpen }: { games: PostWithMeta[]; onOpen: (g: PostWithMeta) => void }) {
+  return (
+    <section className="space-y-2.5">
+      <div className="flex items-center gap-2 px-1">
+        <div className="w-6 h-6 rounded-lg bg-primary/10 border border-primary/20 grid place-items-center">
+          <Star size={12} className="text-primary" fill="currentColor" />
+        </div>
+        <div>
+          <div className="font-display text-[13px] font-bold leading-tight">Destacados por el equipo</div>
+          <div className="text-[10px] text-muted-foreground">Selección curada por los moderadores</div>
+        </div>
+      </div>
+      <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-3 px-3 pb-1">
+        {games.map((g, i) => {
+          const title = (g.content.split("\n")[0] || "Juego").replace(/^🎮\s*/, "").trim() || "Juego";
+          return (
+            <button
+              key={g.id}
+              onClick={() => onOpen(g)}
+              className="shrink-0 w-[140px] sm:w-[160px] rounded-2xl overflow-hidden border border-border/50 bg-card hover:border-primary/40 hover:shadow-md active:scale-[0.97] transition-all duration-200 group"
+              style={{ animationDelay: `${i * 50}ms` }}
+            >
+              <div className="relative aspect-[4/3] w-full bg-gradient-to-br from-primary/5 to-primary/10 overflow-hidden">
+                {g.signed_cover ? (
+                  <img src={g.signed_cover} alt={title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                ) : (
+                  <div className="w-full h-full grid place-items-center">
+                    <Joystick size={32} className="text-primary/15" />
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
+                <div className="absolute bottom-2 left-2 right-2">
+                  <div className="text-white text-[11px] font-display font-semibold leading-tight drop-shadow-md line-clamp-1">{title}</div>
+                  <div className="text-white/70 text-[9px] font-mono truncate">@{g.author?.username ?? "jugador"}</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 px-2.5 py-2">
+                <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                  <Heart size={10} /> {g.likes}
+                </div>
+                {g.comments_count > 0 && (
+                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                    <Users size={10} /> {g.comments_count}
+                  </div>
+                )}
+              </div>
             </button>
           );
         })}
