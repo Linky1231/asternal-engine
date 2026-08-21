@@ -28,7 +28,8 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
   const [postTypes, setPostTypes] = useState<string[]>([]);
   const [myGames, setMyGames] = useState<{ id: string; title: string }[]>([]);
 
-  const [panel, setPanel] = useState<null | "link" | "tags" | "html" | "poll" | "unlock" | "game" | "color" | "type">(null);
+  const [panels, setPanels] = useState<Set<string>>(new Set());
+  const togglePanel = (id: string) => setPanels(prev => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
@@ -90,7 +91,7 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
       setContent(""); setFiles([]); setLinkUrl(""); setTagInput("");
       setDocuments([]); setHtmlContent(""); setTextColor("");
       setPoll(null); setLockedContent(""); setUnlockGoal(""); setUnlockAt("");
-      setPinnedGameId(""); setPostTypes([]); setPanel(null); setExpanded(false);
+      setPinnedGameId(""); setPostTypes([]); setPanels(new Set()); setExpanded(false);
       onCreated();
     } catch (e) { setErr((e as Error).message); }
     finally { setBusy(false); }
@@ -155,7 +156,7 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
           </div>
         )}
 
-        {panel === "link" && (
+        {panels.has("link") && (
           <div className="flex items-center gap-2 bg-input/40 rounded-xl px-3 py-2 animate-in fade-in slide-in-from-top-1 border border-border/50">
             <LinkIcon size={14} className="text-muted-foreground" />
             <input value={linkUrl} onChange={e => setLinkUrl(e.target.value)} placeholder="https://…"
@@ -163,7 +164,7 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
           </div>
         )}
 
-        {panel === "type" && (
+        {panels.has("type") && (
           <div className="bg-input/40 rounded-xl px-3 py-2 space-y-2 border border-border/50">
             <div className="text-xs font-medium flex items-center gap-2"><Share2 size={13} className="text-primary" /> ¿Qué estás compartiendo?</div>
             <div className="flex flex-wrap gap-1.5">
@@ -188,7 +189,7 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
           </div>
         )}
 
-        {panel === "tags" && (
+        {panels.has("tags") && (
           <div className="flex items-center gap-2 bg-input/40 rounded-xl px-3 py-2 border border-border/50">
             <Tag size={14} className="text-muted-foreground" />
             <input value={tagInput} onChange={e => setTagInput(e.target.value)} placeholder="etiquetas separadas por coma"
@@ -196,7 +197,7 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
           </div>
         )}
 
-        {panel === "color" && (
+        {panels.has("color") && (
           <div className="flex items-center gap-3 bg-input/40 rounded-xl px-3 py-2 text-xs border border-border/50">
             <Palette size={14} className="text-muted-foreground" />
             <span>Color del texto:</span>
@@ -206,7 +207,7 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
           </div>
         )}
 
-        {panel === "html" && (
+        {panels.has("html") && (
           <div className="space-y-2">
             <textarea value={htmlContent} onChange={e => setHtmlContent(e.target.value)}
               placeholder="Pega HTML aquí (se mostrará en un visor seguro)…"
@@ -221,7 +222,7 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
           </div>
         )}
 
-        {panel === "game" && myGames.length > 0 && (
+        {panels.has("game") && myGames.length > 0 && (
           <div className="bg-input/40 rounded-xl px-3 py-2 space-y-2 border border-border/50">
             <div className="text-xs flex items-center gap-2 font-medium"><Gamepad2 size={14} className="text-primary" /> Fijar un juego tuyo</div>
             <select value={pinnedGameId} onChange={e => setPinnedGameId(e.target.value)}
@@ -231,15 +232,15 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
             </select>
           </div>
         )}
-        {panel === "game" && myGames.length === 0 && (
+        {panels.has("game") && myGames.length === 0 && (
           <div className="text-xs text-muted-foreground px-2">Aún no tienes juegos publicados.</div>
         )}
 
-        {panel === "poll" && (
+        {panels.has("poll") && (
           <PollEditor poll={poll} setPoll={setPoll} />
         )}
 
-        {panel === "unlock" && (
+        {panels.has("unlock") && (
           <div className="bg-input/40 rounded-xl px-3 py-2 space-y-2 border border-border/50">
             <div className="flex items-center gap-2 text-xs font-medium"><Lock size={13} className="text-primary" /> Contenido desbloqueable</div>
             <textarea value={lockedContent} onChange={e => setLockedContent(e.target.value)}
@@ -289,14 +290,14 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
               accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar,.7z,.json,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain,application/zip"
               onChange={onDocs} />
           </label>
-          <Chip active={panel === "link"} onClick={() => setPanel(panel === "link" ? null : "link")} title="Enlace"><LinkIcon size={15} />{expanded && <span>Enlace</span>}</Chip>
-          <Chip active={panel === "poll"} onClick={() => { setPanel(panel === "poll" ? null : "poll"); if (!poll) setPoll({ question: "", options: ["", ""] }); }} title="Encuesta"><BarChart3 size={15} />{expanded && <span>Encuesta</span>}</Chip>
-          <Chip active={panel === "game"} onClick={() => setPanel(panel === "game" ? null : "game")} title="Fijar juego"><Gamepad2 size={15} />{expanded && <span>Juego</span>}</Chip>
-          <Chip active={panel === "color"} onClick={() => setPanel(panel === "color" ? null : "color")} title="Color del texto"><Palette size={15} />{expanded && <span>Color</span>}</Chip>
-          <Chip active={panel === "html"} onClick={() => setPanel(panel === "html" ? null : "html")} title="HTML"><Code2 size={15} />{expanded && <span>HTML</span>}</Chip>
-          <Chip active={panel === "unlock"} onClick={() => setPanel(panel === "unlock" ? null : "unlock")} title="Desbloqueable"><Lock size={15} />{expanded && <span>Desbloqueable</span>}</Chip>
-          <Chip active={panel === "type"} onClick={() => setPanel(panel === "type" ? null : "type")} title="Tipo"><Share2 size={15} />{expanded && <span>Tipo</span>}{postTypes.length > 0 && <span className="ml-0.5 px-1 py-0 rounded text-[8px] font-mono font-bold bg-white/20">{postTypes.length}</span>}</Chip>
-          <Chip active={panel === "tags"} onClick={() => setPanel(panel === "tags" ? null : "tags")} title="Etiquetas"><Tag size={15} />{expanded && <span>Etiquetas</span>}</Chip>
+          <Chip active={panels.has("link")} onClick={() => togglePanel("link")} title="Enlace"><LinkIcon size={15} />{expanded && <span>Enlace</span>}</Chip>
+          <Chip active={panels.has("poll")} onClick={() => { togglePanel("poll"); if (!poll) setPoll({ question: "", options: ["", ""] }); }} title="Encuesta"><BarChart3 size={15} />{expanded && <span>Encuesta</span>}</Chip>
+          <Chip active={panels.has("game")} onClick={() => togglePanel("game")} title="Fijar juego"><Gamepad2 size={15} />{expanded && <span>Juego</span>}</Chip>
+          <Chip active={panels.has("color")} onClick={() => togglePanel("color")} title="Color del texto"><Palette size={15} />{expanded && <span>Color</span>}</Chip>
+          <Chip active={panels.has("html")} onClick={() => togglePanel("html")} title="HTML"><Code2 size={15} />{expanded && <span>HTML</span>}</Chip>
+          <Chip active={panels.has("unlock")} onClick={() => togglePanel("unlock")} title="Desbloqueable"><Lock size={15} />{expanded && <span>Desbloqueable</span>}</Chip>
+          <Chip active={panels.has("type")} onClick={() => togglePanel("type")} title="Tipo"><Share2 size={15} />{expanded && <span>Tipo</span>}{postTypes.length > 0 && <span className="ml-0.5 px-1 py-0 rounded text-[8px] font-mono font-bold bg-white/20">{postTypes.length}</span>}</Chip>
+          <Chip active={panels.has("tags")} onClick={() => togglePanel("tags")} title="Etiquetas"><Tag size={15} />{expanded && <span>Etiquetas</span>}</Chip>
         </div>
 
         <div className="flex items-center justify-end gap-2 pt-1 border-t border-border/40">
