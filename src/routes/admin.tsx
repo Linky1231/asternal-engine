@@ -14,7 +14,7 @@ import {
 } from "@/lib/social/forum-storage";
 import {
   ArrowLeft, Shield, ShieldCheck, Loader2, Search, Ban, Trash2, Plus,
-  MessageSquare, Hash, Globe, Edit3, X, Check, Trophy, Star, Gamepad2,
+  MessageSquare, Hash, Globe, Edit3, X, Check, Trophy,
 } from "lucide-react";
 import {
   fetchEvents, createEvent, updateEventStatus,
@@ -22,15 +22,14 @@ import {
 } from "@/lib/social/api";
 import { fetchChatProfiles } from "@/lib/social/chat";
 import { SegmentedControl } from "@/components/ui/segmented";
-import { fetchGames, type Profile, type PostWithMeta } from "@/lib/social/api";
-import { getFeaturedGameIds, setFeaturedGameIds } from "@/lib/social/featured-games";
+import type { Profile } from "@/lib/social/api";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Admin · Asternal" }] }),
   component: AdminPage,
 });
 
-type Tab = "mods" | "bans" | "foros" | "eventos" | "destacados";
+type Tab = "mods" | "bans" | "foros" | "eventos";
 
 function AdminPage() {
   const navigate = useNavigate();
@@ -67,10 +66,6 @@ function AdminPage() {
   const [evPrizeDesc, setEvPrizeDesc] = useState("");
   const [evRules, setEvRules] = useState("");
   const [evErr, setEvErr] = useState<string | null>(null);
-  // Featured games
-  const [allGames, setAllGames] = useState<PostWithMeta[]>([]);
-  const [featuredIds, setFeaturedIds] = useState<string[]>([]);
-  const [gamesQ, setGamesQ] = useState("");
 
   const load = async (search?: string) => {
     setLoading(true);
@@ -78,11 +73,7 @@ function AdminPage() {
       if (tab === "mods") setUsers(await listManagedUsers(search));
       else if (tab === "bans") setBans(await listBannedEmails());
       else if (tab === "eventos") setEvents(await fetchEvents());
-      else if (tab === "destacados") {
-        const gs = await fetchGames();
-        setAllGames(gs);
-        setFeaturedIds(getFeaturedGameIds());
-      } else {
+      else {
         const ts = await getForumThreads();
         setThreads(ts);
         setCategories(await getForumCategories());
@@ -208,7 +199,6 @@ Razón: ${reason}`)) return;
                 { id: "bans", label: "BANEOS" },
                 { id: "foros", label: "FOROS" },
                 { id: "eventos", label: "EVENTOS" },
-                { id: "destacados", label: "DESTACADOS" },
               ]}
               value={tab}
               onChange={setTab}
@@ -400,83 +390,6 @@ Razón: ${reason}`)) return;
                 </div>
               );
             })}
-          </>
-        ) : tab === "destacados" ? (
-          <>
-            <div className="panel border border-border/50 rounded-xl p-3 space-y-3">
-              <div className="flex items-center gap-2">
-                <Star size={14} className="text-primary" fill="currentColor" />
-                <div className="font-display text-[11px] font-semibold">Juegos destacados ({featuredIds.length}/6)</div>
-                <div className="text-[10px] text-muted-foreground">Aparecen en la cabecera de la sección Juegos</div>
-              </div>
-              <div className="flex gap-2">
-                <div className="flex-1 flex items-center gap-2 bg-card border border-line-strong rounded-lg px-3">
-                  <Search size={14} className="text-muted-foreground" />
-                  <input value={gamesQ} onChange={e => setGamesQ(e.target.value)}
-                    placeholder="Buscar juegos…" className="flex-1 bg-transparent py-2 text-sm outline-none" />
-                </div>
-                <button onClick={() => { setFeaturedIds([]); setFeaturedGameIds([]); }}
-                  className="px-3 py-2 rounded-lg border border-destructive/30 text-destructive text-[10px] font-display tracking-widest active:scale-95 transition">
-                  LIMPIAR
-                </button>
-              </div>
-            </div>
-            {(() => {
-              const q = gamesQ.toLowerCase();
-              const filtered = q ? allGames.filter(g => {
-                const title = (g.content.split("\n")[0] || "").toLowerCase();
-                const user = (g.author?.username || "").toLowerCase();
-                return title.includes(q) || user.includes(q);
-              }) : allGames;
-              return filtered.length === 0 ? (
-                <div className="text-center text-xs text-muted-foreground py-10">
-                  {allGames.length === 0 ? "Cargando juegos…" : "No se encontraron juegos"}
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {filtered.map(g => {
-                    const title = (g.content.split("\n")[0] || "Juego").replace(/^🎮\s*/, "").trim() || "Juego";
-                    const selected = featuredIds.includes(g.id);
-                    return (
-                      <button
-                        key={g.id}
-                        onClick={() => {
-                          const next = selected
-                            ? featuredIds.filter(x => x !== g.id)
-                            : [...featuredIds, g.id].slice(0, 6);
-                          setFeaturedIds(next);
-                          setFeaturedGameIds(next);
-                        }}
-                        className={`relative rounded-xl border overflow-hidden text-left transition-all duration-200 active:scale-[0.97] ${
-                          selected
-                            ? "border-primary bg-primary/5 ring-1 ring-primary/30 shadow-sm"
-                            : "border-border/50 bg-card hover:border-primary/30"
-                        }`}
-                      >
-                        <div className="aspect-[3/2] w-full bg-gradient-to-br from-primary/5 to-primary/10 overflow-hidden">
-                          {g.signed_cover ? (
-                            <img src={g.signed_cover} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full grid place-items-center">
-                              <Gamepad2 size={24} className="text-primary/15" />
-                            </div>
-                          )}
-                        </div>
-                        <div className="px-2.5 py-2">
-                          <div className="text-[11px] font-semibold truncate">{title}</div>
-                          <div className="text-[9px] font-mono text-muted-foreground truncate">@{g.author?.username ?? ""}</div>
-                        </div>
-                        {selected && (
-                          <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-primary grid place-items-center">
-                            <Check size={10} className="text-white" strokeWidth={3} />
-                          </div>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              );
-            })()}
           </>
         ) : (
           /* ── FOROS TAB ── */
