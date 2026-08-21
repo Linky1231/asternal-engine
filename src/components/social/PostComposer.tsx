@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Avatar } from "./Avatar";
 import { createPost, fetchMyGamesLite, getMyProfile, type MediaType, type Profile } from "@/lib/social/api";
 import {
@@ -8,31 +8,131 @@ import {
 
 type Poll = { question: string; options: string[] };
 
+// === Constants ===
+const MAX_MEDIA_FILES = 5;
+const MAX_DOC_FILES = 5;
+const MAX_DOC_SIZE_MB = 25;
+const MAX_TAGS = 10;
+const TAG_REGEX = /^[a-zA-Z0-9_\u00C0-\u017F]+$/;
+const HEX_COLOR_REGEX = /^#[0-9A-Fa-f]{6}$/;
+const ALLOWED_DOC_MIMES = new Set([
+  "application/pdf", "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "text/plain", "application/zip", "text/csv",
+  "application/x-7z-compressed", "application/x-rar-compressed",
+  "application/json", "text/json",
+]);
+const DRAFT_KEY = "asternal_post_draft";
+
+// === Auto-draft helpers ===
+type DraftData = {
+  content: string;
+  linkUrl: string;
+  tagInput: string;
+  htmlContent: string;
+  textColor: string;
+  lockedContent: string;
+  unlockGoal: number | "";
+  unlockAt: string;
+  pinnedGameId: string;
+  postTypes: string[];
+  panels: string[];
+};
+
+function saveDraft(d: DraftData) {
+  try { localStorage.setItem(DRAFT_KEY, JSON.stringify(d)); } catch { /* quota */ }
+}
+function loadDraft(): DraftData | null {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+function clearDraft() {
+  try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
+}
+
+// === Email color validator (safe CSS color) ===
+function isValidCssColor(c: string): boolean {
+  if (!c) return false;
+  if (HEX_COLOR_REGEX.test(c)) return true;
+  // Allow named CSS colors and rgb/hsl
+  if (/^(rgb|hsl)a?\([^)]+\)$/i.test(c)) return true;
+  const s = new Option().style;
+  s.color = c;
+  return s.color !== "";
+}
+
+// === MIME validator for documents ===
+function isAllowedDocMime(f: File): boolean {
+  if (ALLOWED_DOC_MIMES.has(f.type)) return true;
+  // Fallback: check extension for cases where browser sets empty MIME
+  const ext = f.name.split(".").pop()?.toLowerCase() ?? "";
+  const extMap: Record<string, string> = {
+    pdf: "application/pdf", doc: "application/msword",
+    docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    xls: "application/vnd.ms-excel",
+    xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    txt: "text/plain", csv: "text/csv", zip: "application/zip",
+    rar: "application/x-rar-compressed", "7z": "application/x-7z-compressed",
+    json: "application/json", ppt: "application/vnd.ms-powerpoint",
+    pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  };
+  return !!extMap[ext];
+}
+
 export function PostComposer({ onCreated }: { onCreated: () => void }) {
+  // === Load draft on mount ===
+  const draft = useRef(loadDraft());
+
   const [me, setMe] = useState<Profile | null>(null);
-  const [content, setContent] = useState("");
+  const [content, setContent] = useState(draft.current?.content ?? "");
   const [files, setFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
   const [mediaType, setMediaType] = useState<MediaType>("none");
-  const [linkUrl, setLinkUrl] = useState("");
-  const [tagInput, setTagInput] = useState("");
-
+  const [linkUrl, setLinkUrl] = useState(draft.current?.linkUrl ?? "");
+  const [tagInput, setTagInput] = useState(draft.current?.tagInput ?? "");
   const [documents, setDocuments] = useState<File[]>([]);
-  const [htmlContent, setHtmlContent] = useState("");
-  const [textColor, setTextColor] = useState<string>("");
+  const [htmlContent, setHtmlContent] = useState(draft.current?.htmlContent ?? "");
+  const [textColor, setTextColor] = useState<string>(draft.current?.textColor ?? "");
   const [poll, setPoll] = useState<Poll | null>(null);
-  const [lockedContent, setLockedContent] = useState("");
-  const [unlockGoal, setUnlockGoal] = useState<number | "">("");
-  const [unlockAt, setUnlockAt] = useState("");
-  const [pinnedGameId, setPinnedGameId] = useState<string>("");
-  const [postTypes, setPostTypes] = useState<string[]>([]);
+  const [lockedContent, setLockedContent] = useState(draft.current?.lockedContent ?? "");
+  const [unlockGoal, setUnlockGoal] = useState<number | "">(draft.current?.unlockGoal ?? "");
+  const [unlockAt, setUnlockAt] = useState(draft.current?.unlockAt ?? "");
+  const [pinnedGameId, setPinnedGameId] = useState<string>(draft.current?.pinnedGameId ?? "");
+  const [postTypes, setPostTypes] = useState<string[]>(draft.current?.postTypes ?? []);
   const [myGames, setMyGames] = useState<{ id: string; title: string }[]>([]);
-
-  const [panels, setPanels] = useState<Set<string>>(new Set());
-  const togglePanel = (id: string) => setPanels(prev => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
+  const [panels, setPanels] = useState<Set<string>>(() => {
+    const saved = draft.current?.panels;
+    return saved ? new Set(saved) : new Set<string>();
+  });
+  const togglePanel = (id: string) => setPanels(prev => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(!!(
+    draft.current?.content || draft.current?.linkUrl || draft.current?.htmlContent
+  ));
+  const [submitting, setSubmitting] = useState(false);
+
+  // === Auto-save draft ===
+  useEffect(() => {
+    if (submitting) return; // Don't save while submitting
+    const timer = setTimeout(() => {
+      saveDraft({
+        content, linkUrl, tagInput, htmlContent, textColor,
+        lockedContent, unlockGoal, unlockAt, pinnedGameId, postTypes,
+        panels: Array.from(panels),
+      });
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [content, linkUrl, tagInput, htmlContent, textColor, lockedContent,
+      unlockGoal, unlockAt, pinnedGameId, postTypes, panels, submitting]);
 
   useEffect(() => {
     const urls = files.map(f => URL.createObjectURL(f));
@@ -46,15 +146,36 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
   const onMedia = (e: React.ChangeEvent<HTMLInputElement>, kind: "image" | "video") => {
     const list = Array.from(e.target.files ?? []);
     if (!list.length) return;
-    setFiles(list); setMediaType(kind); setExpanded(true);
+    if (files.length + list.length > MAX_MEDIA_FILES) {
+      setErr(`Máximo ${MAX_MEDIA_FILES} archivos multimedia. Tienes ${files.length} + ${list.length} = ${files.length + list.length}.`);
+      e.target.value = "";
+      return;
+    }
+    setFiles(prev => [...prev, ...list]);
+    setMediaType(kind);
+    setExpanded(true);
     e.target.value = "";
   };
+
   const onDocs = (e: React.ChangeEvent<HTMLInputElement>) => {
     const list = Array.from(e.target.files ?? []);
     if (!list.length) return;
-    const oversize = list.find(f => f.size > 25 * 1024 * 1024);
-    if (oversize) { setErr(`"${oversize.name}" supera 25 MB`); return; }
-    setDocuments(prev => [...prev, ...list]); setExpanded(true);
+    // Validate MIME types
+    const invalid = list.find(f => !isAllowedDocMime(f));
+    if (invalid) {
+      setErr(`"${invalid.name}" no es un tipo de archivo permitido.`);
+      e.target.value = "";
+      return;
+    }
+    const oversize = list.find(f => f.size > MAX_DOC_SIZE_MB * 1024 * 1024);
+    if (oversize) { setErr(`"${oversize.name}" supera ${MAX_DOC_SIZE_MB} MB`); e.target.value = ""; return; }
+    if (documents.length + list.length > MAX_DOC_FILES) {
+      setErr(`Máximo ${MAX_DOC_FILES} documentos. Tienes ${documents.length} + ${list.length} = ${documents.length + list.length}.`);
+      e.target.value = "";
+      return;
+    }
+    setDocuments(prev => [...prev, ...list]);
+    setExpanded(true);
     e.target.value = "";
   };
 
@@ -64,13 +185,43 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
     if (!next.length) setMediaType("none");
   };
 
-  const canSubmit = (content.trim() || files.length || linkUrl.trim() || htmlContent.trim() || documents.length || poll || pinnedGameId) && !busy;
+  // === Tag validation ===
+  const parseTags = useCallback((): string[] => {
+    return tagInput
+      .split(/[,]+/)
+      .map(t => t.trim().replace(/^#/, "").toLowerCase())
+      .filter(t => t.length > 0 && t.length <= 30 && TAG_REGEX.test(t))
+      .slice(0, MAX_TAGS);
+  }, [tagInput]);
 
-  const submit = async () => {
-    if (!canSubmit) return;
-    setBusy(true); setErr(null);
+  const tagCount = parseTags().length;
+  const tagOverLimit = tagInput.split(/[,]+/).filter(t => t.trim()).length > MAX_TAGS;
+
+  // === Color validation ===
+  const validColor = textColor ? isValidCssColor(textColor) : true;
+
+  // === Pinned game validation ===
+  const validPinnedGame = pinnedGameId
+    ? myGames.some(g => g.id === pinnedGameId)
+    : true;
+
+  // === Poll validation ===
+  const validPoll = poll
+    ? poll.question.trim().length > 0 && poll.options.filter(o => o.trim()).length >= 2
+    : true;
+
+  // === Can submit ===
+  const hasContent = content.trim() || files.length || linkUrl.trim() || htmlContent.trim() || documents.length || poll || pinnedGameId;
+  const canSubmit = hasContent && !busy && !submitting && validColor && validPinnedGame && validPoll && !tagOverLimit;
+
+  // === Submit with debounce ===
+  const submit = useCallback(async () => {
+    if (!canSubmit || submitting) return;
+    setSubmitting(true);
+    setBusy(true);
+    setErr(null);
     try {
-      const tags = tagInput.split(/[,\s#]+/).map(t => t.trim()).filter(Boolean);
+      const tags = parseTags();
       await createPost({
         content: content.trim(),
         files,
@@ -85,17 +236,20 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
         lockedContent: lockedContent.trim() || null,
         unlockReactionsGoal: typeof unlockGoal === "number" ? unlockGoal : null,
         unlockAt: unlockAt || null,
-        poll: poll && poll.options.filter(o => o.trim()).length >= 2 ? poll : null,
+        poll: validPoll ? poll : null,
       });
-      // reset
+      // Reset everything
       setContent(""); setFiles([]); setLinkUrl(""); setTagInput("");
       setDocuments([]); setHtmlContent(""); setTextColor("");
       setPoll(null); setLockedContent(""); setUnlockGoal(""); setUnlockAt("");
       setPinnedGameId(""); setPostTypes([]); setPanels(new Set()); setExpanded(false);
+      clearDraft();
       onCreated();
     } catch (e) { setErr((e as Error).message); }
-    finally { setBusy(false); }
-  };
+    finally { setBusy(false); setSubmitting(false); }
+  }, [canSubmit, submitting, content, files, mediaType, linkUrl, parseTags,
+      textColor, htmlContent, documents, pinnedGameId, postTypes, lockedContent,
+      unlockGoal, unlockAt, validPoll, poll, onCreated]);
 
   const Chip = ({ active, onClick, title, children }: { active?: boolean; onClick: () => void; title: string; children: React.ReactNode }) => (
     <button onClick={onClick} title={title}
@@ -125,6 +279,7 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
           />
         </div>
 
+        {/* Media previews */}
         {previews.length > 0 && (
           <div className={`grid gap-2 ${previews.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
             {previews.map((url, i) => (
@@ -138,6 +293,7 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
           </div>
         )}
 
+        {/* Documents */}
         {documents.length > 0 && (
           <div className="space-y-1.5">
             {documents.map((d, i) => (
@@ -155,6 +311,8 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
             ))}
           </div>
         )}
+
+        {/* === Panels === */}
 
         {panels.has("link") && (
           <div className="flex items-center gap-2 bg-input/40 rounded-xl px-3 py-2 animate-in fade-in slide-in-from-top-1 border border-border/50">
@@ -190,20 +348,34 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
         )}
 
         {panels.has("tags") && (
-          <div className="flex items-center gap-2 bg-input/40 rounded-xl px-3 py-2 border border-border/50">
-            <Tag size={14} className="text-muted-foreground" />
-            <input value={tagInput} onChange={e => setTagInput(e.target.value)} placeholder="etiquetas separadas por coma"
-              className="flex-1 bg-transparent text-xs outline-none" />
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 bg-input/40 rounded-xl px-3 py-2 border border-border/50">
+              <Tag size={14} className="text-muted-foreground" />
+              <input value={tagInput} onChange={e => setTagInput(e.target.value)}
+                placeholder="etiquetas separadas por coma (máx. 10)"
+                className="flex-1 bg-transparent text-xs outline-none" />
+            </div>
+            {tagOverLimit && (
+              <div className="text-[10px] text-destructive px-1">Máximo {MAX_TAGS} etiquetas</div>
+            )}
+            {tagCount > 0 && !tagOverLimit && (
+              <div className="text-[10px] text-muted-foreground px-1">{tagCount}/{MAX_TAGS} etiquetas válidas</div>
+            )}
           </div>
         )}
 
         {panels.has("color") && (
-          <div className="flex items-center gap-3 bg-input/40 rounded-xl px-3 py-2 text-xs border border-border/50">
-            <Palette size={14} className="text-muted-foreground" />
-            <span>Color del texto:</span>
-            <input type="color" value={textColor || "#111827"} onChange={e => setTextColor(e.target.value)}
-              className="w-8 h-8 rounded-lg cursor-pointer border border-border/50" />
-            {textColor && <button onClick={() => setTextColor("")} className="text-muted-foreground underline hover:text-primary transition-colors">quitar</button>}
+          <div className="space-y-1">
+            <div className="flex items-center gap-3 bg-input/40 rounded-xl px-3 py-2 text-xs border border-border/50">
+              <Palette size={14} className="text-muted-foreground" />
+              <span>Color del texto:</span>
+              <input type="color" value={textColor || "#111827"} onChange={e => setTextColor(e.target.value)}
+                className="w-8 h-8 rounded-lg cursor-pointer border border-border/50" />
+              {textColor && <button onClick={() => setTextColor("")} className="text-muted-foreground underline hover:text-primary transition-colors">quitar</button>}
+            </div>
+            {textColor && !validColor && (
+              <div className="text-[10px] text-destructive px-1">Color no válido</div>
+            )}
           </div>
         )}
 
@@ -230,6 +402,9 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
               <option value="">— sin juego —</option>
               {myGames.map(g => <option key={g.id} value={g.id}>{g.title}</option>)}
             </select>
+            {pinnedGameId && !validPinnedGame && (
+              <div className="text-[10px] text-destructive">Este juego ya no existe</div>
+            )}
           </div>
         )}
         {panels.has("game") && myGames.length === 0 && (
@@ -276,17 +451,19 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
         )}
 
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar -mx-1 px-1">
-          <label title="Imagen o GIF" className="shrink-0 h-9 px-3 rounded-xl grid grid-flow-col auto-cols-max items-center gap-1.5 bg-muted/50 text-muted-foreground text-[11px] font-medium hover:text-primary hover:bg-primary/10 cursor-pointer active:scale-[0.95] transition-[transform,color,background-color,border-color] duration-300 ease-out border border-transparent hover:border-primary/25">
-            <ImageIcon size={15} /> {expanded && <span>Imagen</span>}
-            <input type="file" hidden accept="image/*,image/gif" multiple onChange={e => onMedia(e, "image")} />
+          <label title={`Imagen o GIF (${files.length}/${MAX_MEDIA_FILES})`}
+            className={`shrink-0 h-9 px-3 rounded-xl grid grid-flow-col auto-cols-max items-center gap-1.5 bg-muted/50 text-[11px] font-medium cursor-pointer active:scale-[0.95] transition-[transform,color,background-color,border-color] duration-300 ease-out border border-transparent hover:border-primary/25 ${files.length >= MAX_MEDIA_FILES ? "text-muted-foreground/30 cursor-not-allowed" : "text-muted-foreground hover:text-primary hover:bg-primary/10"}`}>
+            <ImageIcon size={15} /> {expanded && <span>Imagen {files.length > 0 && <span className="text-[9px]">({files.length})</span>}</span>}
+            <input type="file" hidden accept="image/*,image/gif" multiple onChange={e => onMedia(e, "image")} disabled={files.length >= MAX_MEDIA_FILES} />
           </label>
           <label title="Vídeo" className="shrink-0 h-9 px-3 rounded-xl grid grid-flow-col auto-cols-max items-center gap-1.5 bg-muted/50 text-muted-foreground text-[11px] font-medium hover:text-primary hover:bg-primary/10 cursor-pointer active:scale-[0.95] transition-[transform,color,background-color,border-color] duration-300 ease-out border border-transparent hover:border-primary/25">
             <Film size={15} /> {expanded && <span>Vídeo</span>}
             <input type="file" hidden accept="video/*" onChange={e => onMedia(e, "video")} />
           </label>
-          <label title="Documentos" className="shrink-0 h-9 px-3 rounded-xl grid grid-flow-col auto-cols-max items-center gap-1.5 bg-muted/50 text-muted-foreground text-[11px] font-medium hover:text-primary hover:bg-primary/10 cursor-pointer active:scale-[0.95] transition-[transform,color,background-color,border-color] duration-300 ease-out border border-transparent hover:border-primary/25">
-            <FileText size={15} /> {expanded && <span>Documento</span>}
-            <input type="file" hidden multiple
+          <label title={`Documentos (${documents.length}/${MAX_DOC_FILES})`}
+            className={`shrink-0 h-9 px-3 rounded-xl grid grid-flow-col auto-cols-max items-center gap-1.5 bg-muted/50 text-[11px] font-medium cursor-pointer active:scale-[0.95] transition-[transform,color,background-color,border-color] duration-300 ease-out border border-transparent hover:border-primary/25 ${documents.length >= MAX_DOC_FILES ? "text-muted-foreground/30 cursor-not-allowed" : "text-muted-foreground hover:text-primary hover:bg-primary/10"}`}>
+            <FileText size={15} /> {expanded && <span>Documento {documents.length > 0 && <span className="text-[9px]">({documents.length})</span>}</span>}
+            <input type="file" hidden multiple disabled={documents.length >= MAX_DOC_FILES}
               accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar,.7z,.json,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain,application/zip"
               onChange={onDocs} />
           </label>
@@ -301,9 +478,9 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
         </div>
 
         <div className="flex items-center justify-end gap-2 pt-1 border-t border-border/40">
-          <span className="text-[8px] font-mono text-muted-foreground/30 mr-auto" title="marcador compositor">ast-composer-v1</span>
+          <span className="text-[8px] font-mono text-muted-foreground/30 mr-auto" title="marcador compositor">ast-composer-v2</span>
           <span className={`text-[10px] font-mono text-muted-foreground ${content.length > 1900 ? "text-destructive" : ""}`}>{content.length}/2000</span>
-          <button onClick={submit} disabled={!canSubmit}
+          <button onClick={() => void submit()} disabled={!canSubmit}
             className="h-10 pl-4 pr-5 rounded-xl grad-brand text-primary-foreground font-display tracking-[0.15em] text-xs flex items-center gap-1.5 active:scale-[0.97] transition-[transform,box-shadow,opacity] duration-300 ease-out  disabled:opacity-40 disabled:pointer-events-none  ">
             {busy ? <Loader2 size={14} className="animate-spin" /> : <Send size={13} />}
             {busy ? "…" : "PUBLICAR"}
@@ -321,9 +498,12 @@ function PollEditor({ poll, setPoll }: { poll: Poll | null; setPoll: (p: Poll | 
     next[i] = v;
     setPoll({ ...poll, options: next });
   };
+  const validOptions = poll.options.filter(o => o.trim()).length;
+  const hasQuestion = poll.question.trim().length > 0;
+
   return (
     <div className="bg-input/40 rounded-xl px-3 py-2 space-y-2 border border-border/50">
-      <div className="flex items-center gap-2 text-xs font-medium"><BarChart3 size={13} className="text-primary" /> Encuesta</div>
+      <div className="text-xs font-medium flex items-center gap-2"><BarChart3 size={13} className="text-primary" /> Encuesta</div>
       <input value={poll.question} onChange={e => setPoll({ ...poll, question: e.target.value })}
         placeholder="Pregunta…" className="w-full bg-background rounded-lg px-2.5 py-2 text-xs border border-border/50 focus:border-primary/40 outline-none" />
       {poll.options.map((o, i) => (
@@ -345,9 +525,27 @@ function PollEditor({ poll, setPoll }: { poll: Poll | null; setPoll: (p: Poll | 
             className="text-[11px] flex items-center gap-1 text-primary-glow hover:underline">
             <Plus size={12} /> añadir opción
           </button>
-        )}            <button onClick={() => setPoll(null)} className="ml-auto text-[11px] text-muted-foreground underline hover:text-primary transition-colors duration-300">
+        )}
+        <button onClick={() => setPoll(null)} className="ml-auto text-[11px] text-muted-foreground underline hover:text-primary transition-colors duration-300">
           quitar encuesta
         </button>
+      </div>
+      {/* Poll preview */}
+      <div className="border-t border-border/30 pt-2 space-y-1">
+        <div className="text-[9px] text-muted-foreground font-display tracking-wider">VISTA PREVIA</div>
+        {!hasQuestion && <div className="text-[10px] text-amber-500/70">Escribe una pregunta</div>}
+        {validOptions < 2 && <div className="text-[10px] text-amber-500/70">Añade al menos 2 opciones</div>}
+        {hasQuestion && validOptions >= 2 && (
+          <div className="bg-background/60 rounded-lg p-2 border border-border/30 space-y-1">
+            <div className="text-[11px] font-semibold">{poll.question}</div>
+            {poll.options.filter(o => o.trim()).map((o, i) => (
+              <div key={i} className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                <div className="w-3 h-3 rounded-full border border-border/60" />
+                <span>{o}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
