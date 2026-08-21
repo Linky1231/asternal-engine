@@ -370,7 +370,7 @@ function Ranking24({ games, totalGames, onOpen }: {
     );
   }
 
-  const medals = ["text-amber-400", "text-slate-400", "text-amber-700"];
+  const medals = ["text-primary", "text-primary-glow", "text-blue-400"];
 
   return (
     <section className="rounded-2xl border border-primary/20 grad-brand-soft p-3.5 space-y-2.5">
