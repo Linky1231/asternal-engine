@@ -100,12 +100,26 @@ export function GamesHome({
     const hot = [...scored].sort((a, b) => {
       const pa = playsOf(a), pb = playsOf(b);
       if (pa !== pb) return pb - pa;
-      return (b.likes + b.comments_count) - (a.likes + a.comments_count);
+      const ageA = now - new Date(a.created_at).getTime();
+      const ageB = now - new Date(b.created_at).getTime();
+      const scoreA = (a.likes + a.favorites * 1.5 + a.comments_count * 2) * Math.pow(0.5, ageA / (week * 4));
+      const scoreB = (b.likes + b.favorites * 1.5 + b.comments_count * 2) * Math.pow(0.5, ageB / (week * 4));
+      return scoreB - scoreA;
     });
     const growing = [...scored]
       .filter(g => now - new Date(g.created_at).getTime() < week * 2)
-      .sort((a, b) => b.likes - a.likes);
-    const rated = [...scored].sort((a, b) => (b.likes + b.favorites * 2) - (a.likes + a.favorites * 2));
+      .sort((a, b) => {
+        const ageA = Math.max(1, (now - new Date(a.created_at).getTime()) / 36e5);
+        const ageB = Math.max(1, (now - new Date(b.created_at).getTime()) / 36e5);
+        const velA = (a.likes + a.favorites * 2 + a.comments_count * 3) / ageA;
+        const velB = (b.likes + b.favorites * 2 + b.comments_count * 3) / ageB;
+        return velB - velA;
+      });
+    const rated = [...scored].sort((a, b) => {
+      const scoreA = (b.likes + b.favorites * 2) * Math.pow(0.5, (now - new Date(a.created_at).getTime()) / (week * 8));
+      const scoreB = (b.likes + b.favorites * 2) * Math.pow(0.5, (now - new Date(b.created_at).getTime()) / (week * 8));
+      return scoreB - scoreA;
+    });
     const brandNew = [...scored].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
     return { featured, continuePlaying, recommended, trends: { hot, growing, rated, new: brandNew } };
@@ -404,6 +418,7 @@ function CuratedHeader({ games, onOpen }: { games: PostWithMeta[]; onOpen: (g: P
 
 function FeaturedBanner({ post, plays24, onPlay }: { post: PostWithMeta; plays24?: number; onPlay: () => void }) {
   const title = extractTitle(post.content);
+  const hasCover = !!post.signed_cover;
   const active = plays24 && plays24 > 0 ? plays24 : 1 + Math.floor((post.likes + post.comments_count) * 1.3);
   return (
     <div className="relative">
@@ -413,30 +428,22 @@ function FeaturedBanner({ post, plays24, onPlay }: { post: PostWithMeta; plays24
       <div className="banner-glow-halo absolute -inset-3 rounded-[32px]" aria-hidden />
       <div className="banner-glow relative rounded-3xl overflow-hidden border border-white/70">
         <div className="relative aspect-[16/10] w-full md:aspect-[21/9]">
-        {post.signed_cover ? (
-          <img src={post.signed_cover} alt={title} className="absolute inset-0 w-full h-full object-cover" />
+        {hasCover ? (
+          <img src={post.signed_cover ?? undefined} alt={title} className="absolute inset-0 w-full h-full object-cover" />
         ) : (
-          <>
-            {/* Sin portada: el MISMO degradado oficial de la página (Azure Drift),
-                nunca un degradado distinto — la identidad es una sola en toda la app. */}
-            <div className="absolute inset-0 grad-brand" />
-            {/* Marca de agua: icono de juego translúcido de fondo */}
+          <div className="absolute inset-0 grad-brand">
             <div className="absolute inset-0 grid place-items-center">
-              <Joystick size={150} strokeWidth={1} className="text-white/[0.13] drop-shadow-[0_12px_32px_rgba(0,0,0,0.35)]" />
+              <Joystick size={120} strokeWidth={1} className="text-white/[0.13]" />
             </div>
-          </>
+          </div>
         )}
         {/* Overlay azul de marca SOLO sobre portadas (nunca negro): da contraste
             al título sin desaturar a gris. Sin portada NO se aplica: el degradado
             oficial de la página se ve completo, con solo un scrim sutil abajo
             para que el texto blanco siga legible. */}
-        {post.signed_cover ? (
-          <div className="absolute inset-0 banner-overlay-deep" />
-        ) : (
-          <div className="absolute inset-0 bg-gradient-to-t from-ink/30 via-ink/5 to-transparent" />
-        )}
-        {/* Barrido de luz: animación que subraya «este es el mejor juego» */}
-        <div className="banner-shine" />
+        {hasCover && <div className="absolute inset-0 banner-overlay-deep" />}
+        {!hasCover && <div className="absolute inset-0 bg-gradient-to-t from-ink/30 via-ink/5 to-transparent" />}
+        {hasCover && <div className="banner-shine" />}
         {/* Textura de grano sutil sobre el degradado: nunca plano, nunca “de algoritmo”. */}
         <div className="absolute inset-0 pointer-events-none noise-overlay opacity-[0.16] mix-blend-overlay" />
         <div className="badge-glow absolute top-3 left-3 flex items-center gap-1.5 px-2.5 h-6 rounded-full bg-primary/95 text-primary-foreground text-[10px] font-display tracking-widest ring-1 ring-white/30 ring-inset">

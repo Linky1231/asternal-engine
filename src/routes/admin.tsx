@@ -201,14 +201,13 @@ Razón: ${reason}`)) return;
               <div className="text-[10px] font-mono text-muted-foreground mt-0.5">{admin ? "Administrador" : "Moderador"}</div>
             </div>
           </div>
-          <div className="mt-2.5">
-            <SegmentedControl
+          <div className="mt-2.5">              <SegmentedControl
               items={[
                 { id: "mods", label: "MODS" },
                 { id: "bans", label: "BANEOS" },
                 { id: "foros", label: "FOROS" },
                 { id: "eventos", label: "EVENTOS" },
-                { id: "destacados", label: "DESTACADOS" },
+                ...(admin ? [{ id: "destacados" as const, label: "DESTACADOS" }] : []),
               ]}
               value={tab}
               onChange={setTab}
