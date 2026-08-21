@@ -21,7 +21,6 @@ import { Route as PlusRouteImport } from './routes/plus'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SearchRouteImport } from './routes/search'
-import { Route as GamePostIdRouteImport } from './routes/game.$postId'
 import { Route as ProfileUserIdRouteImport } from './routes/profile.$userId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -84,11 +83,6 @@ const SearchRoute = SearchRouteImport.update({
   path: '/search',
   getParentRoute: () => rootRouteImport,
 } as any)
-const GamePostIdRoute = GamePostIdRouteImport.update({
-  id: '/game/$postId',
-  path: '/game/$postId',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ProfileUserIdRoute = ProfileUserIdRouteImport.update({
   id: '/$userId',
   path: '/$userId',
@@ -108,7 +102,6 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ProfileRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
-  '/game/$postId': typeof GamePostIdRoute
   '/profile/$userId': typeof ProfileUserIdRoute
 }
 export interface FileRoutesByTo {
@@ -124,7 +117,6 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
-  '/game/$postId': typeof GamePostIdRoute
   '/profile/$userId': typeof ProfileUserIdRoute
 }
 export interface FileRoutesById {
@@ -141,7 +133,6 @@ export interface FileRoutesById {
   '/profile': typeof ProfileRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
-  '/game/$postId': typeof GamePostIdRoute
   '/profile/$userId': typeof ProfileUserIdRoute
 }
 export interface FileRouteTypes {
@@ -159,7 +150,6 @@ export interface FileRouteTypes {
     | '/profile'
     | '/reset-password'
     | '/search'
-    | '/game/$postId'
     | '/profile/$userId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -175,7 +165,6 @@ export interface FileRouteTypes {
     | '/profile'
     | '/reset-password'
     | '/search'
-    | '/game/$postId'
     | '/profile/$userId'
   id:
     | '__root__'
@@ -191,7 +180,6 @@ export interface FileRouteTypes {
     | '/profile'
     | '/reset-password'
     | '/search'
-    | '/game/$postId'
     | '/profile/$userId'
   fileRoutesById: FileRoutesById
 }
@@ -208,7 +196,6 @@ export interface RootRouteChildren {
   ProfileRoute: typeof ProfileRouteWithChildren
   ResetPasswordRoute: typeof ResetPasswordRoute
   SearchRoute: typeof SearchRoute
-  GamePostIdRoute: typeof GamePostIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -297,13 +284,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SearchRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/game/$postId': {
-      id: '/game/$postId'
-      path: '/game/$postId'
-      fullPath: '/game/$postId'
-      preLoaderRoute: typeof GamePostIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/profile/$userId': {
       id: '/profile/$userId'
       path: '/$userId'
@@ -338,7 +318,6 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRouteWithChildren,
   ResetPasswordRoute: ResetPasswordRoute,
   SearchRoute: SearchRoute,
-  GamePostIdRoute: GamePostIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
