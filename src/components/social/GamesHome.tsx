@@ -437,10 +437,7 @@ function ForYouSection({ items, userGenres, activeGenre, onSelectGenre, onOpen, 
           <div className="font-display text-base leading-tight">Para ti</div>
           <div className="text-[11px] text-muted-foreground">{userGenres.length ? "Basado en tus géneros favoritos" : "Los más populares de la comunidad"}</div>
         </div>
-        <div className="flex items-center gap-1 px-2 py-1 rounded-full grad-brand">
-          <Zap size={11} className="text-white" fill="currentColor" />
-          <span className="text-[10px] font-display font-semibold text-white">IA</span>
-        </div>
+
       </div>
 
       {/* Genre filter chips */}
