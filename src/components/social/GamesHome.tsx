@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Play, Flame, Rocket, Heart, Sparkles as SparklesIcon, Users, ChevronRight, Gamepad2, Trophy, Joystick, Crown, CloudOff, Loader2, CheckCircle2, Star } from "lucide-react";
 import type { PostWithMeta } from "@/lib/social/api";
@@ -349,55 +349,113 @@ function Ranking24({ games, totalGames, onOpen }: {
 }
 
 function CuratedHeader({ games, onOpen }: { games: PostWithMeta[]; onOpen: (g: PostWithMeta) => void }) {
+  const [active, setActive] = useState(0);
+  const pausedRef = useRef(false);
+  const [paused, setPaused] = useState(false);
+  const len = games.length;
+
+  useEffect(() => {
+    if (len <= 1) return;
+    const id = setInterval(() => {
+      if (!pausedRef.current) setActive(i => (i + 1) % len);
+    }, 4000);
+    return () => clearInterval(id);
+  }, [len]);
+
+  if (!len) return null;
+
+  const g = games[active];
+  const title = (g.content.split("\n")[0] || "Juego").replace(/^🎮\s*/, "").trim() || "Juego";
+  const descLines = g.content.split("\n").slice(1).join(" ").trim();
+  const desc = descLines.length > 0 ? descLines.slice(0, 120) : "Un juego creado por la comunidad";
+
   return (
-    <section className="space-y-2.5">
+    <section className="space-y-3">
+      {/* Header label */}
       <div className="flex items-center gap-2 px-1">
-        <div className="w-6 h-6 rounded-lg bg-primary/10 border border-primary/20 grid place-items-center">
-          <Star size={12} className="text-primary" fill="currentColor" />
+        <div className="w-7 h-7 rounded-lg bg-primary/15 border border-primary/25 grid place-items-center">
+          <Star size={14} className="text-primary" fill="currentColor" />
         </div>
         <div>
           <div className="font-display text-[13px] font-bold leading-tight">Destacados por el equipo</div>
           <div className="text-[10px] text-muted-foreground">Selección curada por los moderadores</div>
         </div>
       </div>
-      <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-3 px-3 pb-1">
-        {games.map((g, i) => {
-          const title = (g.content.split("\n")[0] || "Juego").replace(/^🎮\s*/, "").trim() || "Juego";
-          return (
-            <button
-              key={g.id}
-              onClick={() => onOpen(g)}
-              className="shrink-0 w-[140px] sm:w-[160px] rounded-2xl overflow-hidden border border-border/50 bg-card hover:border-primary/40 hover:shadow-md active:scale-[0.97] transition-all duration-200 group"
-              style={{ animationDelay: `${i * 50}ms` }}
-            >
-              <div className="relative aspect-[4/3] w-full bg-gradient-to-br from-primary/5 to-primary/10 overflow-hidden">
-                {g.signed_cover ? (
-                  <img src={g.signed_cover} alt={title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                ) : (
-                  <div className="w-full h-full grid place-items-center">
-                    <Joystick size={32} className="text-primary/15" />
-                  </div>
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
-                <div className="absolute bottom-2 left-2 right-2">
-                  <div className="text-white text-[11px] font-display font-semibold leading-tight drop-shadow-md line-clamp-1">{title}</div>
-                  <div className="text-white/70 text-[9px] font-mono truncate">@{g.author?.username ?? "jugador"}</div>
-                </div>
+
+      {/* Featured card — single, full width */}
+      <button
+        key={g.id}
+        onClick={() => onOpen(g)}
+        onMouseEnter={() => { pausedRef.current = true; setPaused(true); }}
+        onMouseLeave={() => { pausedRef.current = false; setPaused(false); }}
+        onTouchStart={() => { pausedRef.current = true; setPaused(true); }}
+        onTouchEnd={() => { pausedRef.current = false; setPaused(false); }}
+        className="w-full rounded-2xl overflow-hidden border-2 border-primary/30 bg-card shadow-lg shadow-primary/5 active:scale-[0.98] transition-all duration-200 group"
+      >
+        <div className="flex gap-3 p-3">
+          {/* Square image — left side */}
+          <div className="relative w-[38%] aspect-square shrink-0 rounded-xl overflow-hidden border border-border/60 bg-muted/40">
+            {g.signed_cover ? (
+              <img src={g.signed_cover} alt={title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+            ) : (
+              <div className="w-full h-full grad-brand grid place-items-center">
+                <Joystick size={48} className="text-white/20" />
               </div>
-              <div className="flex items-center gap-2 px-2.5 py-2">
-                <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                  <Heart size={10} /> {g.likes}
-                </div>
-                {g.comments_count > 0 && (
-                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                    <Users size={10} /> {g.comments_count}
-                  </div>
-                )}
+            )}
+            {/* Subtle gradient overlay at bottom of image */}
+            <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-black/30 to-transparent pointer-events-none" />
+          </div>
+
+          {/* Text — right side */}
+          <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+            <div className="space-y-1">
+              <div className="font-display text-[15px] font-bold leading-tight line-clamp-1 group-hover:text-primary transition-colors">{title}</div>
+              <div className="text-[11px] font-mono text-muted-foreground truncate">@{g.author?.username ?? "jugador"}</div>
+              <div className="text-[12px] text-ink-2/70 leading-relaxed line-clamp-3">{desc}</div>
+            </div>
+            {/* Stats + action */}
+            <div className="flex items-center gap-3 mt-2">
+              <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                <Heart size={11} /> {g.likes}
               </div>
-            </button>
-          );
-        })}
-      </div>
+              {g.comments_count > 0 && (
+                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                  <Users size={11} /> {g.comments_count}
+                </div>
+              )}
+              <span className="ml-auto flex items-center gap-1.5 px-3 h-7 rounded-lg grad-brand text-primary-foreground text-[10px] font-display font-semibold tracking-widest">
+                <Play size={10} fill="currentColor" /> JUGAR
+              </span>
+            </div>
+          </div>
+        </div>
+      </button>
+
+      {/* Dots + progress bar */}
+      {len > 1 && (
+        <div className="flex items-center gap-2 px-1">
+          <div className="flex-1 flex items-center gap-1.5">
+            {games.map((gg, i) => (
+              <button
+                key={gg.id}
+                onClick={() => { setActive(i); pausedRef.current = true; setPaused(true); setTimeout(() => { pausedRef.current = false; setPaused(false); }, 3000); }}
+                className={`h-1.5 rounded-full transition-all duration-300 ${
+                  i === active
+                    ? "flex-[3] bg-primary"
+                    : "w-1.5 bg-border hover:bg-primary/40"
+                }`}
+              />
+            ))}
+          </div>
+          {/* Progress bar */}
+          <div className="w-8 h-1 rounded-full bg-border/60 overflow-hidden">
+            <div
+              className="h-full bg-primary/60 rounded-full transition-all duration-1000 ease-linear"
+              style={{ width: paused ? "100%" : "100%", animation: paused ? "none" : `shrink 4s linear infinite` }}
+            />
+          </div>
+        </div>
+      )}
     </section>
   );
 }
