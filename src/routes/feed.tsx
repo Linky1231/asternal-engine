@@ -7,7 +7,7 @@ import { PostComposer } from "@/components/social/PostComposer";
 import { PostCard } from "@/components/social/PostCard";
 import { GamePageSection } from "@/components/social/GamePageSection";
 import { NotificationBell } from "@/components/social/NotificationBell";
-import { Search, LogOut, Gamepad2, Palette, Sparkles, Inbox, X, SlidersHorizontal } from "lucide-react";
+import { Search, LogOut, Gamepad2, Palette, Sparkles, Loader2, Inbox, X } from "lucide-react";
 
 export const Route = createFileRoute("/feed")({
   head: () => ({ meta: [{ title: "Feed · Asternal" }] }),
@@ -74,7 +74,7 @@ function FeedPage() {
         <div className="max-w-2xl md:max-w-3xl lg:max-w-4xl mx-auto flex items-center gap-2 px-3 py-2.5">
           <Link to="/" aria-label="Volver al inicio"
             className="w-10 h-10 rounded-xl overflow-hidden ring-1 ring-line-strong shadow-sm active:scale-95 transition grid place-items-center bg-primary/10 shrink-0">
-            <span className="font-display text-base font-bold text-primary-foreground">A</span>
+            <span className="font-display text-base font-bold text-primary">A</span>
           </Link>
           <div className="flex-1 min-w-0">
             <div className="font-display text-sm font-semibold text-foreground leading-none tracking-wide">FEED</div>
@@ -108,11 +108,6 @@ function FeedPage() {
               {c.label}
             </button>
           ))}
-          <button onClick={() => setShowFilters(s => !s)}
-            className={`shrink-0 h-9 px-3 rounded-xl grid grid-flow-col auto-cols-max items-center gap-1.5 text-xs font-medium transition-[transform,color,background-color,border-color] duration-300 ease-out active:scale-[0.96] ${showFilters ? "bg-primary/10 text-primary-glow border border-primary/30" : "bg-card border border-border text-muted-foreground hover:text-primary-glow hover:border-primary/30"}`}>
-            <SlidersHorizontal size={13} />
-            Filtros
-          </button>
         </div>
 
         <AnimatePresence>
@@ -149,23 +144,9 @@ function FeedPage() {
         </motion.div>
 
         {loading ? (
-          <div className="space-y-3">
-            {[0, 1, 2].map(i => (
-              <div key={i} className="rounded-lg border border-border/70 bg-surface p-3 space-y-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-10 h-10 rounded-full anim-shimmer" />
-                  <div className="flex-1 space-y-1.5">
-                    <div className="h-3 w-1/3 rounded-full anim-shimmer" />
-                    <div className="h-2.5 w-1/4 rounded-full anim-shimmer" />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <div className="h-3 w-full rounded-full anim-shimmer" />
-                  <div className="h-3 w-2/3 rounded-full anim-shimmer" />
-                </div>
-                <div className="h-48 rounded-xl anim-shimmer" />
-              </div>
-            ))}
+          <div className="flex flex-col items-center justify-center py-16 gap-2.5">
+            <Loader2 size={22} className="animate-spin text-primary/70" />
+            <span className="text-xs text-muted-foreground">Cargando publicaciones…</span>
           </div>
         ) : posts.length === 0 ? (
           <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }}

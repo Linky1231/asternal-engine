@@ -317,7 +317,7 @@ export function ProfilePanel({
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
       {/* Header card with banner */}
-      <section className="rounded-lg border border-border/70 bg-surface overflow-hidden">
+      <section className="rounded-2xl border border-border/70 bg-surface overflow-hidden">
         <div className="relative h-28 grad-brand-soft">
           {bannerPreview && <img src={bannerPreview} alt="banner" className="absolute inset-0 w-full h-full object-cover" />}
           {viewingOwn && editing && (
@@ -602,7 +602,7 @@ export function ProfilePanel({
       {viewingOwn && (
         <Link
           to="/plus"
-          className="block relative overflow-hidden rounded-lg border p-4 active:scale-[0.99] transition"
+          className="block relative overflow-hidden rounded-2xl border p-4 active:scale-[0.99] transition"
           style={{
             borderColor: "color-mix(in oklab, var(--plus) 40%, transparent)",
             background: "linear-gradient(135deg, color-mix(in oklab, var(--plus) 15%, transparent), transparent)",
@@ -948,7 +948,7 @@ function TrustPointsPanel({ userId, trustPoints, isMod, viewingOwn, onClose, onT
       <div className="relative w-full sm:max-w-md rounded-t-2xl sm:rounded-lg border border-border bg-surface shadow-md animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-2 duration-300 max-h-[85vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-border/60">
-          <div className="w-9 h-9 rounded-lg grid place-items-center shrink-0" style={{ background: "var(--gradient)" }}>
+          <div className="w-9 h-9 rounded-lg grid place-items-center shrink-0 grad-brand">
             <Shield size={16} className="text-white" />
           </div>
           <div className="flex-1">
