@@ -110,7 +110,11 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
   });
   const togglePanel = (id: string) => setPanels(prev => {
     const next = new Set(prev);
-    if (next.has(id)) next.delete(id); else next.add(id);
+    if (next.has(id)) {
+      next.delete(id);
+    } else if (next.size < 3) {
+      next.add(id);
+    }
     return next;
   });
   const [busy, setBusy] = useState(false);
@@ -476,6 +480,13 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
           <Chip active={panels.has("type")} onClick={() => togglePanel("type")} title="Tipo"><Share2 size={15} />{expanded && <span>Tipo</span>}{postTypes.length > 0 && <span className="ml-0.5 px-1 py-0 rounded text-[8px] font-mono font-bold bg-white/20">{postTypes.length}</span>}</Chip>
           <Chip active={panels.has("tags")} onClick={() => togglePanel("tags")} title="Etiquetas"><Tag size={15} />{expanded && <span>Etiquetas</span>}</Chip>
         </div>
+
+        {panels.size > 0 && (
+          <div className="flex items-center gap-2 px-1">
+            <span className="text-[9px] font-mono text-muted-foreground/50">{panels.size}/3 funciones activas</span>
+            {panels.size >= 3 && <span className="text-[9px] font-mono text-amber-500/70">· límite alcanzado</span>}
+          </div>
+        )}
 
         <div className="flex items-center justify-end gap-2 pt-1 border-t border-border/40">
           <span className="text-[8px] font-mono text-muted-foreground/30 mr-auto" title="marcador compositor">ast-composer-v2</span>
