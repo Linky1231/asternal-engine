@@ -1,4 +1,5 @@
 import { memo, useState } from "react";
+import { toast } from "sonner";
 import { Avatar } from "./Avatar";
 import { Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
@@ -43,7 +44,7 @@ export const PostCard = memo(function PostCard({
 
   const react = async (type: "like" | "favorite") => { await toggleReaction({ postId: post.id, type }); onChange(); };
   const repost = async () => { await toggleRepost(post.id); onChange(); };
-  const remove = async () => { if (!confirm("¿Borrar publicación?")) return; await deletePost(post.id); onChange(); };
+  const remove = async () => { if (!confirm("¿Borrar publicación?")) return; try { await deletePost(post.id); toast.success("Publicación eliminada"); onChange(); } catch (e) { toast.error(e instanceof Error ? e.message : "Error al borrar"); } };
   const saveEdit = async () => { await updatePost(post.id, { content: editContent }); setEditing(false); onChange(); };
   const report = async () => {
     const reason = prompt("Motivo del reporte:");
