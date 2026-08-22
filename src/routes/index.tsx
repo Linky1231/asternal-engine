@@ -18,6 +18,7 @@ import OrionPanel from "@/components/ai/OrionPanel";
 import { ForumSection } from "@/components/social/ForumSection";
 import { StoreSection } from "@/components/social/StoreSection";
 import { EventsSection } from "@/components/social/EventsSection";
+import { GamePageSection } from "@/components/social/GamePageSection";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -106,6 +107,7 @@ function HomePage() {
   const [chatShareText, setChatShareText] = useState<string | null>(null);
   const [chatShareView, setChatShareView] = useState<"group" | "dms" | "groups" | undefined>(undefined);
   const [eventsOpen, setEventsOpen] = useState(false);
+  const [gamePageId, setGamePageId] = useState<string | null>(null);
   const [inPreview, setInPreview] = useState(false);
 
   // When the app runs embedded in the Freebuff preview (inside an iframe), the
@@ -360,7 +362,7 @@ function HomePage() {
                               <div className="space-y-3">
                                 {gamesPosts.slice(0, 3).map((p, i) => (
                                   <div key={p.id} className="card-enter" style={{ animationDelay: `${i * 30}ms` }}>
-                                    <PostCard post={p} myId={myId} isMod={mod} onChange={onFeedChange} />
+                                    <PostCard post={p} myId={myId} isMod={mod} onChange={onFeedChange} onOpenGame={(id) => setGamePageId(id)} />
                                   </div>
                                 ))}
                               </div>
@@ -374,7 +376,7 @@ function HomePage() {
                               <div className="space-y-3">
                                 {tutorials.slice(0, 3).map((p, i) => (
                                   <div key={p.id} className="card-enter" style={{ animationDelay: `${i * 30}ms` }}>
-                                    <PostCard post={p} myId={myId} isMod={mod} onChange={onFeedChange} />
+                                    <PostCard post={p} myId={myId} isMod={mod} onChange={onFeedChange} onOpenGame={(id) => setGamePageId(id)} />
                                   </div>
                                 ))}
                               </div>
@@ -387,7 +389,7 @@ function HomePage() {
                             <div className="space-y-3">
                               {filtered.slice(0, 8).map((p, i) => (
                                 <div key={p.id} className="card-enter" style={{ animationDelay: `${i * 25}ms` }}>
-                                  <PostCard post={p} myId={myId} isMod={mod} onChange={onFeedChange} />
+                                  <PostCard post={p} myId={myId} isMod={mod} onChange={onFeedChange} onOpenGame={(id) => setGamePageId(id)} />
                                 </div>
                               ))}
                             </div>
@@ -398,7 +400,7 @@ function HomePage() {
 
                     return filtered.map((p, i) => (
                       <div key={p.id} className="card-enter mb-3 last:mb-0" style={{ animationDelay: `${Math.min(i * 25, 180)}ms` }}>
-                        <PostCard post={p} myId={myId} isMod={mod} onChange={onFeedChange} />
+                        <PostCard post={p} myId={myId} isMod={mod} onChange={onFeedChange} onOpenGame={(id) => setGamePageId(id)} />
                       </div>
                     ));
                   })()}
@@ -560,6 +562,16 @@ function HomePage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Full-screen game page */}
+      {gamePageId && (
+        <GamePageSection
+          gameId={gamePageId}
+          myId={myId}
+          isMod={mod}
+          onClose={() => setGamePageId(null)}
+        />
+      )}
 
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 inset-x-0 z-30 bg-background/95 backdrop-blur-md border-t border-border/70 safe-area-bottom">

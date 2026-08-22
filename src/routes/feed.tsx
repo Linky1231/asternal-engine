@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { fetchFeed, getMyProfile, isMod, type PostWithMeta, type Profile } from "@/lib/social/api";
 import { PostComposer } from "@/components/social/PostComposer";
 import { PostCard } from "@/components/social/PostCard";
+import { GamePageSection } from "@/components/social/GamePageSection";
 import { NotificationBell } from "@/components/social/NotificationBell";
 import { Search, LogOut, Gamepad2, Palette, Sparkles, Inbox, X, SlidersHorizontal } from "lucide-react";
 
@@ -32,6 +33,7 @@ function FeedPage() {
   const [tag, setTag] = useState("");
   const [category, setCategory] = useState<FilterCat>("all");
   const [showFilters, setShowFilters] = useState(false);
+  const [gamePageId, setGamePageId] = useState<string | null>(null);
 
   // Categorías estáticas (sin píldora deslizante, sin refs ni medición): el
   // activo se pinta con el degradado por clases condicionales. Cero trabajo de
@@ -66,6 +68,7 @@ function FeedPage() {
   };
 
   return (
+    <>
     <div className="min-h-screen w-full flex flex-col bg-background">
       <header className="app-header sticky top-0 z-20 bg-background border-b border-border/70">
         <div className="max-w-2xl md:max-w-3xl lg:max-w-4xl mx-auto flex items-center gap-2 px-3 py-2.5">
@@ -182,12 +185,23 @@ function FeedPage() {
           <>
             {posts.map((p, i) => (
               <div key={p.id} className="card-enter" style={{ animationDelay: `${Math.min(i * 25, 180)}ms` }}>
-                <PostCard post={p} myId={myId} isMod={mod} onChange={() => reload(false)} />
+                <PostCard post={p} myId={myId} isMod={mod} onChange={() => reload(false)} onOpenGame={(id) => setGamePageId(id)} />
               </div>
             ))}
           </>
         )}
       </main>
     </div>
+
+      {/* Full-screen game page */}
+      {gamePageId && (
+        <GamePageSection
+          gameId={gamePageId}
+          myId={myId}
+          isMod={mod}
+          onClose={() => setGamePageId(null)}
+        />
+      )}
+    </>
   );
 }
