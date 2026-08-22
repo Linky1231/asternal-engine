@@ -203,18 +203,32 @@ export function GameCard({
 
   return (
     <article className="panel rounded-2xl overflow-hidden border border-border/50 shadow-sm">
+      {squareCover ? (
+        /* Modo página aislada: portada limpia, sin elementos encima del arte */
+        <div className="relative aspect-square bg-muted/30">
+          {post.signed_cover ? (
+            <img src={post.signed_cover} alt={title} className="absolute inset-0 w-full h-full object-contain" />
+          ) : (
+            <div className="absolute inset-0 grid place-items-center" style={{ background: "var(--gradient-asternal-soft)" }}>
+              <Gamepad2 size={72} className="text-primary/25" />
+            </div>
+          )}
+          {price > 0 && !owned && (
+            <div className="absolute top-2 right-2 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/95 shadow-md backdrop-blur border border-primary/20">
+              <Sparkles size={12} className="text-primary" fill="currentColor" />
+              <span className="text-[11px] font-display font-semibold tracking-wide">{price}</span>
+            </div>
+          )}
+        </div>
+      ) : (
       <div
         onClick={play}
-        className={`relative grid place-items-center cursor-pointer active:scale-[0.99] transition overflow-hidden ${squareCover ? "aspect-square" : "aspect-[16/10]"}`}
+        className="relative aspect-[16/10] grid place-items-center cursor-pointer active:scale-[0.99] transition overflow-hidden"
         style={post.signed_cover ? undefined : { background: "var(--gradient-asternal-soft)" }}
       >
         {post.signed_cover ? (
           <>
-            <img
-              src={post.signed_cover}
-              alt={title}
-              className={`absolute inset-0 w-full h-full ${squareCover ? "object-contain bg-muted/30" : "object-cover"}`}
-            />
+            <img src={post.signed_cover} alt={title} className="absolute inset-0 w-full h-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
           </>
         ) : null}
@@ -265,6 +279,31 @@ export function GameCard({
           <span className="text-[9px] font-display tracking-widest px-2 py-0.5 rounded-full bg-primary/20 text-primary-glow border border-primary/40">JUEGO</span>
         </div>
       </div>
+      )}
+
+      {/* Botón principal — estilo tienda, solo en página aislada */}
+      {squareCover && (
+        <div className="px-3 pt-3">
+          <button
+            type="button"
+            onClick={play}
+            disabled={loading}
+            className="w-full h-12 rounded-2xl grad-brand text-primary-foreground font-display tracking-[0.2em] text-sm shadow-md flex items-center justify-center gap-2 disabled:opacity-60 active:scale-[0.98] transition-transform duration-200"
+          >
+            {loading ? (
+              <Loader2 size={18} className="animate-spin" />
+            ) : needsPurchase ? (
+              <>
+                <Lock size={16} /> COMPRAR Y JUGAR
+              </>
+            ) : (
+              <>
+                <Play size={18} fill="currentColor" /> JUGAR
+              </>
+            )}
+          </button>
+        </div>
+      )}
 
       {/* Galería de capturas */}
       {post.signed_screenshots.length > 0 && (
