@@ -27,9 +27,9 @@ function extractTitle(content: string): { title: string; body: string } {
 }
 
 export function GameCard({
-  post, myId, isMod, onChange,
+  post, myId, isMod, onChange, squareCover,
 }: {
-  post: PostWithMeta; myId: string | null; isMod: boolean; onChange: () => void;
+  post: PostWithMeta; myId: string | null; isMod: boolean; onChange: () => void; squareCover?: boolean;
 }) {
   const navigate = useNavigate();
   const [playing, setPlaying] = useState<Scene | null>(null);
@@ -205,12 +205,16 @@ export function GameCard({
     <article className="panel rounded-2xl overflow-hidden border border-border/50 shadow-sm">
       <div
         onClick={play}
-        className="relative aspect-[16/10] grid place-items-center cursor-pointer active:scale-[0.99] transition overflow-hidden"
+        className={`relative grid place-items-center cursor-pointer active:scale-[0.99] transition overflow-hidden ${squareCover ? "aspect-square" : "aspect-[16/10]"}`}
         style={post.signed_cover ? undefined : { background: "var(--gradient-asternal-soft)" }}
       >
         {post.signed_cover ? (
           <>
-            <img src={post.signed_cover} alt={title} className="absolute inset-0 w-full h-full object-cover" />
+            <img
+              src={post.signed_cover}
+              alt={title}
+              className={`absolute inset-0 w-full h-full ${squareCover ? "object-contain bg-muted/30" : "object-cover"}`}
+            />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
           </>
         ) : null}

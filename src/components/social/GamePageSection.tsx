@@ -147,6 +147,7 @@ export function GamePageSection({
                   post={game}
                   myId={myId}
                   isMod={isMod}
+                  squareCover
                   onChange={() => { /* refresh not critical */ }}
                 />
               </div>
