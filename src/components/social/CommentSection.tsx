@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { addComment, deleteComment, fetchComments, toggleReaction, reportContent, type CommentRow } from "@/lib/social/api";
 import { Avatar } from "./Avatar";
 
@@ -7,29 +8,43 @@ export function CommentSection({ postId, myId, isMod, onChange }: {
 }) {
   const [rows, setRows] = useState<CommentRow[]>([]);
   const [content, setContent] = useState("");
+  const [sending, setSending] = useState(false);
 
   const reload = async () => setRows(await fetchComments(postId));
   useEffect(() => { reload(); }, [postId]);
 
   const send = async (parentId?: string, text?: string) => {
     const v = (text ?? content).trim();
-    if (!v) return;
-    await addComment(postId, v, parentId);
-    if (!parentId) setContent("");
-    await reload();
-    onChange();
+    if (!v || sending) return;
+    setSending(true);
+    try {
+      await addComment(postId, v, parentId);
+      if (!parentId) setContent("");
+      await reload();
+      onChange();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Error al comentar");
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
-    <div className="pt-2 border-t border-border/40 space-y-2">
-      <div className="flex gap-1">
+    <div className="space-y-3">
+      {/* Compose */}
+      <div className="flex gap-2">
         <input value={content} onChange={e => setContent(e.target.value)}
-          onKeyDown={e => { if (e.key === "Enter") send(); }}
+          onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
           placeholder="Escribe un comentario…"
-          className="flex-1 bg-input/40 rounded px-2 py-1.5 text-xs" />
-        <button onClick={() => send()} className="text-[10px] font-display px-2 rounded bg-primary text-primary-foreground">ENVIAR</button>
+          className="flex-1 bg-input/40 rounded-xl px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-primary/40 transition-shadow" />
+        <button type="button" onClick={() => send()}
+          disabled={!content.trim() || sending}
+          className="text-[10px] font-semibold px-3 py-1.5 rounded-xl bg-primary text-primary-foreground active:scale-[0.96] transition-all duration-200 disabled:opacity-40 shrink-0">
+          {sending ? "…" : "Enviar"}
+        </button>
       </div>
-      <ul className="space-y-1.5">
+      {/* List */}
+      <ul className="space-y-2">
         {rows.map(c => (
           <CommentItem key={c.id} c={c} myId={myId} isMod={isMod} onReply={(t) => send(c.id, t)} onChanged={reload} />
         ))}
@@ -52,43 +67,76 @@ function CommentItem({ c, myId, isMod, onReply, onChanged }: {
     await toggleReaction({ commentId: c.id, type: "like" });
     onChanged();
   };
-  const del = async () => {
-    if (!confirm("¿Borrar comentario?")) return;
-    await deleteComment(c.id); onChanged();
+  const del = () => {
+    toast("¿Borrar comentario?", {
+      description: "Se eliminará este comentario.",
+      action: {
+        label: "Borrar",
+        onClick: async () => {
+          try {
+            await deleteComment(c.id);
+            toast.success("Comentario borrado");
+            onChanged();
+          } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Error");
+          }
+        },
+      },
+    });
   };
-  const report = async () => {
-    const r = prompt("Motivo:"); if (!r) return;
-    await reportContent({ commentId: c.id, reason: r });
-    alert("Reportado");
+  const report = () => {
+    toast("Reportar comentario", {
+      description: "Señalará este comentario a los moderadores.",
+      action: {
+        label: "Reportar",
+        onClick: async () => {
+          try {
+            await reportContent({ commentId: c.id, reason: "Reporte desde el feed" });
+            toast.success("Reporte enviado");
+          } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Error");
+          }
+        },
+      },
+    });
   };
 
   return (
-    <li className="text-xs">
-      <div className="flex gap-1.5">
-        <Avatar p={c.author} size={24} />
+    <li className="text-xs group/comment">
+      <div className="flex gap-2">
+        <Avatar p={c.author} size={24} className="mt-0.5 shrink-0" />
         <div className="flex-1 min-w-0">
-          <div className="bg-muted/20 rounded-md px-2 py-1.5">
-            <div className="text-[10px] font-mono text-muted-foreground">@{c.author?.username ?? "?"}</div>
-            <div className="break-words">{isDeleted ? <em className="text-muted-foreground">[borrado]</em> : c.content}</div>
+          <div className="bg-muted/25 rounded-xl px-2.5 py-1.5">
+            <div className="text-[10px] font-semibold text-foreground/80 mb-0.5">@{c.author?.username ?? "?"}</div>
+            <div className="text-foreground/70 break-words leading-relaxed">{isDeleted ? <em className="text-muted-foreground/60">[borrado]</em> : c.content}</div>
           </div>
           {!isDeleted && (
-            <div className="flex gap-2 text-[10px] text-muted-foreground mt-0.5 px-1">
-              <button onClick={like} className={c.my_like ? "text-primary-glow" : ""}>♥ {c.likes ?? 0}</button>
-              <button onClick={() => setReplyOpen(o => !o)}>Responder</button>
-              {canDel && <button onClick={del} className="text-destructive">Borrar</button>}
-              {!mine && <button onClick={report}>Reportar</button>}
+            <div className="flex gap-3 text-[10px] text-muted-foreground/60 mt-1 px-1">
+              <button type="button" onClick={like}
+                className={`transition-colors ${c.my_like ? "text-primary font-semibold" : "hover:text-primary"}`}>
+                ♥ {c.likes ?? 0}
+              </button>
+              <button type="button" onClick={() => setReplyOpen(o => !o)}
+                className="hover:text-foreground transition-colors">Responder</button>
+              {canDel && <button type="button" onClick={del} className="hover:text-destructive transition-colors">Borrar</button>}
+              {!mine && <button type="button" onClick={report} className="hover:text-foreground transition-colors">Reportar</button>}
             </div>
           )}
           {replyOpen && (
-            <div className="flex gap-1 mt-1">
-              <input value={reply} onChange={e => setReply(e.target.value)} placeholder="Responder…"
-                className="flex-1 bg-input/40 rounded px-2 py-1 text-xs" />
-              <button onClick={() => { onReply(reply); setReply(""); setReplyOpen(false); }}
-                className="text-[10px] px-2 rounded bg-primary text-primary-foreground">OK</button>
+            <div className="flex gap-2 mt-2">
+              <input value={reply} onChange={e => setReply(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") { onReply(reply); setReply(""); setReplyOpen(false); } }}
+                placeholder="Responder…"
+                className="flex-1 bg-input/40 rounded-xl px-2.5 py-1.5 text-xs outline-none focus:ring-1 focus:ring-primary/40" />
+              <button type="button" onClick={() => { onReply(reply); setReply(""); setReplyOpen(false); }}
+                disabled={!reply.trim()}
+                className="text-[10px] font-semibold px-2.5 py-1 rounded-xl bg-primary text-primary-foreground active:scale-[0.96] transition disabled:opacity-40">
+                OK
+              </button>
             </div>
           )}
           {c.replies && c.replies.length > 0 && (
-            <ul className="mt-1.5 pl-2 border-l border-border/40 space-y-1.5">
+            <ul className="mt-2 pl-2 border-l-2 border-border/30 space-y-2">
               {c.replies.map(r => (
                 <CommentItem key={r.id} c={r} myId={myId} isMod={isMod} onReply={onReply} onChanged={onChanged} />
               ))}

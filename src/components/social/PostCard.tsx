@@ -147,7 +147,7 @@ export const PostCard = memo(function PostCard({
               @{author?.username ?? "?"} · <span className="text-primary font-medium">{timeAgo(post.created_at)}</span>
             </div>
           </Link>
-          <button ref={menu.anchorRef} onClick={menu.toggle}
+          <button type="button" ref={menu.anchorRef} onClick={menu.toggle}
             className="w-8 h-8 rounded-lg border border-border text-primary-glow grid place-items-center transition-[transform,background-color,color] duration-150 ease-out pointer-fine:hover:bg-primary/10 pointer-fine:hover:text-primary active:scale-[0.94]"
             aria-label="Menú de la publicación">
             <MoreHorizontal size={15} />
@@ -167,9 +167,9 @@ export const PostCard = memo(function PostCard({
             <textarea value={editContent} onChange={e => setEditContent(e.target.value)} rows={3}
               className="w-full bg-input/40 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary/40" />
             <div className="flex gap-2 justify-end">
-              <button onClick={() => setEditing(false)}
+              <button type="button" onClick={() => setEditing(false)}
                 className="text-xs px-3.5 py-1.5 rounded-xl border border-border hover:bg-muted/40 transition-colors duration-200">Cancelar</button>
-              <button onClick={saveEdit}
+              <button type="button" onClick={saveEdit}
                 className="text-xs px-3.5 py-1.5 rounded-xl bg-primary text-white active:scale-[0.96] transition-transform duration-300 ease-out">Guardar</button>
             </div>
           </div>
@@ -215,7 +215,7 @@ export const PostCard = memo(function PostCard({
         {/* HTML embebido */}
         {post.html_content && (
           <div className="border border-border rounded-xl overflow-hidden">
-            <button onClick={() => setShowHtml(s => !s)}
+            <button type="button" onClick={() => setShowHtml(s => !s)}
               className="w-full flex items-center gap-2 px-3 py-2.5 text-xs bg-muted/30 pointer-fine:hover:bg-muted/50 transition-colors duration-300">
               <Code2 size={13} className="text-primary" />
               <span className="flex-1 text-left font-medium">Contenido HTML {showHtml ? "(ocultar)" : "(mostrar)"}</span>
@@ -301,8 +301,8 @@ export const PostCard = memo(function PostCard({
         )}
       </div>
 
-      <footer className="flex items-center border-t border-border/50 bg-muted/15 px-2 py-1 text-[11px] text-muted-foreground">
-        <button onClick={() => react("like")}
+      <footer className="flex items-center border-t border-border/50 bg-muted/15 px-1 py-0.5 text-[11px] text-muted-foreground">
+        <button type="button" onClick={() => react("like")}
           className={`flex-1 flex items-center justify-center gap-1.5 px-1 py-2 rounded-lg transition-[transform,color,background-color] duration-150 ease-out active:scale-[0.93] ${post.my_like ? "text-rose-500" : "pointer-fine:hover:bg-rose-500/10 pointer-fine:hover:text-rose-500"}`}>
           <motion.span
             key={post.my_like ? "liked" : "unliked"}
@@ -315,7 +315,7 @@ export const PostCard = memo(function PostCard({
           </motion.span>
           <span className="tabular-nums font-medium">{post.likes}</span>
         </button>
-        <button onClick={() => react("favorite")}
+        <button type="button" onClick={() => react("favorite")}
           className={`flex-1 flex items-center justify-center gap-1.5 px-1 py-2 rounded-lg transition-[transform,color,background-color] duration-150 ease-out active:scale-[0.93] ${post.my_favorite ? "text-amber-500" : "pointer-fine:hover:bg-amber-500/10 pointer-fine:hover:text-amber-500"}`}>
           <motion.span
             key={post.my_favorite ? "favd" : "unfavd"}
@@ -328,12 +328,12 @@ export const PostCard = memo(function PostCard({
           </motion.span>
           <span className="tabular-nums font-medium">{post.favorites}</span>
         </button>
-        <button onClick={() => setOpenComments(o => !o)}
+        <button type="button" onClick={() => setOpenComments(o => !o)}
           className={`flex-1 flex items-center justify-center gap-1.5 px-1 py-2 rounded-lg transition-[transform,color,background-color] duration-150 ease-out active:scale-[0.93] ${openComments ? "text-primary-glow bg-primary/10" : "pointer-fine:hover:bg-primary/10 pointer-fine:hover:text-primary-glow"}`}>
           <MessageCircle size={15} className={openComments ? "fill-primary/20" : ""} />
           <span className="tabular-nums font-medium">{post.comments_count}</span>
         </button>
-        <button onClick={repost}
+        <button type="button" onClick={repost}
           className={`flex-1 flex items-center justify-center gap-1.5 px-1 py-2 rounded-lg transition-[transform,color,background-color] duration-150 ease-out active:scale-[0.93] ${post.my_repost ? "text-emerald-600" : "pointer-fine:hover:bg-emerald-500/10 pointer-fine:hover:text-emerald-600"}`}>
           <motion.span
             key={post.my_repost ? "reposted" : "unreposted"}

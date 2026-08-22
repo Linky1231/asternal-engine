@@ -140,7 +140,7 @@ function FeedPage() {
         </AnimatePresence>
       </div>
 
-      <main className="flex-1 p-3 space-y-3 max-w-2xl md:max-w-3xl lg:max-w-4xl mx-auto w-full pb-[env(safe-area-inset-bottom)]">
+      <main className="flex-1 p-3 space-y-3 max-w-2xl md:max-w-3xl lg:max-w-4xl mx-auto w-full pb-8 sm:pb-6">
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}>
           <PostComposer onCreated={reload} />
         </motion.div>

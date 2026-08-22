@@ -68,7 +68,8 @@ export function CardMenu({
 
   // Nunca se sale de la ventana (bordes derecho e inferior).
   const left = Math.max(8, Math.min(rect.left - width + 14, window.innerWidth - width - 8));
-  const top = rect.top;
+  const maxTop = Math.max(8, window.innerHeight - 280);
+  const top = Math.min(rect.top, maxTop);
 
   return createPortal(
     <>

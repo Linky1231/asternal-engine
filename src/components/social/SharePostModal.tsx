@@ -142,8 +142,8 @@ export function SharePostModal({
             exit={{ y: 60, opacity: 0 }}
             transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
             onClick={(e) => e.stopPropagation()}
-            className="absolute bottom-0 left-0 right-0 sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-md bg-background border border-border/70 rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden"
-            style={{ maxHeight: "min(80vh, 80dvh)" }}
+            className="absolute bottom-0 left-0 right-0 sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-md bg-background border border-border/70 rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col"
+            style={{ maxHeight: "min(85vh, 85dvh)" }}
           >
             {/* Header */}
             <div className="flex items-center gap-3 px-4 py-3 border-b border-border/50">
