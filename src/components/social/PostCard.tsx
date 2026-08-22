@@ -29,6 +29,7 @@ export const PostCard = memo(function PostCard({
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState(post.content);
   const [showHtml, setShowHtml] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const menu = useCardMenuAnchor<HTMLButtonElement>();
 
   const mine = myId === post.author_id;
@@ -44,7 +45,26 @@ export const PostCard = memo(function PostCard({
 
   const react = async (type: "like" | "favorite") => { await toggleReaction({ postId: post.id, type }); onChange(); };
   const repost = async () => { await toggleRepost(post.id); onChange(); };
-  const remove = async () => { if (!confirm("¿Borrar publicación?")) return; try { await deletePost(post.id); toast.success("Publicación eliminada"); onChange(); } catch (e) { toast.error(e instanceof Error ? e.message : "Error al borrar"); } };
+  const remove = () => {
+    toast("¿Eliminar publicación?", {
+      description: "Esta acción no se puede deshacer.",
+      action: {
+        label: "Eliminar",
+        onClick: async () => {
+          setDeleting(true);
+          try {
+            await deletePost(post.id);
+            toast.success("Publicación eliminada");
+            onChange();
+          } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Error al borrar");
+          } finally {
+            setDeleting(false);
+          }
+        },
+      },
+    });
+  };
   const saveEdit = async () => { await updatePost(post.id, { content: editContent }); setEditing(false); onChange(); };
   const report = async () => {
     const reason = prompt("Motivo del reporte:");
@@ -327,9 +347,9 @@ export const PostCard = memo(function PostCard({
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-medium text-muted-foreground hover:text-primary hover:bg-primary/10 transition-[color,background-color] duration-200">
             <Pencil size={11} /> Editar
           </button>
-          <button onClick={remove}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-[color,background-color] duration-200">
-            <Trash2 size={11} /> Eliminar
+          <button onClick={remove} disabled={deleting}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-[color,background-color] duration-200 disabled:opacity-40">
+            <Trash2 size={11} /> {deleting ? "Borrando…" : "Eliminar"}
           </button>
         </div>
       )}
