@@ -31,6 +31,8 @@ export function GamePageSection({
   const [error, setError] = useState<string | null>(null);
   const [myBalance, setMyBalance] = useState(0);
   const [donating, setDonating] = useState(false);
+  // Refresco: los likes/comentarios dentro del juego vuelven a cargar el post.
+  const [refresh, setRefresh] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -58,7 +60,7 @@ export function GamePageSection({
       }
     })();
     return () => { cancelled = true; };
-  }, [gameId]);
+  }, [gameId, refresh]);
 
   const handleDonate = useCallback(async (amount: number) => {
     if (!game || donating) return;
@@ -78,6 +80,7 @@ export function GamePageSection({
         toast.success(`¡${amount} orbes donados!`, {
           description: `A @${game.author?.username || "el autor"}`,
         });
+        setRefresh(r => r + 1);
       } else {
         toast.error(result.error || "Error al donar");
       }
@@ -87,6 +90,26 @@ export function GamePageSection({
       setDonating(false);
     }
   }, [game, myBalance, myId, donating]);
+
+  /** Pide confirmación antes de donar (evita donaciones accidentales). */
+  const askDonate = useCallback((amount: number) => {
+    if (!game || donating) return;
+    if (myId === game.author_id) {
+      toast.error("No puedes donar a tu propio juego");
+      return;
+    }
+    if (amount > myBalance) {
+      toast.error("No tienes suficientes orbes");
+      return;
+    }
+    toast(`¿Donar ${amount} orbes?`, {
+      description: `Irán a @${game.author?.username || "el autor"}. Esta acción no se puede deshacer.`,
+      action: {
+        label: "Donar",
+        onClick: () => void handleDonate(amount),
+      },
+    });
+  }, [handleDonate, game, donating, myBalance, myId]);
 
   const isOwnGame = myId === game?.author_id;
   const title = game ? extractTitle(game.content) : "";
@@ -148,7 +171,7 @@ export function GamePageSection({
                   myId={myId}
                   isMod={isMod}
                   squareCover
-                  onChange={() => { /* refresh not critical */ }}
+                  onChange={() => setRefresh(r => r + 1)}
                 />
               </div>
 
@@ -182,7 +205,7 @@ export function GamePageSection({
                           key={amt}
                           type="button"
                           disabled={disabled}
-                          onClick={() => handleDonate(amt)}
+                          onClick={() => askDonate(amt)}
                           className={`h-10 rounded-xl text-xs font-display font-semibold border transition active:scale-95 disabled:opacity-40 disabled:active:scale-100 ${
                             amt <= myBalance
                               ? "border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 hover:border-primary/50"
@@ -199,7 +222,7 @@ export function GamePageSection({
                   <CustomDonateButton
                     maxAmount={myBalance}
                     donating={donating}
-                    onDonate={handleDonate}
+                    onDonate={askDonate}
                   />
                 </div>
               )}

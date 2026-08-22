@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { toast } from "sonner";
 import { Avatar } from "./Avatar";
 import { Play, Heart, MessageCircle, Share2, Trash2, MoreHorizontal, Pencil, GitFork, Loader2, Sparkles, Lock, X, CheckCircle2, AlertTriangle, ChevronLeft, ChevronRight, Gamepad2, Flag } from "lucide-react";
 import { useNavigate, Link } from "@tanstack/react-router";
@@ -151,20 +152,52 @@ export function GameCard({
     }
   };
 
-  const like = async () => { await toggleReaction({ postId: post.id, type: "like" }); onChange(); };
-  const remove = async () => {
-    if (!confirm("¿Borrar juego publicado?")) return;
-    await deletePost(post.id); onChange();
+  const like = async () => {
+    try {
+      await toggleReaction({ postId: post.id, type: "like" });
+      onChange();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "No se pudo dar Me gusta");
+    }
+  };
+  const remove = () => {
+    toast("¿Borrar juego publicado?", {
+      description: "Esta acción no se puede deshacer.",
+      action: {
+        label: "Borrar",
+        onClick: async () => {
+          try {
+            await deletePost(post.id);
+            toast.success("Juego eliminado");
+            onChange();
+          } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Error al borrar");
+          }
+        },
+      },
+    });
   };
   const share = async () => {
     const url = window.location.origin + "/?g=" + post.id;
     try { await navigator.share({ url, title, text: body.slice(0, 80) }); }
     catch { await navigator.clipboard.writeText(url); }
   };
-  const report = async () => {
-    const reason = prompt("Motivo:"); if (!reason) return;
-    await reportContent({ postId: post.id, reason });
+  const report = () => {
     menu.close();
+    toast("Reportar juego", {
+      description: "Señalará este juego a los moderadores.",
+      action: {
+        label: "Reportar",
+        onClick: async () => {
+          try {
+            await reportContent({ postId: post.id, reason: "Reporte desde juegos" });
+            toast.success("Reporte enviado");
+          } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Error al reportar");
+          }
+        },
+      },
+    });
   };
   const doRemix = async () => {
     if (!canRemix) { setErr("El autor no permite remixes"); return; }
