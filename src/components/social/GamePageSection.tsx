@@ -141,54 +141,15 @@ export function GamePageSection({
           )}
           {game && (
             <>
-              {/* Cover image — rounded square, not cropped */}
-              <div className="relative w-full aspect-square max-w-sm mx-auto rounded-2xl overflow-hidden border border-border/40 bg-surface shadow-lg">
-                {game.signed_cover ? (
-                  <img
-                    src={game.signed_cover}
-                    alt={title}
-                    className="w-full h-full object-contain"
-                  />
-                ) : game.signed_media?.[0] ? (
-                  <img
-                    src={game.signed_media[0]}
-                    alt={title}
-                    className="w-full h-full object-contain"
-                  />
-                ) : (
-                  <div className="w-full h-full grid place-items-center bg-gradient-to-br from-primary/5 to-primary/10">
-                    <Gamepad2 size={64} className="text-primary/20" />
-                  </div>
-                )}
-                {/* Overlay: author + stats */}
-                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent p-4 pt-10">
-                  <div className="flex items-center gap-2 text-white/90 text-xs">
-                    <span className="font-semibold truncate">{title}</span>
-                    <span className="text-white/50">·</span>
-                    <span className="text-white/70 truncate">@{game.author?.username}</span>
-                  </div>
-                </div>
+              {/* GameCard (portada + player + controles) — único elemento principal, centrado */}
+              <div className="w-full max-w-md mx-auto">
+                <GameCard
+                  post={game}
+                  myId={myId}
+                  isMod={isMod}
+                  onChange={() => { /* refresh not critical */ }}
+                />
               </div>
-
-              {/* Stats bar */}
-              <div className="flex items-center justify-center gap-6 text-muted-foreground">
-                <div className="flex items-center gap-1.5 text-xs">
-                  <Heart size={13} className={game.my_like ? "text-red-500" : ""} fill={game.my_like ? "currentColor" : "none"} />
-                  <span className="font-mono">{game.likes}</span>
-                </div>
-                <div className="flex items-center gap-1.5 text-xs">
-                  <MessageCircle size={13} />
-                  <span className="font-mono">{game.comments_count}</span>
-                </div>
-              </div>
-
-              {/* GameCard (player + controls) */}
-              <GameCard
-                post={game}
-                myId={myId}
-                isMod={isMod}
-                onChange={() => { /* refresh not critical */ }}
-              />
 
               {/* Donation panel */}
               {myId && !isOwnGame && (
