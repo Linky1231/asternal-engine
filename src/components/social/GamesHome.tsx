@@ -18,11 +18,20 @@ type TrendTab = "hot" | "growing" | "rated" | "new";
 
 
 export function GamesHome({
-  games, myId, isMod, onChange,
+  games, myId, isMod, onChange, onOpenGame,
 }: {
-  games: PostWithMeta[]; myId: string | null; isMod: boolean; onChange: () => void;
+  games: PostWithMeta[]; myId: string | null; isMod: boolean; onChange: () => void; onOpenGame?: (gameId: string) => void;
 }) {
   const [selected, setSelected] = useState<PostWithMeta | null>(null);
+
+  // When any game is selected, open the full-screen game page
+  const openGame = (g: PostWithMeta) => {
+    if (onOpenGame) {
+      onOpenGame(g.id);
+    } else {
+      setSelected(g);
+    }
+  };
   const [trend, setTrend] = useState<TrendTab>("hot");
   const [forYouGenre, setForYouGenre] = useState<string | null>(null);
   const [playCounts, setPlayCounts] = useState<Record<string, number>>({});
@@ -208,7 +217,7 @@ export function GamesHome({
   return (
     <div className="space-y-5">
       {/* 1. Banner destacado */}
-      <FeaturedBanner post={featured} plays24={playCounts[featured.id] ?? 0} onPlay={() => setSelected(featured)} />
+      <FeaturedBanner post={featured} plays24={playCounts[featured.id] ?? 0} onPlay={() => openGame(featured)} />
 
       {/* 2. Ranking · Más jugados en las últimas 24h */}
       {rankCloud === false && games.length > 0 && (
@@ -218,7 +227,7 @@ export function GamesHome({
           onInstall={installRankingTable}
         />
       )}
-      <Ranking24 games={ranking24} totalGames={games.length} onOpen={setSelected} />
+      <Ranking24 games={ranking24} totalGames={games.length} onOpen={openGame} />
 
       {/* 3. Para ti — recomendaciones personalizadas */}
       {forYou.items.length > 0 && (
@@ -227,7 +236,7 @@ export function GamesHome({
           userGenres={forYou.userGenres}
           activeGenre={forYouGenre}
           onSelectGenre={setForYouGenre}
-          onOpen={setSelected}
+          onOpen={openGame}
           playCounts={playCounts}
         />
       )}
@@ -235,14 +244,13 @@ export function GamesHome({
       {/* 4. Continuar jugando */}
       {continuePlaying.length > 0 && (
         <Section title="Continuar jugando" subtitle="Retoma donde lo dejaste">
-          <IconRow games={continuePlaying} onOpen={setSelected} />
+          <IconRow games={continuePlaying} onOpen={openGame} />
         </Section>
       )}
 
       {/* 5. Recomendados para ti */}
       {recommended.length > 0 && (
-        <Section title="Recomendados para ti" subtitle="En base a lo que juega la comunidad">
-          <IconRow games={recommended} onOpen={setSelected} />
+        <Section title="Recomendados para ti" subtitle="En base a lo que juega la comunidad">            <IconRow games={recommended} onOpen={openGame} />
         </Section>
       )}
 
@@ -262,14 +270,12 @@ export function GamesHome({
         </div>
         <div className="grid grid-cols-4 xs:grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-3 gap-y-4 pt-1">
           {trendList.slice(0, 18).map(g => (
-            <GameIcon key={g.id} post={g} onOpen={() => setSelected(g)} />
+            <GameIcon key={g.id} post={g} onOpen={() => openGame(g)} />
           ))}
         </div>
       </div>
 
-      {selected && (
-        <GamePlayModal post={selected} myId={myId} isMod={isMod} onClose={() => setSelected(null)} onChange={onChange} />
-      )}
+
     </div>
   );
 }

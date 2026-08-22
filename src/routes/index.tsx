@@ -296,7 +296,7 @@ function HomePage() {
           >
             {tab === "games" ? (
               loading ? <SkeletonList /> : (
-                <GamesHome games={games} myId={myId} isMod={mod} onChange={() => reload("games")} />
+                <GamesHome games={games} myId={myId} isMod={mod} onChange={() => reload("games")} onOpenGame={(id) => setGamePageId(id)} />
               )
             ) : tab === "feed" ? (
               <div className="max-w-2xl md:max-w-3xl mx-auto w-full">

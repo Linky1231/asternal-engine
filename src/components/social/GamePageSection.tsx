@@ -149,7 +149,7 @@ export function GamePageSection({
                 <div className="rounded-2xl border border-border/60 bg-card p-4 space-y-3">
                   <div className="flex items-center gap-2.5">
                     <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 grid place-items-center shrink-0">
-                      <Sparkles size={16} className="text-primary" />
+                      <Heart size={16} className="text-primary" fill="currentColor" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-display font-semibold text-foreground">
@@ -160,7 +160,7 @@ export function GamePageSection({
                       </div>
                     </div>
                     <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/15 shrink-0">
-                      <Heart size={11} className="text-primary" fill="currentColor" />
+                      <Sparkles size={11} className="text-primary" />
                       <span className="text-[11px] font-mono font-semibold text-primary">{myBalance}</span>
                     </div>
                   </div>
@@ -199,15 +199,6 @@ export function GamePageSection({
                       No puedes donar a tu propio juego
                     </p>
                   )}
-                </div>
-              )}
-
-              {/* Login prompt for non-authenticated users */}
-              {!myId && (
-                <div className="rounded-2xl border border-border/60 bg-card p-4 text-center">
-                  <p className="text-xs text-muted-foreground">
-                    Inicia sesión para donar orbes al autor
-                  </p>
                 </div>
               )}
             </>

@@ -10,7 +10,7 @@ import { UserName } from "./UserName";
 import { CardMenu, CardMenuItem, useCardMenuAnchor } from "./CardMenu";
 import {
   Heart, Star, MessageCircle, Repeat2, MoreHorizontal, Pencil, Trash2, Flag, Share2,
-  FileText, Download, Lock, Gamepad2, Code2, Link2,
+  FileText, Download, Lock, Gamepad2, Code2, Link2, Play,
 } from "lucide-react";
 
 function timeAgo(iso: string) {
@@ -247,7 +247,9 @@ export const PostCard = memo(function PostCard({
               <div className="text-[9px] font-display tracking-[0.18em] text-primary-glow uppercase">Juego fijado</div>
               <div className="text-sm font-display truncate mt-0.5">{post.pinned_game.title}</div>
             </div>
-            <span className="w-7 h-7 rounded-full bg-primary/10 grid place-items-center text-primary-glow transition-transform duration-300 ease-out pointer-fine:group-hover/game:translate-x-0.5">▶</span>
+            <span className="w-8 h-8 rounded-full bg-primary/10 grid place-items-center transition-transform duration-300 ease-out pointer-fine:group-hover/game:translate-x-0.5">
+              <Play size={14} className="text-primary ml-0.5" fill="currentColor" />
+            </span>
           </button>
         )}
 
