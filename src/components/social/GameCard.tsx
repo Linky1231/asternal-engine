@@ -266,6 +266,20 @@ export function GameCard({
         </div>
       </div>
 
+      {/* Acción principal de juego — botón claro debajo de la portada, no encima */}
+      <div className="px-3 pt-3">
+        <button
+          onClick={play}
+          disabled={loading}
+          className="w-full h-12 rounded-xl grad-brand text-primary-foreground font-display tracking-widest text-sm flex items-center justify-center gap-2 active:scale-[0.99] transition disabled:opacity-60"
+          aria-label={needsPurchase ? "Comprar y jugar" : "Jugar"}
+        >
+          {loading ? <Loader2 size={18} className="animate-spin" /> :
+            needsPurchase ? <><Lock size={18} /> COMPRAR · {price} ORBES</> :
+            <><Play size={18} fill="currentColor" /> JUGAR</>}
+        </button>
+      </div>
+
       {/* Galería de capturas */}
       {post.signed_screenshots.length > 0 && (
         <div className="flex gap-2 overflow-x-auto no-scrollbar px-3 pt-2.5">

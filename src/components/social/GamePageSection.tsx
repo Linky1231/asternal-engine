@@ -142,12 +142,11 @@ export function GamePageSection({
           {game && (
             <>
               {/* GameCard (portada + player + controles) — único elemento principal, centrado */}
-              <div className="w-full max-w-md mx-auto">
+              <div className="w-full max-w-lg mx-auto">
                 <GameCard
                   post={game}
                   myId={myId}
                   isMod={isMod}
-                  squareCover
                   onChange={() => { /* refresh not critical */ }}
                 />
               </div>
