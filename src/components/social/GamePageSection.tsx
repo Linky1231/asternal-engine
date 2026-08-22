@@ -1,10 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
-import { X, Gamepad2, Heart, Sparkles } from "lucide-react";
+import { X, Gamepad2, HandCoins, Sparkles, Play, Heart, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
-import { type PostWithMeta, fetchGames, donateOrbs, getMyOrbes } from "@/lib/social/api";
+import { type PostWithMeta, fetchGames, donateOrbs, getMyOrbes, recordGamePlay } from "@/lib/social/api";
 import { GameCard } from "./GameCard";
 
 const PRESET_AMOUNTS = [5, 10, 25, 50, 100];
+
+function extractTitle(content: string): string {
+  return (content.split("\n")[0] || "Juego").replace(/^🎮\s*/, "").trim() || "Juego";
+}
 
 /**
  * Full-screen game page panel — renders a single game (by post ID) inside
@@ -85,6 +89,7 @@ export function GamePageSection({
   }, [game, myBalance, myId, donating]);
 
   const isOwnGame = myId === game?.author_id;
+  const title = game ? extractTitle(game.content) : "";
 
   return (
     <div
@@ -98,8 +103,8 @@ export function GamePageSection({
             <Gamepad2 size={18} />
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="text-base font-display font-semibold text-foreground">
-              {game ? (game.content.split("\n")[0] || "Juego").replace(/^🎮\s*/, "").trim() || "Juego" : "Cargando juego..."}
+            <h2 className="text-base font-display font-semibold text-foreground truncate">
+              {title || "Cargando juego..."}
             </h2>
             <p className="text-xs text-muted-foreground truncate">
               {game ? `Por @${game.author?.username || "desconocido"}` : " "}
@@ -136,7 +141,48 @@ export function GamePageSection({
           )}
           {game && (
             <>
-              {/* Game card */}
+              {/* Cover image — rounded square, not cropped */}
+              <div className="relative w-full aspect-square max-w-sm mx-auto rounded-2xl overflow-hidden border border-border/40 bg-surface shadow-lg">
+                {game.signed_cover ? (
+                  <img
+                    src={game.signed_cover}
+                    alt={title}
+                    className="w-full h-full object-contain"
+                  />
+                ) : game.signed_media?.[0] ? (
+                  <img
+                    src={game.signed_media[0]}
+                    alt={title}
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <div className="w-full h-full grid place-items-center bg-gradient-to-br from-primary/5 to-primary/10">
+                    <Gamepad2 size={64} className="text-primary/20" />
+                  </div>
+                )}
+                {/* Overlay: author + stats */}
+                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent p-4 pt-10">
+                  <div className="flex items-center gap-2 text-white/90 text-xs">
+                    <span className="font-semibold truncate">{title}</span>
+                    <span className="text-white/50">·</span>
+                    <span className="text-white/70 truncate">@{game.author?.username}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Stats bar */}
+              <div className="flex items-center justify-center gap-6 text-muted-foreground">
+                <div className="flex items-center gap-1.5 text-xs">
+                  <Heart size={13} className={game.my_like ? "text-red-500" : ""} fill={game.my_like ? "currentColor" : "none"} />
+                  <span className="font-mono">{game.likes}</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-xs">
+                  <MessageCircle size={13} />
+                  <span className="font-mono">{game.comments_count}</span>
+                </div>
+              </div>
+
+              {/* GameCard (player + controls) */}
               <GameCard
                 post={game}
                 myId={myId}
@@ -144,19 +190,19 @@ export function GamePageSection({
                 onChange={() => { /* refresh not critical */ }}
               />
 
-              {/* Donation panel — only visible if user is logged in and it's not their own game */}
+              {/* Donation panel */}
               {myId && !isOwnGame && (
-                <div className="rounded-2xl border border-border/60 bg-card p-4 space-y-3">
+                <div className="rounded-2xl border border-border/60 bg-card p-4 space-y-3.5">
                   <div className="flex items-center gap-2.5">
                     <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 grid place-items-center shrink-0">
-                      <Heart size={16} className="text-primary" fill="currentColor" />
+                      <HandCoins size={16} className="text-primary" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-display font-semibold text-foreground">
                         Donar orbes
                       </div>
                       <div className="text-[11px] text-muted-foreground">
-                        Apoya al autor con orbes
+                        Apoya al autor de este juego
                       </div>
                     </div>
                     <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/15 shrink-0">
@@ -193,12 +239,6 @@ export function GamePageSection({
                     donating={donating}
                     onDonate={handleDonate}
                   />
-
-                  {isOwnGame && (
-                    <p className="text-[10px] text-muted-foreground/50 text-center">
-                      No puedes donar a tu propio juego
-                    </p>
-                  )}
                 </div>
               )}
             </>
