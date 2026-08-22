@@ -111,9 +111,10 @@
   --shadow-float: 0 18px 44px -18px oklch(0.5 0.13 266 / 0.3);
   --shadow-glow: 0 10px 30px -12px oklch(0.55 0.14 262 / 0.3), 0 4px 18px -8px oklch(0.68 0.08 230 / 0.26);
 
-  /* ── Glassmorphism (estilo Apple): superficies translúcidas difuminadas ── */
-  --glass-bg: oklch(1 0 0 / 0.6);
-  --glass-border: oklch(1 0 0 / 0.7);
+  /* ── Glassmorphism (estilo Apple): superficies translúcidas difuminadas.
+     Tinte azul-hielo muy leve para que el cristal se perciba sobre el lienzo. ── */
+  --glass-bg: oklch(0.995 0.005 250 / 0.62);
+  --glass-border: oklch(1 0 0 / 0.75);
   --glass-blur: 18px;
   --glass-shadow:
     0 8px 32px -12px oklch(0.3 0.06 260 / 0.12),
@@ -209,9 +210,9 @@
     /* Lienzo con atmósfera glassmorphism: lavado suave de azules de marca
        (mismo Azure Drift, a opacidad mínima) sobre el canvas casi blanco. */
     background:
-      radial-gradient(120% 90% at 85% -10%, oklch(0.72 0.08 236 / 0.14) 0%, transparent 55%),
-      radial-gradient(100% 80% at -15% 20%, oklch(0.63 0.12 252 / 0.1) 0%, transparent 50%),
-      radial-gradient(90% 70% at 50% 115%, oklch(0.74 0.08 234 / 0.1) 0%, transparent 55%),
+      radial-gradient(120% 90% at 85% -10%, oklch(0.72 0.08 236 / 0.26) 0%, transparent 55%),
+      radial-gradient(100% 80% at -15% 20%, oklch(0.63 0.12 252 / 0.18) 0%, transparent 50%),
+      radial-gradient(90% 70% at 50% 115%, oklch(0.74 0.08 234 / 0.18) 0%, transparent 55%),
       var(--canvas);
     background-attachment: fixed;
     color: var(--color-foreground);

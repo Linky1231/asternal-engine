@@ -116,11 +116,11 @@ export function GamePageSection({
 
   return (
     <div
-      className="fixed inset-0 z-[90] bg-background flex flex-col animate-in fade-in duration-200"
+      className="fixed inset-0 z-[90] bg-background/85 backdrop-blur-2xl flex flex-col animate-in fade-in duration-200"
       style={{ height: "100dvh" }}
     >
       {/* Header */}
-      <header className="shrink-0 border-b border-border/60 bg-background">
+      <header className="shrink-0 border-b border-border/60 bg-background/60">
         <div className="max-w-2xl md:max-w-3xl mx-auto flex items-center gap-2.5 px-4 py-3">
           <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 text-primary grid place-items-center shrink-0">
             <Gamepad2 size={18} />

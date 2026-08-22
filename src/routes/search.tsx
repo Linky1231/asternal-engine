@@ -10,7 +10,7 @@ export const Route = createFileRoute("/search")({
 
 function SearchPage() {
   return (
-    <div className="min-h-screen w-full flex flex-col bg-background text-foreground">
+    <div className="min-h-screen w-full flex flex-col text-foreground">
       <SubPageHeader
         title="BUSCAR"
         icon={<Search size={15} />}

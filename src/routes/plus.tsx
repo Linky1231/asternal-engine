@@ -128,7 +128,7 @@ function PlusPage() {
   if (loading) return <div className="min-h-screen grid place-items-center"><Loader2 className="animate-spin" /></div>;
 
   return (
-    <div className="min-h-screen w-full flex flex-col bg-background text-foreground">
+    <div className="min-h-screen w-full flex flex-col text-foreground">
       <SubPageHeader
         title="CENTRO PLUS"
         icon={<Star size={14} fill="currentColor" style={{ color: "var(--plus)" }} />}

@@ -159,7 +159,7 @@ function OrbesPage() {
   );
 
   return (
-    <div className="min-h-screen w-full flex flex-col bg-background text-foreground">
+    <div className="min-h-screen w-full flex flex-col text-foreground">
       <SubPageHeader
         title="MIS ORBES"
         icon={<Sparkles size={14} fill="currentColor" />}

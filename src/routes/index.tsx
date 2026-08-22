@@ -237,11 +237,11 @@ function HomePage() {
   const closeMenu = () => { setMenuOpen(false); setNotifOpen(false); };
 
   return (
-    <div className="min-h-screen w-full flex flex-col bg-background text-foreground">
+    <div className="min-h-screen w-full flex flex-col text-foreground">
       {/* Header */}
       {/* bg casi opaco + blur reducido: el backdrop-blur-xl sobre un header
           sticky obligaba a re-desenfocar el fondo en cada frame de scroll → lag. */}
-      <header className="app-header sticky top-0 z-20 bg-background border-b border-border/70">
+      <header className="app-header sticky top-0 z-20 bg-background/70 backdrop-blur-xl border-b border-border/70">
         <div className={`max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto flex items-center gap-2 sm:gap-2.5 px-3 sm:px-4 ${inPreview ? "pt-14 pb-3" : "py-2.5"}`}>
           <button onClick={() => navigate({ to: "/profile" })} title="Mi perfil"
             className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl overflow-hidden border border-slate-900/5  active:scale-95 transition shrink-0">
@@ -534,10 +534,10 @@ function HomePage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="fixed inset-0 z-[90] bg-background flex flex-col"
+            className="fixed inset-0 z-[90] bg-background/85 backdrop-blur-2xl flex flex-col"
             style={{ height: "100dvh" }}
           >
-            <header className="shrink-0 border-b border-border/60 bg-background">
+            <header className="shrink-0 border-b border-border/60 bg-background/60">
               <div className="max-w-2xl md:max-w-3xl mx-auto flex items-center gap-2.5 px-4 py-3">
                 <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 text-primary grid place-items-center shrink-0">
                   <Trophy size={18} />
@@ -574,7 +574,7 @@ function HomePage() {
       )}
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 inset-x-0 z-30 bg-background/95 backdrop-blur-md border-t border-border/70 safe-area-bottom">
+      <nav className="fixed bottom-0 inset-x-0 z-30 bg-background/80 backdrop-blur-xl border-t border-border/70 safe-area-bottom">
         <div className="max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto px-3 pt-2 pb-3">
           {/* Tabs with gray selector — Juegos | Feed | +CREAR | Tienda | Perfil */}
           <div className="flex bg-muted/60 rounded-xl p-0.5 relative">
