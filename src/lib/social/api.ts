@@ -854,6 +854,79 @@ export async function fetchAllOrbeTransactions(): Promise<OrbeTx[]> {
   return all;
 }
 
+/**
+ * Donate orbes from the current user to the author of a game post.
+ * Deducts from donor, credits the author, records both transactions.
+ */
+export async function donateOrbs(
+  postId: string,
+  amount: number,
+): Promise<{ ok: boolean; balance?: number; error?: string }> {
+  if (amount <= 0 || !Number.isFinite(amount)) return { ok: false, error: "Cantidad inválida" };
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "No autenticado" };
+
+  // 1. Get the post author
+  const { data: post, error: postErr } = await supabase
+    .from("posts")
+    .select("author_id")
+    .eq("id", postId)
+    .single();
+  if (postErr || !post) return { ok: false, error: "Juego no encontrado" };
+
+  const authorId = (post as { author_id: string }).author_id;
+  if (authorId === user.id) return { ok: false, error: "No puedes donar orbes a tu propio juego" };
+
+  // 2. Check donor balance
+  const { data: donorProfile } = await supabase
+    .from("profiles")
+    .select("orbes")
+    .eq("id", user.id)
+    .maybeSingle();
+  const donorBalance = (donorProfile as { orbes?: number } | null)?.orbes ?? 0;
+  if (donorBalance < amount) return { ok: false, error: "No tienes suficientes orbes" };
+
+  // 3. Deduct from donor
+  const { error: deductErr } = await supabase
+    .from("profiles")
+    .update({ orbes: donorBalance - amount })
+    .eq("id", user.id);
+  if (deductErr) return { ok: false, error: "Error al descontar orbes" };
+
+  // 4. Credit author
+  const { data: authorProfile } = await supabase
+    .from("profiles")
+    .select("orbes")
+    .eq("id", authorId)
+    .maybeSingle();
+  const authorBalance = (authorProfile as { orbes?: number } | null)?.orbes ?? 0;
+  const { error: creditErr } = await supabase
+    .from("profiles")
+    .update({ orbes: authorBalance + amount })
+    .eq("id", authorId);
+  if (creditErr) return { ok: false, error: "Error al acreditar orbes" };
+
+  // 5. Record donor transaction (negative)
+  await supabase.from("orbe_transactions" as never).insert({
+    user_id: user.id,
+    amount: -amount,
+    kind: "adjustment" as never,
+    post_id: postId,
+    description: `Donación a juego`,
+  } as never);
+
+  // 6. Record author transaction (positive)
+  await supabase.from("orbe_transactions" as never).insert({
+    user_id: authorId,
+    amount: amount,
+    kind: "adjustment" as never,
+    post_id: postId,
+    description: `Donación recibida de un jugador`,
+  } as never);
+
+  return { ok: true, balance: donorBalance - amount };
+}
+
 
 export async function remixGame(post: PostWithMeta): Promise<{ cloudId: string; name: string }> {
   const { data: { user } } = await supabase.auth.getUser();
