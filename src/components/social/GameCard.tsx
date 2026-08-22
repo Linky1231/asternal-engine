@@ -238,12 +238,31 @@ export function GameCard({
     <article className="panel rounded-2xl overflow-hidden border border-border/50 shadow-sm">
       {squareCover ? (
         /* Modo página aislada: portada limpia, sin elementos encima del arte */
-        <div className="relative aspect-square bg-muted/30">
+        <div className="relative aspect-square bg-muted/30 overflow-hidden">
+          {/* Capa decorativa de esquinas — queda detrás de la portada; solo se ve
+              donde la imagen no cubre (bandas laterales o placeholder vacío). */}
+          <div aria-hidden className="absolute inset-0 pointer-events-none" style={{ background: "var(--gradient-asternal-soft)" }}>
+            {/* Brillos difusos en las 4 esquinas */}
+            <div className="absolute -top-12 -left-12 w-40 h-40 rounded-full bg-primary/20 blur-3xl" />
+            <div className="absolute -top-14 -right-14 w-44 h-44 rounded-full bg-blue-300/25 blur-3xl" />
+            <div className="absolute -bottom-14 -left-14 w-44 h-44 rounded-full bg-sky-300/25 blur-3xl" />
+            <div className="absolute -bottom-12 -right-12 w-40 h-40 rounded-full bg-primary/15 blur-3xl" />
+            {/* Marcos de esquina sutiles */}
+            <div className="absolute top-3 left-3 w-5 h-5 border-t-2 border-l-2 border-primary/30 rounded-tl-md" />
+            <div className="absolute top-3 right-3 w-5 h-5 border-t-2 border-r-2 border-primary/30 rounded-tr-md" />
+            <div className="absolute bottom-3 left-3 w-5 h-5 border-b-2 border-l-2 border-primary/30 rounded-bl-md" />
+            <div className="absolute bottom-3 right-3 w-5 h-5 border-b-2 border-r-2 border-primary/30 rounded-br-md" />
+          </div>
           {post.signed_cover ? (
-            <img src={post.signed_cover} alt={title} className="absolute inset-0 w-full h-full object-contain" />
+            <img src={post.signed_cover} alt={title} className="absolute inset-0 w-full h-full object-contain relative z-[1]" />
           ) : (
-            <div className="absolute inset-0 grid place-items-center" style={{ background: "var(--gradient-asternal-soft)" }}>
-              <Gamepad2 size={72} className="text-primary/25" />
+            <div className="absolute inset-0 grid place-items-center relative z-[1]">
+              {/* Icono centrado con anillos concéntricos — nunca se estira */}
+              <div className="relative grid place-items-center">
+                <div className="w-32 h-32 rounded-full border border-primary/15 absolute" />
+                <div className="w-24 h-24 rounded-full border border-primary/25 bg-white/40 backdrop-blur-sm shadow-inner absolute" />
+                <Gamepad2 size={56} className="text-primary/35 relative" strokeWidth={1.75} />
+              </div>
             </div>
           )}
           {price > 0 && !owned && (
