@@ -118,7 +118,7 @@ export const PostCard = memo(function PostCard({
   ) : null;
 
   return (
-    <article className={`group panel rounded-2xl border border-border/60 transition-[border-color,box-shadow] duration-200 ease-out pointer-fine:hover:border-primary/30 pointer-fine:hover:shadow-sm ${entranceClass}`}>
+    <article className={`group panel relative isolate overflow-hidden rounded-2xl border border-border/60 transition-[border-color,box-shadow] duration-200 ease-out pointer-fine:hover:border-primary/30 pointer-fine:hover:shadow-sm ${entranceClass}`}>
       {/* Hairline degradado superior */}
       <div className="h-[3px] w-full rounded-t-2xl grad-brand-fade opacity-70 pointer-fine:group-hover:opacity-100 transition-opacity duration-300" />
 
@@ -237,7 +237,7 @@ export const PostCard = memo(function PostCard({
             onClick={() => onOpenGame?.(post.pinned_game!.id)}
             className="group/game flex items-center gap-3 rounded-2xl p-2 pr-3 bg-primary/[0.04] border border-primary/20 pointer-fine:hover:border-primary/40 transition-[border-color,box-shadow] duration-300 ease-out pointer-fine:hover:shadow-md w-full text-left cursor-pointer">
             {post.pinned_game.cover_url ? (
-              <img src={post.pinned_game.cover_url} alt="" className="w-14 h-14 rounded-xl object-cover shrink-0 ring-1 ring-border/50" />
+              <img src={post.pinned_game.cover_url} alt="" className="w-14 h-14 max-w-full rounded-xl object-cover shrink-0 ring-1 ring-border/50" />
             ) : (
               <div className="w-14 h-14 rounded-xl bg-primary/10 border border-primary/20 grid place-items-center shrink-0">
                 <Gamepad2 size={22} className="text-primary" />
