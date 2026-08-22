@@ -36,8 +36,8 @@ function FeedPage() {
   // Categorías estáticas (sin píldora deslizante, sin refs ni medición): el
   // activo se pinta con el degradado por clases condicionales. Cero trabajo de
   // layout por frame → imposible que dé lag o se desalinee.
-  const reload = useCallback(async () => {
-    setLoading(true);
+  const reload = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
       const data = await fetchFeed({
         search: search || undefined,
@@ -46,7 +46,7 @@ function FeedPage() {
         includeGames: category === "game",
       });
       setPosts(data);
-    } finally { setLoading(false); }
+    } finally { if (showLoading) setLoading(false); }
   }, [search, tag, category]);
 
   useEffect(() => {
@@ -130,7 +130,7 @@ function FeedPage() {
                     className="flex-1 bg-transparent text-xs outline-none min-w-0" />
                   {tag && <button onClick={() => setTag("")} className="text-muted-foreground hover:text-foreground active:scale-[0.92] transition-transform duration-200"><X size={13} /></button>}
                 </label>
-                <button onClick={reload}
+                <button onClick={() => reload()}
                   className="sm:col-span-2 h-10 rounded-lg bg-primary text-white text-xs font-semibold active:scale-[0.98] transition">
                   Aplicar filtros
                 </button>
@@ -182,7 +182,7 @@ function FeedPage() {
           <>
             {posts.map((p, i) => (
               <div key={p.id} className="card-enter" style={{ animationDelay: `${Math.min(i * 25, 180)}ms` }}>
-                <PostCard post={p} myId={myId} isMod={mod} onChange={reload} />
+                <PostCard post={p} myId={myId} isMod={mod} onChange={() => reload(false)} />
               </div>
             ))}
           </>

@@ -5,6 +5,7 @@ import { Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { type PostWithMeta, toggleReaction, toggleRepost, deletePost, updatePost, reportContent, votePoll, isPlusActive } from "@/lib/social/api";
 import { CommentSection } from "./CommentSection";
+import { SharePostModal } from "./SharePostModal";
 import { UserName } from "./UserName";
 import { CardMenu, CardMenuItem, useCardMenuAnchor } from "./CardMenu";
 import {
@@ -30,6 +31,7 @@ export const PostCard = memo(function PostCard({
   const [editContent, setEditContent] = useState(post.content);
   const [showHtml, setShowHtml] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showShare, setShowShare] = useState(false);
   const menu = useCardMenuAnchor<HTMLButtonElement>();
 
   const mine = myId === post.author_id;
@@ -66,18 +68,24 @@ export const PostCard = memo(function PostCard({
     });
   };
   const saveEdit = async () => { await updatePost(post.id, { content: editContent }); setEditing(false); onChange(); };
-  const report = async () => {
-    const reason = prompt("Motivo del reporte:");
-    if (!reason) return;
-    await reportContent({ postId: post.id, reason });
-    alert("Reporte enviado");
+  const report = () => {
     menu.close();
+    toast("Reportar publicación", {
+      description: "Señalará esta publicación a los moderadores.",
+      action: {
+        label: "Reportar",
+        onClick: async () => {
+          try {
+            await reportContent({ postId: post.id, reason: "Reporte desde el feed" });
+            toast.success("Reporte enviado");
+          } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Error al reportar");
+          }
+        },
+      },
+    });
   };
-  const share = async () => {
-    const url = window.location.origin + "/feed?p=" + post.id;
-    try { await navigator.share({ url, text: post.content.slice(0, 80) }); }
-    catch { navigator.clipboard.writeText(url); alert("Enlace copiado"); }
-  };
+  const share = () => { setShowShare(true); menu.close(); };
   const vote = async (i: number) => {
     if (!post.poll) return;
     await votePoll(post.poll.id, i);
@@ -341,6 +349,8 @@ export const PostCard = memo(function PostCard({
       </footer>
 
       {openComments && <div className="border-t border-border/50 bg-muted/10 px-3 py-2.5"><CommentSection postId={post.id} myId={myId} isMod={isMod} onChange={onChange} /></div>}
+
+      <SharePostModal postId={post.id} postContent={post.content} open={showShare} onClose={() => setShowShare(false)} />
     </article>
   );
 });
