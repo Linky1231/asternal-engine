@@ -128,17 +128,22 @@ export function SharePostModal({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+          className="fixed inset-0 z-50"
+          style={{ height: "100dvh" }}
           onClick={onClose}
         >
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+          {/* Backdrop — full viewport, always covers everything */}
+          <div className="absolute inset-0 bg-black/50" />
+
+          {/* Panel — bottom sheet on mobile, centered on desktop */}
           <motion.div
-            initial={{ y: 40, opacity: 0, scale: 0.97 }}
-            animate={{ y: 0, opacity: 1, scale: 1 }}
-            exit={{ y: 40, opacity: 0, scale: 0.97 }}
+            initial={{ y: 60, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 60, opacity: 0 }}
             transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full sm:max-w-md bg-background border border-border/70 rounded-t-2xl sm:rounded-2xl shadow-xl max-h-[80vh] flex flex-col"
+            className="absolute bottom-0 left-0 right-0 sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-md bg-background border border-border/70 rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+            style={{ maxHeight: "min(80vh, 80dvh)" }}
           >
             {/* Header */}
             <div className="flex items-center gap-3 px-4 py-3 border-b border-border/50">
