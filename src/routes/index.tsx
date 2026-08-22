@@ -323,7 +323,9 @@ function HomePage() {
                     if (filtered.length === 0) {
                       return (
                         <div className="text-center text-xs text-muted-foreground py-10 space-y-2">
-                          <div className="text-2xl mb-1">{feedSub === "forYou" ? "🎯" : feedSub === "following" ? "👥" : "🔭"}</div>
+                          <div className="w-14 h-14 mx-auto rounded-xl bg-primary/10 border border-primary/20 grid place-items-center mb-2">
+                            {feedSub === "forYou" ? <Compass size={24} className="text-primary" /> : feedSub === "following" ? <Users size={24} className="text-primary" /> : <Flame size={24} className="text-primary" />}
+                          </div>
                           <div className="font-medium text-foreground/70">
                             {feedSub === "forYou"
                               ? "Tu feed personalizado"
