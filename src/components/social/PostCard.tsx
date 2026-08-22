@@ -340,20 +340,6 @@ export const PostCard = memo(function PostCard({
         </button>
       </footer>
 
-      {/* Author actions: visible edit/delete for post owner */}
-      {mine && (
-        <div className="border-t border-border/50 px-3 py-1.5 flex items-center gap-2">
-          <button onClick={() => setEditing(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-medium text-muted-foreground hover:text-primary hover:bg-primary/10 transition-[color,background-color] duration-200">
-            <Pencil size={11} /> Editar
-          </button>
-          <button onClick={remove} disabled={deleting}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-[color,background-color] duration-200 disabled:opacity-40">
-            <Trash2 size={11} /> {deleting ? "Borrando…" : "Eliminar"}
-          </button>
-        </div>
-      )}
-
       {openComments && <div className="border-t border-border/50 bg-muted/10 px-3 py-2.5"><CommentSection postId={post.id} myId={myId} isMod={isMod} onChange={onChange} /></div>}
     </article>
   );
