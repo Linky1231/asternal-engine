@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X } from "lucide-react";
+import { X, Gamepad2 } from "lucide-react";
 import { type PostWithMeta, fetchGames } from "@/lib/social/api";
 import { GameCard } from "./GameCard";
 
@@ -56,7 +56,7 @@ export function GamePageSection({
       <header className="shrink-0 border-b border-border/60 bg-background">
         <div className="max-w-2xl md:max-w-3xl mx-auto flex items-center gap-2.5 px-4 py-3">
           <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 text-primary grid place-items-center shrink-0">
-            <span className="text-lg">🎮</span>
+            <Gamepad2 size={18} />
           </div>
           <div className="flex-1 min-w-0">
             <h2 className="text-base font-display font-semibold text-foreground">
