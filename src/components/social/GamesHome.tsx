@@ -436,7 +436,7 @@ function ForYouSection({ items, userGenres, activeGenre, onSelectGenre, onOpen, 
         <Compass size={18} className="text-primary" />
         <div className="flex-1 min-w-0">
           <div className="font-display text-base leading-tight">Para ti</div>
-          <div className="text-[11px] text-muted-foreground">{userGenres.length ? "Basado en tus preferencias" : "Los más populares de la comunidad"}</div>
+          <div className="text-[11px] text-muted-foreground">{userGenres.length ? "Según lo que juegas" : "Los más populares de la comunidad"}</div>
         </div>
 
       </div>
@@ -549,14 +549,14 @@ function FeaturedBanner({ post, plays24, onPlay }: { post: PostWithMeta; plays24
   );
 }
 
-function GamePlayModal({
+export function GamePlayModal({
   post, myId, isMod, onClose, onChange,
 }: {
   post: PostWithMeta; myId: string | null; isMod: boolean; onClose: () => void; onChange: () => void;
 }) {
   return (
     <div
-      className="fixed inset-0 z-[90] bg-black/70  p-3 flex items-start justify-center pt-16 overflow-y-auto animate-in fade-in duration-200"
+      className="fixed inset-0 z-[90] bg-black/70 p-3 flex items-start justify-center pt-16 overflow-y-auto animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div

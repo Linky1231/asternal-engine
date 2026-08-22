@@ -22,9 +22,9 @@ function timeAgo(iso: string) {
 }
 
 export const PostCard = memo(function PostCard({
-  post, myId, isMod, onChange,
+  post, myId, isMod, onChange, onOpenGame,
 }: {
-  post: PostWithMeta; myId: string | null; isMod: boolean; onChange: () => void;
+  post: PostWithMeta; myId: string | null; isMod: boolean; onChange: () => void; onOpenGame?: (gameId: string) => void;
 }) {
   const [openComments, setOpenComments] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -32,6 +32,7 @@ export const PostCard = memo(function PostCard({
   const [showHtml, setShowHtml] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showShare, setShowShare] = useState(false);
+  const [showGameOverlay, setShowGameOverlay] = useState(false);
   const menu = useCardMenuAnchor<HTMLButtonElement>();
 
   const mine = myId === post.author_id;
@@ -232,8 +233,10 @@ export const PostCard = memo(function PostCard({
 
         {/* Juego fijado */}
         {post.pinned_game && (
-          <Link to="/" search={{ p: post.pinned_game.id } as never}
-            className="group/game flex items-center gap-3 rounded-2xl p-2 pr-3 bg-primary/[0.04] border border-primary/20 pointer-fine:hover:border-primary/40 transition-[border-color,box-shadow] duration-300 ease-out pointer-fine:hover:shadow-md">
+          <button
+            type="button"
+            onClick={() => onOpenGame ? onOpenGame(post.pinned_game!.id) : setShowGameOverlay(true)}
+            className="group/game flex items-center gap-3 rounded-2xl p-2 pr-3 bg-primary/[0.04] border border-primary/20 pointer-fine:hover:border-primary/40 transition-[border-color,box-shadow] duration-300 ease-out pointer-fine:hover:shadow-md w-full text-left cursor-pointer">
             {post.pinned_game.cover_url ? (
               <img src={post.pinned_game.cover_url} alt="" className="w-14 h-14 rounded-xl object-cover shrink-0 ring-1 ring-border/50" />
             ) : (
@@ -246,7 +249,48 @@ export const PostCard = memo(function PostCard({
               <div className="text-sm font-display truncate mt-0.5">{post.pinned_game.title}</div>
             </div>
             <span className="w-7 h-7 rounded-full bg-primary/10 grid place-items-center text-primary-glow transition-transform duration-300 ease-out pointer-fine:group-hover/game:translate-x-0.5">▶</span>
-          </Link>
+          </button>
+        )}
+
+        {/* Game overlay widget */}
+        {showGameOverlay && post.pinned_game && (
+          <div
+            className="fixed inset-0 z-[90] bg-black/70 p-3 flex items-start justify-center pt-16 overflow-y-auto animate-in fade-in duration-200"
+            onClick={() => setShowGameOverlay(false)}
+          >
+            <div
+              onClick={e => e.stopPropagation()}
+              className="w-full max-w-md animate-in zoom-in-95 slide-in-from-bottom-4 duration-300 bg-card border border-border/70 rounded-2xl overflow-hidden shadow-2xl"
+            >
+              {post.pinned_game.cover_url ? (
+                <img src={post.pinned_game.cover_url} alt="" className="w-full h-48 object-cover" />
+              ) : (
+                <div className="w-full h-48 bg-gradient-to-br from-primary/10 to-primary/5 grid place-items-center">
+                  <Gamepad2 size={48} className="text-primary/30" />
+                </div>
+              )}
+              <div className="p-4 space-y-3">
+                <div>
+                  <div className="text-[9px] font-display tracking-[0.18em] text-primary-glow uppercase">Juego fijado</div>
+                  <div className="text-lg font-display font-bold mt-0.5">{post.pinned_game.title}</div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { setShowGameOverlay(false); onOpenGame?.(post.pinned_game!.id); }}
+                    className="flex-1 h-11 rounded-xl grad-brand text-white text-sm font-display tracking-wider active:scale-[0.97] transition"
+                  >
+                    JUGAR
+                  </button>
+                  <button
+                    onClick={() => setShowGameOverlay(false)}
+                    className="h-11 px-4 rounded-xl bg-muted/50 text-muted-foreground text-xs font-display tracking-wider border border-border/50 active:scale-[0.97] transition"
+                  >
+                    CERRAR
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Encuesta */}
