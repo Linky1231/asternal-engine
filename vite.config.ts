@@ -1,3 +1,4 @@
+import { vlyPlugin } from "@vly-ai/integrations";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
@@ -38,7 +39,7 @@ export default defineConfig({
   // Exponer también V1/V2/V3 (variables personalizadas del tab Keys) en
   // import.meta.env además del prefijo estándar VITE_.
   envPrefix: ["VITE_", "V1", "V2", "V3"],
-  plugins: [react(), manusOrionDevEndpoint(), tailwindcss()],
+  plugins: [vlyPlugin(), react(), manusOrionDevEndpoint(), tailwindcss()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
