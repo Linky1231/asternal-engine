@@ -39,7 +39,7 @@ const STATUS_STYLES: Record<string, { label: string; class: string }> = {
   completed: { label: "FINALIZADO", class: "text-slate-500 bg-slate-100 border-slate-200" },
 };
 
-export function EventsSection({ isAdmin }: { isAdmin: boolean }) {
+export function EventsSection({ isAdmin, showHeader = true }: { isAdmin: boolean; showHeader?: boolean }) {
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<string | null>(null);
@@ -146,8 +146,8 @@ export function EventsSection({ isAdmin }: { isAdmin: boolean }) {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center gap-3">
+      {/* El panel completo ya aporta cabecera; esta cabecera solo se muestra en vistas incrustadas. */}
+      {showHeader && <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 text-primary grid place-items-center shrink-0">
           <Trophy size={18} />
         </div>
@@ -167,7 +167,7 @@ export function EventsSection({ isAdmin }: { isAdmin: boolean }) {
             {activeCount} activo{activeCount > 1 ? "s" : ""}
           </span>
         )}
-      </div>
+      </div>}
 
       {loading ? (
         <div className="space-y-3">
@@ -284,7 +284,7 @@ export function EventsSection({ isAdmin }: { isAdmin: boolean }) {
                       {ev.submission_count !== undefined && (
                         <span className="inline-flex items-center gap-1">
                           <FileText size={11} />
-                          {ev.submission_count} submissions
+                          {ev.submission_count} entrega{ev.submission_count === 1 ? "" : "s"}
                         </span>
                       )}
                     </div>

@@ -1,7 +1,18 @@
 import { useState, useEffect, useCallback } from "react";
-import { X, Gamepad2, HandCoins, Sparkles, Play, Heart, MessageCircle } from "lucide-react";
+import { X, Gamepad2, HandCoins, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import { type PostWithMeta, fetchGames, donateOrbs, getMyOrbes, recordGamePlay } from "@/lib/social/api";
+import { type PostWithMeta, fetchGames, donateOrbs, getMyOrbes } from "@/lib/social/api";
+import { donationValidationMessage } from "@/lib/social/donation-confirmation";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { GameCard } from "./GameCard";
 
 const PRESET_AMOUNTS = [5, 10, 25, 50, 100];
@@ -31,8 +42,7 @@ export function GamePageSection({
   const [error, setError] = useState<string | null>(null);
   const [myBalance, setMyBalance] = useState(0);
   const [donating, setDonating] = useState(false);
-  // Refresco: los likes/comentarios dentro del juego vuelven a cargar el post.
-  const [refresh, setRefresh] = useState(0);
+  const [pendingDonation, setPendingDonation] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -60,18 +70,32 @@ export function GamePageSection({
       }
     })();
     return () => { cancelled = true; };
-  }, [gameId, refresh]);
+  }, [gameId]);
 
-  const handleDonate = useCallback(async (amount: number) => {
+  const requestDonation = useCallback((amount: number) => {
     if (!game || donating) return;
     if (myId === game.author_id) {
       toast.error("No puedes donar a tu propio juego");
       return;
     }
-    if (amount > myBalance) {
-      toast.error("No tienes suficientes orbes");
+    const validationMessage = donationValidationMessage(amount, myBalance);
+    if (validationMessage) {
+      toast.error(validationMessage);
       return;
     }
+    setPendingDonation(amount);
+  }, [game, myBalance, myId, donating]);
+
+  const confirmDonation = useCallback(async () => {
+    const amount = pendingDonation;
+    if (!game || !amount || donating) return;
+    const validationMessage = donationValidationMessage(amount, myBalance);
+    if (validationMessage) {
+      toast.error(validationMessage);
+      setPendingDonation(null);
+      return;
+    }
+    setPendingDonation(null);
     setDonating(true);
     try {
       const result = await donateOrbs(game.id, amount);
@@ -80,7 +104,6 @@ export function GamePageSection({
         toast.success(`¡${amount} orbes donados!`, {
           description: `A @${game.author?.username || "el autor"}`,
         });
-        setRefresh(r => r + 1);
       } else {
         toast.error(result.error || "Error al donar");
       }
@@ -89,38 +112,18 @@ export function GamePageSection({
     } finally {
       setDonating(false);
     }
-  }, [game, myBalance, myId, donating]);
-
-  /** Pide confirmación antes de donar (evita donaciones accidentales). */
-  const askDonate = useCallback((amount: number) => {
-    if (!game || donating) return;
-    if (myId === game.author_id) {
-      toast.error("No puedes donar a tu propio juego");
-      return;
-    }
-    if (amount > myBalance) {
-      toast.error("No tienes suficientes orbes");
-      return;
-    }
-    toast(`¿Donar ${amount} orbes?`, {
-      description: `Irán a @${game.author?.username || "el autor"}. Esta acción no se puede deshacer.`,
-      action: {
-        label: "Donar",
-        onClick: () => void handleDonate(amount),
-      },
-    });
-  }, [handleDonate, game, donating, myBalance, myId]);
+  }, [game, myBalance, pendingDonation, donating]);
 
   const isOwnGame = myId === game?.author_id;
   const title = game ? extractTitle(game.content) : "";
 
   return (
     <div
-      className="fixed inset-0 z-[90] bg-background/85 backdrop-blur-2xl flex flex-col animate-in fade-in duration-200"
+      className="fixed inset-0 z-[90] bg-background flex flex-col animate-in fade-in duration-200"
       style={{ height: "100dvh" }}
     >
       {/* Header */}
-      <header className="shrink-0 border-b border-border/60 bg-background/60">
+      <header className="shrink-0 border-b border-border/60 bg-background">
         <div className="max-w-2xl md:max-w-3xl mx-auto flex items-center gap-2.5 px-4 py-3">
           <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 text-primary grid place-items-center shrink-0">
             <Gamepad2 size={18} />
@@ -164,16 +167,14 @@ export function GamePageSection({
           )}
           {game && (
             <>
-              {/* GameCard (portada + player + controles) — único elemento principal, centrado */}
-              <div className="w-full max-w-md mx-auto">
-                <GameCard
-                  post={game}
-                  myId={myId}
-                  isMod={isMod}
-                  squareCover
-                  onChange={() => setRefresh(r => r + 1)}
-                />
-              </div>
+              {/* Una única tarjeta integra portada, reproducción, precio y actividad.
+                  La información del proyecto nunca se usa como URL de imagen. */}
+              <GameCard
+                post={game}
+                myId={myId}
+                isMod={isMod}
+                onChange={() => { /* refresh not critical */ }}
+              />
 
               {/* Donation panel */}
               {myId && !isOwnGame && (
@@ -196,7 +197,7 @@ export function GamePageSection({
                     </div>
                   </div>
 
-                  {/* Preset amounts */}
+                  {/* Cada importe solicita confirmación antes de transferir orbes. */}
                   <div className="grid grid-cols-5 gap-2">
                     {PRESET_AMOUNTS.map((amt) => {
                       const disabled = donating || amt > myBalance;
@@ -205,7 +206,7 @@ export function GamePageSection({
                           key={amt}
                           type="button"
                           disabled={disabled}
-                          onClick={() => askDonate(amt)}
+                          onClick={() => requestDonation(amt)}
                           className={`h-10 rounded-xl text-xs font-display font-semibold border transition active:scale-95 disabled:opacity-40 disabled:active:scale-100 ${
                             amt <= myBalance
                               ? "border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 hover:border-primary/50"
@@ -222,7 +223,7 @@ export function GamePageSection({
                   <CustomDonateButton
                     maxAmount={myBalance}
                     donating={donating}
-                    onDonate={askDonate}
+                    onDonate={requestDonation}
                   />
                 </div>
               )}
@@ -230,6 +231,42 @@ export function GamePageSection({
           )}
         </div>
       </div>
+
+      <AlertDialog
+        open={pendingDonation !== null}
+        onOpenChange={(open) => {
+          if (!open && !donating) setPendingDonation(null);
+        }}
+      >
+        <AlertDialogContent className="max-w-sm rounded-2xl border-border/70 bg-background/95 p-5 backdrop-blur-xl">
+          <AlertDialogHeader className="text-left">
+            <AlertDialogTitle className="font-display text-base text-foreground">
+              ¿Confirmar donación?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="leading-relaxed">
+              Vas a donar <span className="font-semibold text-foreground">{pendingDonation ?? 0} orbes</span>{" "}
+              a <span className="font-semibold text-foreground">@{game?.author?.username || "el autor"}</span>.
+              Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="rounded-xl border border-primary/15 bg-primary/[0.06] px-3 py-2.5 text-center">
+            <span className="font-mono text-lg font-semibold text-primary">{pendingDonation ?? 0}</span>
+            <span className="ml-1.5 text-xs font-medium text-muted-foreground">ORBES</span>
+          </div>
+          <AlertDialogFooter className="gap-2 sm:space-x-0">
+            <AlertDialogCancel disabled={donating} className="rounded-xl border-border/60">
+              CANCELAR
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={donating || pendingDonation === null}
+              onClick={confirmDonation}
+              className="rounded-xl grad-brand text-white hover:opacity-95"
+            >
+              {donating ? "DONANDO…" : "CONFIRMAR DONACIÓN"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

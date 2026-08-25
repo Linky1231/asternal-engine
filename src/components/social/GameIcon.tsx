@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
-import { Sparkles, Lock, Heart } from "lucide-react";
+import { Sparkles, Lock } from "lucide-react";
 import { FaGamepad } from "react-icons/fa";
-import { toast } from "sonner";
 import type { PostWithMeta } from "@/lib/social/api";
-import { toggleReaction } from "@/lib/social/api";
+import { coverFrameFromPreset, coverFrameStyle } from "@/lib/social/cover-frame";
 
 function extractTitle(content: string): string {
   const line = content.split("\n")[0] || "Juego";
@@ -41,27 +40,7 @@ export function GameIcon({
     setImgFailed(false);
   }, [coverUrl]);
   const hasCover = !!coverUrl && !imgFailed;
-
-  // Me gusta directo desde el tile (apartado de juegos).
-  const [likes, setLikes] = useState(post.likes ?? 0);
-  const [myLike, setMyLike] = useState(!!post.my_like);
-  useEffect(() => {
-    setLikes(post.likes ?? 0);
-    setMyLike(!!post.my_like);
-  }, [post.id, post.likes, post.my_like]);
-
-  const toggleLike = async () => {
-    const next = !myLike;
-    setMyLike(next);
-    setLikes(n => Math.max(0, n + (next ? 1 : -1)));
-    try {
-      await toggleReaction({ postId: post.id, type: "like" });
-    } catch {
-      setMyLike(!next);
-      setLikes(n => Math.max(0, n + (next ? -1 : 1)));
-      toast.error("No se pudo dar Me gusta");
-    }
-  };
+  const coverFrame = coverFrameFromPreset(post.asset_preset);
 
   const dims = size === "sm" ? "w-16" : size === "lg" ? "w-24" : "w-20";
   const radius = size === "lg" ? "rounded-[22px]" : "rounded-2xl";
@@ -85,22 +64,14 @@ export function GameIcon({
             alt={title}
             loading="lazy"
             onError={() => setImgFailed(true)}
-            className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.04]"
+            className="absolute inset-0 w-full h-full object-contain transition-transform duration-300 group-hover:scale-[1.04]"
+            style={coverFrameStyle(coverFrame)}
           />
         ) : (
           <TileMark />
         )}
         {/* subtle top gloss like iOS icons */}
         <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-white/15 via-transparent to-black/[0.06]" />
-        {/* Badge «Me gusta»: toca para dar/quitar like sin abrir el juego */}
-        <span
-          onClick={(e) => { e.stopPropagation(); void toggleLike(); }}
-          className={`absolute top-1 left-1 flex items-center gap-0.5 px-1.5 h-5 rounded-full text-[9px] font-mono font-semibold shadow-sm backdrop-blur-sm transition active:scale-90 cursor-pointer ${
-            myLike ? "bg-primary text-primary-foreground" : "bg-white/90 text-primary"
-          }`}
-        >
-          <Heart size={9} fill="currentColor" /> {likes}
-        </span>
         {/* ticks de esquina: detalle técnico del tile blueprint */}
         {!hasCover && <CornerTicks />}
         {needsPurchase ? (
@@ -122,13 +93,33 @@ export function GameIcon({
   );
 }
 
+/** Marcador compartido para juegos que aún no tienen portada ni capturas. */
+export function GameIconPlaceholder({ iconSize = 46 }: { iconSize?: number }) {
+  return (
+    <>
+      <TileMark iconSize={iconSize} prominent={iconSize >= 80} />
+      <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-white/15 via-transparent to-black/[0.06]" />
+      <CornerTicks />
+    </>
+  );
+}
+
 /** Marca del tile sin portada: icono de juego de trazo fino sobre la cuadrícula blueprint. */
-function TileMark() {
+function TileMark({ iconSize = 46, prominent = false }: { iconSize?: number; prominent?: boolean }) {
   return (
     <span className="absolute inset-0 grid place-items-center pointer-events-none" aria-hidden>
       {/* halo suave: profundidad sin caja ni recuadro genérico */}
-      <span className="absolute w-14 h-14 rounded-full bg-primary/[0.06] dark:bg-primary/[0.04] blur-xl" />
-      <FaGamepad size={46} className="relative text-primary/[0.28] dark:text-primary/[0.20]" />
+      <span className={prominent
+        ? "absolute w-28 h-28 rounded-full bg-primary/[0.08] dark:bg-primary/[0.05] blur-2xl"
+        : "absolute w-14 h-14 rounded-full bg-primary/[0.06] dark:bg-primary/[0.04] blur-xl"
+      } />
+      <FaGamepad
+        size={iconSize}
+        className={prominent
+          ? "relative text-primary/[0.38] dark:text-primary/[0.30]"
+          : "relative text-primary/[0.28] dark:text-primary/[0.20]"
+        }
+      />
     </span>
   );
 }

@@ -9,15 +9,15 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        // Acción principal SÓLIDA (Guardar, Seguir, Aplicar) — sin degradado.
-        default: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm",
+        // Acción principal con material de vidrio sobre el azul de marca.
+        default: "bg-primary text-primary-foreground hover:bg-primary/90 glass-primary",
         // La CTA de la pantalla: ÚNICO uso dominante del degradado Asternal.
-        gradient: "btn-grad shadow-sm",
-        destructive: "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
+        gradient: "btn-grad",
+        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90 glass-destructive",
         outline:
-          "border border-line-strong bg-card hover:bg-muted/60 text-foreground",
-        secondary: "bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/70",
-        ghost: "text-foreground hover:bg-muted/70 hover:text-foreground",
+          "glass-control text-foreground",
+        secondary: "glass-control bg-secondary/70 text-secondary-foreground",
+        ghost: "glass-ghost text-foreground hover:text-foreground",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {

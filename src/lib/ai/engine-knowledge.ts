@@ -1,8 +1,14 @@
-// Conocimiento del motor para Orión: se importa como texto crudo (Vite ?raw)
-// para evitar problemas de escapes. Se regenera desde src/lib/engine/*.ts.
-import knowledge from "./engine-knowledge.md?raw";
-
-export const ENGINE_KNOWLEDGE: string = knowledge;
+// Contexto portable del motor para Orión. Se mantiene como TypeScript para que el
+// mismo asistente funcione tanto en Vite como en el servidor de Manus.
+export const ENGINE_KNOWLEDGE = `
+Asternal es un motor de videojuegos social. El motor organiza proyectos en
+entidades y escenas, y ofrece física, renderizado, un bucle de juego y una API
+de creación. Sus sistemas incluyen scripting declarativo para comportamientos,
+guardado y carga de proyectos, animaciones por estados y sprites, efectos de
+sonido, utilidades de imagen y sincronización de proyectos entre dispositivos.
+Cuando expliques una función, distingue entre el editor visual, la lógica de
+juego y la capa social; no inventes APIs que no aparezcan en el proyecto.
+`.trim();
 
 export const ENGINE_MODULE_SUMMARY = {
   core: "Motor principal: tipos de entidades, escenas, física, renderizado, bucle del juego y API de creación.",

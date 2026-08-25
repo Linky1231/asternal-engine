@@ -30,7 +30,7 @@ export function SubPageHeader({
     <button
       onClick={onBack}
       aria-label={backLabel}
-      className="w-9 h-9 rounded-lg border border-line-strong bg-card text-ink-2 grid place-items-center hover:bg-muted/60 hover:text-foreground active:scale-95 transition shrink-0"
+      className="glass-control w-9 h-9 rounded-lg text-ink-2 grid place-items-center hover:text-foreground active:scale-95 shrink-0"
     >
       <ArrowLeft size={16} />
     </button>
@@ -38,14 +38,14 @@ export function SubPageHeader({
     <Link
       to="/"
       aria-label={backLabel}
-      className="w-9 h-9 rounded-lg border border-line-strong bg-card text-ink-2 grid place-items-center hover:bg-muted/60 hover:text-foreground active:scale-95 transition shrink-0"
+      className="glass-control w-9 h-9 rounded-lg text-ink-2 grid place-items-center hover:text-foreground active:scale-95 shrink-0"
     >
       <ArrowLeft size={16} />
     </Link>
   );
 
   return (
-    <header className="app-header sticky top-0 z-20 bg-background border-b border-border/70">
+    <header className="app-header glass-header sticky top-0 z-20 border-b">
       <div className="max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto flex items-center gap-2.5 px-3 py-2.5">
         {back}
         <div className="flex-1 min-w-0">

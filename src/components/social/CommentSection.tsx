@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { addComment, deleteComment, fetchComments, toggleReaction, reportContent, type CommentRow } from "@/lib/social/api";
 import { Avatar } from "./Avatar";
-import { SUPABASE_ACCESS_TOKEN, runSql, COMMENTS_PARENT_ID_SQL } from "@/lib/supabase/setup";
 
 export function CommentSection({ postId, myId, isMod, onChange }: {
   postId: string; myId: string | null; isMod: boolean; onChange: () => void;
@@ -14,51 +13,17 @@ export function CommentSection({ postId, myId, isMod, onChange }: {
   const reload = async () => setRows(await fetchComments(postId));
   useEffect(() => { reload(); }, [postId]);
 
-  /** Envía un comentario. Devuelve true si se publicó. */
-  const doSend = async (parentId: string | undefined, v: string): Promise<boolean> => {
-    try {
-      await addComment(postId, v, parentId);
-      if (!parentId) setContent("");
-      await reload();
-      onChange();
-      return true;
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e ?? "");
-      // Auto-reparación del esquema: instalaciones antiguas sin la columna
-      // parent_id → responder comentarios falla siempre. Intenta crearla
-      // (idempotente) y reintenta una sola vez.
-      if (/parent_id|42703|PGRST204|does not exist/i.test(msg)) {
-        const token = (SUPABASE_ACCESS_TOKEN ?? "").trim();
-        const fixed = token
-          ? await runSql(token, COMMENTS_PARENT_ID_SQL).then(r => r.ok).catch(() => false)
-          : false;
-        if (fixed) {
-          try {
-            await addComment(postId, v, parentId);
-            if (!parentId) setContent("");
-            await reload();
-            onChange();
-            toast.success("Respuestas activadas: comentario publicado");
-            return true;
-          } catch { /* cae al error genérico */ }
-        } else {
-          toast.error("No se pudo activar el esquema de respuestas", {
-            description: "Añade el token sbp_ en Keys/API keys para que la app pueda repararlo sola.",
-          });
-          return false;
-        }
-      }
-      toast.error(msg || "Error al comentar");
-      return false;
-    }
-  };
-
   const send = async (parentId?: string, text?: string) => {
     const v = (text ?? content).trim();
     if (!v || sending) return;
     setSending(true);
     try {
-      await doSend(parentId, v);
+      await addComment(postId, v, parentId);
+      if (!parentId) setContent("");
+      await reload();
+      onChange();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Error al comentar");
     } finally {
       setSending(false);
     }

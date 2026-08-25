@@ -1,7 +1,7 @@
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 
 /**
- * Control segmentado con píldora medida (patrón estable de Asternal).
+ * Control segmentado con píldora de pestaña activa (patrón estable de Asternal).
  *
  * Centraliza la implementación que estaba duplicada en el inicio (/), el panel
  * de perfil y admin: la píldora se mide por la posición REAL de cada botón y se
@@ -93,7 +93,7 @@ export function SegmentedControl<T extends string>({
       })}
       <div
         aria-hidden
-        className={`absolute top-0.5 bottom-0.5 rounded-[10px] grad-brand shadow-sm transition-transform duration-300 ease-out will-change-transform ${pillClassName}`}
+        className={`absolute top-0.5 bottom-0.5 rounded-[10px] grad-brand shadow-sm transition-[transform,width] duration-300 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none will-change-transform ${pillClassName}`}
         style={{
           left: 0,
           width: pill?.width ?? 0,

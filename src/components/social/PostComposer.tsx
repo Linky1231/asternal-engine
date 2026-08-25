@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Avatar } from "./Avatar";
 import { createPost, fetchMyGamesLite, getMyProfile, type MediaType, type Profile } from "@/lib/social/api";
+import { reviewPostWithOrion } from "@/lib/ai/community-orion";
 import {
   Image as ImageIcon, Film, Link as LinkIcon, X, Send, Loader2, Tag,
   FileText, Code2, Palette, BarChart3, Lock, Gamepad2, Plus, Trash2, Share2, Sparkles,
@@ -226,6 +227,19 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
     setErr(null);
     try {
       const tags = parseTags();
+      const review = await reviewPostWithOrion({
+        content: content.trim(),
+        tags,
+        postTypes,
+        linkUrl: linkUrl.trim() || undefined,
+        htmlIncluded: Boolean(htmlContent.trim()),
+        documentNames: documents.map(document => document.name).slice(0, MAX_DOC_FILES),
+        hasMedia: files.length > 0,
+        pollQuestion: poll?.question.trim() || undefined,
+      });
+      if (!review.allowed) {
+        throw new Error(review.reason || "Esta publicación no cumple las reglas de la comunidad.");
+      }
       await createPost({
         content: content.trim(),
         files,
@@ -257,8 +271,12 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
 
   const Chip = ({ active, onClick, title, children }: { active?: boolean; onClick: () => void; title: string; children: React.ReactNode }) => (
     <button onClick={onClick} title={title}
-      className={`relative shrink-0 h-9 px-3 rounded-xl grid grid-flow-col auto-cols-max items-center gap-1.5 text-[11px] font-medium transition-[transform,color,border-color,background-color,box-shadow] duration-300 ease-out active:scale-[0.95] ${active ? "text-primary-foreground  border border-transparent" : "bg-muted/50 text-muted-foreground hover:text-primary hover:bg-primary/10 hover:border-primary/25 border border-transparent"}`}>
-      <span aria-hidden className={`absolute inset-0 rounded-xl grad-brand transition-opacity duration-300 ease-out ${active ? "opacity-100" : "opacity-0"}`} />
+      className={`relative shrink-0 h-9 px-3 rounded-xl grid grid-flow-col auto-cols-max items-center gap-1.5 text-[11px] font-medium transition-[transform,color,border-color,background-color,box-shadow] duration-200 ease-[var(--ease-out-expo)] active:scale-[0.95] ${active ? "text-primary-foreground border border-transparent" : "!bg-muted/50 text-muted-foreground border border-border/40 hover:text-foreground hover:!bg-surface-2 hover:border-border/70"}`}>
+      <span
+        aria-hidden
+        className="absolute inset-0 rounded-xl grad-brand transition-[opacity,transform] duration-200 ease-[var(--ease-out-expo)]"
+        style={{ opacity: active ? 1 : 0, transform: active ? "scale(1)" : "scale(0.92)" }}
+      />
       <span className="relative z-10 flex items-center gap-1.5">{children}</span>
     </button>
   );
@@ -494,7 +512,7 @@ export function PostComposer({ onCreated }: { onCreated: () => void }) {
           <button onClick={() => void submit()} disabled={!canSubmit}
             className="h-10 pl-4 pr-5 rounded-xl grad-brand text-primary-foreground font-display tracking-[0.15em] text-xs flex items-center gap-1.5 active:scale-[0.97] transition-[transform,box-shadow,opacity] duration-300 ease-out  disabled:opacity-40 disabled:pointer-events-none  ">
             {busy ? <Loader2 size={14} className="animate-spin" /> : <Send size={13} />}
-            {busy ? "…" : "PUBLICAR"}
+            {busy ? "ORIÓn REVISA…" : "PUBLICAR"}
           </button>
         </div>
       </div>

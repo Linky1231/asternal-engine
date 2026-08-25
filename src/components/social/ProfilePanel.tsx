@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   Loader2, Camera, Save, Gamepad2, Newspaper, CheckCircle2, Star, ChevronRight,
@@ -32,13 +34,20 @@ import {
 } from "@/lib/social/api";
 import { GameCard } from "./GameCard";
 import { PostCard } from "./PostCard";
+import { CommentSection } from "./CommentSection";
 import { UserName } from "./UserName";
 import { Avatar } from "./Avatar";
 import { SegmentedControl } from "@/components/ui/segmented";
 import { TrustPointsHistory } from "./TrustPointsHistory";
-import { SmartStatusPanel } from "./SmartStatusPanel";
 import { PortfolioPanel } from "./PortfolioPanel";
+import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { getUserCode } from "@/lib/social/avatar";
+import { galleryPreviewAuthor, galleryPreviewPrice, isArtistGalleryArtwork } from "@/lib/social/gallery-preview";
+import { optimisticFollowStats, profileControlStateClass } from "@/lib/social/interaction-state";
+import { qrPreviewGeometry } from "@/lib/social/qr-preview";
+import { createQrExportSvg, qrHex, safeExportFilename } from "@/lib/social/profile-export";
+import { trustLevelPresentation } from "@/lib/social/trust-points-panel";
+import { formatPublicOrbes, shouldShowPublicOrbes } from "@/lib/social/profile-visibility";
 
 const GENRES = ["Acción", "Aventura", "Puzzle", "RPG", "Estrategia", "Plataformas", "Casual", "Terror", "Simulación", "Deportes"];
 
@@ -57,7 +66,7 @@ export function ProfilePanel({
   const [editing, setEditing] = useState(false);
   const [showMore, setShowMore] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
-  const [showQR, setShowQR] = useState(false);
+  const [showQREditor, setShowQREditor] = useState(false);
 
   // form state
   const [username, setUsername] = useState("");
@@ -69,8 +78,6 @@ export function ProfilePanel({
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [pronouns, setPronouns] = useState("");
   const [location, setLocation] = useState("");
-  const [statusEmoji, setStatusEmoji] = useState("");
-  const [statusText, setStatusText] = useState("");
   const [accentColor, setAccentColor] = useState("#6B83D1");
   const [favoriteGenre, setFavoriteGenre] = useState("");
   const [customTitle, setCustomTitle] = useState("");
@@ -88,16 +95,18 @@ export function ProfilePanel({
   const [contentLoading, setContentLoading] = useState(false);
   const [follow, setFollow] = useState<FollowStats>({ followers: 0, following: 0, i_follow: false });
   const [followBusy, setFollowBusy] = useState(false);
+  const followRequestVersion = useRef(0);
   const [trustPoints, setTrustPoints] = useState<number>(DEFAULT_TRUST_POINTS);
   const [trustBusy, setTrustBusy] = useState(false);
   const [trustDeductAmt, setTrustDeductAmt] = useState(1);
   const [trustReason, setTrustReason] = useState("");
-  const [shareOpen, setShareOpen] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [showSharePanel, setShowSharePanel] = useState(false);
+  const [showMorePanel, setShowMorePanel] = useState(false);
   const [followList, setFollowList] = useState<null | { kind: "followers" | "following"; items: Profile[]; loading: boolean }>(null);
-  const [showTrustMenu, setShowTrustMenu] = useState(false);
   const [showTrustPanel, setShowTrustPanel] = useState(false);
   const [showPortfolio, setShowPortfolio] = useState(false);
+  const [artDetail, setArtDetail] = useState<PostWithMeta | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -112,8 +121,6 @@ export function ProfilePanel({
         setBannerPreview(p.banner_url ?? null);
         setPronouns(p.pronouns ?? "");
         setLocation(p.location ?? "");
-        setStatusEmoji(p.status_emoji ?? "");
-        setStatusText(p.status_text ?? "");
         setAccentColor(p.accent_color ?? "#6B83D1");
         setFavoriteGenre(p.favorite_genre ?? "");
         setCustomTitle(p.custom_title ?? "");
@@ -136,17 +143,29 @@ export function ProfilePanel({
     } finally { setContentLoading(false); }
   };
 
-  const loadFollow = async () => { try { setFollow(await getFollowStats(userId)); } catch { /* ignore */ } };
+  const loadFollow = async () => {
+    const requestVersion = followRequestVersion.current;
+    try {
+      const stats = await getFollowStats(userId);
+      if (requestVersion === followRequestVersion.current) setFollow(stats);
+    } catch { /* ignore */ }
+  };
 
   useEffect(() => { load(); loadContent(); loadFollow(); getTrustPoints(userId).then(setTrustPoints).catch(() => {}); /* eslint-disable-next-line */ }, [userId]);
 
   const toggleFollow = async () => {
     if (followBusy) return;
+    const previous = follow;
+    const willFollow = !previous.i_follow;
+    followRequestVersion.current += 1;
+    setFollow(optimisticFollowStats(previous, willFollow));
     setFollowBusy(true);
     try {
-      if (follow.i_follow) await unfollowUser(userId);
+      if (previous.i_follow) await unfollowUser(userId);
       else await followUser(userId);
-      await loadFollow();
+    } catch {
+      setFollow(previous);
+      setErr("No se pudo actualizar el seguimiento. Inténtalo de nuevo.");
     } finally { setFollowBusy(false); }
   };
 
@@ -181,7 +200,7 @@ export function ProfilePanel({
   // ─── Compartir perfil: enlace directo + compartir en el chat grupal ───
   const shareLink = typeof window !== "undefined" ? window.location.origin + "/profile/" + userId : "";
   const shareToChat = () => {
-    setShareOpen(false);
+    setShowSharePanel(false);
     try {
       sessionStorage.setItem("asternal_chat_share", shareLink);
       window.dispatchEvent(new CustomEvent("asternal_share_chat", { detail: { text: shareLink, view: "group" as const } }));
@@ -189,7 +208,7 @@ export function ProfilePanel({
     navigate({ to: "/" });
   };
   const shareDirect = () => {
-    setShareOpen(false);
+    setShowSharePanel(false);
     try {
       sessionStorage.setItem("asternal_chat_share", shareLink);
       window.dispatchEvent(new CustomEvent("asternal_share_chat", { detail: { text: shareLink, view: "dms" as const } }));
@@ -197,35 +216,25 @@ export function ProfilePanel({
     navigate({ to: "/" });
   };
   const copyLink = async () => {
-    setShareOpen(false);
+    setShowSharePanel(false);
     try { await navigator.clipboard.writeText(shareLink); } catch { /* noop */ }
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 1800);
   };
   const shareMenu = (
-    <div className="relative">
-      <button onClick={() => setShareOpen(s => !s)}
-        className="h-9 px-3 rounded-lg border border-border bg-surface text-xs font-medium flex items-center gap-1.5 active:scale-95 transition">
-        <Share2 size={13} /> Compartir
-      </button>
-      {shareOpen && (
-        <div className="absolute right-0 top-full mt-1.5 z-30 rounded-lg border border-border bg-surface p-1 min-w-[220px] shadow-md">
-          <button onClick={shareToChat}
-            className="flex w-full items-center gap-2 px-3 py-2 rounded-md text-xs hover:bg-muted/60 transition-colors text-left">
-            <MessageCircle size={14} className="text-primary shrink-0" /> Compartir en chat grupal
-          </button>
-          <button onClick={shareDirect}
-            className="flex w-full items-center gap-2 px-3 py-2 rounded-md text-xs hover:bg-muted/60 transition-colors text-left">
-            <MessageCircle size={14} className="text-primary shrink-0" /> Compartir en chat directo
-          </button>
-          <button onClick={() => void copyLink()}
-            className="flex w-full items-center gap-2 px-3 py-2 rounded-md text-xs hover:bg-muted/60 transition-colors text-left">
-            {copiedLink ? <Check size={14} className="text-emerald-500 shrink-0" /> : <Link2 size={14} className="text-primary shrink-0" />}
-            {copiedLink ? "¡Enlace copiado!" : "Copiar enlace al perfil"}
-          </button>
-        </div>
-      )}
-    </div>
+    <button onClick={() => { setShowMorePanel(false); setShowSharePanel(true); }}
+      aria-label="Compartir perfil" aria-expanded={showSharePanel}
+      className="h-9 w-9 sm:w-auto sm:px-3 rounded-xl border border-border bg-surface text-xs font-medium flex items-center justify-center gap-1.5 text-foreground hover:bg-muted/60 active:scale-95 transition">
+      <Share2 size={14} /><span className="hidden sm:inline">Compartir</span>
+    </button>
+  );
+
+  const moreMenu = (
+    <button onClick={() => { setShowSharePanel(false); setShowMorePanel(true); }}
+      aria-label="Más acciones de perfil" aria-expanded={showMorePanel}
+      className="h-9 w-9 rounded-xl border border-border bg-surface grid place-items-center text-muted-foreground hover:text-foreground active:scale-95 transition">
+      <MoreVertical size={14} />
+    </button>
   );
 
   // Abre la lista de seguidores o de "siguiendo" cargando los perfiles.
@@ -260,7 +269,7 @@ export function ProfilePanel({
       const interests = interestsRaw.split(",").map(s => s.trim()).filter(Boolean).slice(0, 10);
       const updated = await updateMyProfile({
         username, display_name: displayName, bio,
-        pronouns, location, status_emoji: statusEmoji, status_text: statusText,
+        pronouns, location,
         accent_color: accentColor, favorite_genre: favoriteGenre, custom_title: customTitle,
         birthday: birthday || null, show_orbes: showOrbes, interests,
         ...(avatar_url ? { avatar_url } : {}),
@@ -281,6 +290,11 @@ export function ProfilePanel({
 
   const interestsList = (profile.interests ?? []).filter(Boolean);
   const userCode = profile.user_code || getUserCode(profile.id);
+  const profileHandle = profile.username?.trim() || userCode;
+  const profileDisplayName = profile.display_name?.trim() || profileHandle || "Jugador";
+  const publicOrbes = typeof profile.orbes === "number" ? profile.orbes : null;
+  const publicOrbesVisible = shouldShowPublicOrbes(profile.show_orbes, publicOrbes);
+  const galleryArtworks = artworks.filter(isArtistGalleryArtwork);
   const copyCode = async () => {
     try { await navigator.clipboard.writeText(userCode); } catch { /* noop */ }
     setCodeCopied(true);
@@ -293,7 +307,7 @@ export function ProfilePanel({
     <button
       type="button"
       onClick={() => viewingOwn && editing && fileRef.current?.click()}
-      className={`relative w-20 h-20 rounded-2xl overflow-hidden border-[3px] border-white block  ${viewingOwn && editing ? "cursor-pointer active:scale-95" : ""}`}
+      className={`relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-[3px] border-white block ${viewingOwn && editing ? "cursor-pointer active:scale-95" : ""}`}
       aria-label="Avatar"
     >
       {/* w-full h-full sin size fijo: la foto rellena exactamente la caja
@@ -317,8 +331,8 @@ export function ProfilePanel({
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
       {/* Header card with banner */}
-      <section className="rounded-lg border border-border/70 bg-surface overflow-hidden">
-        <div className="relative h-28 grad-brand-soft">
+      <section className="rounded-2xl border border-border/70 bg-surface/90 shadow-sm overflow-hidden">
+        <div className="relative h-28 sm:h-36 bg-muted/35">
           {bannerPreview && <img src={bannerPreview} alt="banner" className="absolute inset-0 w-full h-full object-cover" />}
           {viewingOwn && editing && (
             <button onClick={() => bannerRef.current?.click()}
@@ -330,8 +344,8 @@ export function ProfilePanel({
             onChange={e => pickBanner(e.target.files?.[0] ?? null)} />
         </div>
 
-        <div className="p-4 space-y-3">
-          <div className="flex items-start gap-3 -mt-12">
+        <div className="px-3 sm:px-4 pb-3 sm:pb-4">
+          <div className="-mt-10 sm:-mt-12 flex items-end gap-3">
             {/* Avatar: marco de degradado ceñido a la foto (mismo lenguaje que PostCard),
                 en vez del anillo animado flotante que se veía como un borde roto. */}
             {frameRing ? (
@@ -341,9 +355,7 @@ export function ProfilePanel({
             ) : (
               avatarButton
             )}
-
-
-            <div className="flex-1 min-w-0 pt-12">
+            <div className="min-w-0 flex-1 pt-10 sm:pt-12">
               {editing ? (
                 <div className="space-y-2">
                   <input value={displayName} onChange={e => setDisplayName(e.target.value)} maxLength={40} placeholder="Nombre"
@@ -353,105 +365,85 @@ export function ProfilePanel({
                 </div>
               ) : (
                 <>
-                  <div className="flex items-center gap-2 flex-wrap min-w-0">
-                    <UserName p={profile} size="lg" showBadge={false} />
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-display text-base sm:text-lg font-semibold truncate text-foreground" title={profileDisplayName}>{profileDisplayName}</span>
                     {isPlusActive(profile) && profile.show_plus_badge !== false && (
                       <span className="px-1.5 py-0.5 rounded-md text-[9px] font-display font-bold text-white shrink-0"
                         style={{ background: "var(--gradient-plus)" }}>PLUS</span>
                     )}
                   </div>
-                  <div className="text-[11px] font-mono text-muted-foreground truncate">
-                    @{profile.username}{profile.pronouns ? ` · ${profile.pronouns}` : ""}
+                  <div className="mt-0.5 max-w-full truncate text-xs font-medium text-muted-foreground" title={`@${profileHandle}`}>
+                    @{profileHandle}{profile.pronouns ? ` · ${profile.pronouns}` : ""}
                   </div>
-                  {!editing && (
-                    <button onClick={() => void copyCode()}
-                      className="mt-1 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/40 border border-border/50 text-[9px] font-mono text-muted-foreground hover:text-primary-glow hover:border-primary/40 active:scale-95 transition"
-                      title="ID de usuario · toca para copiar">
-                      <Fingerprint size={10} className="text-primary-glow" />
-                      {userCode}
-                      {codeCopied ? <Check size={9} className="text-emerald-500" /> : <Copy size={9} className="opacity-60" />}
-                    </button>
-                  )}
-                  {profile.custom_title && (
-                    <div className="text-[11px] mt-0.5" style={{ color: profile.accent_color ?? "var(--primary)" }}>
-                      {profile.custom_title}
-                    </div>
-                  )}
                 </>
               )}
             </div>
+          </div>
 
+          {!editing && (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <button onClick={() => void copyCode()}
+                className="inline-flex max-w-full items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/40 border border-border/50 text-[10px] font-mono text-muted-foreground hover:text-foreground hover:border-border active:scale-95 transition"
+                title="ID de usuario · toca para copiar">
+                <Fingerprint size={10} />
+                <span className="truncate">{userCode}</span>
+                {codeCopied ? <Check size={9} className="text-emerald-500 shrink-0" /> : <Copy size={9} className="opacity-60 shrink-0" />}
+              </button>
+              {publicOrbesVisible && publicOrbes !== null && (
+                <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-primary/25 bg-primary/[0.08] text-[10px] font-semibold text-primary" aria-label={`${formatPublicOrbes(publicOrbes)} orbes públicos`}>
+                  <SparklesIcon size={10} aria-hidden="true" />
+                  <span className="tabular-nums">{formatPublicOrbes(publicOrbes)}</span>
+                  <span className="text-primary/75">orbes</span>
+                </div>
+              )}
+              {profile.custom_title && (
+                <div className="max-w-full truncate text-[11px] text-muted-foreground" style={profile.accent_color ? { color: profile.accent_color } : undefined}>
+                  {profile.custom_title}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="mt-3 grid grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)_2.75rem_2.75rem] items-center gap-2 border-t border-border/40 pt-3 sm:flex sm:gap-3">
             {viewingOwn ? (
               editing ? (
                 <button onClick={save} disabled={saving}
-                  className="mt-12 h-9 px-3.5 rounded-lg bg-primary text-white text-xs font-semibold flex items-center gap-1.5 active:scale-95 disabled:opacity-60">
+                  className="col-span-4 h-10 px-3.5 rounded-xl bg-primary text-white text-xs font-semibold flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-60">
                   {saving ? <Loader2 size={12} className="animate-spin" /> : saved ? <CheckCircle2 size={12}/> : <Save size={12} />} Guardar
                 </button>
               ) : (
-                <div className="mt-12 flex items-center gap-2">
+                <>
                   <button onClick={() => setEditing(true)}
-                    className="h-9 px-3 rounded-lg border border-border bg-surface text-xs font-medium active:scale-95">Editar</button>
-                  <button onClick={() => setShowQR(v => !v)}
-                    className={`h-9 px-2.5 rounded-lg border text-xs font-medium active:scale-95 flex items-center gap-1 ${showQR ? "border-primary/30 bg-primary/10 text-primary" : "border-border bg-surface text-muted-foreground hover:text-foreground"}`}>
-                    <QrCode size={13} />
+                    className="h-9 px-2 rounded-xl border border-border bg-surface text-xs font-medium text-foreground hover:bg-muted/60 active:scale-95">Editar</button>
+                  <button onClick={() => setShowQREditor(true)}
+                    aria-haspopup="dialog"
+                    className={`h-9 px-2 rounded-xl border text-xs font-semibold active:scale-95 flex items-center justify-center gap-1.5 transition-colors ${profileControlStateClass(false)}`}>
+                    <QrCode size={15} /><span>Código QR</span>
                   </button>
                   {shareMenu}
-                  <div className="relative">
-                    <button onClick={() => setShowTrustMenu(v => !v)}
-                      className="h-9 w-9 rounded-lg border border-border bg-surface grid place-items-center text-muted-foreground hover:text-foreground active:scale-95 transition">
-                      <MoreVertical size={14} />
-                    </button>
-                    {showTrustMenu && (
-                      <div className="absolute right-0 top-full mt-1.5 z-30 rounded-lg border border-border bg-surface p-1 min-w-[200px] shadow-md animate-in fade-in slide-in-from-top-1 duration-150">
-                        <button onClick={() => { setShowTrustMenu(false); setShowTrustPanel(true); }}
-                          className="flex w-full items-center gap-2 px-3 py-2 rounded-md text-xs hover:bg-muted/60 transition-colors text-left">
-                          <Shield size={14} className="text-primary shrink-0" /> Puntos de confianza
-                        </button>
-                        <button onClick={() => { setShowTrustMenu(false); setShowPortfolio(true); }}
-                          className="flex w-full items-center gap-2 px-3 py-2 rounded-md text-xs hover:bg-muted/60 transition-colors text-left">
-                          <Trophy size={14} className="text-primary shrink-0" /> Portafolio
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
+                  {moreMenu}
+                </>
               )
             ) : (
-              <div className="mt-12 flex items-center gap-2">
+              <>
                 <button onClick={toggleFollow} disabled={followBusy}
-                  className={`h-9 px-3 rounded-lg text-xs font-semibold flex items-center gap-1.5 active:scale-95 disabled:opacity-60 ${follow.i_follow ? "border border-border bg-surface text-foreground" : "bg-primary text-white"}`}>
-                  {followBusy ? <Loader2 size={12} className="animate-spin"/> : follow.i_follow ? <><UserCheck size={12}/> Siguiendo</> : <><UserPlus size={12}/> Seguir</>}
+                  className={`h-9 px-2 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-60 ${follow.i_follow ? "border-border bg-muted/60 text-foreground" : "border-border bg-surface text-foreground hover:bg-muted/60"}`}>
+                  {follow.i_follow ? <><UserCheck size={12}/> Siguiendo</> : <><UserPlus size={12}/> Seguir</>}
                 </button>
-                <button onClick={() => setShowQR(v => !v)}
-                  className={`h-9 px-2.5 rounded-lg border text-xs font-medium active:scale-95 flex items-center gap-1 ${showQR ? "border-primary/30 bg-primary/10 text-primary" : "border-border bg-surface text-muted-foreground hover:text-foreground"}`}>
-                  <QrCode size={13} />
+                <button onClick={() => setShowQREditor(true)}
+                  aria-haspopup="dialog"
+                  className={`h-9 px-2 rounded-xl border text-xs font-semibold active:scale-95 flex items-center justify-center gap-1.5 transition-colors ${profileControlStateClass(false)}`}>
+                  <QrCode size={15} /><span>Código QR</span>
                 </button>
                 {shareMenu}
-                <div className="relative">
-                  <button onClick={() => setShowTrustMenu(v => !v)}
-                    className="h-9 w-9 rounded-lg border border-border bg-surface grid place-items-center text-muted-foreground hover:text-foreground active:scale-95 transition">
-                    <MoreVertical size={14} />
-                  </button>
-                  {showTrustMenu && (
-                    <div className="absolute right-0 top-full mt-1.5 z-30 rounded-lg border border-border bg-surface p-1 min-w-[200px] shadow-md animate-in fade-in slide-in-from-top-1 duration-150">
-                      <button onClick={() => { setShowTrustMenu(false); setShowTrustPanel(true); }}
-                        className="flex w-full items-center gap-2 px-3 py-2 rounded-md text-xs hover:bg-muted/60 transition-colors text-left">
-                        <Shield size={14} className="text-primary shrink-0" /> Puntos de confianza
-                      </button>
-                      <button onClick={() => { setShowTrustMenu(false); setShowPortfolio(true); }}
-                        className="flex w-full items-center gap-2 px-3 py-2 rounded-md text-xs hover:bg-muted/60 transition-colors text-left">
-                        <Trophy size={14} className="text-primary shrink-0" /> Portafolio
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
+                {moreMenu}
+              </>
             )}
           </div>
 
           {/* Follow counts (tocables: muestran la lista de personas) */}
           {!editing && (
-            <div className="flex items-center gap-1 text-[11px]">
+          <div className="mt-2 flex items-center gap-1 text-[11px]">
               <button onClick={() => openFollowList("followers")}
                 className="flex items-center gap-1 px-2 py-1 -mx-1 rounded-lg hover:bg-muted/40 active:scale-95 transition text-left">
                 <b className="text-foreground tabular-nums">{follow.followers}</b>
@@ -475,27 +467,19 @@ export function ProfilePanel({
             <SocialLinksRow links={profile.social_links} />
           )}
 
-          {/* Status pill */}
-          {!editing && (profile.status_text || profile.status_emoji) && (
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/40 text-xs">
-              {profile.status_emoji && <span>{profile.status_emoji}</span>}
-              {profile.status_text && <span className="text-muted-foreground">{profile.status_text}</span>}
-            </div>
-          )}
-
           {editing ? (
             <textarea value={bio} onChange={e => setBio(e.target.value)} rows={3} maxLength={280}
               placeholder="Cuéntanos sobre ti…"
               className="w-full bg-input/50 rounded-lg px-3 py-2 text-sm outline-none resize-none focus:ring-2 focus:ring-primary/40" />
           ) : profile.bio ? (
-            <p className="text-sm whitespace-pre-wrap break-words">{profile.bio}</p>
+            <p className="mt-3 text-sm whitespace-pre-wrap break-words">{profile.bio}</p>
           ) : viewingOwn ? (
-            <p className="text-xs text-muted-foreground italic">Añade una descripción tocando Editar.</p>
+          <p className="mt-3 text-xs text-muted-foreground italic">Añade una descripción tocando Editar.</p>
           ) : null}
 
           {/* Meta chips */}
           {!editing && (
-            <div className="flex flex-wrap gap-1.5 text-[11px] text-muted-foreground">
+            <div className="mt-3 flex flex-wrap gap-1.5 border-t border-border/30 pt-3 text-[11px] text-muted-foreground">
               {profile.location && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted/30"><MapPin size={10}/>{profile.location}</span>}
               {profile.birthday && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted/30"><Cake size={10}/>{new Date(profile.birthday).toLocaleDateString()}</span>}
               {profile.favorite_genre && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted/30"><Heart size={10}/>{profile.favorite_genre}</span>}
@@ -504,7 +488,7 @@ export function ProfilePanel({
 
           {/* Interests */}
           {!editing && interestsList.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
+            <div className="mt-3 flex flex-wrap gap-1.5">
               {interestsList.map((t, i) => (
                 <span key={i} className="px-2 py-0.5 rounded-full text-[10px] font-medium"
                   style={{ background: `color-mix(in oklab, ${profile.accent_color ?? "var(--primary)"} 15%, transparent)`, color: profile.accent_color ?? "var(--primary)" }}>
@@ -514,18 +498,11 @@ export function ProfilePanel({
             </div>
           )}
 
-          {/* QR Code: personalizable */}
-          {!editing && showQR && (
-            <div className="pt-3 border-t border-border/30 animate-in fade-in slide-in-from-top-2 duration-200">
-              <QRCustomizer userId={userId} username={profile.username ?? "user"} qrStyle={profile.qr_style ?? null} isPlus={viewingOwn && isPlusActive(profile)} viewingOwn={viewingOwn} />
-            </div>
-          )}
-
           {/* Extended edit fields — agrupados por sección con etiqueta y
               descripción: cada bloque dice para qué sirve (IDENTIDAD / ESTILO /
               CONTENIDO / PRIVACIDAD) en vez de aparecer todo junto. */}
           {editing && (
-            <div className="space-y-2 pt-2 border-t border-border/40">
+            <div className="mt-5 space-y-3 border-t border-border/40 pt-3">
               <button onClick={() => setShowMore(v => !v)}
                 className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground">
                 <span>Personalización</span>
@@ -539,10 +516,6 @@ export function ProfilePanel({
                       <LabeledInput label="Ubicación" value={location} onChange={setLocation} placeholder="Ciudad" max={40}/>
                     </div>
                     <LabeledInput label="Título personalizado" value={customTitle} onChange={setCustomTitle} placeholder="Desarrolladora indie" max={40}/>
-                    <div className="grid grid-cols-[64px_1fr] gap-2">
-                      <LabeledInput label="Emoji" value={statusEmoji} onChange={setStatusEmoji} placeholder="🎮" max={4}/>
-                      <LabeledInput label="Estado" value={statusText} onChange={setStatusText} placeholder="Jugando ahora" max={60}/>
-                    </div>
                     <div>
                       <div className="text-[11px] font-medium text-muted-foreground mb-1 flex items-center gap-1"><Cake size={10}/>Cumpleaños</div>
                       <input type="date" value={birthday} onChange={e => setBirthday(e.target.value)}
@@ -578,23 +551,23 @@ export function ProfilePanel({
                   </EditSection>
 
                   <EditSection label="Privacidad" hint="Qué información muestras en el header">
-                    <label className="flex items-center gap-2 px-2 py-2 rounded-lg border border-border cursor-pointer">
-                      <button type="button" onClick={() => setShowOrbes(v => !v)}
-                        className={`w-9 h-5 rounded-full transition relative ${showOrbes ? "bg-primary" : "bg-muted"}`}>
-                        <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition ${showOrbes ? "left-4" : "left-0.5"}`}/>
+                    <div className="flex items-center gap-2 px-2 py-2 rounded-lg border border-border">
+                      <button type="button" onClick={() => setShowOrbes(v => !v)} aria-pressed={showOrbes} aria-label={showOrbes ? "Ocultar orbes en el header" : "Mostrar orbes en el header"}
+                        className={`w-10 h-6 rounded-full border transition-colors relative ${showOrbes ? "border-primary/45 bg-primary/15" : "border-border bg-muted/60"}`}>
+                        <span className={`absolute top-1 left-1 w-4 h-4 rounded-full transition-transform ${showOrbes ? "translate-x-4 bg-primary" : "translate-x-0 bg-muted-foreground/60"}`}/>
                       </button>
                       <span className="text-xs flex-1 flex items-center gap-1">
-                        {showOrbes ? <Eye size={12}/> : <EyeOff size={12}/>}
+                        {showOrbes ? <Eye size={12} className="text-primary"/> : <EyeOff size={12}/>} 
                         Mostrar orbes en el header
                       </span>
-                    </label>
+                    </div>
                   </EditSection>
                 </div>
               )}
             </div>
           )}
 
-          {err && <div className="text-xs text-destructive">{err}</div>}
+          {err && <div className="mt-3 text-xs text-destructive">{err}</div>}
         </div>
       </section>
 
@@ -602,15 +575,10 @@ export function ProfilePanel({
       {viewingOwn && (
         <Link
           to="/plus"
-          className="block relative overflow-hidden rounded-lg border p-4 active:scale-[0.99] transition"
-          style={{
-            borderColor: "color-mix(in oklab, var(--plus) 40%, transparent)",
-            background: "linear-gradient(135deg, color-mix(in oklab, var(--plus) 15%, transparent), transparent)",
-          }}
+          className="profile-plus-benefits block relative overflow-hidden rounded-2xl border p-3 sm:p-4 active:scale-[0.99] transition"
         >
           <div className="relative flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl grid place-items-center text-white shrink-0"
-              style={{ background: "var(--gradient-plus)" }}>
+            <div className="profile-plus-benefits-icon w-10 h-10 sm:w-11 sm:h-11 rounded-xl grid place-items-center text-white shrink-0">
               <Star size={20} fill="currentColor" />
             </div>
             <div className="flex-1 min-w-0">
@@ -619,7 +587,7 @@ export function ProfilePanel({
                 {profile.is_plus ? "Gestiona tus beneficios activos" : "Suscríbete y desbloquea todo"}
               </div>
             </div>
-            <ChevronRight size={18} style={{ color: "var(--plus)" }} />
+            <ChevronRight size={18} className="profile-plus-benefits-chevron" />
           </div>
         </Link>
       )}
@@ -628,13 +596,22 @@ export function ProfilePanel({
         items={[
           { id: "games", label: <>JUEGOS · {games.length}</>, icon: <Gamepad2 size={13} className="hidden sm:block shrink-0" /> },
           { id: "posts", label: <>POSTS · {posts.length}</>, icon: <Newspaper size={13} className="hidden sm:block shrink-0" /> },
-          { id: "gallery", label: <>TIENDA · {artworks.length}</>, icon: <Palette size={13} className="hidden sm:block shrink-0" /> },
+          { id: "gallery", label: <>GALERÍA · {galleryArtworks.length}</>, icon: <Palette size={13} className="hidden sm:block shrink-0" /> },
         ]}
         value={tab}
         onChange={setTab}
       />
 
       <div className="space-y-3">
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={contentLoading ? "loading" : tab}
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+            className="space-y-3"
+          >
         {contentLoading ? (
           <div className="p-8 text-center text-xs text-muted-foreground"><Loader2 className="animate-spin inline mr-2" size={14} /></div>
         ) : tab === "games" ? (
@@ -642,49 +619,39 @@ export function ProfilePanel({
             <div className="px-4 py-8 text-center text-xs text-muted-foreground rounded-lg border border-dashed border-border bg-surface">Sin juegos publicados</div>
           ) : games.map(g => <GameCard key={g.id} post={g} myId={myId} isMod={isMod} onChange={loadContent} />)
         ) : tab === "gallery" ? (
-          artworks.length === 0 ? (
+          galleryArtworks.length === 0 ? (
             <div className="px-4 py-8 text-center text-xs text-muted-foreground rounded-lg border border-dashed border-border bg-surface">
               {viewingOwn ? "Aún no has publicado obras en la galería" : "Este artista aún no ha publicado obras"}
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3">
-              {artworks.map(a => {
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {galleryArtworks.map(a => {
                 const imgUrl = a.signed_media?.[0] ?? a.signed_cover;
-                const price = a.price_orbes ?? 0;
-                const title = a.content.replace(/^🎨\s*/, "");
+                const title = (a.content.split("\n")[0] || "Obra sin título").replace(/^🎮🎨\s*/, "").replace(/^🎨\s*/, "");
+                const authorLabel = galleryPreviewAuthor(a.author?.username ?? profile.username);
+                const priceLabel = galleryPreviewPrice(a.price_orbes);
                 return (
-                  <div key={a.id} className="rounded-lg border border-border/70 bg-surface overflow-hidden group">
-                    <div className="aspect-square bg-muted/20 relative overflow-hidden">
+                  <article key={a.id} className="rounded-2xl border border-border/60 bg-surface overflow-hidden group hover:border-border-strong hover:shadow-md transition-[border-color,box-shadow]">
+                    <button type="button" onClick={() => setArtDetail(a)} className="block w-full aspect-square bg-muted/20 relative p-2 text-left" aria-label={`Abrir ${title}`}>
                       {imgUrl ? (
-                        <img src={imgUrl} alt={title} className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-500 ease-out" />
+                        <img src={imgUrl} alt={title} className="w-full h-full object-contain rounded-xl group-hover:scale-[1.015] transition-transform duration-200" />
                       ) : (
-                        <div className="w-full h-full grid place-items-center"><Palette size={32} className="text-muted-foreground/15" /></div>
+                        <div className="w-full h-full rounded-xl border border-dashed border-border/60 grid place-items-center"><Palette size={28} className="text-muted-foreground/30" /></div>
                       )}
-                      {price > 0 ? (
-                        <span className="absolute bottom-2 left-2 px-2.5 py-1 rounded-full text-[9px] font-semibold bg-primary text-white flex items-center gap-1 shadow-sm">
-                          <SparklesIcon size={9} /> {price}
+                    </button>
+                    <div className="border-t border-border/40 px-3 py-2.5">
+                      <button type="button" onClick={() => setArtDetail(a)} className="flex w-full min-w-0 items-center justify-between gap-3 text-left hover:opacity-80 transition" aria-label={`Abrir obra de ${authorLabel}`}>
+                        <span className="flex min-w-0 items-center gap-2">
+                          <Avatar p={a.author ?? profile} className="w-6 h-6" />
+                          <span className="min-w-0 truncate text-[11px] font-semibold">{authorLabel}</span>
                         </span>
-                      ) : (
-                        <span className="absolute bottom-2 left-2 px-2.5 py-1 rounded-full text-[9px] font-semibold bg-emerald-500/15 text-emerald-600 border border-emerald-500/30">
-                          GRATIS
+                        <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-semibold tabular-nums text-foreground/75" aria-label={`Precio: ${priceLabel}`}>
+                          <SparklesIcon size={12} className="text-primary/75" />
+                          {priceLabel}
                         </span>
-                      )}
+                      </button>
                     </div>
-                    <div className="p-2.5 space-y-1.5">
-                      <div className="text-xs font-display truncate font-semibold tracking-tight">{title}</div>
-                      <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Heart size={10} className={a.likes > 0 ? "text-rose-400" : ""} /> {a.likes}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <MessageCircle size={10} /> {a.comments_count}
-                        </span>
-                        <span className="text-[9px] font-mono text-muted-foreground/50 ml-auto">
-                          {new Date(a.created_at).toLocaleDateString("es", { month: "short", day: "numeric" })}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+                  </article>
                 );
               })}
             </div>
@@ -694,12 +661,76 @@ export function ProfilePanel({
             <div className="px-4 py-8 text-center text-xs text-muted-foreground rounded-lg border border-dashed border-border bg-surface">Sin publicaciones</div>
           ) : posts.map(p => <PostCard key={p.id} post={p} myId={myId} isMod={isMod} onChange={loadContent} />)
         )}
+          </motion.div>
+        </AnimatePresence>
       </div>
 
-      {/* Smart Status */}
-      <div className="px-3 py-1">
-        <SmartStatusPanel userId={userId} />
-      </div>
+      {artDetail && (
+        <div className="fixed inset-0 z-[90] flex flex-col overflow-hidden bg-background/95 backdrop-blur-md" onClick={() => setArtDetail(null)}>
+          <header className="shrink-0 glass-header border-b" onClick={event => event.stopPropagation()}>
+            <div className="max-w-4xl mx-auto px-3 sm:px-6 py-3 flex items-center justify-between gap-3">
+              <div className="min-w-0"><div className="text-[9px] uppercase tracking-[0.16em] text-muted-foreground">Galería</div><h3 className="text-sm font-display font-bold truncate">{(artDetail.content.split("\n")[0] || "Obra sin título").replace(/^🎮🎨\s*/, "").replace(/^🎨\s*/, "")}</h3></div>
+              <button type="button" onClick={() => setArtDetail(null)} className="w-9 h-9 shrink-0 rounded-xl border border-border/60 bg-muted/40 grid place-items-center hover:bg-muted" aria-label="Cerrar detalle de obra"><X size={15} /></button>
+            </div>
+          </header>
+          <div className="min-h-0 flex-1 overflow-y-auto" onClick={event => event.stopPropagation()}>
+            <div className="max-w-4xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(300px,0.85fr)]">
+              <div className="rounded-2xl border border-border/60 bg-card aspect-square p-3 sm:p-5 grid place-items-center">
+                {artDetail.signed_media?.[0] || artDetail.signed_cover ? <img src={artDetail.signed_media?.[0] ?? artDetail.signed_cover ?? ""} alt="" className="w-full h-full object-contain rounded-xl" /> : <Palette size={36} className="text-muted-foreground/30" />}
+              </div>
+              <div className="rounded-2xl border border-border/60 bg-card p-4"><div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground mb-3">Comentarios</div><CommentSection postId={artDetail.id} myId={myId} isMod={isMod} onChange={loadContent} /></div>
+            </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showQREditor && (
+        <div className="fixed inset-0 z-[100] bg-background/95 backdrop-blur-md overflow-y-auto" role="dialog" aria-modal="true" aria-label="Editor de código QR" onClick={() => setShowQREditor(false)}>
+          <div className="min-h-full max-w-2xl mx-auto px-3 sm:px-6 py-4 sm:py-8" onClick={event => event.stopPropagation()}>
+            <div className="rounded-2xl border border-border/70 bg-card shadow-xl overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200">
+              <header className="flex items-center justify-between gap-3 border-b border-border/50 px-4 py-3 sm:px-5">
+                <div className="min-w-0">
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Perfil</div>
+                  <h2 className="font-display text-base font-bold truncate">Código QR</h2>
+                </div>
+                <button type="button" onClick={() => setShowQREditor(false)} className="h-9 w-9 rounded-xl border border-border bg-surface grid place-items-center text-muted-foreground hover:text-foreground hover:bg-muted/60 active:scale-95 transition" aria-label="Cerrar editor QR"><X size={16} /></button>
+              </header>
+              <div className="p-4 sm:p-5">
+                <QRCustomizer userId={userId} username={profile.username ?? "user"} qrStyle={profile.qr_style ?? null} isPlus={viewingOwn && isPlusActive(profile)} viewingOwn={viewingOwn} />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <Drawer open={showSharePanel} onOpenChange={setShowSharePanel}>
+        <DrawerContent className="z-[120] max-w-xl mx-auto">
+          <DrawerHeader className="text-left">
+            <DrawerTitle>Compartir perfil</DrawerTitle>
+            <DrawerDescription>Elige cómo quieres enviar este perfil.</DrawerDescription>
+          </DrawerHeader>
+          <div className="px-4 pb-6 space-y-2">
+            <button type="button" onClick={shareToChat} className="w-full min-h-12 rounded-xl border border-border bg-surface px-4 py-3 flex items-center gap-3 text-left text-sm font-medium hover:bg-muted/60 active:scale-[0.99] transition"><MessageCircle size={17} className="text-primary shrink-0" />Compartir en chat grupal</button>
+            <button type="button" onClick={shareDirect} className="w-full min-h-12 rounded-xl border border-border bg-surface px-4 py-3 flex items-center gap-3 text-left text-sm font-medium hover:bg-muted/60 active:scale-[0.99] transition"><MessageCircle size={17} className="text-primary shrink-0" />Compartir en chat directo</button>
+            <button type="button" onClick={() => void copyLink()} className="w-full min-h-12 rounded-xl border border-border bg-surface px-4 py-3 flex items-center gap-3 text-left text-sm font-medium hover:bg-muted/60 active:scale-[0.99] transition">{copiedLink ? <Check size={17} className="text-emerald-500 shrink-0" /> : <Link2 size={17} className="text-primary shrink-0" />}{copiedLink ? "¡Enlace copiado!" : "Copiar enlace al perfil"}</button>
+          </div>
+        </DrawerContent>
+      </Drawer>
+
+      <Drawer open={showMorePanel} onOpenChange={setShowMorePanel}>
+        <DrawerContent className="z-[120] max-w-xl mx-auto">
+          <DrawerHeader className="text-left">
+            <DrawerTitle>Opciones de perfil</DrawerTitle>
+            <DrawerDescription>Consulta herramientas y reconocimientos de este perfil.</DrawerDescription>
+          </DrawerHeader>
+          <div className="px-4 pb-6 space-y-2">
+            <button type="button" onClick={() => { setShowMorePanel(false); setShowTrustPanel(true); }} className="w-full min-h-12 rounded-xl border border-border bg-surface px-4 py-3 flex items-center gap-3 text-left text-sm font-medium hover:bg-muted/60 active:scale-[0.99] transition"><Shield size={17} className="text-primary shrink-0" />Puntos de confianza</button>
+            <button type="button" onClick={() => { setShowMorePanel(false); setShowPortfolio(true); }} className="w-full min-h-12 rounded-xl border border-border bg-surface px-4 py-3 flex items-center gap-3 text-left text-sm font-medium hover:bg-muted/60 active:scale-[0.99] transition"><Trophy size={17} className="text-primary shrink-0" />Portafolio</button>
+          </div>
+        </DrawerContent>
+      </Drawer>
 
       {/* Trust Points panel (full, from three-dot menu) */}
       {showTrustPanel && (
@@ -732,16 +763,16 @@ function QRCustomizer({ userId, username, qrStyle, isPlus, viewingOwn }: {
   isPlus: boolean; viewingOwn: boolean;
 }) {
   const profileUrl = typeof window !== "undefined" ? `${window.location.origin}/profile/${userId}` : `/profile/${userId}`;
-  const defaultStyle = { fg: "#000000", bg: "#ffffff", size: 180, cornerStyle: "square" as const };
+  const defaultStyle = { fg: "#000000", bg: "#ffffff", size: 180, cornerStyle: "rounded" as const };
   const [style, setStyle] = useState<Required<import("@/lib/social/api").QRStyle> & { cornerStyle: string }>(
-    qrStyle ? { ...defaultStyle, ...qrStyle } : defaultStyle
+    qrStyle ? { ...defaultStyle, ...qrStyle, cornerStyle: "rounded" } : defaultStyle
   );
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Sync from DB when qrStyle prop changes (e.g. viewing another user's profile)
   useEffect(() => {
-    if (qrStyle) setStyle({ ...defaultStyle, ...qrStyle });
+    if (qrStyle) setStyle({ ...defaultStyle, ...qrStyle, cornerStyle: "rounded" });
   }, [qrStyle?.fg, qrStyle?.bg, qrStyle?.size, qrStyle?.cornerStyle]);
 
   const persist = async (next: typeof style) => {
@@ -763,15 +794,9 @@ function QRCustomizer({ userId, username, qrStyle, isPlus, viewingOwn }: {
   ] as const;
 
   const SIZES = [120, 160, 200, 240] as const;
-  const CORNERS = [
-    { id: "square", label: "Cuadrados" },
-    { id: "rounded", label: "Redondeados" },
-    { id: "dots", label: "Puntos" },
-  ] as const;
-
   const qrSrc = (() => {
-    const fg = style.fg.startsWith("#") ? style.fg.replace("#", "") : "000000";
-    const bg = style.bg.startsWith("#") ? style.bg.replace("#", "") : "ffffff";
+    const fg = qrHex(style.fg, "000000");
+    const bg = qrHex(style.bg, "ffffff");
     const sz = style.size || 180;
     return `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(profileUrl)}&size=${sz}x${sz}&margin=6&format=svg&color=${fg}&bgcolor=${bg}`;
   })();
@@ -779,11 +804,18 @@ function QRCustomizer({ userId, username, qrStyle, isPlus, viewingOwn }: {
   const handleDownload = async () => {
     try {
       const res = await fetch(qrSrc);
-      const blob = await res.blob();
+      if (!res.ok) throw new Error("No se pudo generar el QR");
+      const rawQrSvg = await res.text();
+      const bytes = new TextEncoder().encode(rawQrSvg);
+      let binary = "";
+      bytes.forEach(byte => { binary += String.fromCharCode(byte); });
+      const qrDataUri = `data:image/svg+xml;base64,${btoa(binary)}`;
+      const { padding, frameSize } = qrPreviewGeometry(style.size || 180, style.cornerStyle);
+      const blob = new Blob([createQrExportSvg({ qrDataUri, size: style.size || 180, padding, frameSize, background: style.bg.startsWith("#") ? style.bg : "#ffffff" })], { type: "image/svg+xml;charset=utf-8" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = url; a.download = `qr_${username}.svg`; a.click();
-      URL.revokeObjectURL(url);
+      a.href = url; a.download = `qr-${safeExportFilename(username, "perfil")}.svg`; a.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 0);
     } catch { /* noop */ }
   };
 
@@ -792,15 +824,16 @@ function QRCustomizer({ userId, username, qrStyle, isPlus, viewingOwn }: {
   };
 
   const canCustomize = viewingOwn && isPlus;
+  const { padding: qrPadding, frameSize } = qrPreviewGeometry(style.size || 180, style.cornerStyle);
 
   return (
-    <div className="space-y-3 animate-in fade-in duration-200">
+    <div className="space-y-4 animate-in fade-in duration-200">
       {/* Preview */}
-      <div className="flex flex-col items-center gap-2">
-        <div className="border border-border/40 bg-card shadow-sm" style={{ background: style.bg, borderRadius: style.cornerStyle === "rounded" ? 16 : style.cornerStyle === "dots" ? "50%" : 8, padding: style.cornerStyle === "dots" ? 24 : style.cornerStyle === "rounded" ? 12 : 12 }}>
-          <img src={qrSrc} alt={`QR de ${username}`} width={style.size || 180} height={style.size || 180} className="block" />
+      <div className="flex flex-col items-center gap-3">
+        <div className="border border-border/40 bg-card shadow-sm" style={{ background: style.bg, borderRadius: 16, boxSizing: "border-box", width: `min(100%, ${frameSize}px)`, padding: qrPadding }}>
+          <img src={qrSrc} alt={`QR de ${username}`} width={style.size || 180} height={style.size || 180} className="block h-auto w-full max-w-full" />
         </div>
-        <div className="text-[9px] font-mono text-muted-foreground/40 text-center truncate max-w-[200px]">{profileUrl}</div>
+        <div className="text-[9px] font-mono text-muted-foreground/60 text-center truncate max-w-full">{profileUrl}</div>
       </div>
 
       {/* Botón de guardar (solo Plus propio) */}
@@ -818,8 +851,8 @@ function QRCustomizer({ userId, username, qrStyle, isPlus, viewingOwn }: {
       )}
 
       {!canCustomize && viewingOwn && (
-        <div className="text-center py-2 px-3 rounded-lg bg-primary/5 border border-primary/15">
-          <div className="text-[11px] text-primary font-medium">Personaliza tu QR con Plus</div>
+        <div className="text-center py-2 px-3 rounded-lg bg-muted/35 border border-border/50">
+          <div className="text-[11px] text-foreground font-medium">Personaliza tu QR con Plus</div>
           <div className="text-[10px] text-muted-foreground/50 mt-0.5">Cambia colores, estilos y tamaño</div>
         </div>
       )}
@@ -870,18 +903,6 @@ function QRCustomizer({ userId, username, qrStyle, isPlus, viewingOwn }: {
             </div>
           </div>
 
-          {/* Estilo de esquinas */}
-          <div>
-            <div className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider mb-1.5">Estilo</div>
-            <div className="flex gap-1.5">
-              {CORNERS.map(c => (
-                <button key={c.id} onClick={() => persist({ ...style, cornerStyle: c.id })}
-                  className={`h-8 px-2.5 rounded-lg text-[10px] font-medium border transition active:scale-95 ${style.cornerStyle === c.id ? "border-primary/40 bg-primary/10 text-primary" : "border-border/40 bg-surface text-muted-foreground hover:text-foreground"}`}>
-                  {c.label}
-                </button>
-              ))}
-            </div>
-          </div>
         </>
       )}
 
@@ -900,7 +921,7 @@ function QRCustomizer({ userId, username, qrStyle, isPlus, viewingOwn }: {
   );
 }
 
-/** Panel completo de puntos de confianza — se abre desde el menú de tres puntos */
+/** Pantalla aislada de puntos de confianza — se abre desde el menú de tres puntos */
 function TrustPointsPanel({ userId, trustPoints, isMod, viewingOwn, onClose, onTrustChange }: {
   userId: string;
   trustPoints: number;
@@ -912,6 +933,7 @@ function TrustPointsPanel({ userId, trustPoints, isMod, viewingOwn, onClose, onT
   const [busy, setBusy] = useState(false);
   const [deductAmt, setDeductAmt] = useState(1);
   const [reason, setReason] = useState("");
+  const [showHistory, setShowHistory] = useState(false);
 
   const handleDeduct = async () => {
     if (busy || !isMod || viewingOwn || deductAmt < 1) return;
@@ -937,85 +959,66 @@ function TrustPointsPanel({ userId, trustPoints, isMod, viewingOwn, onClose, onT
     finally { setBusy(false); }
   };
 
-  const level = trustPoints <= 2 ? "crítico" : trustPoints <= 5 ? "bajo" : "normal";
-  const levelColor = trustPoints <= 2 ? "text-red-500" : trustPoints <= 6 ? "text-amber-500" : "text-emerald-500";
-  const levelBg = trustPoints <= 2 ? "bg-red-50 border-red-200/60" : trustPoints <= 6 ? "bg-amber-50 border-amber-200/60" : "bg-emerald-50 border-emerald-200/60";
+  const level = trustLevelPresentation(trustPoints);
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <button aria-label="Cerrar" onClick={onClose}
-        className="absolute inset-0 bg-black/60 backdrop-blur-[2px] animate-in fade-in duration-200" />
-      <div className="relative w-full sm:max-w-md rounded-t-2xl sm:rounded-lg border border-border bg-surface shadow-md animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-2 duration-300 max-h-[85vh] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-border/60">
-          <div className="w-9 h-9 rounded-lg grid place-items-center shrink-0" style={{ background: "var(--gradient)" }}>
-            <Shield size={16} className="text-white" />
-          </div>
-          <div className="flex-1">
-            <div className="text-sm font-display font-semibold">Puntos de confianza</div>
-            <div className="text-[10px] text-muted-foreground">Nivel de reputación en la plataforma</div>
-          </div>
-          <button onClick={onClose}
-            className="w-8 h-8 rounded-md border border-border grid place-items-center text-muted-foreground hover:text-foreground active:scale-95 transition">
-            <X size={14} />
+  return createPortal(
+    <section className="fixed inset-0 z-[130] flex h-[100dvh] min-h-screen flex-col overflow-hidden bg-background/95 backdrop-blur-md animate-in fade-in duration-200" role="dialog" aria-modal="true" aria-label="Puntos de confianza">
+      <header className="glass-header shrink-0 border-b border-border/70">
+        <div className="mx-auto flex w-full max-w-5xl items-center gap-3 px-3 py-3 sm:px-6">
+          <button type="button" onClick={onClose} className="h-9 w-9 shrink-0 rounded-xl border border-primary/20 bg-primary/8 grid place-items-center text-primary hover:bg-primary/14 active:scale-95 transition" aria-label="Volver al perfil">
+            <ChevronRight size={16} className="rotate-180" />
           </button>
-        </div>
-
-        {/* Score display */}
-        <div className={`mx-4 mt-4 p-4 rounded-xl border ${levelBg} text-center`}
-          >
-          <div className="text-4xl font-display font-bold tabular-nums" style={{ color: "var(--primary)" }}>{trustPoints}</div>
-          <div className="text-[11px] text-muted-foreground mt-1">de 10 puntos</div>
-          <div className={`text-[10px] font-semibold uppercase tracking-wider mt-2 ${levelColor}`}>Nivel: {level}</div>
-          <div className="w-full h-1.5 rounded-full bg-muted/40 mt-3">
-            <div className="h-full rounded-full transition-all duration-500"
-              style={{ width: `${(trustPoints / DEFAULT_TRUST_POINTS) * 100}%`, background: trustPoints <= 2 ? "#ef4444" : trustPoints <= 6 ? "#f59e0b" : "#10b981" }} />
+          <div className="min-w-0 flex-1">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Perfil</div>
+            <h2 className="font-display text-base font-bold text-primary truncate">Puntos de confianza</h2>
           </div>
+          <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground"><Shield size={14} className="text-primary" />Reputación de la comunidad</div>
+          <button type="button" onClick={onClose} className="h-9 w-9 shrink-0 rounded-xl border border-primary/20 bg-primary/8 grid place-items-center text-primary hover:bg-primary/14 active:scale-95 transition" aria-label="Cerrar puntos de confianza"><X size={16} /></button>
         </div>
+      </header>
 
-        {/* Info */}
-        <div className="mx-4 mt-3 p-3 rounded-xl bg-muted/20 border border-border/30">
-          <p className="text-[11px] text-muted-foreground leading-relaxed">
-            Los puntos de confianza reflejan tu comportamiento en la plataforma. Si llegan a 0, tu cuenta será bloqueada automáticamente. Los moderadores pueden ajustar puntos según las reglas de la comunidad.
-          </p>
-        </div>
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        <main className="mx-auto w-full max-w-5xl px-3 py-5 sm:px-6 sm:py-8">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(280px,0.85fr)]">
+            <section className="rounded-2xl border border-primary/20 bg-card p-5 shadow-sm sm:p-7">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Estado actual</div>
+                  <div className="mt-2 flex items-end gap-2"><span className="font-display text-6xl font-bold tabular-nums text-primary">{trustPoints}</span><span className="mb-2 text-sm text-muted-foreground">de {DEFAULT_TRUST_POINTS} puntos</span></div>
+                </div>
+                <div className="grad-brand h-11 w-11 rounded-2xl grid place-items-center text-primary-foreground shadow-sm" aria-label="Protección de confianza"><Shield size={20} strokeWidth={2.25} /></div>
+              </div>
+              <div className="mt-5 h-2 rounded-full bg-muted/50 overflow-hidden"><div className="h-full rounded-full transition-[width] duration-300" style={{ width: `${Math.max(0, Math.min(100, (trustPoints / DEFAULT_TRUST_POINTS) * 100))}%`, background: level.progressColor }} /></div>
+              <div className="mt-4 flex items-center justify-between gap-3"><span className="text-xs text-muted-foreground">Tu comportamiento dentro de la comunidad.</span><span className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${level.surfaceClass} ${level.textClass}`}>Nivel {level.label}</span></div>
+            </section>
 
-        {/* Moderator controls */}
-        {isMod && !viewingOwn && (
-          <div className="mx-4 mt-3 p-3 rounded-xl bg-muted/30 border border-border/30 space-y-2">
-            <div className="text-[10px] font-mono uppercase tracking-wider text-primary-glow">Control de moderador</div>
-            <div className="flex items-center gap-2">
-              <button onClick={handleRestore} disabled={busy || trustPoints >= DEFAULT_TRUST_POINTS}
-                className="h-8 px-3 rounded-md border border-border/50 bg-surface text-[11px] font-medium text-primary hover:bg-primary/10 active:scale-95 transition disabled:opacity-40">
-                Restaurar +1
-              </button>
-            </div>
-            <div className="flex items-center gap-2">
-              <input type="number" min={1} max={10} value={deductAmt}
-                onChange={e => setDeductAmt(Math.max(1, Math.min(10, parseInt(e.target.value) || 1)))}
-                className="w-14 h-8 px-1.5 rounded-md bg-card border border-border/50 text-[11px] text-center font-mono outline-none focus:border-primary/40"
-              />
-              <input value={reason} onChange={e => setReason(e.target.value)}
-                placeholder="Razón para quitar puntos…"
-                className="flex-1 h-8 px-2.5 rounded-md bg-card border border-border/50 text-[11px] outline-none focus:border-primary/40 placeholder:text-muted-foreground/30"
-              />
-              <button onClick={handleDeduct} disabled={busy || trustPoints <= 0}
-                className="h-8 px-3 rounded-md bg-red-500 text-white text-[10px] font-semibold active:scale-95 transition disabled:opacity-50">
-                {busy ? "…" : "Quitar"}
-              </button>
-            </div>
+            <aside className="rounded-2xl border border-primary/20 bg-surface/80 p-5 sm:p-6">
+              <div className="flex items-center gap-2 text-sm font-display font-bold text-primary"><Trophy size={16} className="text-primary" />Cómo funciona</div>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">Los puntos de confianza reflejan el cumplimiento de las reglas de la comunidad. Mantén una conducta respetuosa y protege tu cuenta.</p>
+              <div className="mt-4 rounded-xl border border-primary/15 bg-primary/5 p-3 text-xs leading-relaxed text-muted-foreground">Al llegar a <strong className="text-primary">0 puntos</strong>, la cuenta queda bloqueada automáticamente. Los ajustes realizados por moderación quedan registrados.</div>
+              <button type="button" onClick={() => setShowHistory(true)} className="grad-brand mt-4 h-10 w-full rounded-xl text-xs font-semibold text-primary-foreground active:scale-[0.98] transition">Ver historial de puntos</button>
+            </aside>
           </div>
-        )}
 
-        {/* History link */}
-        <div className="px-4 pb-4 pt-3">
-          <button onClick={() => { onClose(); }}
-            className="w-full text-center text-[11px] text-muted-foreground hover:text-primary transition py-2">
-            Ver historial completo de puntos
-          </button>
-        </div>
+          {isMod && !viewingOwn && (
+            <section className="mt-4 rounded-2xl border border-primary/20 bg-card p-4 sm:p-5">
+              <div className="flex items-center gap-2"><Shield size={15} className="text-primary" /><div><div className="text-sm font-display font-bold text-primary">Control de moderación</div><p className="text-xs text-muted-foreground">Los cambios se registran en el historial del perfil.</p></div></div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-[auto_minmax(0,1fr)]">
+                <button onClick={handleRestore} disabled={busy || trustPoints >= DEFAULT_TRUST_POINTS} className="h-10 rounded-xl border border-border/60 bg-surface px-4 text-xs font-semibold text-primary hover:bg-primary/10 active:scale-95 transition disabled:opacity-40">Restaurar +1</button>
+                <div className="grid grid-cols-[4.5rem_minmax(0,1fr)_auto] gap-2">
+                  <input type="number" min={1} max={10} value={deductAmt} onChange={e => setDeductAmt(Math.max(1, Math.min(10, parseInt(e.target.value) || 1)))} aria-label="Puntos a retirar" className="h-10 rounded-xl border border-border/60 bg-surface px-2 text-center text-sm font-mono outline-none focus:border-primary/50" />
+                  <input value={reason} onChange={e => setReason(e.target.value)} placeholder="Razón para quitar puntos…" className="min-w-0 h-10 rounded-xl border border-border/60 bg-surface px-3 text-xs outline-none focus:border-primary/50 placeholder:text-muted-foreground/50" />
+                  <button onClick={handleDeduct} disabled={busy || trustPoints <= 0} className="h-10 rounded-xl bg-red-500 px-4 text-xs font-bold text-white active:scale-95 transition disabled:opacity-50">{busy ? "Procesando…" : "Quitar"}</button>
+                </div>
+              </div>
+            </section>
+          )}
+        </main>
       </div>
-    </div>
+
+      {showHistory && <TrustPointsHistory userId={userId} onClose={() => setShowHistory(false)} />}
+    </section>,
+    document.body,
   );
 }
 
@@ -1025,9 +1028,11 @@ function FollowListModal({ list, myId, onClose, onChanged }: {
   onClose: () => void;
   onChanged: () => void;
 }) {
-  const [busyId, setBusyId] = useState<string | null>(null);
   const [items, setItems] = useState<Profile[]>(list.items);
   const [iFollow, setIFollow] = useState<Set<string>>(new Set());
+  const [followStateReady, setFollowStateReady] = useState(false);
+  const followOverrides = useRef(new Map<string, boolean>());
+  const pendingFollowIds = useRef(new Set<string>());
 
   // Sync items when parent re-renders with new data
   useEffect(() => {
@@ -1036,50 +1041,81 @@ function FollowListModal({ list, myId, onClose, onChanged }: {
 
   // Estado "¿yo sigo a esta persona?" para cada perfil de la lista.
   useEffect(() => {
-    if (!myId || items.length === 0) return;
+    if (!myId || items.length === 0) {
+      setIFollow(new Set());
+      setFollowStateReady(true);
+      return;
+    }
     let cancelled = false;
+    setFollowStateReady(false);
     (async () => {
-      const set = new Set<string>();
-      for (const p of items) {
-        if (cancelled) return;
-        try {
-          const s = await getFollowStats(p.id);
-          if (s.i_follow) set.add(p.id);
-        } catch { /* ignore */ }
+      const results = await Promise.all(items.map(async p => {
+        try { return [p.id, (await getFollowStats(p.id)).i_follow] as const; }
+        catch { return [p.id, false] as const; }
+      }));
+      if (cancelled) return;
+      const set = new Set(results.filter(([, following]) => following).map(([id]) => id));
+      for (const [id, following] of followOverrides.current) {
+        if (!items.some(p => p.id === id)) continue;
+        if (following) set.add(id);
+        else set.delete(id);
       }
-      if (!cancelled) setIFollow(set);
+      if (!cancelled) {
+        setIFollow(set);
+        setFollowStateReady(true);
+      }
     })();
     return () => { cancelled = true; };
   }, [items, myId]);
 
   const toggle = async (p: Profile) => {
-    if (busyId || !myId) return;
-    setBusyId(p.id);
+    if (!myId || pendingFollowIds.current.has(p.id)) return;
+    const wasFollowing = iFollow.has(p.id);
+    const willFollow = !wasFollowing;
+    pendingFollowIds.current.add(p.id);
+    followOverrides.current.set(p.id, willFollow);
+    setIFollow(prev => {
+      const next = new Set(prev);
+      if (willFollow) next.add(p.id);
+      else next.delete(p.id);
+      return next;
+    });
     try {
-      if (iFollow.has(p.id)) await unfollowUser(p.id);
+      if (wasFollowing) await unfollowUser(p.id);
       else await followUser(p.id);
-      setIFollow(prev => { const n = new Set(prev); if (n.has(p.id)) n.delete(p.id); else n.add(p.id); return n; });
       onChanged();
-    } catch { /* ignore */ } finally { setBusyId(null); }
+    } catch {
+      followOverrides.current.set(p.id, wasFollowing);
+      setIFollow(prev => {
+        const next = new Set(prev);
+        if (wasFollowing) next.add(p.id);
+        else next.delete(p.id);
+        return next;
+      });
+    } finally { pendingFollowIds.current.delete(p.id); }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+  const panel = (
+    <div className="fixed inset-0 z-[100] h-[100dvh] overflow-hidden flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true" aria-label={list.kind === "followers" ? "Seguidores" : "Siguiendo"}>
       <button aria-label="Cerrar" onClick={onClose}
-        className="absolute inset-0 bg-black/60 backdrop-blur-[2px] animate-in fade-in duration-200" />
-      <div className="relative w-full sm:max-w-sm rounded-t-2xl sm:rounded-lg border border-border bg-surface shadow-md animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-2 duration-300 max-h-[80vh] flex flex-col">
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-border/60">
+        className="absolute inset-0 bg-foreground/35 backdrop-blur-[3px] animate-in fade-in duration-200" />
+      <div className="relative w-full h-[min(80dvh,42rem)] max-h-[calc(100dvh-1rem)] sm:max-w-sm overflow-hidden rounded-t-2xl sm:rounded-2xl glass-menu shadow-xl animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-2 duration-300 flex flex-col">
+        <div className="flex items-center gap-2 px-4 py-3.5 border-b border-border/70 bg-white/25">
           <div className="flex-1 text-sm font-semibold">
             {list.kind === "followers" ? "Seguidores" : "Siguiendo"} · {items.length}
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-md border border-border grid place-items-center text-muted-foreground hover:text-foreground active:scale-95 transition">
+          <button onClick={onClose} className="w-8 h-8 rounded-lg glass-control grid place-items-center text-muted-foreground hover:text-foreground active:scale-95 transition">
             <X size={14} />
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto p-2 space-y-1">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-gutter:stable] bg-surface/75 p-2.5 space-y-1.5">
           {list.loading ? (
             <div className="p-8 text-center text-xs text-muted-foreground">
               <Loader2 className="animate-spin inline mr-2" size={14} /> Cargando…
+            </div>
+          ) : !followStateReady ? (
+            <div className="p-8 text-center text-xs text-muted-foreground">
+              <Loader2 className="animate-spin inline mr-2" size={14} /> Preparando seguidores…
             </div>
           ) : items.length === 0 ? (
             <div className="p-8 text-center text-xs text-muted-foreground">
@@ -1087,7 +1123,7 @@ function FollowListModal({ list, myId, onClose, onChanged }: {
             </div>
           ) : (
             items.map(p => (
-              <div key={p.id} className="flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-muted/40 transition">
+              <div key={p.id} className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl border border-transparent bg-white/20 hover:border-border/60 hover:bg-white/45 transition">
                 <Link to="/profile/$userId" params={{ userId: p.id }} onClick={onClose}
                   className="flex items-center gap-2.5 min-w-0 flex-1">
                   <Avatar p={p} size={36} rounded="xl" className="border border-border/50" />
@@ -1097,9 +1133,9 @@ function FollowListModal({ list, myId, onClose, onChanged }: {
                   </div>
                 </Link>
                 {myId && myId !== p.id && (
-                  <button onClick={() => void toggle(p)} disabled={busyId === p.id}
-                    className={`shrink-0 h-8 px-2.5 rounded-md text-[11px] font-medium flex items-center gap-1 active:scale-95 transition disabled:opacity-60 ${iFollow.has(p.id) ? "border border-border text-muted-foreground" : "bg-primary text-white"}`}>
-                    {busyId === p.id ? <Loader2 size={11} className="animate-spin" /> : iFollow.has(p.id) ? <><UserCheck size={11} /> Siguiendo</> : <><UserPlus size={11} /> Seguir</>}
+                  <button onClick={() => void toggle(p)}
+                    className={`shrink-0 h-8 px-2.5 rounded-lg text-[11px] font-semibold flex items-center gap-1 active:scale-95 transition ${iFollow.has(p.id) ? "border border-primary/30 bg-primary/12 text-primary shadow-[inset_0_1px_0_oklch(1_0_0_/_0.72)]" : "grad-brand text-primary-foreground shadow-[0_5px_12px_-8px_oklch(0.47_0.14_263_/_0.8)]"}`}>
+                    {iFollow.has(p.id) ? <><UserCheck size={11} /> Siguiendo</> : <><UserPlus size={11} /> Seguir</>}
                   </button>
                 )}
               </div>
@@ -1109,6 +1145,8 @@ function FollowListModal({ list, myId, onClose, onChanged }: {
       </div>
     </div>
   );
+
+  return createPortal(panel, document.body);
 }
 
 /** Bloque de personalización con etiqueta + descripción (separa los apartados). */

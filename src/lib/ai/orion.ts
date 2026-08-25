@@ -1,22 +1,13 @@
 /**
  * Orión — asistente de IA para desarrolladores de juegos de Asternal.
  *
- * Usa VLY Integration (Freebuff) como servicio principal.
- * OmegaTech como respaldo si VLY no está disponible.
+ * Usa exclusivamente la IA integrada de Manus a través de una ruta segura del servidor.
  */
 import { ENGINE_KNOWLEDGE } from "./engine-knowledge";
 
-/** VLY Integration — gateway directo (OpenAI-compatible) */
-const VLY_GATEWAY = "https://integrations.vly.ai/v1/llm/chat/completions";
-const VLY_TOKEN = "sk_ae7ab002fe96d25409052e0db06fc906eb3b34d098762378af114911bf70cff4";
-
-/** OmegaTech — respaldo gratuito sin clave */
-const OMEGATECH_MODELS = ["Gpt-4-mini", "Gpt-3.5-turbo", "Gemini"];
-const OMEGATECH_BASE = "https://api.omegatech.app/api/ai";
-
-/** La API de OmegaTech no requiere clave. Se mantiene getOrionApiKey por compatibilidad. */
+/** Compatibilidad para consumidores antiguos; ya no se expone ninguna clave en el navegador. */
 export function getOrionApiKey(): string {
-  return "omegatech-free";
+  return "manus-server-managed";
 }
 
 export type OrionRole = "system" | "user" | "assistant";
@@ -145,99 +136,22 @@ export function needsCodingModel(q: string): boolean {
 }
 
 /**
- * Combina el system prompt + historial en un solo `message` para OmegaTech.
- * OmegaTech no acepta array de mensajes, solo un campo `message`.
- */
-function buildSingleMessage(history: OrionMessage[]): string {
-  const systemMsg = buildOrionMessages(history).find(m => m.role === "system")?.content ?? "";
-  const userMsgs = history
-    .filter(m => m.role === "user")
-    .map(m => m.content)
-    .join("\n\n");
-  const assistantMsgs = history
-    .filter(m => m.role === "assistant")
-    .map(m => `Asistente: ${m.content}`)
-    .join("\n\n");
-  const parts = [systemMsg];
-  if (assistantMsgs) parts.push(assistantMsgs);
-  if (userMsgs) parts.push(`Usuario: ${userMsgs}`);
-  return parts.join("\n\n---\n\n");
-}
-
 /**
- * Intenta VLY Integration — llama directamente al gateway VLY
- * (formato OpenAI-compatible: messages array → choices[0].message.content).
- * El gateway VLY funciona dentro del entorno de ejecución de Freebuff.
- */
-async function tryVly(history: OrionMessage[]): Promise<OrionResult | null> {
-  const messages = buildOrionMessages(history);
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 20000);
-    const res = await fetch(VLY_GATEWAY, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${VLY_TOKEN}`,
-      },
-      body: JSON.stringify({ model: "gpt-4o-mini", messages }),
-      signal: controller.signal,
-    });
-    clearTimeout(timeout);
-    if (!res.ok) return null;
-    const data = await res.json().catch(() => ({}));
-    const content = data?.choices?.[0]?.message?.content;
-    if (content) {
-      return { content, model: data?.model ?? "gpt-4o-mini", costUsd: 0, balanceUsd: 0 };
-    }
-    return null;
-  } catch { return null; }
-}
-
-/** Intenta OmegaTech (formato simple: message → answer). */
-async function tryOmegaTech(modelName: string, message: string): Promise<{ ok: boolean; answer?: string; model?: string }> {
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
-    const res = await fetch(`${OMEGATECH_BASE}/${modelName}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message }),
-      signal: controller.signal,
-    });
-    clearTimeout(timeout);
-    if (res.ok) {
-      const data = await res.json().catch(() => ({}));
-      if (data?.answer) return { ok: true, answer: data.answer, model: data.model ?? modelName };
-    }
-    return { ok: false };
-  } catch { return { ok: false }; }
-}
-
-/**
- * Envía una petición de chat a Orión.
- * Primero intenta VLY Integration, luego OmegaTech como respaldo.
+ * Envía una petición de chat a Orión mediante el servidor de Asternal.
+ * Las credenciales y el modelo de Manus nunca llegan al navegador.
  */
 export async function orionChat(
   history: OrionMessage[],
   opts: { coding?: boolean; maxTokens?: number; temperature?: number } = {}
 ): Promise<OrionResult> {
-  // 1. Intentar VLY Integration (Freebuff)
-  const vlyResult = await tryVly(history);
-  if (vlyResult) return vlyResult;
-
-  // 2. Respaldar con OmegaTech
-  const message = buildSingleMessage(history);
-  for (const model of OMEGATECH_MODELS) {
-    const result = await tryOmegaTech(model, message);
-    if (result.ok && result.answer) {
-      return { content: result.answer, model: result.model ?? model, costUsd: 0, balanceUsd: 0 };
-    }
-  }
-
-  throw new Error(
-    "Orión no está disponible en este momento. Los servicios de IA están temporalmente fuera de servicio. Inténtalo de nuevo más tarde."
-  );
+  const response = await fetch("/api/orion/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ history, options: opts }),
+  });
+  const payload = await response.json().catch(() => ({})) as OrionResult | OrionError;
+  if (!response.ok || !("content" in payload)) throw new Error("error" in payload ? payload.error : "Orión no está disponible en este momento.");
+  return payload;
 }
 
 /**

@@ -261,7 +261,7 @@ export function AsternalEditor() {
               title={label}
               className={`relative flex flex-col items-center gap-1.5 py-3 rounded-lg transition-colors duration-150 active:scale-[0.96] ${
                 tab === id
-                  ? "text-primary bg-primary/10"
+                  ? "text-foreground bg-card border border-border/70 shadow-sm"
                   : "text-ink-3 hover:bg-muted/60 hover:text-foreground"
               }`}
             >
@@ -308,13 +308,13 @@ export function AsternalEditor() {
             onClick={() => setPublishOpen(true)}
             aria-label="Publicar juego"
             title="Publicar"
-            className="hidden sm:flex items-center gap-1.5 font-display text-[11px] font-semibold tracking-widest h-9 px-3.5 rounded-lg border border-primary/30 text-primary bg-primary/10 hover:bg-primary/15 active:scale-95 transition"
+            className="hidden sm:flex items-center gap-1.5 font-display text-[11px] font-semibold tracking-widest h-9 px-3.5 rounded-lg btn-grad text-primary-foreground active:scale-95 transition"
           ><Upload size={14} /> PUBLICAR</button>
           <button
             onClick={() => setPublishOpen(true)}
             aria-label="Publicar juego"
             title="Publicar"
-            className="sm:hidden w-9 h-9 rounded-lg border border-primary/30 text-primary bg-primary/10 grid place-items-center active:scale-95 transition"
+            className="sm:hidden w-9 h-9 rounded-lg btn-grad text-primary-foreground grid place-items-center active:scale-95 transition"
           ><Upload size={15} /></button>
           <button
             onClick={() => {
@@ -487,7 +487,7 @@ export function AsternalEditor() {
                 title={t(toolItem.tKey)}
                 className={`shrink-0 flex items-center gap-1.5 h-9 px-3 rounded-lg border text-[10px] font-display font-medium transition-colors duration-150 active:scale-95 ${
                   tool === toolItem.id
-                    ? "border-primary/40 bg-primary/10 text-primary"
+                    ? "btn-grad border-transparent text-primary-foreground"
                     : "border-transparent text-ink-2 hover:bg-muted/60 hover:text-foreground"
                 }`}
               >
@@ -507,7 +507,7 @@ export function AsternalEditor() {
             key={id}
             onClick={() => setTab(id)}
             className={`min-w-0 flex flex-col items-center gap-1 py-2.5 px-0.5 transition-colors duration-150 active:scale-95 ${
-              tab === id ? "text-primary" : "text-ink-3 hover:text-foreground"
+              tab === id ? "relative text-foreground after:absolute after:bottom-0.5 after:left-1/2 after:h-0.5 after:w-5 after:-translate-x-1/2 after:rounded-full after:bg-primary" : "text-ink-3 hover:text-foreground"
             }`}
           >
             <span className="leading-none">{icon}</span>

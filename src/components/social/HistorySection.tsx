@@ -1,19 +1,36 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Avatar } from "./Avatar";
 import { motion, AnimatePresence } from "framer-motion";
 import { Heart, Gamepad2, Clock, BarChart3, Loader2, Flame, CalendarDays, TrendingUp, Award } from "lucide-react";
 import { Link } from "@tanstack/react-router";
-import type { PostWithMeta } from "@/lib/social/api";
+import { fetchGames, type PostWithMeta } from "@/lib/social/api";
 import {
   getMyLikedPosts,
   getAggregatedPlayTime,
   getUsageStats,
   getTopGame,
   formatPlayTime,
+  refreshPlayHistoryCovers,
 } from "@/lib/social/history";
 import { UserName } from "./UserName";
+import { GameIconPlaceholder } from "./GameIcon";
 
 type HistoryTab = "games" | "likes";
+
+function PlayedGameThumbnail({ src, title, size = "md" }: { src: string | null; title: string; size?: "sm" | "md" }) {
+  const [failed, setFailed] = useState(false);
+  const dimensions = size === "sm" ? "w-8 h-8 rounded-lg" : "w-14 aspect-square rounded-2xl";
+
+  return (
+    <div className={`${dimensions} bg-primary/10 shrink-0 overflow-hidden grid place-items-center ${src && !failed ? "" : "tile-blueprint"}`}>
+      {src && !failed ? (
+        <img src={src} alt={`Portada de ${title}`} onError={() => setFailed(true)} className="w-full h-full object-contain" />
+      ) : (
+        <GameIconPlaceholder iconSize={size === "sm" ? 13 : 18} />
+      )}
+    </div>
+  );
+}
 
 /** Tarjeta compacta de estadística. */
 function StatCard({ icon, label, value, sub, tone }: {
@@ -45,17 +62,36 @@ export function HistorySection() {
   const [likedPosts, setLikedPosts] = useState<PostWithMeta[]>([]);
   const [loading, setLoading] = useState(true);
   const [likesLoading, setLikesLoading] = useState(false);
+  const [historyRevision, setHistoryRevision] = useState(0);
 
-  const agg = getAggregatedPlayTime();
-  const sortedGames = Array.from(agg.entries()).sort((a, b) => b[1].lastPlayed.localeCompare(a[1].lastPlayed));
-  const stats = getUsageStats();
-  const topGame = getTopGame("total");
-  const max7 = Math.max(1, ...stats.last7.map(d => d.seconds));
+  const { sortedGames, stats, topGame, max7 } = useMemo(() => {
+    const agg = getAggregatedPlayTime();
+    const nextStats = getUsageStats();
+    return {
+      sortedGames: Array.from(agg.entries()).sort((a, b) => b[1].lastPlayed.localeCompare(a[1].lastPlayed)),
+      stats: nextStats,
+      topGame: getTopGame("total"),
+      max7: Math.max(1, ...nextStats.last7.map((day) => day.seconds)),
+    };
+  }, [historyRevision]);
 
   useEffect(() => {
     // Simulate loading time for the view transition
     const t = setTimeout(() => setLoading(false), 300);
     return () => clearTimeout(t);
+  }, []);
+
+  // Repara sesiones antiguas que se guardaron antes de resolver la primera captura como respaldo de portada.
+  useEffect(() => {
+    let active = true;
+    fetchGames()
+      .then((games) => {
+        if (active && refreshPlayHistoryCovers(games)) setHistoryRevision((revision) => revision + 1);
+      })
+      .catch(() => {
+        // El historial sigue disponible con lo almacenado localmente si no hay conexión.
+      });
+    return () => { active = false; };
   }, []);
 
   // Se cargan los likes al abrir el panel: el contador del encabezado
@@ -157,7 +193,7 @@ export function HistorySection() {
             <div className="shrink-0 max-w-[38%]">
               <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1.5">Más jugado</div>
               <div className="rounded-lg border border-border/70 bg-surface px-2.5 py-2 flex items-center gap-2">
-                <Award size={14} className="text-primary shrink-0" />
+                <PlayedGameThumbnail src={topGame.coverUrl} title={topGame.title} size="sm" />
                 <div className="min-w-0">
                   <div className="text-[11px] font-medium truncate">{topGame.title}</div>
                   <div className="text-[9px] font-mono text-muted-foreground">{formatPlayTime(topGame.seconds)}</div>
@@ -227,13 +263,7 @@ export function HistorySection() {
                 >
                   <div className="flex items-center gap-3 p-3">
                     {/* Cover thumbnail */}
-                    <div className="w-14 h-14 rounded-xl bg-primary/10 shrink-0 overflow-hidden grid place-items-center">
-                      {data.coverUrl ? (
-                        <img src={data.coverUrl} alt={data.title} className="w-full h-full object-cover" />
-                      ) : (
-                        <Gamepad2 size={18} className="text-primary/40" />
-                      )}
-                    </div>
+                    <PlayedGameThumbnail src={data.coverUrl} title={data.title} />
                     {/* Info */}
                     <div className="flex-1 min-w-0">
                       <div className="font-display text-sm font-medium truncate">{data.title}</div>

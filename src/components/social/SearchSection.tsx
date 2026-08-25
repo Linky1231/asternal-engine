@@ -8,6 +8,9 @@ import {
 import { Avatar } from "./Avatar";
 import { fetchGames, fetchFeed, fetchArtworks, type PostWithMeta, type Profile } from "@/lib/social/api";
 import { searchUsers } from "@/lib/social/global-search";
+import { coverFrameFromPreset, coverFrameStyle } from "@/lib/social/cover-frame";
+import { searchResultRowClass } from "@/lib/social/search-presentation";
+import { GameIconPlaceholder } from "./GameIcon";
 
 /* ─── Types ─── */
 type Tab = "all" | "users" | "games" | "posts" | "gallery";
@@ -61,7 +64,7 @@ function UserRow({ user, query }: { user: Profile; query: string }) {
     <Link
       to="/profile/$userId"
       params={{ userId: user.id }}
-      className="flex items-center gap-3.5 p-3 rounded-xl border border-border/40 bg-card hover:border-primary/25 hover:bg-primary/[0.02] transition-all duration-200 group"
+      className={`${searchResultRowClass} flex items-center gap-3.5 p-3`}
     >
       <div className="relative shrink-0">
         <Avatar p={user} size={40} className="ring-2 ring-border/30 group-hover:ring-primary/30 transition-all" />
@@ -95,18 +98,18 @@ function UserRow({ user, query }: { user: Profile; query: string }) {
 /* ═══════════ GAME ROW ═══════════ */
 function GameRow({ post, query }: { post: PostWithMeta; query: string }) {
   const title = extractTitle(post.content);
+  const visualUrl = post.signed_cover ?? post.signed_screenshots[0] ?? null;
+  const coverFrame = coverFrameFromPreset(post.asset_preset);
   return (
     <Link
       to="/"
-      className="flex items-center gap-3.5 p-3 rounded-xl border border-border/40 bg-card hover:border-primary/25 hover:bg-primary/[0.02] transition-all duration-200 group"
+      className={`${searchResultRowClass} flex items-center gap-3.5 p-3`}
     >
-      <div className="relative w-14 h-14 shrink-0 rounded-xl overflow-hidden border border-border/40 bg-surface group-hover:border-primary/20 transition-all">
-        {post.signed_cover ? (
-          <img src={post.signed_cover} alt="" className="w-full h-full object-cover" />
+      <div className={`relative w-14 aspect-square shrink-0 rounded-2xl overflow-hidden border border-border/40 bg-surface group-hover:border-primary/20 transition-all ${visualUrl ? "" : "tile-blueprint"}`}>
+        {visualUrl ? (
+          <img src={visualUrl} alt="" className="w-full h-full object-contain" style={coverFrameStyle(coverFrame)} />
         ) : (
-          <div className="w-full h-full grid place-items-center bg-gradient-to-br from-primary/5 to-primary/10">
-            <Gamepad2 size={20} className="text-primary/30" />
-          </div>
+          <GameIconPlaceholder iconSize={20} />
         )}
       </div>
       <div className="min-w-0 flex-1">
@@ -135,7 +138,7 @@ function PostRow({ post, query }: { post: PostWithMeta; query: string }) {
   return (
     <Link
       to="/"
-      className="flex items-start gap-3.5 p-3 rounded-xl border border-border/40 bg-card hover:border-primary/25 hover:bg-primary/[0.02] transition-all duration-200 group"
+      className={`${searchResultRowClass} flex items-start gap-3.5 p-3`}
     >
       <Avatar p={post.author} size={36} className="shrink-0 mt-0.5 ring-2 ring-border/20" />
       <div className="min-w-0 flex-1">
@@ -166,14 +169,14 @@ function GalleryRow({ post, query }: { post: PostWithMeta; query: string }) {
   return (
     <Link
       to="/"
-      className="flex items-center gap-3.5 p-3 rounded-xl border border-border/40 bg-card hover:border-primary/25 hover:bg-primary/[0.02] transition-all duration-200 group"
+      className={`${searchResultRowClass} flex items-center gap-3.5 p-3`}
     >
       <div className="relative w-14 h-14 shrink-0 rounded-xl overflow-hidden border border-border/40 bg-surface group-hover:border-primary/20 transition-all">
         {post.signed_media?.[0] ? (
           <img src={post.signed_media[0]} alt="" className="w-full h-full object-cover" />
         ) : (
-          <div className="w-full h-full grid place-items-center bg-gradient-to-br from-violet-500/5 to-primary/10">
-            <Palette size={18} className="text-violet-400/40" />
+          <div className="w-full h-full grid place-items-center bg-muted/45">
+            <Palette size={18} className="text-primary/45" />
           </div>
         )}
       </div>
@@ -185,7 +188,7 @@ function GalleryRow({ post, query }: { post: PostWithMeta; query: string }) {
           <span className="font-mono">@{post.author?.username}</span>
           <span className="text-border/60">·</span>
           <span className="flex items-center gap-0.5"><Heart size={8} /> {post.likes}</span>
-          {post.media_type === "image" && <Image size={8} className="text-violet-400/40" />}
+          {post.media_type === "image" && <Image size={8} className="text-primary/40" />}
         </div>
       </div>
       <Eye size={13} className="text-muted-foreground/20 group-hover:text-primary/40 shrink-0 transition-colors" />
@@ -269,7 +272,7 @@ export function SearchSection() {
     { id: "users", icon: <Users size={11} />, label: "Usuarios", count: counts.users },
     { id: "games", icon: <Gamepad2 size={11} />, label: "Juegos", count: counts.games },
     { id: "posts", icon: <Newspaper size={11} />, label: "Publicaciones", count: counts.posts },
-    { id: "gallery", icon: <Palette size={11} />, label: "Tienda", count: counts.gallery },
+    { id: "gallery", icon: <Palette size={11} />, label: "Galería", count: counts.gallery },
   ];
 
   return (
@@ -396,7 +399,7 @@ export function SearchSection() {
           {/* Gallery */}
           {filtered.gallery.length > 0 && (
             <div>
-              <SectionHeader icon={<Palette size={13} />} label="Tienda" count={filtered.gallery.length} />
+              <SectionHeader icon={<Palette size={13} />} label="Galería" count={filtered.gallery.length} />
               <div className="space-y-1.5">
                 {filtered.gallery.slice(0, tab === "all" ? 4 : 30).map(a => (
                   <GalleryRow key={a.id} post={a} query={q} />

@@ -10,7 +10,7 @@ export const Route = createFileRoute("/history")({
 
 function HistoryPage() {
   return (
-    <div className="min-h-screen w-full flex flex-col text-foreground">
+    <div className="min-h-screen w-full flex flex-col bg-background text-foreground">
       <SubPageHeader
         title="MI HISTORIAL"
         icon={<BarChart3 size={15} />}

@@ -52,7 +52,7 @@
 }
 
 :root {
-  --radius: 0.875rem;
+  --radius: 0.75rem;
 
   /* ── Lienzo "espacio profundo": claro, frío, casi blanco ── */
   --canvas: oklch(0.972 0.006 252);
@@ -107,23 +107,18 @@
   --shadow-lg: 0 12px 28px -8px oklch(0 0 0 / 0.10), 0 4px 12px -4px oklch(0 0 0 / 0.06);
   --shadow-xl: 0 20px 44px -12px oklch(0 0 0 / 0.14);
 
-  /* Sombras de color (elementos flotando sobre el lienzo blanco) */
+/* Sombras de color (elementos flotando sobre el lienzo blanco) */
   --shadow-float: 0 18px 44px -18px oklch(0.5 0.13 266 / 0.3);
   --shadow-glow: 0 10px 30px -12px oklch(0.55 0.14 262 / 0.3), 0 4px 18px -8px oklch(0.68 0.08 230 / 0.26);
 
-  /* ── Glassmorphism (estilo Apple): superficies translúcidas difuminadas.
-     Tinte azul-hielo muy leve para que el cristal se perciba sobre el lienzo. ── */
-  --glass-bg: oklch(0.995 0.005 250 / 0.62);
-  --glass-border: oklch(1 0 0 / 0.75);
-  --glass-blur: 18px;
-  --glass-shadow:
-    0 8px 32px -12px oklch(0.3 0.06 260 / 0.12),
-    0 2px 8px -2px oklch(0.3 0.06 260 / 0.06),
-    inset 0 1px 0 0 oklch(1 0 0 / 0.8);
-  --glass-shadow-lg:
-    0 16px 48px -16px oklch(0.3 0.06 260 / 0.16),
-    0 4px 16px -4px oklch(0.3 0.06 260 / 0.08),
-    inset 0 1px 0 0 oklch(1 0 0 / 0.8);
+  /* Material de interfaz: vidrio luminoso con la paleta actual de Asternal. */
+  --glass-fill: oklch(1 0 0 / 0.64);
+  --glass-fill-strong: oklch(1 0 0 / 0.8);
+  --glass-fill-soft: oklch(1 0 0 / 0.46);
+  --glass-edge-muted: oklch(0.78 0.035 252 / 0.28);
+  --glass-highlight: inset 0 1px 0 oklch(1 0 0 / 0.8);
+  --glass-shadow: 0 16px 38px -24px oklch(0.28 0.05 260 / 0.3), 0 3px 10px -7px oklch(0.28 0.05 260 / 0.16);
+  --glass-blur: blur(18px) saturate(1.1);
 
   /* ── Degradados oficiales (DESIGN.md §2.2) ── */
   /* ÚNICO degradado de marca: 135° cobalto → azur → cielo (Azure Drift). */
@@ -146,7 +141,7 @@
 
 .dark {
   /* Light-first product — .dark mirrors :root to prevent OS dark-mode surprises. */
-  --radius: 0.875rem;
+  --radius: 0.75rem;
   --canvas: oklch(0.972 0.006 252);
   --background: var(--canvas);
   --foreground: oklch(0.165 0.028 258);
@@ -207,14 +202,10 @@
   }
 
   body {
-    /* Lienzo con atmósfera glassmorphism: lavado suave de azules de marca
-       (mismo Azure Drift, a opacidad mínima) sobre el canvas casi blanco. */
     background:
-      radial-gradient(120% 90% at 85% -10%, oklch(0.72 0.08 236 / 0.26) 0%, transparent 55%),
-      radial-gradient(100% 80% at -15% 20%, oklch(0.63 0.12 252 / 0.18) 0%, transparent 50%),
-      radial-gradient(90% 70% at 50% 115%, oklch(0.74 0.08 234 / 0.18) 0%, transparent 55%),
+      radial-gradient(circle at 4% -12%, oklch(0.72 0.08 236 / 0.12), transparent 31rem),
+      radial-gradient(circle at 96% 4%, oklch(0.55 0.15 262 / 0.08), transparent 28rem),
       var(--canvas);
-    background-attachment: fixed;
     color: var(--color-foreground);
     font-family: var(--font-sans);
     font-feature-settings: "ss01", "cv11";
@@ -256,21 +247,33 @@
   ::selection {
     background: color-mix(in oklab, var(--color-primary) 16%, transparent);
   }
+
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+  textarea,
+  select {
+    background-color: var(--glass-fill-strong);
+    border-color: var(--glass-edge-muted);
+    box-shadow: var(--glass-highlight);
+  }
 }
 
 /* ═══════════ ASTERNAL SURFACE SYSTEM (DESIGN.md §7.2) ═══════════ */
 
 /* Superficie estándar: borde hairline + radio, sin sombra por defecto. */
 @utility surface {
-  background: var(--color-card);
-  border: 1px solid var(--color-border);
+  background: var(--glass-fill);
+  border: 1px solid var(--glass-edge-muted);
   border-radius: var(--radius);
+  box-shadow: var(--glass-highlight);
+  backdrop-filter: var(--glass-blur);
 }
 
 /* Superficie inset (fondos de inputs, filas seleccionadas, menús). */
 @utility surface-2 {
-  background: var(--color-muted);
+  background: var(--glass-fill-soft);
   border-radius: var(--radius);
+  box-shadow: var(--glass-highlight);
+  backdrop-filter: blur(12px) saturate(1.05);
 }
 
 /* Hairline: separación mínima. */
@@ -290,12 +293,13 @@
 @utility btn-grad {
   background: var(--gradient-asternal);
   color: var(--color-primary-foreground);
-  border: 1px solid transparent;
-  transition: transform 180ms var(--ease-out-expo), filter 180ms ease, box-shadow 180ms ease;
+  border: 1px solid oklch(1 0 0 / 0.32);
+  box-shadow: var(--glass-highlight), 0 10px 24px -13px oklch(0.47 0.14 263 / 0.65);
+  transition: transform 120ms var(--ease-out-expo);
 }
 .btn-grad:hover {
-  filter: brightness(1.07);
-  box-shadow: var(--shadow-glow);
+  border-color: oklch(1 0 0 / 0.55);
+  box-shadow: var(--glass-highlight), var(--shadow-glow);
 }
 .btn-grad:active {
   transform: scale(0.97);
@@ -347,49 +351,43 @@
 }
 
 @utility panel {
-  /* Glassmorphism: superficie translúcida + blur + saturación (estilo Apple).
-     El borde interior claro simula el reflejo del cristal. */
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow);
+  background: var(--glass-fill);
+  border: 1px solid var(--glass-edge-muted);
+  box-shadow: var(--glass-highlight), var(--glass-shadow);
   border-radius: var(--radius);
-  backdrop-filter: blur(var(--glass-blur)) saturate(1.6);
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.6);
-}
-
-/* Fallback: sin soporte de blur, la superficie pasa a sólida para legibilidad. */
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .panel {
-    background: var(--color-card);
-    border-color: var(--color-border);
-    box-shadow: var(--shadow-md);
-  }
+  backdrop-filter: var(--glass-blur);
 }
 
 @utility neu-raised {
-  background: var(--color-card);
-  box-shadow: var(--shadow-md);
+  background: var(--glass-fill);
+  box-shadow: var(--glass-highlight), var(--glass-shadow);
   border-radius: var(--radius);
+  backdrop-filter: var(--glass-blur);
 }
 
 @utility neu-inset {
-  background: var(--color-muted);
+  background: var(--glass-fill-soft);
   border-radius: var(--radius);
+  box-shadow: var(--glass-highlight);
+  backdrop-filter: blur(12px) saturate(1.05);
 }
 
 @utility neu-btn {
-  background: var(--color-card);
-  box-shadow: var(--shadow-sm);
+  background: var(--glass-fill-strong);
+  border: 1px solid var(--glass-edge-muted);
+  box-shadow: var(--glass-highlight), var(--shadow-sm);
   border-radius: 999px;
-  transition: box-shadow 180ms var(--ease-out-smooth), transform 180ms var(--ease-out-smooth);
+  backdrop-filter: blur(14px) saturate(1.08);
+  transition: transform 120ms var(--ease-out-smooth);
 }
+.neu-btn:hover { background: oklch(1 0 0 / 0.9); box-shadow: var(--glass-highlight), var(--glass-shadow); }
 .neu-btn:active {
   box-shadow: none;
   transform: scale(0.98);
 }
 
 @utility hover-lift {
-  transition: transform 260ms var(--ease-out-expo), box-shadow 260ms var(--ease-out-expo);
+  transition: transform 160ms var(--ease-out-expo);
 }
 .hover-lift:hover {
   transform: translateY(-2px);
@@ -474,13 +472,15 @@
   width: 34%;
   pointer-events: none;
   background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.16) 50%, transparent 100%);
-  animation: banner-shine 5s ease-in-out infinite;
+  animation: banner-shine 14s ease-in-out infinite;
+  will-change: transform;
 }
 
 /* Insignia MEJOR JUEGO: sombra estática + pulso de opacidad (composited). */
 .badge-glow {
   box-shadow: 0 6px 16px -6px oklch(0.35 0.09 262 / 0.4);
-  animation: glow-pulse 2.8s ease-in-out infinite;
+  animation: glow-pulse 7s ease-in-out infinite;
+  will-change: opacity;
 }
 
 /* Textura de grano sutil sobre degradados (nunca se ve plano ni "de algoritmo"). */
@@ -506,26 +506,77 @@
 }
 
 @utility glass {
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow);
-  backdrop-filter: blur(var(--glass-blur)) saturate(1.6);
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.6);
+  background: var(--glass-fill);
+  border: 1px solid var(--glass-edge-muted);
+  box-shadow: var(--glass-highlight), var(--glass-shadow);
+  backdrop-filter: var(--glass-blur);
 }
 
 @utility glass-btn {
-  background: oklch(1 0 0 / 0.55);
-  border: 1px solid oklch(1 0 0 / 0.7);
-  box-shadow: 0 2px 10px -2px oklch(0.3 0.06 260 / 0.1), inset 0 1px 0 0 oklch(1 0 0 / 0.8);
-  backdrop-filter: blur(12px) saturate(1.5);
-  -webkit-backdrop-filter: blur(12px) saturate(1.5);
+  background: var(--glass-fill-strong);
+  border: 1px solid var(--glass-edge-muted);
+  box-shadow: var(--glass-highlight), var(--shadow-sm);
   color: var(--color-foreground);
-  transition: transform 180ms cubic-bezier(0.32, 0.72, 0, 1),
-              box-shadow 220ms ease;
+  backdrop-filter: blur(14px) saturate(1.08);
+  transition: transform 120ms cubic-bezier(0.32, 0.72, 0, 1);
 }
 @utility glass-btn-hover {
-  background: oklch(1 0 0 / 0.75);
-  box-shadow: var(--glass-shadow-lg);
+  background: oklch(1 0 0 / 0.94);
+  box-shadow: var(--glass-highlight), var(--glass-shadow);
+}
+
+@utility glass-surface {
+  background: var(--glass-fill);
+  border: 1px solid var(--glass-edge-muted);
+  box-shadow: var(--glass-highlight), var(--glass-shadow);
+  backdrop-filter: var(--glass-blur);
+}
+
+@utility glass-control {
+  background: var(--glass-fill-strong);
+  border: 1px solid var(--glass-edge-muted);
+  box-shadow: var(--glass-highlight), 0 2px 6px -5px oklch(0.28 0.05 260 / 0.34);
+  backdrop-filter: blur(14px) saturate(1.08);
+  transition: transform 120ms var(--ease-out-expo);
+}
+.glass-control:hover { background: oklch(1 0 0 / 0.92); border-color: oklch(0.72 0.08 236 / 0.42); }
+.glass-control:focus-visible { border-color: oklch(0.55 0.15 262 / 0.7); box-shadow: var(--glass-highlight), 0 0 0 3px oklch(0.55 0.15 262 / 0.16); }
+
+@utility glass-menu {
+  background: oklch(0.99 0.004 252 / 0.82);
+  border: 1px solid var(--glass-edge-muted);
+  box-shadow: var(--glass-highlight), 0 20px 46px -22px oklch(0.28 0.05 260 / 0.42);
+  backdrop-filter: blur(22px) saturate(1.12);
+}
+
+@utility glass-header {
+  background: oklch(0.972 0.006 252 / 0.76);
+  border-color: oklch(0.78 0.035 252 / 0.22);
+  box-shadow: 0 1px 0 oklch(1 0 0 / 0.72);
+  backdrop-filter: blur(14px) saturate(1.08);
+}
+
+@utility glass-primary {
+  border: 1px solid oklch(1 0 0 / 0.34);
+  box-shadow: var(--glass-highlight), 0 10px 22px -14px oklch(0.47 0.14 263 / 0.7);
+}
+.glass-primary:hover { box-shadow: var(--glass-highlight), var(--shadow-glow); }
+
+@utility glass-destructive {
+  border: 1px solid oklch(1 0 0 / 0.32);
+  box-shadow: var(--glass-highlight), 0 8px 18px -14px oklch(0.577 0.215 25 / 0.64);
+}
+
+@utility glass-ghost {
+  border: 1px solid transparent;
+  transition: transform 120ms var(--ease-out-expo);
+}
+.glass-ghost:hover { background: var(--glass-fill-soft); border-color: var(--glass-edge-muted); }
+
+.app-header { box-shadow: 0 1px 0 oklch(1 0 0 / 0.64); }
+
+@media (prefers-reduced-motion: reduce) {
+  .glass-control, .glass-btn, .neu-btn, .btn-grad, .glass-ghost, .banner-shine, .badge-glow { transition-duration: 0ms; animation: none !important; }
 }
 
 .no-scrollbar::-webkit-scrollbar { display: none; }

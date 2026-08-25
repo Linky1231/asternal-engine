@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { Avatar } from "./Avatar";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
   Store, Palette, Package, Sparkles, X, Loader2, Heart, Search,
   DollarSign, Gift, Eye, ShoppingCart, Star, TrendingUp, Clock,
@@ -15,8 +15,9 @@ import {
   getMyProfile, getMyOrbes, toggleReaction,
 } from "@/lib/social/api";
 import { CommentSection } from "@/components/social/CommentSection";
-
-type StoreTab = "shop" | "gallery";
+import { socialActionStateClass } from "@/lib/social/interaction-state";
+import { galleryPreviewAuthor, galleryPreviewPrice, isArtistGalleryArtwork } from "@/lib/social/gallery-preview";
+import { galleryDetailMotion } from "@/lib/social/gallery-detail-motion";
 
 /* ═══════════════════════════════════════════════════════
    IMAGE VIEWER — Lightbox para ver imágenes completas
@@ -188,14 +189,14 @@ function AssetCard({
         })()}
 
         {/* Stats */}
-        <div className="flex items-center gap-4 text-xs text-muted-foreground/70 pt-1">
-          <button onClick={() => react("like")} className={`flex items-center gap-1.5 transition ${post.my_like ? "text-red-500" : "hover:text-red-400"}`}>
+        <div className="flex items-center gap-2 pt-1">
+          <button onClick={() => react("like")} aria-pressed={post.my_like} className={`flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs transition ${socialActionStateClass(post.my_like)}`}>
             <Heart size={14} className={post.my_like ? "fill-current" : ""} /> {post.likes}
           </button>
-          <button onClick={() => setOpenComments(!openComments)} className="flex items-center gap-1.5 hover:text-primary transition">
+          <button onClick={() => setOpenComments(!openComments)} aria-expanded={openComments} className={`flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs transition ${socialActionStateClass(openComments)} `}>
             <MessageCircle size={14} /> {post.comments_count}
           </button>
-          <button onClick={() => react("favorite")} className={`flex items-center gap-1.5 transition ${post.my_favorite ? "text-amber-500" : "hover:text-amber-400"}`}>
+          <button onClick={() => react("favorite")} aria-pressed={post.my_favorite} className={`flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs transition ${socialActionStateClass(post.my_favorite)}`}>
             <Bookmark size={14} className={post.my_favorite ? "fill-current" : ""} /> {post.favorites}
           </button>
         </div>
@@ -438,13 +439,13 @@ function BuyDialog({
     <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
       <div className="w-full max-w-sm rounded-2xl bg-card border border-border/50 p-5 space-y-4 shadow-xl" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between">
-          <h3 className="font-display text-sm font-bold">{isFree ? "Descargar" : "Comprar asset"}</h3>
+          <h3 className="font-display text-sm font-bold">{isFree ? "Obtener obra" : "Comprar obra"}</h3>
           <button onClick={onClose} className="w-7 h-7 rounded-lg hover:bg-muted grid place-items-center"><X size={14} /></button>
         </div>
         {result === "ok" ? (
           <div className="py-6 text-center space-y-2">
             <CheckCircle2 size={32} className="text-emerald-500 mx-auto" />
-            <div className="text-sm font-semibold">{isFree ? "¡Descargado!" : "¡Comprado!"}</div>
+            <div className="text-sm font-semibold">{isFree ? "¡Obra añadida!" : "¡Obra comprada!"}</div>
           </div>
         ) : result === "insufficient" ? (
           <div className="py-6 text-center space-y-2">
@@ -456,8 +457,8 @@ function BuyDialog({
           <>
             <div className="text-sm text-muted-foreground">
               {isFree
-                ? `Descargar "${(post.content.split("\n")[0] || "Asset").slice(0, 40)}" gratis`
-                : `Comprar "${(post.content.split("\n")[0] || "Asset").slice(0, 40)}" por ${post.price_orbes} orbes`
+                ? `Obtener "${(post.content.split("\n")[0] || "Obra").slice(0, 40)}" gratis`
+                : `Comprar "${(post.content.split("\n")[0] || "Obra").slice(0, 40)}" por ${post.price_orbes} orbes`
               }
             </div>
             {!isFree && (
@@ -467,7 +468,7 @@ function BuyDialog({
             <button onClick={handleBuy} disabled={loading || !canAfford}
               className="w-full h-10 rounded-lg bg-primary text-white text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition disabled:opacity-50">
               {loading ? <Loader2 size={14} className="animate-spin" /> : isFree ? <Gift size={14} /> : <ShoppingCart size={14} />}
-              {isFree ? "Descargar gratis" : `Pagar ${post.price_orbes} orbes`}
+              {isFree ? "Obtener gratis" : `Pagar ${post.price_orbes} orbes`}
             </button>
           </>
         )}
@@ -482,22 +483,21 @@ function BuyDialog({
 export function StoreSection({ myId, isMod: _isMod, onRefresh }: {
   myId: string | null; isMod: boolean; onRefresh?: () => void;
 }) {
-  const [storeTab, setStoreTab] = useState<StoreTab>("shop");
   const [artworks, setArtworks] = useState<PostWithMeta[]>([]);
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [searchQ, setSearchQ] = useState("");
-  const [shopFilter, setShopFilter] = useState<"all" | "free" | "paid" | "popular">("all");
-  const [categoryFilter, setCategoryFilter] = useState<"all" | "player" | "platform" | "enemy" | "coin" | "goal" | "decor">("all");
   const [balance, setBalance] = useState<number | null>(null);
+  const reducedMotion = useReducedMotion();
 
   // Dialogs
-  const [publishOpen, setPublishOpen] = useState(false);
   const [buyPost, setBuyPost] = useState<PostWithMeta | null>(null);
   const [detailPost, setDetailPost] = useState<PostWithMeta | null>(null);
   const [viewImageSrc, setViewImageSrc] = useState<string | null>(null);
   const [viewImageAlt, setViewImageAlt] = useState("");
   const openImageViewer = (src: string, alt: string) => { setViewImageSrc(src); setViewImageAlt(alt); };
+  const detailImage = detailPost?.signed_cover || detailPost?.signed_media?.[0] || null;
+  const detailTitle = detailPost?.content.split("\n")[0].replace(/^🎮🎨\s*/, "").slice(0, 60) || "Obra de galería";
+  const detailMotion = galleryDetailMotion(Boolean(reducedMotion));
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -516,174 +516,24 @@ export function StoreSection({ myId, isMod: _isMod, onRefresh }: {
 
   const handleBuy = () => { setBuyPost(null); load(); onRefresh?.(); };
 
-  // Tienda: solo assets del editor (tienen asset_preset)
-  const shopItems = artworks
-    .filter(a => !!a.asset_preset)
-    .filter(a => {
-      if (categoryFilter !== "all") {
-        const kind = (a.asset_preset as Record<string, unknown> | null)?.kind;
-        if (kind !== categoryFilter) return false;
-      }
-      return true;
-    })
-    .filter(a => {
-      if (shopFilter === "free") return !a.price_orbes || a.price_orbes === 0;
-      if (shopFilter === "paid") return (a.price_orbes ?? 0) > 0;
-      return true;
-    }).filter(a => {
-      if (!searchQ.trim()) return true;
-      const q = searchQ.toLowerCase();
-      return a.content.toLowerCase().includes(q) || a.author?.username?.toLowerCase().includes(q);
-    }).sort((a, b) => {
-      if (shopFilter === "popular") return (b.likes ?? 0) - (a.likes ?? 0);
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-    });
-
-  // Galería: solo obras de arte tradicionales (sin asset_preset)
+  // Galería: obras originales de artistas, no assets de la biblioteca del editor.
   const galleryItems = artworks
-    .filter(a => !a.asset_preset)
+    .filter(isArtistGalleryArtwork)
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   return (
     <div className="space-y-4">
-      {/* Sub-tabs: Tienda / Galería */}
-      <div className="flex gap-1 p-1 bg-muted/40 rounded-xl">
-        <button
-          onClick={() => setStoreTab("shop")}
-          className={`flex-1 h-10 rounded-lg text-[11px] font-semibold tracking-wide flex items-center justify-center gap-1.5 transition-all ${
-            storeTab === "shop" ? "grad-brand text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <Store size={13} /> Tienda
-        </button>
-        <button
-          onClick={() => setStoreTab("gallery")}
-          className={`flex-1 h-10 rounded-lg text-[11px] font-semibold tracking-wide flex items-center justify-center gap-1.5 transition-all ${
-            storeTab === "gallery" ? "grad-brand text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <Palette size={13} /> Galería
-        </button>
-      </div>
+      <header className="flex items-start gap-3 rounded-2xl border border-border/50 bg-card/60 px-4 py-3">
+        <span className="w-10 h-10 shrink-0 rounded-xl bg-primary/10 grid place-items-center"><Palette size={18} className="text-primary" /></span>
+        <div className="min-w-0">
+          <h2 className="font-display text-base font-bold">Galería</h2>
+          <p className="text-[11px] leading-relaxed text-muted-foreground">Obras originales publicadas y vendidas por artistas.</p>
+        </div>
+      </header>
 
-      {/* Vender — acción independiente */}
-      {myId && (
-        <button
-          onClick={() => setPublishOpen(true)}
-          className="w-full h-10 rounded-xl grad-brand text-primary-foreground text-[11px] font-semibold flex items-center justify-center gap-1.5 shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
-        >
-          <Plus size={14} /> Publicar asset en la tienda
-        </button>
-      )}
-
-      <AnimatePresence mode="wait">
-        {storeTab === "shop" ? (
-          <motion.div key="shop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }} className="space-y-4">
-
-            {/* Search — full width */}
-            <div className="relative">
-              <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/30 pointer-events-none" />
-              <input
-                value={searchQ} onChange={e => setSearchQ(e.target.value)}
-                placeholder="Buscar assets, textures, plantillas…"
-                className="w-full h-10 pl-10 pr-4 rounded-xl bg-muted/40 border border-border/40 text-sm outline-none focus:border-primary/40 transition placeholder:text-muted-foreground/35"
-              />
-            </div>
-
-            {/* Price filters — level 1 */}
-            <div>
-              <div className="text-[9px] font-semibold text-muted-foreground/50 uppercase tracking-wider mb-1.5 px-0.5">Ordenar por</div>
-              <div className="flex gap-1.5 flex-wrap">
-                {([["all", "Todos"], ["free", "Gratis"], ["paid", "De pago"], ["popular", "Populares"]] as const).map(([id, label]) => (
-                  <button
-                    key={id} onClick={() => setShopFilter(id)}
-                    className={`h-7 px-3 rounded-lg text-[10px] font-semibold tracking-wide transition-all ${
-                      shopFilter === id
-                        ? "grad-brand text-primary-foreground border border-transparent shadow-sm"
-                        : "bg-muted/40 text-muted-foreground border border-transparent hover:text-foreground"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Categories — level 2, visually secondary */}
-            <div>
-              <div className="text-[9px] font-semibold text-muted-foreground/50 uppercase tracking-wider mb-1.5 px-0.5">Categoría</div>
-              <div className="flex gap-1.5 flex-wrap">
-                {([
-                  ["all", "Todos", Package],
-                  ["player", "Jugadores", User],
-                  ["platform", "Plataformas", Box],
-                  ["enemy", "Enemigos", Skull],
-                  ["coin", "Monedas", CircleDollarSign],
-                  ["goal", "Metas", Flag],
-                  ["decor", "Decoración", Flower2],
-                ] as const).map(([id, label, Icon]) => (
-                  <button
-                    key={id} onClick={() => setCategoryFilter(id)}
-                    className={`h-7 px-2.5 rounded-lg text-[10px] font-semibold tracking-wide flex items-center gap-1 transition-all ${
-                      categoryFilter === id
-                        ? "grad-brand text-primary-foreground border border-transparent shadow-sm"
-                        : "bg-muted/40 text-muted-foreground border border-transparent hover:text-foreground"
-                    }`}
-                  >
-                    <Icon size={10} /> {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Stats bar */}
-            <div className="flex items-center gap-3 text-[10px] text-muted-foreground/60 pt-1 border-t border-border/30">
-              <span>{shopItems.length} assets</span>
-              {balance !== null && (
-                <span className="flex items-center gap-1 ml-auto">
-                  <Sparkles size={10} className="text-primary" /> {balance} orbes
-                </span>
-              )}
-            </div>
-
-            {/* Grid */}
-            {loading ? (
-              <div className="flex items-center justify-center py-12 gap-2">
-                <Loader2 size={18} className="animate-spin text-primary/40" />
-                <span className="text-xs text-muted-foreground/50">Cargando tienda…</span>
-              </div>
-            ) : shopItems.length === 0 ? (
-              <div className="text-center py-16 space-y-3">
-                <div className="w-14 h-14 mx-auto rounded-2xl bg-muted/30 border border-border/30 grid place-items-center">
-                  <Store size={22} className="text-muted-foreground/25" />
-                </div>
-                <div className="text-sm text-muted-foreground/60 font-medium">No hay assets aún</div>
-                <div className="text-[11px] text-muted-foreground/40">Sé el primero en publicar en la tienda</div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                {shopItems.map(p => (
-                  <div key={p.id} className="card-enter" style={{ animationDelay: "0ms" }}>
-                    <AssetCard
-                      post={p} myId={myId}
-                      onBuy={setBuyPost}
-                      onRefresh={load}
-                      onViewImage={openImageViewer}
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-          </motion.div>
-        ) : (
-          <motion.div key="gallery" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
-            <GallerySubSection artworks={galleryItems} loading={loading} myId={myId} profile={profile} onRefresh={load} onViewImage={openImageViewer} />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Publish Dialog */}
-      <PublishAssetDialog open={publishOpen} onClose={() => setPublishOpen(false)} onPublished={load} />
+      <motion.div key="artist-gallery" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.12 }}>
+        <GallerySubSection artworks={galleryItems} loading={loading} myId={myId} profile={profile} onRefresh={load} onOpenDetail={setDetailPost} />
+      </motion.div>
 
       {/* Buy Dialog */}
       {buyPost && myId && balance !== null && (
@@ -691,19 +541,73 @@ export function StoreSection({ myId, isMod: _isMod, onRefresh }: {
       )}
 
       {/* Detail Modal */}
-      {detailPost && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={() => setDetailPost(null)}>
-          <div className="w-full max-w-lg max-h-[85vh] bg-card rounded-t-2xl sm:rounded-2xl overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="sticky top-0 bg-card/90 backdrop-blur-sm border-b border-border/30 px-4 py-3 flex items-center justify-between z-10">
-              <h3 className="font-display text-sm font-bold truncate">Detalle del asset</h3>
-              <button onClick={() => setDetailPost(null)} className="w-7 h-7 rounded-lg hover:bg-muted grid place-items-center"><X size={14} /></button>
+      <AnimatePresence>
+        {detailPost && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={detailMotion.overlay}
+            className="fixed inset-0 z-[90] flex flex-col overflow-hidden bg-background/95 backdrop-blur-md"
+            onClick={() => setDetailPost(null)}
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Detalle de ${detailTitle}`}
+          >
+            <motion.div
+              initial={detailMotion.initialPanel}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 12, scale: 0.99 }}
+              transition={detailMotion.panel}
+              className="min-h-0 flex-1 flex flex-col"
+              onClick={e => e.stopPropagation()}
+            >
+              <header className="shrink-0 glass-header border-b">
+                <div className="max-w-5xl mx-auto px-3 sm:px-6 py-3 flex items-center justify-between gap-3">
+                  <div className="min-w-0 flex items-center gap-2">
+                    <span className="w-8 h-8 rounded-xl bg-muted/70 grid place-items-center"><Palette size={15} className="text-muted-foreground" /></span>
+                    <div className="min-w-0">
+                      <div className="text-[9px] uppercase tracking-[0.16em] text-muted-foreground">Galería</div>
+                      <h3 className="font-display text-sm font-bold truncate">{detailTitle}</h3>
+                    </div>
+                  </div>
+                  <button type="button" onClick={() => setDetailPost(null)} className="w-9 h-9 shrink-0 rounded-xl border border-border/60 bg-muted/40 hover:bg-muted grid place-items-center" aria-label="Cerrar detalle de obra"><X size={15} /></button>
+                </div>
+              </header>
+              <div className="min-h-0 flex-1 overflow-y-auto">
+              <div className="max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(300px,0.75fr)]">
+              <section className="rounded-2xl border border-border/60 bg-card overflow-hidden">
+                <div className="aspect-square bg-muted/30 p-3 sm:p-5 grid place-items-center">
+                  {detailImage ? (
+                    <img src={detailImage} alt={detailTitle} className="w-full h-full object-contain rounded-xl" />
+                  ) : (
+                    <div className="text-center text-muted-foreground/60 space-y-2"><Package size={34} className="mx-auto" /><p className="text-xs">Esta obra no incluye una imagen disponible.</p></div>
+                  )}
+                </div>
+              </section>
+
+              <aside className="rounded-2xl border border-border/60 bg-card p-4 space-y-4">
+                <div className="flex items-center gap-2">
+                  <Avatar p={detailPost.author} className="w-8 h-8" />
+                  <div className="min-w-0"><div className="text-sm font-medium truncate">@{detailPost.author?.username ?? "artista"}</div><div className="text-[10px] text-muted-foreground">{timeAgo(detailPost.created_at)}</div></div>
+                </div>
+                {detailPost.content.split("\n").slice(1).filter(line => line.trim() && !line.startsWith("#")).length > 0 && (
+                  <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">{detailPost.content.split("\n").slice(1).filter(line => line.trim() && !line.startsWith("#")).join(" ")}</p>
+                )}
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-border/50 bg-muted/25 px-3 py-2.5">
+                  <div><div className="text-[9px] uppercase tracking-[0.14em] text-muted-foreground">Precio</div><div className="mt-0.5 flex items-center gap-1 text-sm font-semibold tabular-nums"><Sparkles size={13} className="text-primary" />{galleryPreviewPrice(detailPost.price_orbes)} orbes</div></div>
+                  {myId && detailPost.author?.id !== myId && <button type="button" onClick={() => setBuyPost(detailPost)} className="h-9 rounded-lg grad-brand px-3 text-[11px] font-semibold text-primary-foreground shadow-sm active:scale-[0.97] transition-transform">{detailPost.price_orbes ? "Comprar obra" : "Obtener obra"}</button>}
+                </div>
+                <div className="border-t border-border/50 pt-4"><div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground mb-3">Comentarios</div><CommentSection postId={detailPost.id} myId={myId} isMod={false} onChange={load} /></div>
+              </aside>
             </div>
-            <div className="p-4">
-              <CommentSection postId={detailPost.id} myId={myId} isMod={false} onChange={() => {}} />
-            </div>
-          </div>
-        </div>
-      )}
+              </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Image Viewer / Lightbox */}
       <AnimatePresence>
@@ -716,16 +620,15 @@ export function StoreSection({ myId, isMod: _isMod, onRefresh }: {
 }
 
 /* ═══════════════════════════════════════════════════════
-   GALLERY SUB-SECTION — inside the Store
+   GALLERY SUB-SECTION — obras de artistas
    ═══════════════════════════════════════════════════════ */
 function GallerySubSection({
-  artworks, loading, myId, profile, onRefresh, onViewImage,
+  artworks, loading, myId, profile: _profile, onRefresh, onOpenDetail,
 }: {
   artworks: PostWithMeta[]; loading: boolean; myId: string | null;
   profile: Profile | null; onRefresh: () => void;
-  onViewImage: (src: string, alt: string) => void;
+  onOpenDetail: (post: PostWithMeta) => void;
 }) {
-  const [openCommentsId, setOpenCommentsId] = useState<string | null>(null);
   const [filter, setFilter] = useState<"recent" | "popular" | "free">("recent");
 
   const items = artworks
@@ -737,11 +640,6 @@ function GallerySubSection({
       if (filter === "popular") return (b.likes ?? 0) - (a.likes ?? 0);
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
-
-  const react = async (postId: string, type: "like" | "favorite") => {
-    await toggleReaction({ postId, type });
-    onRefresh();
-  };
 
   return (
     <div className="space-y-4">
@@ -770,94 +668,32 @@ function GallerySubSection({
           No hay obras en la galería aún
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
           {items.map(p => {
             const lines = p.content.split("\n");
             const titleText = (lines[0] || "Sin título").replace(/^🎮🎨\s*/, "").slice(0, 60);
-            const descLines = lines.slice(1).filter(l => l.trim() && !l.startsWith("#"));
-            const description = descLines.join(" ").trim();
-            const hashtags = p.tags?.length
-              ? p.tags
-              : lines.filter(l => l.startsWith("#")).flatMap(l => l.match(/#[\w-]+/g) ?? []);
-            const isOpen = openCommentsId === p.id;
+            const imageSrc = p.signed_cover || p.signed_media?.[0] || null;
+            const authorLabel = galleryPreviewAuthor(p.author?.username);
+            const priceLabel = galleryPreviewPrice(p.price_orbes);
 
             return (
-              <div key={p.id} className="rounded-xl border border-border/40 bg-card overflow-hidden hover:border-primary/20 transition-all group">
-                {/* Image — se adapta sin recortar */}
-                {(p.signed_cover || p.signed_media?.[0]) && (
-                  <div className="relative w-full max-h-[50vh] bg-gradient-to-br from-primary/5 to-primary/10 overflow-hidden cursor-pointer"
-                    onClick={() => onViewImage(p.signed_cover || p.signed_media?.[0] || '', (lines[0] || 'Obra').replace(/^🎮🎨\s*/, '').slice(0, 60))}>
-                    <img src={p.signed_cover || p.signed_media?.[0]} alt=""
-                      className="w-full h-full object-contain group-hover:opacity-90 transition-opacity duration-300" />
-                    {/* Zoom badge */}
-                    <div className="absolute bottom-2 right-2 w-7 h-7 rounded-lg bg-black/40 backdrop-blur-sm grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <ZoomIn size={13} className="text-white" />
-                    </div>
-                    {(p.price_orbes ?? 0) > 0 && (
-                      <div className="absolute top-2 right-2">
-                        <span className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-primary/10 text-primary border border-primary/15 flex items-center gap-1 tabular-nums">
-                          <Sparkles size={10} /> {p.price_orbes}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                )}
+              <article key={p.id} className="rounded-2xl border border-border/50 bg-card overflow-hidden hover:border-border-strong hover:shadow-md transition-[border-color,box-shadow] duration-200 group">
+                <button type="button" onClick={() => onOpenDetail(p)} className="relative block w-full aspect-square bg-muted/30 p-2 text-left" aria-label={`Abrir ${titleText}`}>
+                  {imageSrc ? <img src={imageSrc} alt={titleText} className="w-full h-full object-contain rounded-xl transition-transform duration-200 pointer-fine:group-hover:scale-[1.015]" /> : <div className="w-full h-full rounded-xl border border-dashed border-border/60 grid place-items-center"><Package size={26} className="text-muted-foreground/50" /></div>}
+                  <span className="absolute bottom-3 right-3 w-7 h-7 rounded-lg border border-white/20 bg-black/50 backdrop-blur-sm grid place-items-center opacity-0 pointer-fine:group-hover:opacity-100 transition-opacity"><ZoomIn size={13} className="text-white" /></span>
+                </button>
 
-                <div className="p-3 space-y-2">
-                  {/* Author */}
-                  <Link to="/profile/$userId" params={{ userId: p.author_id }} className="flex items-center gap-2 hover:opacity-80 transition">
+                <div className="flex items-center justify-between gap-3 border-t border-border/40 px-3 py-2.5">
+                  <Link to="/profile/$userId" params={{ userId: p.author_id }} className="flex min-w-0 items-center gap-2 hover:opacity-80 transition" aria-label={`Ver perfil de ${authorLabel}`}>
                     <Avatar p={p.author} className="w-6 h-6" />
-                    <div>
-                      <div className="text-[11px] font-semibold leading-tight">@{p.author?.username ?? "…"}</div>
-                      <div className="text-[9px] text-muted-foreground/50">{timeAgo(p.created_at)}</div>
-                    </div>
+                    <span className="min-w-0 truncate text-[11px] font-semibold leading-tight">{authorLabel}</span>
                   </Link>
-
-                  {/* Title */}
-                  <div className="text-sm font-bold leading-snug group-hover:text-primary transition-colors">
-                    {titleText}
-                  </div>
-
-                  {/* Description */}
-                  {description && (
-                    <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-3">
-                      {description}
-                    </p>
-                  )}
-
-                  {/* Hashtags */}
-                  {hashtags.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {hashtags.slice(0, 5).map((tag, i) => (
-                        <span key={i} className="text-[9px] text-primary/70 font-medium">{tag.startsWith("#") ? tag : `#${tag}`}</span>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Stats + Actions */}
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground/70 pt-1">
-                    <button onClick={() => react(p.id, "like")} className={`flex items-center gap-1.5 transition ${p.my_like ? "text-red-500" : "hover:text-red-400"}`}>
-                      <Heart size={14} className={p.my_like ? "fill-current" : ""} /> {p.likes}
-                    </button>
-                    <button onClick={() => setOpenCommentsId(isOpen ? null : p.id)} className={`flex items-center gap-1.5 transition ${isOpen ? "text-primary" : "hover:text-primary"}`}>
-                      <MessageCircle size={14} /> {p.comments_count}
-                    </button>
-                    <button onClick={() => react(p.id, "favorite")} className={`flex items-center gap-1.5 transition ${p.my_favorite ? "text-amber-500" : "hover:text-amber-400"}`}>
-                      <Bookmark size={14} className={p.my_favorite ? "fill-current" : ""} /> {p.favorites}
-                    </button>
-                    {(p.price_orbes ?? 0) > 0 && (
-                      <span className="flex items-center gap-0.5 ml-auto"><Sparkles size={10} className="text-primary" /> {p.price_orbes}</span>
-                    )}
-                  </div>
-
-                  {/* Comments */}
-                  {isOpen && (
-                    <div className="pt-2 border-t border-border/30">
-                      <CommentSection postId={p.id} myId={myId} isMod={false} onChange={onRefresh} />
-                    </div>
-                  )}
+                  <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-semibold tabular-nums text-foreground/75" aria-label={`Precio: ${priceLabel}`}>
+                    <Sparkles size={12} className="text-primary/75" />
+                    {priceLabel}
+                  </span>
                 </div>
-              </div>
+              </article>
             );
           })}
         </div>

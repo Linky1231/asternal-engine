@@ -1,5 +1,6 @@
 // @ts-nocheck — Local DB adapter (types differ from Supabase generics)
 import { supabase, isSchemaMissing } from "@/integrations/supabase/client";
+import { DEFAULT_COVER_FRAME, type CoverFrame, withCoverFrame } from "./cover-frame";
 
 export type SocialLinks = {
   youtube?: string;
@@ -156,15 +157,20 @@ export type CommentRow = {
 
 const MEDIA_BUCKET = "post-media";
 
+/** Convierte una ruta del bucket en una URL utilizable por imágenes y banners. */
+export async function resolveMediaUrl(path: string | null | undefined): Promise<string | null> {
+  const value = path?.trim();
+  if (!value) return null;
+  if (/^(?:https?:|data:|blob:)/i.test(value)) return value;
+  const { data } = await supabase.storage.from(MEDIA_BUCKET).createSignedUrl(value, 60 * 60 * 24 * 7);
+  return data?.signedUrl ?? null;
+}
+
 export async function signMediaUrls(paths: string[]): Promise<string[]> {
   if (!paths.length) return [];
   // Paralelo: los chats con muchos stickers/audios firman todas las URLs a la vez.
   return Promise.all(
-    paths.map(async (p) => {
-      if (/^https?:\/\//.test(p)) return p;
-      const { data } = await supabase.storage.from(MEDIA_BUCKET).createSignedUrl(p, 60 * 60 * 24 * 7);
-      return data?.signedUrl ?? "";
-    })
+    paths.map(async (p) => (await resolveMediaUrl(p)) ?? "")
   );
 }
 
@@ -180,14 +186,17 @@ export async function uploadMedia(file: File, userId: string): Promise<string> {
   return path;
 }
 
-export async function fetchFeed(opts: { search?: string; tag?: string; category?: string; includeGames?: boolean } = {}): Promise<PostWithMeta[]> {
+export async function fetchFeed(opts: { search?: string; tag?: string; category?: string; includeGames?: boolean; artistGallery?: boolean } = {}): Promise<PostWithMeta[]> {
   let q = supabase.from("posts").select("*").is("deleted_at", null).order("created_at", { ascending: false }).limit(100);
   if (opts.search) q = q.ilike("content", `%${opts.search}%`);
   if (opts.category) q = q.eq("category", opts.category);
+  // La Tienda histórica compartía category="artwork", pero sus recursos del
+  // editor conservan asset_preset. La Galería solo admite obras artísticas.
+  if (opts.artistGallery) q = q.is("asset_preset", null);
   // El feed normal solo muestra publicaciones: los juegos y las obras de la
   // galería (category = artwork) viven en sus propias secciones y no deben
   // colarse aquí.
-  else if (!opts.includeGames) q = q.or("category.is.null,category.neq.game,category.neq.artwork");
+  else if (!opts.includeGames) q = q.or("category.is.null,category.neq.game,category.neq.artwork,category.neq.system");
   const { data: posts, error } = await q;
   if (error) {
     // Esquema aún sin crear en Supabase: degradar a lista vacía en vez de crashear.
@@ -223,7 +232,10 @@ async function enrichPosts(rawPosts: PostRow[], me: string | null, tag?: string)
       : Promise.resolve({ data: [] as { post_id: string }[] }),
   ]);
 
-  const pmap = new Map((profiles.data ?? []).map(p => [p.id, p as Profile]));
+  const hydratedProfiles = await Promise.all(
+    (profiles.data ?? []).map(profile => hydrateProfileMedia(profile as Profile)),
+  );
+  const pmap = new Map(hydratedProfiles.filter((profile): profile is Profile => !!profile).map(profile => [profile.id, profile]));
   const ownedIds = new Set((purchases.data ?? []).map(x => x.post_id));
   const tagMap = new Map<string, string[]>();
   for (const row of (tagsJoin.data ?? []) as Array<{ post_id: string; tags: { name: string } | null }>) {
@@ -664,7 +676,7 @@ export async function getMyProfile(): Promise<Profile | null> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
   const { data } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
-  return (data as Profile) ?? null;
+  return hydrateProfileMedia((data as Profile) ?? null);
 }
 
 export async function isMod(): Promise<boolean> {
@@ -703,6 +715,7 @@ export async function publishGame(input: {
   allowRemix?: boolean;
   priceOrbes?: number;
   gameGenre?: string | null;
+  coverFrame?: CoverFrame;
 }): Promise<PostRow> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
@@ -728,6 +741,7 @@ export async function publishGame(input: {
     screenshots,
     allow_remix: input.allowRemix ?? true,
     price_orbes: Math.max(0, Math.floor(input.priceOrbes ?? 0)),
+    asset_preset: withCoverFrame(null, input.coverFrame ?? DEFAULT_COVER_FRAME),
   } as never).select().single();
   if (error) throw error;
   await upsertTagsFor(post!.id, input.tags);
@@ -758,6 +772,8 @@ export async function updateGame(postId: string, input: {
   allowRemix?: boolean;
   priceOrbes?: number;
   gameGenre?: string | null;
+  coverFrame?: CoverFrame;
+  assetPreset?: Record<string, unknown> | null;
 }): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
@@ -786,6 +802,7 @@ export async function updateGame(postId: string, input: {
   if (typeof input.allowRemix === "boolean") patch.allow_remix = input.allowRemix;
   if (typeof input.priceOrbes === "number") patch.price_orbes = Math.max(0, Math.floor(input.priceOrbes));
   if (input.gameGenre !== undefined) patch.game_genre = input.gameGenre.trim() || null;
+  if (input.coverFrame) patch.asset_preset = withCoverFrame(input.assetPreset, input.coverFrame);
   const { error } = await supabase.from("posts").update(patch as never).eq("id", postId);
   if (error) throw error;
   if (input.tags) {
@@ -1158,7 +1175,7 @@ export async function updateMyProfile(patch: {
   if (patch.interests !== undefined) clean.interests = patch.interests;
   const { data, error } = await supabase.from("profiles").update(clean as never).eq("id", user.id).select().single();
   if (error) throw error;
-  return data as Profile;
+  return (await hydrateProfileMedia(data as Profile))!;
 }
 
 export async function uploadBanner(file: File): Promise<string> {
@@ -1168,8 +1185,7 @@ export async function uploadBanner(file: File): Promise<string> {
   const optimized = await resizeImage(file, 1024);
   const optimizedFile = new File([optimized], file.name.replace(/\.[^.]+$/, "") + ".webp", { type: "image/webp" });
   const path = await uploadMedia(optimizedFile, user.id);
-  const { data } = await supabase.storage.from(MEDIA_BUCKET).createSignedUrl(path, 60 * 60 * 24 * 365);
-  return data?.signedUrl ?? path;
+  return path;
 }
 
 /** Resize an image file to target size (max dimension) for faster upload & crisp display */
@@ -1207,18 +1223,26 @@ export async function uploadAvatar(file: File): Promise<string> {
   const optimized = await resizeImage(file, 384);
   const optimizedFile = new File([optimized], file.name.replace(/\.[^.]+$/, "") + ".webp", { type: "image/webp" });
   const path = await uploadMedia(optimizedFile, user.id);
-  const { data } = await supabase.storage.from(MEDIA_BUCKET).createSignedUrl(path, 60 * 60 * 24 * 365);
-  return data?.signedUrl ?? path;
+  return path;
+}
+
+async function hydrateProfileMedia(profile: Profile | null): Promise<Profile | null> {
+  if (!profile) return null;
+  const [avatarUrl, bannerUrl] = await Promise.all([
+    resolveMediaUrl(profile.avatar_url),
+    resolveMediaUrl(profile.banner_url),
+  ]);
+  return { ...profile, avatar_url: avatarUrl, banner_url: bannerUrl };
 }
 
 export async function fetchProfileById(userId: string): Promise<Profile | null> {
   const { data } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
-  return (data as Profile) ?? null;
+  return hydrateProfileMedia((data as Profile) ?? null);
 }
 
 export async function fetchUserPosts(userId: string, opts: { games?: boolean; artwork?: boolean } = {}): Promise<PostWithMeta[]> {
   let q = supabase.from("posts").select("*").eq("author_id", userId).is("deleted_at", null).order("created_at", { ascending: false }).limit(100);
-  if (opts.artwork) q = q.eq("category", "artwork");
+  if (opts.artwork) q = q.eq("category", "artwork").is("asset_preset", null);
   else if (opts.games === true) q = q.eq("category", "game");
   else if (opts.games === false) q = q.or("category.is.null,category.neq.game,category.neq.artwork");
   const { data: posts, error } = await q;
@@ -1480,7 +1504,7 @@ export async function fetchMyGamesLite(): Promise<{ id: string; title: string }[
 
 // ============ ARTWORK GALLERY ============
 export async function fetchArtworks(opts: { search?: string } = {}): Promise<PostWithMeta[]> {
-  return fetchFeed({ ...opts, category: "artwork" });
+  return fetchFeed({ ...opts, category: "artwork", artistGallery: true });
 }
 
 export async function publishArtwork(input: {
@@ -1568,13 +1592,13 @@ export async function fetchMyArtworks(): Promise<PostWithMeta[]> {
   const legacyIds = (purchases ?? []).map(x => (x as { post_id: string }).post_id);
 
   const rows: PostRow[] = [];
-  const q1 = await supabase.from("posts").select("*").is("deleted_at", null).eq("category", "artwork")
+  const q1 = await supabase.from("posts").select("*").is("deleted_at", null).eq("category", "artwork").is("asset_preset", null)
     .or(`current_owner_id.eq.${me},author_id.eq.${me}`)
     .order("created_at", { ascending: false }).limit(100);
   if (!q1.error) rows.push(...((q1.data ?? []) as PostRow[]));
 
   if (legacyIds.length) {
-    const q2 = await supabase.from("posts").select("*").is("deleted_at", null).eq("category", "artwork")
+    const q2 = await supabase.from("posts").select("*").is("deleted_at", null).eq("category", "artwork").is("asset_preset", null)
       .in("id", legacyIds.slice(0, 200)).order("created_at", { ascending: false });
     if (!q2.error) rows.push(...((q2.data ?? []) as PostRow[]));
   }
@@ -1836,4 +1860,3 @@ export async function fetchFollowing(userId: string): Promise<Profile[]> {
     return ids.map(id => byId.get(id)).filter((p): p is Profile => !!p);
   } catch { return []; }
 }
-

@@ -23,6 +23,8 @@ export function NotificationBell() {
   useEffect(() => {
     reload();
     const t = setInterval(reload, 45000);
+    const onNotificationsChanged = () => { void reload(); };
+    window.addEventListener("asternal-notifications:changed", onNotificationsChanged);
     let channel: unknown;
     try {
       if (typeof supabase.channel === "function") {
@@ -37,6 +39,7 @@ export function NotificationBell() {
     }
     return () => {
       clearInterval(t);
+      window.removeEventListener("asternal-notifications:changed", onNotificationsChanged);
       try {
         (supabase as any).removeChannel?.(channel);
       } catch { /* noop */ }

@@ -2,11 +2,12 @@ import { useState, useEffect } from "react";
 import {
   X, Loader2, Trophy, Plus, Trash2, Save, Edit3, Star, Award,
   Zap, Target, Gem, Flame, Rocket, Heart, Palette, Link2, Tag,
-  ChevronDown, ChevronUp, GripVertical, Crown,
+  ChevronDown, ChevronUp, GripVertical, Crown, Send,
 } from "lucide-react";
 import { type Profile } from "@/lib/social/api";
 import { Avatar } from "./Avatar";
 import { UserName } from "./UserName";
+import { SharePortfolioModal } from "./SharePortfolioModal";
 
 /* ── Icon registry: lucide icons only ── */
 const ICON_OPTIONS = [
@@ -63,11 +64,12 @@ export interface Portfolio {
   skills: string[];
   links: PortfolioLink[];
   achievements: PortfolioAchievement[];
-  layout: "list" | "grid";
+  layout: "list";
   updatedAt: string;
 }
 
-const STORAGE_KEY = "asternal_portfolios";
+export const PORTFOLIO_STORAGE_KEY = "asternal_portfolios";
+const PORTFOLIO_LAYOUT = "list" as const;
 const SKILL_SUGGESTIONS = [
   "Game Design", "Pixel Art", "3D Modeling", "Programming", "Music",
   "Level Design", "Storytelling", "Unity", "Godot", "Unreal",
@@ -75,31 +77,31 @@ const SKILL_SUGGESTIONS = [
   "Sound Design", "Animation", "UI/UX", "Marketing", "Community",
 ];
 
-function loadPortfolio(userId: string): Portfolio | null {
+export function getPortfolio(userId: string): Portfolio | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(PORTFOLIO_STORAGE_KEY);
     if (!raw) return null;
     const all = JSON.parse(raw) as Record<string, Portfolio>;
     return all[userId] ?? null;
   } catch { return null; }
 }
 
-function savePortfolio(p: Portfolio): void {
+export function savePortfolio(p: Portfolio): void {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(PORTFOLIO_STORAGE_KEY);
     const all = raw ? JSON.parse(raw) as Record<string, Portfolio> : {};
-    all[p.userId] = { ...p, updatedAt: new Date().toISOString() };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+    all[p.userId] = { ...p, layout: PORTFOLIO_LAYOUT, updatedAt: new Date().toISOString() };
+    localStorage.setItem(PORTFOLIO_STORAGE_KEY, JSON.stringify(all));
   } catch { /* quota */ }
 }
 
-function deletePortfolio(userId: string): void {
+export function deletePortfolio(userId: string): void {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(PORTFOLIO_STORAGE_KEY);
     if (!raw) return;
     const all = JSON.parse(raw) as Record<string, Portfolio>;
     delete all[userId];
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+    localStorage.setItem(PORTFOLIO_STORAGE_KEY, JSON.stringify(all));
   } catch { /* noop */ }
 }
 
@@ -113,14 +115,18 @@ export function PortfolioPanel({
   profile,
   viewingOwn,
   onClose,
+  portfolioSnapshot,
 }: {
   userId: string;
   profile: Profile;
   viewingOwn: boolean;
   onClose: () => void;
+  portfolioSnapshot?: Portfolio | null;
 }) {
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [editing, setEditing] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const readOnlySnapshot = !!portfolioSnapshot;
 
   // editor state
   const [headline, setHeadline] = useState("");
@@ -130,12 +136,11 @@ export function PortfolioPanel({
   const [skillInput, setSkillInput] = useState("");
   const [links, setLinks] = useState<PortfolioLink[]>([]);
   const [achievements, setAchievements] = useState<PortfolioAchievement[]>([]);
-  const [layout, setLayout] = useState<"list" | "grid">("list");
   const [saving, setSaving] = useState(false);
   const [showSkillPicker, setShowSkillPicker] = useState(false);
 
   useEffect(() => {
-    const p = loadPortfolio(userId);
+    const p = portfolioSnapshot ?? getPortfolio(userId);
     setPortfolio(p);
     if (p) {
       setHeadline(p.headline);
@@ -144,9 +149,8 @@ export function PortfolioPanel({
       setSkills(p.skills ?? []);
       setLinks(p.links ?? []);
       setAchievements(p.achievements ?? []);
-      setLayout(p.layout ?? "list");
     }
-  }, [userId]);
+  }, [userId, portfolioSnapshot]);
 
   const startEditing = () => {
     if (portfolio) {
@@ -156,7 +160,6 @@ export function PortfolioPanel({
       setSkills(portfolio.skills ?? []);
       setLinks(portfolio.links ?? []);
       setAchievements(portfolio.achievements ?? []);
-      setLayout(portfolio.layout ?? "list");
     }
     setEditing(true);
   };
@@ -201,7 +204,7 @@ export function PortfolioPanel({
         skills,
         links: links.filter(l => l.label.trim() && l.url.trim()),
         achievements: achievements.filter(a => a.title.trim()),
-        layout,
+        layout: PORTFOLIO_LAYOUT,
         updatedAt: new Date().toISOString(),
       };
       savePortfolio(p);
@@ -220,10 +223,9 @@ export function PortfolioPanel({
   /* ── No portfolio ── */
   if (!portfolio && !editing) {
     return (
-      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-        <button aria-label="Cerrar" onClick={onClose}
-          className="absolute inset-0 bg-black/60 backdrop-blur-[2px] animate-in fade-in duration-200" />
-        <div className="relative w-full sm:max-w-md rounded-t-2xl sm:rounded-lg border border-border bg-surface shadow-md animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-2 duration-300 max-h-[85vh] flex flex-col">
+      <div className="fixed inset-0 z-[100] overflow-y-auto bg-background/95 backdrop-blur-md animate-in fade-in duration-200" role="dialog" aria-modal="true" aria-label="Portafolio">
+        <div className="min-h-full max-w-6xl mx-auto px-3 py-3 sm:px-6 sm:py-6">
+        <div className="relative min-h-[calc(100vh-1.5rem)] sm:min-h-[calc(100vh-3rem)] rounded-2xl border border-border bg-surface shadow-xl animate-in slide-in-from-bottom-2 duration-300 flex flex-col">
           <div className="flex items-center gap-3 px-4 py-3 border-b border-border/60 shrink-0">
             <div className="w-9 h-9 rounded-lg grid place-items-center shrink-0 bg-primary/10">
               <Trophy size={16} className="text-primary" />
@@ -237,7 +239,7 @@ export function PortfolioPanel({
               <X size={14} />
             </button>
           </div>
-          <div className="p-8 text-center space-y-3">
+          <div className="flex-1 grid place-items-center p-8 text-center space-y-3">
             <div className="w-14 h-14 mx-auto rounded-2xl bg-muted/30 border border-border/30 grid place-items-center">
               <Trophy size={22} className="text-muted-foreground/25" />
             </div>
@@ -245,7 +247,7 @@ export function PortfolioPanel({
               <div className="text-sm text-muted-foreground/60 font-medium">
                 {viewingOwn ? "Aún no tienes portafolio" : `${profile.display_name || profile.username} no tiene portafolio`}
               </div>
-              {viewingOwn && (
+              {viewingOwn && !readOnlySnapshot && (
                 <div className="text-[11px] text-muted-foreground/40 mt-1">
                   Crea uno para mostrar tus logros y habilidades
                 </div>
@@ -257,7 +259,9 @@ export function PortfolioPanel({
                 Crear portafolio
               </button>
             )}
+            <div className="text-[10px] text-muted-foreground/55">Crea un portafolio para compartir tus logros y habilidades.</div>
           </div>
+        </div>
         </div>
       </div>
     );
@@ -266,10 +270,9 @@ export function PortfolioPanel({
   /* ═══════ EDITOR ═══════ */
   if (editing) {
     return (
-      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-        <button aria-label="Cerrar" onClick={onClose}
-          className="absolute inset-0 bg-black/60 backdrop-blur-[2px] animate-in fade-in duration-200" />
-        <div className="relative w-full sm:max-w-lg rounded-t-2xl sm:rounded-lg border border-border bg-surface shadow-md animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-2 duration-300 max-h-[90vh] flex flex-col">
+      <div className="fixed inset-0 z-[100] overflow-y-auto bg-background/95 backdrop-blur-md animate-in fade-in duration-200" role="dialog" aria-modal="true" aria-label="Editor de portafolio">
+        <div className="min-h-full max-w-6xl mx-auto px-3 py-3 sm:px-6 sm:py-6">
+        <div className="relative min-h-[calc(100vh-1.5rem)] sm:min-h-[calc(100vh-3rem)] rounded-2xl border border-border bg-surface shadow-xl animate-in slide-in-from-bottom-2 duration-300 flex flex-col">
           {/* Header */}
           <div className="flex items-center gap-3 px-4 py-3 border-b border-border/60 shrink-0">
             <div className="w-9 h-9 rounded-lg grid place-items-center shrink-0" style={{ background: accentColor + "18" }}>
@@ -322,20 +325,6 @@ export function PortfolioPanel({
                 <input type="color" value={accentColor.startsWith("#") ? accentColor : "#3b82f6"}
                   onChange={e => setAccentColor(e.target.value)}
                   className="w-8 h-8 rounded-lg border border-border cursor-pointer bg-transparent" title="Color personalizado" />
-              </div>
-            </Section>
-
-            {/* ── Layout ── */}
-            <Section label="Diseño" hint="Cómo se muestran tus logros">
-              <div className="flex gap-2">
-                <button onClick={() => setLayout("list")}
-                  className={`flex-1 h-9 rounded-lg text-[11px] font-medium border transition ${layout === "list" ? "border-foreground bg-card" : "border-border bg-surface text-muted-foreground"}`}>
-                  Lista
-                </button>
-                <button onClick={() => setLayout("grid")}
-                  className={`flex-1 h-9 rounded-lg text-[11px] font-medium border transition ${layout === "grid" ? "border-foreground bg-card" : "border-border bg-surface text-muted-foreground"}`}>
-                  Cuadrícula
-                </button>
               </div>
             </Section>
 
@@ -442,7 +431,7 @@ export function PortfolioPanel({
           </div>
 
           {/* Footer */}
-          <div className="px-4 pb-4 pt-3 flex items-center gap-2 shrink-0 border-t border-border/30">
+          <div className="sticky bottom-0 px-4 pb-4 pt-3 flex items-center gap-2 shrink-0 border-t border-border/30 bg-surface/95 backdrop-blur">
             <button onClick={handleDelete}
               className="h-9 px-3 rounded-lg border border-border bg-surface text-[11px] font-medium text-red-500 hover:bg-red-50 active:scale-95 transition">
               Eliminar
@@ -459,16 +448,16 @@ export function PortfolioPanel({
             </button>
           </div>
         </div>
+        </div>
       </div>
     );
   }
 
   /* ═══════ VIEW MODE ═══════ */
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <button aria-label="Cerrar" onClick={onClose}
-        className="absolute inset-0 bg-black/60 backdrop-blur-[2px] animate-in fade-in duration-200" />
-      <div className="relative w-full sm:max-w-md rounded-t-2xl sm:rounded-lg border border-border bg-surface shadow-md animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-2 duration-300 max-h-[85vh] flex flex-col">
+    <div className="fixed inset-0 z-[100] overflow-y-auto bg-background/95 backdrop-blur-md animate-in fade-in duration-200" role="dialog" aria-modal="true" aria-label="Portafolio">
+      <div className="min-h-full max-w-6xl mx-auto px-3 py-3 sm:px-6 sm:py-6">
+      <div className="relative min-h-[calc(100vh-1.5rem)] sm:min-h-[calc(100vh-3rem)] rounded-2xl border border-primary/20 bg-[radial-gradient(circle_at_top_right,rgba(99,178,255,0.1),transparent_26%),linear-gradient(135deg,rgba(255,255,255,0.99),rgba(242,248,255,0.98))] shadow-xl animate-in slide-in-from-bottom-2 duration-300 flex flex-col">
         {/* Header */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-border/60 shrink-0">
           <div className="w-9 h-9 rounded-lg grid place-items-center shrink-0"
@@ -481,11 +470,17 @@ export function PortfolioPanel({
               <div className="text-[10px] text-muted-foreground truncate">{portfolio.bio}</div>
             )}
           </div>
-          {viewingOwn && (
-            <button onClick={startEditing}
-              className="h-8 px-2.5 rounded-md border border-border bg-surface text-[10px] font-medium text-primary hover:bg-primary/5 active:scale-95 transition flex items-center gap-1 shrink-0">
-              <Edit3 size={11} /> Editar
-            </button>
+          {viewingOwn && !readOnlySnapshot && (
+            <>
+              <button onClick={() => setShareOpen(true)}
+                className="h-8 px-2.5 rounded-md grad-brand text-primary-foreground text-[10px] font-semibold active:scale-95 transition flex items-center gap-1 shrink-0">
+                <Send size={11} /> Compartir
+              </button>
+              <button onClick={startEditing}
+                className="h-8 px-2.5 rounded-md border border-border bg-surface text-[10px] font-medium text-primary hover:bg-primary/5 active:scale-95 transition flex items-center gap-1 shrink-0">
+                <Edit3 size={11} /> Editar
+              </button>
+            </>
           )}
           <button onClick={onClose}
             className="w-8 h-8 rounded-md border border-border grid place-items-center text-muted-foreground hover:text-foreground active:scale-95 transition shrink-0">
@@ -495,7 +490,7 @@ export function PortfolioPanel({
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {/* ── User card ── */}
-          <div className="flex items-center gap-3 p-3 rounded-xl border border-border/40 bg-card">
+          <div className="flex items-center gap-3 rounded-xl border border-primary/20 bg-card/95 p-3 shadow-sm">
             <Avatar p={profile} size={48} rounded="xl" className="border-2" style={{ borderColor: portfolio?.accentColor ?? "#3b82f6" }} />
             <div className="min-w-0 flex-1">
               <UserName p={profile} size="md" />
@@ -520,7 +515,7 @@ export function PortfolioPanel({
             <div className="flex flex-wrap gap-1.5">
               {portfolio.links.map(l => (
                 <a key={l.id} href={l.url.startsWith("http") ? l.url : `https://${l.url}`} target="_blank" rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] border border-border/60 bg-muted/30 hover:border-primary/30 transition">
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-primary/20 bg-card px-2.5 py-1 text-[11px] shadow-sm transition hover:border-primary/35">
                   <Link2 size={10} style={{ color: portfolio.accentColor }} />
                   <span className="text-foreground">{l.label}</span>
                 </a>
@@ -530,51 +525,28 @@ export function PortfolioPanel({
 
           {/* ── Achievements ── */}
           {portfolio && portfolio.achievements.length > 0 && (
-            portfolio.layout === "grid" ? (
-              <div className="grid grid-cols-2 gap-2">
-                {portfolio.achievements.map(ach => {
-                  const Icon = getIcon(ach.icon);
-                  return (
-                    <div key={ach.id} className="p-3 rounded-xl border border-border/40 bg-card hover:border-primary/20 transition text-center space-y-2">
-                      <div className="w-10 h-10 mx-auto rounded-xl grid place-items-center"
-                        style={{ background: (portfolio.accentColor ?? "#3b82f6") + "12" }}>
-                        <Icon size={18} style={{ color: portfolio.accentColor ?? "#3b82f6" }} />
-                      </div>
-                      <div className="text-[11px] font-semibold text-foreground leading-tight">{ach.title}</div>
+            <div className="space-y-2">
+              {portfolio.achievements.map(ach => {
+                const Icon = getIcon(ach.icon);
+                return (
+                  <div key={ach.id} className="flex items-start gap-3 rounded-xl border border-primary/20 bg-card/95 p-3 shadow-sm transition hover:border-primary/35">
+                    <div className="w-9 h-9 rounded-lg grid place-items-center shrink-0"
+                      style={{ background: (portfolio.accentColor ?? "#3b82f6") + "12" }}>
+                      <Icon size={16} style={{ color: portfolio.accentColor ?? "#3b82f6" }} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[12px] font-semibold text-foreground">{ach.title}</div>
                       {ach.description && (
-                        <div className="text-[10px] text-muted-foreground/60 leading-snug line-clamp-2">{ach.description}</div>
+                        <div className="text-[11px] text-muted-foreground/60 mt-0.5">{ach.description}</div>
                       )}
-                      <div className="text-[8px] font-mono text-muted-foreground/30">
-                        {new Date(ach.date).toLocaleDateString("es", { month: "short", year: "numeric" })}
+                      <div className="text-[9px] font-mono text-muted-foreground/30 mt-1">
+                        {new Date(ach.date).toLocaleDateString("es", { year: "numeric", month: "short", day: "numeric" })}
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {portfolio.achievements.map(ach => {
-                  const Icon = getIcon(ach.icon);
-                  return (
-                    <div key={ach.id} className="flex items-start gap-3 p-3 rounded-xl border border-border/40 bg-card hover:border-primary/20 transition">
-                      <div className="w-9 h-9 rounded-lg grid place-items-center shrink-0"
-                        style={{ background: (portfolio.accentColor ?? "#3b82f6") + "12" }}>
-                        <Icon size={16} style={{ color: portfolio.accentColor ?? "#3b82f6" }} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-[12px] font-semibold text-foreground">{ach.title}</div>
-                        {ach.description && (
-                          <div className="text-[11px] text-muted-foreground/60 mt-0.5">{ach.description}</div>
-                        )}
-                        <div className="text-[9px] font-mono text-muted-foreground/30 mt-1">
-                          {new Date(ach.date).toLocaleDateString("es", { year: "numeric", month: "short", day: "numeric" })}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )
+                  </div>
+                );
+              })}
+            </div>
           )}
 
           {portfolio && portfolio.achievements.length === 0 && !portfolio.skills.length && !portfolio.links.length && (
@@ -584,6 +556,8 @@ export function PortfolioPanel({
           )}
         </div>
       </div>
+      </div>
+      {!readOnlySnapshot && <SharePortfolioModal portfolio={portfolio} profile={profile} open={shareOpen} onClose={() => setShareOpen(false)} />}
     </div>
   );
 }

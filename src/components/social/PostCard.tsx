@@ -1,4 +1,4 @@
-import { memo, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Avatar } from "./Avatar";
 import { Link } from "@tanstack/react-router";
@@ -8,6 +8,11 @@ import { CommentSection } from "./CommentSection";
 import { SharePostModal } from "./SharePostModal";
 import { UserName } from "./UserName";
 import { CardMenu, CardMenuItem, useCardMenuAnchor } from "./CardMenu";
+import { nextExclusiveFooterAction, postFooterActionIsActive, socialActionStateClass, type FooterActionSelection } from "@/lib/social/interaction-state";
+import { mergePostInteractionSnapshot, toggleReactionSnapshot, toggleRepostSnapshot, type PostInteractionSnapshot } from "@/lib/social/post-interaction";
+import { documentDisplayMeta } from "@/lib/social/document-display";
+import { postSurfaceClass } from "@/lib/social/post-surface";
+import type { PostShareInput } from "@/lib/social/post-share";
 import {
   Heart, Star, MessageCircle, Repeat2, MoreHorizontal, Pencil, Trash2, Flag, Share2,
   FileText, Download, Lock, Gamepad2, Code2, Link2, Play,
@@ -32,7 +37,40 @@ export const PostCard = memo(function PostCard({
   const [showHtml, setShowHtml] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showShare, setShowShare] = useState(false);
+  const [activeFooterAction, setActiveFooterAction] = useState<FooterActionSelection>(null);
+  const [interactions, setInteractions] = useState<PostInteractionSnapshot>(() => ({
+    likes: post.likes,
+    favorites: post.favorites,
+    reposts: post.reposts_count,
+    liked: post.my_like,
+    favorited: post.my_favorite,
+    reposted: post.my_repost,
+  }));
+  const [commentsCount, setCommentsCount] = useState(post.comments_count);
+  const [poll, setPoll] = useState(post.poll);
+  const interactionVersion = useRef({ like: 0, favorite: 0, repost: 0, poll: 0 });
+  const personalInteractionOverride = useRef({ liked: false, favorited: false, reposted: false });
+  const interactionPostId = useRef(post.id);
   const menu = useCardMenuAnchor<HTMLButtonElement>();
+
+  useEffect(() => {
+    if (interactionPostId.current !== post.id) {
+      interactionPostId.current = post.id;
+      personalInteractionOverride.current = { liked: false, favorited: false, reposted: false };
+    }
+    const incoming: PostInteractionSnapshot = {
+      likes: post.likes,
+      favorites: post.favorites,
+      reposts: post.reposts_count,
+      liked: post.my_like,
+      favorited: post.my_favorite,
+      reposted: post.my_repost,
+    };
+    setInteractions(current => mergePostInteractionSnapshot(current, incoming, personalInteractionOverride.current));
+    setCommentsCount(post.comments_count);
+    setPoll(post.poll);
+    interactionVersion.current = { like: 0, favorite: 0, repost: 0, poll: 0 };
+  }, [post.id, post.likes, post.favorites, post.reposts_count, post.my_like, post.my_favorite, post.my_repost, post.comments_count, post.poll]);
 
   const mine = myId === post.author_id;
   const canDelete = mine || isMod;
@@ -45,8 +83,53 @@ export const PostCard = memo(function PostCard({
   const showEntrance = !!post.entrance_effect && authorPlus && ageMs < 30_000;
   const entranceClass = showEntrance ? `post-fx-${post.entrance_effect}` : "";
 
-  const react = async (type: "like" | "favorite") => { await toggleReaction({ postId: post.id, type }); onChange(); };
-  const repost = async () => { await toggleRepost(post.id); onChange(); };
+  const react = async (type: "like" | "favorite") => {
+    const before = interactions;
+    const version = ++interactionVersion.current[type];
+    const activeKey = type === "like" ? "liked" : "favorited";
+    personalInteractionOverride.current[activeKey] = true;
+    setInteractions(current => toggleReactionSnapshot(current, type));
+    try {
+      const active = await toggleReaction({ postId: post.id, type });
+      if (interactionVersion.current[type] === version) {
+        setInteractions(current => {
+          if (current[activeKey] === active) return current;
+          return toggleReactionSnapshot(current, type);
+        });
+      }
+    } catch (error) {
+      if (interactionVersion.current[type] === version) {
+        personalInteractionOverride.current[activeKey] = false;
+        setInteractions(before);
+      }
+      toast.error(error instanceof Error ? error.message : "No se pudo actualizar la reacción");
+    }
+  };
+  const repost = async () => {
+    const before = interactions;
+    const version = ++interactionVersion.current.repost;
+    personalInteractionOverride.current.reposted = true;
+    setInteractions(current => toggleRepostSnapshot(current));
+    try {
+      const active = await toggleRepost(post.id);
+      if (interactionVersion.current.repost === version) {
+        setInteractions(current => current.reposted === active ? current : toggleRepostSnapshot(current));
+      }
+    } catch (error) {
+      if (interactionVersion.current.repost === version) {
+        personalInteractionOverride.current.reposted = false;
+        setInteractions(before);
+      }
+      toast.error(error instanceof Error ? error.message : "No se pudo actualizar la republicación");
+    }
+  };
+  const chooseFooterAction = (next: Exclude<FooterActionSelection, null>) => {
+    setActiveFooterAction(current => {
+      const selected = nextExclusiveFooterAction(current, next);
+      setOpenComments(selected === "comments");
+      return selected;
+    });
+  };
   const remove = () => {
     toast("¿Eliminar publicación?", {
       description: "Esta acción no se puede deshacer.",
@@ -87,9 +170,21 @@ export const PostCard = memo(function PostCard({
   };
   const share = () => { setShowShare(true); menu.close(); };
   const vote = async (i: number) => {
-    if (!post.poll) return;
-    await votePoll(post.poll.id, i);
-    onChange();
+    if (!poll || poll.my_vote !== null) return;
+    const before = poll;
+    const version = ++interactionVersion.current.poll;
+    setPoll(current => current ? {
+      ...current,
+      my_vote: i,
+      total: current.total + 1,
+      votes: current.votes.map((count, index) => index === i ? count + 1 : count),
+    } : current);
+    try {
+      await votePoll(poll.id, i);
+    } catch (error) {
+      if (interactionVersion.current.poll === version) setPoll(before);
+      toast.error(error instanceof Error ? error.message : "No se pudo registrar el voto");
+    }
   };
 
   const avatarInner = <Avatar p={author} className="w-full h-full" />;
@@ -116,11 +211,61 @@ export const PostCard = memo(function PostCard({
       {postTypeInfo.label}
     </div>
   ) : null;
+  const shareKind: PostShareInput["post"]["kind"] = post.pinned_game
+    ? "game"
+    : post.media_type === "video"
+      ? "video"
+      : post.signed_media.length > 0 || post.signed_cover
+        ? "image"
+        : post.category?.toLowerCase() === "galería"
+          ? "gallery"
+          : "post";
+  const postShare: PostShareInput = {
+    owner: {
+      id: post.author_id,
+      displayName: author?.display_name ?? author?.username ?? "Creador de Asternal",
+      username: author?.username ?? "",
+      avatarUrl: author?.avatar_url ?? "",
+    },
+    post: {
+      id: post.id,
+      content: post.content,
+      kind: shareKind,
+      imageUrl: post.signed_media[0] ?? post.signed_cover ?? post.pinned_game?.cover_url ?? "",
+      sourceUrl: "",
+      mediaUrls: post.signed_media,
+      mediaType: post.media_type,
+      documents: post.signed_documents ?? [],
+      textColor: post.text_color ?? "",
+      linkUrl: post.link_url ?? "",
+      hasHtml: Boolean(post.html_content),
+      pinnedGame: post.pinned_game ? {
+        id: post.pinned_game.id,
+        title: post.pinned_game.title,
+        coverUrl: post.pinned_game.cover_url ?? "",
+      } : null,
+      poll: post.poll ? {
+        question: post.poll.question,
+        options: post.poll.options,
+        votes: post.poll.votes,
+        total: post.poll.total,
+      } : null,
+      locked: post.locked_content ? {
+        isUnlocked: post.is_unlocked === true,
+        text: post.locked_content,
+        goal: post.unlock_reactions_goal ?? 0,
+        current: interactions.likes + interactions.favorites,
+        unlockAt: post.unlock_at ?? "",
+      } : null,
+      postTypes: (post.post_type ?? "").split(","),
+      tags: post.tags,
+    },
+  };
 
   return (
-    <article className={`group panel relative isolate overflow-hidden rounded-2xl border border-border/60 transition-[border-color,box-shadow] duration-200 ease-out pointer-fine:hover:border-primary/30 pointer-fine:hover:shadow-sm ${entranceClass}`}>
+    <article className={`group panel overflow-hidden rounded-2xl border border-border/60 transition-[border-color,box-shadow] duration-200 ease-out pointer-fine:hover:border-primary/30 pointer-fine:hover:shadow-sm ${entranceClass}`}>
       {/* Hairline degradado superior */}
-      <div className="h-[3px] w-full rounded-t-2xl grad-brand-fade opacity-70 pointer-fine:group-hover:opacity-100 transition-opacity duration-300" />
+      <div aria-hidden="true" className="h-px w-full grad-brand-fade opacity-35 pointer-fine:group-hover:opacity-50 transition-opacity duration-200" />
 
       <div className="p-3 space-y-3">
         <header className="flex items-center gap-2.5">
@@ -199,24 +344,33 @@ export const PostCard = memo(function PostCard({
         {/* Documentos */}
         {post.signed_documents && post.signed_documents.length > 0 && (
           <div className="space-y-1.5">
-            {post.signed_documents.map((d, i) => (
-              <a key={i} href={d.url} target="_blank" rel="noreferrer" download={d.name}
-                className="flex items-center gap-2.5 bg-muted/30 pointer-fine:hover:bg-primary/10 rounded-xl px-3 py-2.5 text-xs border border-border/50 pointer-fine:hover:border-primary/30 transition-[background-color,border-color] duration-300 ease-out group/doc">
-                <span className="w-8 h-8 rounded-lg bg-primary/10 grid place-items-center shrink-0">
-                  <FileText size={14} className="text-primary" />
-                </span>
-                <span className="flex-1 truncate font-medium">{d.name}</span>
-                <Download size={13} className="text-muted-foreground pointer-fine:group-hover/doc:text-primary transition-colors duration-300" />
-              </a>
-            ))}
+            {post.signed_documents.map((d, i) => {
+              const file = documentDisplayMeta(d.name);
+              return (
+                <div key={i} className="flex items-center gap-2.5 rounded-2xl border border-border/60 bg-card/70 px-3 py-2.5 text-xs shadow-[0_1px_0_rgba(15,23,42,0.03)]">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-primary/15 bg-primary/[0.07] text-primary">
+                    <FileText size={16} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-semibold text-foreground">{d.name}</span>
+                    <span className="mt-0.5 block text-[9px] font-medium uppercase tracking-[0.12em] text-muted-foreground">{file.label} · {file.format}</span>
+                  </span>
+                  <a href={d.url} target="_blank" rel="noreferrer" download={d.name}
+                    className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-border/70 bg-background/80 text-muted-foreground transition-[border-color,color,background-color,transform] duration-150 ease-out hover:border-primary/35 hover:bg-primary/[0.06] hover:text-primary active:scale-95"
+                    aria-label={`Descargar ${d.name}`} title={`Descargar ${d.name}`}>
+                    <Download size={14} />
+                  </a>
+                </div>
+              );
+            })}
           </div>
         )}
 
         {/* HTML embebido */}
         {post.html_content && (
-          <div className="border border-border rounded-xl overflow-hidden">
+          <div className={`rounded-xl overflow-hidden ${postSurfaceClass("html")}`}>
             <button type="button" onClick={() => setShowHtml(s => !s)}
-              className="w-full flex items-center gap-2 px-3 py-2.5 text-xs bg-muted/30 pointer-fine:hover:bg-muted/50 transition-colors duration-300">
+              className="w-full flex items-center gap-2 px-3 py-2.5 text-xs bg-primary/[0.055] pointer-fine:hover:bg-primary/[0.09] transition-colors duration-300">
               <Code2 size={13} className="text-primary" />
               <span className="flex-1 text-left font-medium">Contenido HTML {showHtml ? "(ocultar)" : "(mostrar)"}</span>
               <span className="text-muted-foreground transition-transform duration-300 ease-out" style={{ transform: showHtml ? "rotate(180deg)" : "none" }}>▼</span>
@@ -224,7 +378,7 @@ export const PostCard = memo(function PostCard({
             {showHtml && (
               <>
                 <iframe srcDoc={post.html_content} sandbox="" className="w-full h-64 bg-white" title="html-content" />
-                <div className="text-[9px] text-muted-foreground px-2 py-1 bg-muted/20">Contenido de terceros · sandbox seguro</div>
+                <div className="text-[9px] text-muted-foreground px-2 py-1 bg-primary/[0.035]">Contenido de terceros · sandbox seguro</div>
               </>
             )}
           </div>
@@ -232,25 +386,28 @@ export const PostCard = memo(function PostCard({
 
         {/* Juego fijado */}
         {post.pinned_game && (
-          <button
-            type="button"
-            onClick={() => onOpenGame?.(post.pinned_game!.id)}
-            className="group/game flex items-center gap-3 rounded-2xl p-2 pr-3 bg-primary/[0.04] border border-primary/20 pointer-fine:hover:border-primary/40 transition-[border-color,box-shadow] duration-300 ease-out pointer-fine:hover:shadow-md w-full text-left cursor-pointer">
+          <div className={`flex items-center gap-2.5 rounded-2xl px-3 py-2.5 text-xs ${postSurfaceClass("game")}`}>
             {post.pinned_game.cover_url ? (
-              <img src={post.pinned_game.cover_url} alt="" className="w-14 h-14 max-w-full rounded-xl object-cover shrink-0 ring-1 ring-border/50" />
+              <img src={post.pinned_game.cover_url} alt="" className="h-9 w-9 shrink-0 rounded-xl border border-primary/15 bg-primary/[0.07] object-contain" />
             ) : (
-              <div className="w-14 h-14 rounded-xl bg-primary/10 border border-primary/20 grid place-items-center shrink-0">
-                <Gamepad2 size={22} className="text-primary" />
-              </div>
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-primary/15 bg-primary/[0.07] text-primary">
+                <Gamepad2 size={16} />
+              </span>
             )}
             <div className="min-w-0 flex-1">
-              <div className="text-[9px] font-display tracking-[0.18em] text-primary-glow uppercase">Juego fijado</div>
-              <div className="text-sm font-display truncate mt-0.5">{post.pinned_game.title}</div>
+              <div className="text-[9px] font-medium uppercase tracking-[0.12em] text-muted-foreground">Juego fijado</div>
+              <div className="mt-0.5 truncate font-semibold text-foreground">{post.pinned_game.title}</div>
             </div>
-            <span className="w-8 h-8 rounded-full bg-primary/10 grid place-items-center transition-transform duration-300 ease-out pointer-fine:group-hover/game:translate-x-0.5">
-              <Play size={14} className="text-primary ml-0.5" fill="currentColor" />
-            </span>
-          </button>
+            <button
+              type="button"
+              onClick={() => onOpenGame?.(post.pinned_game!.id)}
+              className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-border/70 bg-background/80 text-muted-foreground transition-[border-color,color,background-color,transform] duration-150 ease-out hover:border-primary/35 hover:bg-primary/[0.06] hover:text-primary active:scale-95"
+              aria-label={`Jugar ${post.pinned_game.title}`}
+              title={`Jugar ${post.pinned_game.title}`}
+            >
+              <Play size={14} className="ml-0.5" fill="currentColor" />
+            </button>
+          </div>
         )}
 
         {/* Encuesta */}
@@ -258,7 +415,7 @@ export const PostCard = memo(function PostCard({
 
         {/* Contenido desbloqueable */}
         {post.locked_content && (
-          <div className={`rounded-2xl border p-3.5 transition-[border-color,background-color] duration-500 ease-out ${post.is_unlocked ? "border-primary/40 bg-primary/[0.05]" : "border-dashed border-border bg-muted/20"}`}>
+          <div className={`rounded-2xl p-3.5 transition-[border-color,background-color] duration-500 ease-out ${post.is_unlocked ? "border border-primary/40 bg-primary/[0.07]" : `${postSurfaceClass("locked")} border-dashed`}`}>
             <div className="flex items-center gap-2 text-[11px] font-display tracking-[0.15em] mb-2">
               <span className={`w-6 h-6 rounded-full grid place-items-center ${post.is_unlocked ? "bg-primary/15 text-primary-glow" : "bg-muted text-muted-foreground"}`}>
                 <Lock size={11} />
@@ -275,7 +432,7 @@ export const PostCard = memo(function PostCard({
                       <span className="block h-full bg-primary rounded-full transition-[width] duration-700 ease-out"
                         style={{ width: `${Math.min(100, Math.round(((post.likes + post.favorites) / post.unlock_reactions_goal) * 100))}%` }} />
                     </span>
-                    <span className="tabular-nums">{post.likes + post.favorites} / {post.unlock_reactions_goal}</span>
+                      <span className="tabular-nums">{interactions.likes + interactions.favorites} / {post.unlock_reactions_goal}</span>
                   </div>
                 )}
                 {post.unlock_at && (
@@ -306,55 +463,59 @@ export const PostCard = memo(function PostCard({
       </div>
 
       <footer className="flex items-center border-t border-border/50 bg-muted/15 px-1 py-0.5 text-[11px] text-muted-foreground">
-        <button type="button" onClick={() => react("like")}
-          className={`flex-1 flex items-center justify-center gap-1.5 px-1 py-2 rounded-lg transition-[transform,color,background-color] duration-150 ease-out active:scale-[0.93] ${post.my_like ? "text-rose-500" : "pointer-fine:hover:bg-rose-500/10 pointer-fine:hover:text-rose-500"}`}>
+        <button type="button" onClick={() => { chooseFooterAction("like"); void react("like"); }}
+          aria-pressed={interactions.liked}
+          className={`flex-1 flex items-center justify-center gap-1.5 px-1 py-2 rounded-lg border transition-[transform,color,border-color] duration-150 ease-out active:scale-[0.93] ${socialActionStateClass(postFooterActionIsActive("like", { ...interactions, commentsOpen: openComments }))}`}>
           <motion.span
-            key={post.my_like ? "liked" : "unliked"}
+            key={interactions.liked ? "liked" : "unliked"}
             initial={{ scale: 0.4, rotate: -18 }}
             animate={{ scale: 1, rotate: 0 }}
             transition={{ type: "spring", stiffness: 520, damping: 17 }}
             className="inline-flex"
           >
-            <Heart size={15} className={post.my_like ? "fill-rose-500" : ""} />
+            <Heart size={15} className={interactions.liked ? "fill-current" : ""} />
           </motion.span>
-          <span className="tabular-nums font-medium">{post.likes}</span>
+          <span className="tabular-nums font-medium">{interactions.likes}</span>
         </button>
-        <button type="button" onClick={() => react("favorite")}
-          className={`flex-1 flex items-center justify-center gap-1.5 px-1 py-2 rounded-lg transition-[transform,color,background-color] duration-150 ease-out active:scale-[0.93] ${post.my_favorite ? "text-amber-500" : "pointer-fine:hover:bg-amber-500/10 pointer-fine:hover:text-amber-500"}`}>
+        <button type="button" onClick={() => { chooseFooterAction("favorite"); void react("favorite"); }}
+          aria-pressed={interactions.favorited}
+          className={`flex-1 flex items-center justify-center gap-1.5 px-1 py-2 rounded-lg border transition-[transform,color,border-color] duration-150 ease-out active:scale-[0.93] ${socialActionStateClass(postFooterActionIsActive("favorite", { ...interactions, commentsOpen: openComments }))}`}>
           <motion.span
-            key={post.my_favorite ? "favd" : "unfavd"}
+            key={interactions.favorited ? "favd" : "unfavd"}
             initial={{ scale: 0.4, rotate: 18 }}
             animate={{ scale: 1, rotate: 0 }}
             transition={{ type: "spring", stiffness: 520, damping: 17 }}
             className="inline-flex"
           >
-            <Star size={15} className={post.my_favorite ? "fill-amber-500" : ""} />
+            <Star size={15} className={interactions.favorited ? "fill-current" : ""} />
           </motion.span>
-          <span className="tabular-nums font-medium">{post.favorites}</span>
+          <span className="tabular-nums font-medium">{interactions.favorites}</span>
         </button>
-        <button type="button" onClick={() => setOpenComments(o => !o)}
-          className={`flex-1 flex items-center justify-center gap-1.5 px-1 py-2 rounded-lg transition-[transform,color,background-color] duration-150 ease-out active:scale-[0.93] ${openComments ? "text-primary-glow bg-primary/10" : "pointer-fine:hover:bg-primary/10 pointer-fine:hover:text-primary-glow"}`}>
-          <MessageCircle size={15} className={openComments ? "fill-primary/20" : ""} />
-          <span className="tabular-nums font-medium">{post.comments_count}</span>
+        <button type="button" onClick={() => chooseFooterAction("comments")}
+          aria-expanded={openComments}
+          className={`flex-1 flex items-center justify-center gap-1.5 px-1 py-2 rounded-lg border transition-[transform,color,border-color] duration-150 ease-out active:scale-[0.93] ${socialActionStateClass(postFooterActionIsActive("comments", { ...interactions, commentsOpen: openComments }))}`}>
+          <MessageCircle size={15} className={openComments ? "fill-current/10" : ""} />
+          <span className="tabular-nums font-medium">{commentsCount}</span>
         </button>
-        <button type="button" onClick={repost}
-          className={`flex-1 flex items-center justify-center gap-1.5 px-1 py-2 rounded-lg transition-[transform,color,background-color] duration-150 ease-out active:scale-[0.93] ${post.my_repost ? "text-emerald-600" : "pointer-fine:hover:bg-emerald-500/10 pointer-fine:hover:text-emerald-600"}`}>
+        <button type="button" onClick={() => { chooseFooterAction("repost"); void repost(); }}
+          aria-pressed={interactions.reposted}
+          className={`flex-1 flex items-center justify-center gap-1.5 px-1 py-2 rounded-lg border transition-[transform,color,border-color] duration-150 ease-out active:scale-[0.93] ${socialActionStateClass(postFooterActionIsActive("repost", { ...interactions, commentsOpen: openComments }))}`}>
           <motion.span
-            key={post.my_repost ? "reposted" : "unreposted"}
+            key={interactions.reposted ? "reposted" : "unreposted"}
             initial={{ scale: 0.6, rotate: -25 }}
             animate={{ scale: 1, rotate: 0 }}
             transition={{ type: "spring", stiffness: 480, damping: 16 }}
             className="inline-flex"
           >
-            <Repeat2 size={15} className={post.my_repost ? "stroke-emerald-600" : ""} />
+            <Repeat2 size={15} />
           </motion.span>
-          <span className="tabular-nums font-medium">{post.reposts_count}</span>
+          <span className="tabular-nums font-medium">{interactions.reposts}</span>
         </button>
       </footer>
 
-      {openComments && <div className="border-t border-border/50 bg-muted/10 px-3 py-2.5"><CommentSection postId={post.id} myId={myId} isMod={isMod} onChange={onChange} /></div>}
+      {openComments && <div className="border-t border-border/50 bg-muted/10 px-3 py-2.5"><CommentSection postId={post.id} myId={myId} isMod={isMod} onChange={() => setCommentsCount(current => current + 1)} /></div>}
 
-      <SharePostModal postId={post.id} postContent={post.content} open={showShare} onClose={() => setShowShare(false)} />
+      <SharePostModal post={postShare} open={showShare} onClose={() => setShowShare(false)} />
     </article>
   );
 });
@@ -372,10 +533,10 @@ function frameCss(id: string): string {
 function PollView({ poll, onVote }: { poll: NonNullable<PostWithMeta["poll"]>; onVote: (i: number) => void }) {
   const voted = poll.my_vote !== null;
   return (
-    <div className="rounded-2xl border border-border bg-muted/20 p-3.5 space-y-2.5">
+    <div className={`rounded-2xl p-3.5 space-y-2.5 ${postSurfaceClass("poll")}`}>
       <div className="flex items-start gap-2">
-        <span className="w-7 h-7 rounded-lg bg-primary/10 grid place-items-center shrink-0 mt-0.5">
-          <span className="text-primary-foreground text-[11px]">📊</span>
+        <span className="w-7 h-7 rounded-lg bg-primary/15 text-primary grid place-items-center shrink-0 mt-0.5">
+          <span className="text-[11px]">📊</span>
         </span>
         <div className="text-sm font-display leading-snug">{poll.question}</div>
       </div>

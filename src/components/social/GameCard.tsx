@@ -1,16 +1,15 @@
 import { useState, useEffect, useRef } from "react";
-import { toast } from "sonner";
 import { Avatar } from "./Avatar";
-import { Play, Heart, MessageCircle, Share2, Trash2, MoreHorizontal, Pencil, GitFork, Loader2, Sparkles, Lock, X, CheckCircle2, AlertTriangle, ChevronLeft, ChevronRight, Gamepad2, Flag } from "lucide-react";
+import { Play, Heart, MessageCircle, Share2, GitFork, Loader2, Sparkles, Lock, X, CheckCircle2, AlertTriangle, ChevronLeft, ChevronRight, Gamepad2 } from "lucide-react";
 import { useNavigate, Link } from "@tanstack/react-router";
-import { type PostWithMeta, toggleReaction, deletePost, loadGameProject, reportContent, remixGame, purchaseGame, getMyOrbes, recordGamePlay } from "@/lib/social/api";
+import { type PostWithMeta, toggleReaction, loadGameProject, remixGame, purchaseGame, getMyOrbes, recordGamePlay } from "@/lib/social/api";
+import { coverFrameFromPreset, coverFrameStyle } from "@/lib/social/cover-frame";
 import { logPlaySession } from "@/lib/social/history";
 import type { Project, Scene } from "@/lib/engine/core";
 import { GameRuntime } from "@/components/engine/GameRuntime";
 import { CommentSection } from "./CommentSection";
-import { CardMenu, CardMenuItem, useCardMenuAnchor } from "./CardMenu";
-import { PublishGameDialog } from "@/components/engine/PublishGameDialog";
 import { createProject, saveProjectById, setProjectCloudId, setCurrentProjectId } from "@/lib/engine/storage";
+import { GameIconPlaceholder } from "./GameIcon";
 
 function timeAgo(iso: string) {
   const s = Math.max(1, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
@@ -28,9 +27,9 @@ function extractTitle(content: string): { title: string; body: string } {
 }
 
 export function GameCard({
-  post, myId, isMod, onChange, squareCover,
+  post, myId, isMod, onChange,
 }: {
-  post: PostWithMeta; myId: string | null; isMod: boolean; onChange: () => void; squareCover?: boolean;
+  post: PostWithMeta; myId: string | null; isMod: boolean; onChange: () => void;
 }) {
   const navigate = useNavigate();
   const [playing, setPlaying] = useState<Scene | null>(null);
@@ -39,14 +38,17 @@ export function GameCard({
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [openComments, setOpenComments] = useState(false);
-  const menu = useCardMenuAnchor<HTMLButtonElement>();
-  const [editOpen, setEditOpen] = useState(false);
   const [viewer, setViewer] = useState<number | null>(null);
   const [remixing, setRemixing] = useState(false);
   const { title, body } = extractTitle(post.content);
   const mine = myId === post.author_id;
   const canRemix = post.allow_remix !== false;
   const price = post.price_orbes ?? 0;
+  const coverUrl = post.signed_cover ?? post.signed_screenshots[0] ?? null;
+  const [coverFailed, setCoverFailed] = useState(false);
+  useEffect(() => { setCoverFailed(false); }, [coverUrl]);
+  const hasCover = Boolean(coverUrl) && !coverFailed;
+  const coverFrame = coverFrameFromPreset(post.asset_preset);
   const [owned, setOwned] = useState<boolean>(post.owned ?? (price <= 0 || mine));
   useEffect(() => { setOwned(post.owned ?? (price <= 0 || mine)); }, [post.owned, price, mine]);
   const needsPurchase = !owned && price > 0 && !mine;
@@ -81,7 +83,7 @@ export function GameCard({
       logPlaySession({
         gameId: post.id,
         gameTitle: title,
-        coverUrl: post.signed_cover ?? null,
+        coverUrl,
         startedAt: new Date(s.startedAt).toISOString(),
         endedAt,
         durationSeconds: dur,
@@ -152,52 +154,11 @@ export function GameCard({
     }
   };
 
-  const like = async () => {
-    try {
-      await toggleReaction({ postId: post.id, type: "like" });
-      onChange();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "No se pudo dar Me gusta");
-    }
-  };
-  const remove = () => {
-    toast("¿Borrar juego publicado?", {
-      description: "Esta acción no se puede deshacer.",
-      action: {
-        label: "Borrar",
-        onClick: async () => {
-          try {
-            await deletePost(post.id);
-            toast.success("Juego eliminado");
-            onChange();
-          } catch (e) {
-            toast.error(e instanceof Error ? e.message : "Error al borrar");
-          }
-        },
-      },
-    });
-  };
+  const like = async () => { await toggleReaction({ postId: post.id, type: "like" }); onChange(); };
   const share = async () => {
     const url = window.location.origin + "/?g=" + post.id;
     try { await navigator.share({ url, title, text: body.slice(0, 80) }); }
     catch { await navigator.clipboard.writeText(url); }
-  };
-  const report = () => {
-    menu.close();
-    toast("Reportar juego", {
-      description: "Señalará este juego a los moderadores.",
-      action: {
-        label: "Reportar",
-        onClick: async () => {
-          try {
-            await reportContent({ postId: post.id, reason: "Reporte desde juegos" });
-            toast.success("Reporte enviado");
-          } catch (e) {
-            toast.error(e instanceof Error ? e.message : "Error al reportar");
-          }
-        },
-      },
-    });
   };
   const doRemix = async () => {
     if (!canRemix) { setErr("El autor no permite remixes"); return; }
@@ -211,7 +172,6 @@ export function GameCard({
       saveProjectById(localId, project);
       setProjectCloudId(localId, cloudId);
       setCurrentProjectId(localId);
-      menu.close();
       navigate({ to: "/editor" });
     } catch (e) { setErr((e as Error).message); }
     finally { setRemixing(false); }
@@ -236,126 +196,47 @@ export function GameCard({
 
   return (
     <article className="panel rounded-2xl overflow-hidden border border-border/50 shadow-sm">
-      {squareCover ? (
-        /* Modo página aislada: portada limpia, sin elementos encima del arte */
-        <div className="relative aspect-square bg-muted/30 overflow-hidden">
-          {/* Capa decorativa de esquinas — queda detrás de la portada; solo se ve
-              donde la imagen no cubre (bandas laterales o placeholder vacío). */}
-          <div aria-hidden className="absolute inset-0 pointer-events-none" style={{ background: "var(--gradient-asternal-soft)" }}>
-            {/* Brillos difusos en las 4 esquinas */}
-            <div className="absolute -top-12 -left-12 w-40 h-40 rounded-full bg-primary/20 blur-3xl" />
-            <div className="absolute -top-14 -right-14 w-44 h-44 rounded-full bg-blue-300/25 blur-3xl" />
-            <div className="absolute -bottom-14 -left-14 w-44 h-44 rounded-full bg-sky-300/25 blur-3xl" />
-            <div className="absolute -bottom-12 -right-12 w-40 h-40 rounded-full bg-primary/15 blur-3xl" />
-            {/* Marcos de esquina sutiles */}
-            <div className="absolute top-3 left-3 w-5 h-5 border-t-2 border-l-2 border-primary/30 rounded-tl-md" />
-            <div className="absolute top-3 right-3 w-5 h-5 border-t-2 border-r-2 border-primary/30 rounded-tr-md" />
-            <div className="absolute bottom-3 left-3 w-5 h-5 border-b-2 border-l-2 border-primary/30 rounded-bl-md" />
-            <div className="absolute bottom-3 right-3 w-5 h-5 border-b-2 border-r-2 border-primary/30 rounded-br-md" />
-          </div>
-          {post.signed_cover ? (
-            <img src={post.signed_cover} alt={title} className="absolute inset-0 w-full h-full object-contain relative z-[1]" />
-          ) : (
-            <div className="absolute inset-0 grid place-items-center relative z-[1]">
-              {/* Icono centrado con anillos concéntricos — nunca se estira */}
-              <div className="relative grid place-items-center">
-                <div className="w-32 h-32 rounded-full border border-primary/15 absolute" />
-                <div className="w-24 h-24 rounded-full border border-primary/25 bg-white/40 backdrop-blur-sm shadow-inner absolute" />
-                <Gamepad2 size={56} className="text-primary/35 relative" strokeWidth={1.75} />
-              </div>
-            </div>
-          )}
-          {price > 0 && !owned && (
-            <div className="absolute top-2 right-2 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/95 shadow-md backdrop-blur border border-primary/20">
-              <Sparkles size={12} className="text-primary" fill="currentColor" />
-              <span className="text-[11px] font-display font-semibold tracking-wide">{price}</span>
-            </div>
-          )}
+      <div className="p-3 pb-0">
+        <div className={`relative aspect-square overflow-hidden rounded-2xl border border-border/60 bg-muted/20 ${hasCover ? "" : "tile-blueprint"}`}>
+        {hasCover ? (
+          <img src={coverUrl!} alt={`Portada de ${title}`} onError={() => setCoverFailed(true)} className="absolute inset-0 w-full h-full object-contain" style={coverFrameStyle(coverFrame)} />
+        ) : <GameIconPlaceholder iconSize={112} />}
         </div>
-      ) : (
-      <div
-        onClick={play}
-        className="relative aspect-[16/10] grid place-items-center cursor-pointer active:scale-[0.99] transition overflow-hidden"
-        style={post.signed_cover ? undefined : { background: "var(--gradient-asternal-soft)" }}
-      >
-        {post.signed_cover ? (
-          <>
-            <img src={post.signed_cover} alt={title} className="absolute inset-0 w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-          </>
-        ) : null}
-        <button
-          className="relative w-16 h-16 rounded-2xl bg-card grid place-items-center shadow-md active:scale-95 hover:scale-105 transition-transform duration-200"
-          aria-label={needsPurchase ? "Comprar y jugar" : "Jugar"}
-        >
-          {loading ? <Loader2 size={20} className="animate-spin text-primary" /> :
-            needsPurchase ? <Lock size={22} className="text-primary" /> :
-            <Play size={26} className="text-primary translate-x-[2px]" fill="currentColor" />}
-        </button>
-        {/* Top-right price badge */}
-        <div className="absolute top-2 right-2 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/95 shadow-md backdrop-blur border border-primary/20">
-          {price > 0 ? (
-            <>
-              <Sparkles size={12} className={owned ? "text-emerald-500" : "text-primary"} fill="currentColor" />
-              <span className="text-[11px] font-display font-semibold tracking-wide">
-                {owned ? "TUYO" : `${price}`}
-              </span>
-            </>
-          ) : (
-            <>
-              <Sparkles size={12} className="text-emerald-500" fill="currentColor" />
-              <span className="text-[11px] font-display font-semibold tracking-wide text-emerald-600">GRATIS</span>
-            </>
-          )}
-        </div>
-        <div className="absolute bottom-2 left-3 right-3 flex items-end justify-between gap-2">
-          <div className="min-w-0 flex items-end gap-2">
+        <div className="flex items-start justify-between gap-3 pt-3">
+          <div className="min-w-0 flex items-center gap-2.5">
             <Link
               to="/profile/$userId" params={{ userId: post.author_id }}
-              onClick={e => e.stopPropagation()}
-              className="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-white/30 block"
+              className="w-9 h-9 rounded-full overflow-hidden shrink-0 border border-border/60 block"
             >
               <Avatar p={post.author} className="w-full h-full" />
             </Link>
             <div className="min-w-0">
-              <div className={`font-display text-base truncate drop-shadow ${post.signed_cover ? "text-white" : "text-foreground"}`}>{title}</div>
+              <div className="font-display text-base leading-tight truncate text-foreground">{title}</div>
               <Link
                 to="/profile/$userId" params={{ userId: post.author_id }}
-                onClick={e => e.stopPropagation()}
-                className={`text-[10px] font-mono truncate hover:underline ${post.signed_cover ? "text-white/80" : "text-muted-foreground"}`}
+                className="block text-[10px] font-mono truncate text-muted-foreground hover:underline"
               >
                 @{post.author?.username ?? "jugador"} · {timeAgo(post.created_at)}
               </Link>
             </div>
           </div>
-          <span className="text-[9px] font-display tracking-widest px-2 py-0.5 rounded-full bg-primary/20 text-primary-glow border border-primary/40">JUEGO</span>
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/90 shadow-sm border border-primary/20 shrink-0">
+            <Sparkles size={12} className={price === 0 || owned ? "text-emerald-500" : "text-primary"} fill="currentColor" />
+            <span className={`text-[10px] font-display font-semibold tracking-wide ${price === 0 ? "text-emerald-600" : "text-foreground"}`}>
+              {price === 0 ? "GRATIS" : owned ? "TUYO" : `${price} ORBES`}
+            </span>
+          </div>
         </div>
+        <button
+          onClick={play}
+          disabled={loading}
+          className="mt-3 h-12 w-full rounded-xl grad-brand text-primary-foreground font-display tracking-widest text-xs flex items-center justify-center gap-2 shadow-sm transition-transform active:scale-[0.98] disabled:opacity-70"
+          aria-label={needsPurchase ? `Comprar ${title} y jugar` : `Jugar ${title}`}
+        >
+          {loading ? <Loader2 size={18} className="animate-spin" /> : needsPurchase ? <Lock size={17} /> : <Play size={17} fill="currentColor" />}
+          {loading ? "ABRIENDO" : needsPurchase ? `COMPRAR · ${price} ORBES` : "JUGAR AHORA"}
+        </button>
       </div>
-      )}
-
-      {/* Botón principal — estilo tienda, solo en página aislada */}
-      {squareCover && (
-        <div className="px-3 pt-3">
-          <button
-            type="button"
-            onClick={play}
-            disabled={loading}
-            className="w-full h-12 rounded-2xl grad-brand text-primary-foreground font-display tracking-[0.2em] text-sm shadow-md flex items-center justify-center gap-2 disabled:opacity-60 active:scale-[0.98] transition-transform duration-200"
-          >
-            {loading ? (
-              <Loader2 size={18} className="animate-spin" />
-            ) : needsPurchase ? (
-              <>
-                <Lock size={16} /> COMPRAR Y JUGAR
-              </>
-            ) : (
-              <>
-                <Play size={18} fill="currentColor" /> JUGAR
-              </>
-            )}
-          </button>
-        </div>
-      )}
 
       {/* Galería de capturas */}
       {post.signed_screenshots.length > 0 && (
@@ -407,41 +288,12 @@ export function GameCard({
         <button onClick={share} className={`flex items-center gap-1 px-2 py-1.5 rounded-lg active:scale-95 transition ${canRemix && !mine ? "" : "ml-auto"}`}>
           <Share2 size={15} />
         </button>
-        <button ref={menu.anchorRef} onClick={menu.toggle}
-          className="w-8 h-8 grid place-items-center rounded-lg border border-border text-primary-glow transition-[transform,background-color,color] duration-150 ease-out pointer-fine:hover:bg-primary/10 pointer-fine:hover:text-primary active:scale-95"
-          aria-label="Menú del juego">
-          <MoreHorizontal size={16} />
-        </button>
-        <CardMenu rect={menu.rect} onClose={menu.close} width={150}>
-          {mine && <CardMenuItem onClick={() => { setEditOpen(true); menu.close(); }} icon={<Pencil size={13} />}>Editar</CardMenuItem>}
-          {(mine || isMod) && <CardMenuItem onClick={remove} danger icon={<Trash2 size={13} />}>Borrar</CardMenuItem>}
-          {!mine && <CardMenuItem onClick={report} icon={<Flag size={13} />}>Reportar</CardMenuItem>}
-        </CardMenu>
       </footer>
 
       {openComments && (
         <div className="px-3 pb-3">
           <CommentSection postId={post.id} myId={myId} isMod={isMod} onChange={onChange} />
         </div>
-      )}
-
-      {editOpen && (
-        <PublishGameDialog
-          open={editOpen}
-          onOpenChange={setEditOpen}
-          defaultTitle={title}
-          mode="edit"
-          editPostId={post.id}
-          initialTitle={title}
-          initialDescription={body}
-          initialTags={post.tags}
-          initialCoverUrl={post.signed_cover}
-          initialScreenshots={(post.screenshots ?? []).map((path, i) => ({ path, url: post.signed_screenshots[i] ?? "" }))}
-          initialAllowRemix={post.allow_remix !== false}
-          initialPriceOrbes={post.price_orbes ?? 0}
-          initialGenre={post.game_genre ?? null}
-          onSaved={onChange}
-        />
       )}
 
       {/* Visor de capturas a pantalla completa */}

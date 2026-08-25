@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { createPortal } from "react-dom";
 import { X, Send, Users, MessageCircle, Globe, Link2, Search, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -10,6 +11,7 @@ import {
   type DmChat,
   type GroupChat,
 } from "@/lib/social/chat";
+import { serializePostShare, type PostShareInput } from "@/lib/social/post-share";
 
 type ShareTarget =
   | { kind: "community"; chatId: string; name: string }
@@ -17,13 +19,11 @@ type ShareTarget =
   | { kind: "group"; chatId: string; name: string; memberCount: number };
 
 export function SharePostModal({
-  postId,
-  postContent,
+  post,
   open,
   onClose,
 }: {
-  postId: string;
-  postContent: string;
+  post: PostShareInput;
   open: boolean;
   onClose: () => void;
 }) {
@@ -77,10 +77,11 @@ export function SharePostModal({
     })();
   }, [open]);
 
-  const shareUrl = `${window.location.origin}/feed?p=${postId}`;
-  const shareText = postContent
-    ? `${postContent.slice(0, 120)}${postContent.length > 120 ? "…" : ""}\n\n${shareUrl}`
-    : shareUrl;
+  const shareUrl = `${window.location.origin}/feed?p=${post.post.id}`;
+  const shareText = serializePostShare({
+    ...post,
+    post: { ...post.post, sourceUrl: post.post.sourceUrl || shareUrl },
+  });
 
   const handleShare = async (target: ShareTarget) => {
     setSending(target.chatId);
@@ -120,49 +121,51 @@ export function SharePostModal({
   const filteredGroups = groups.filter(
     (g) => !q || g.name.toLowerCase().includes(q)
   );
+  const showCommunity = community && (!q || community.name.toLowerCase().includes(q) || "comunidad".includes(q))
+    ? community
+    : null;
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {open && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50"
+          className="fixed inset-0 z-[120]"
           style={{ height: "100dvh" }}
           onClick={onClose}
         >
-          {/* Backdrop — full viewport, always covers everything */}
-          <div className="absolute inset-0 bg-black/50" />
+          <div className="absolute inset-0 bg-foreground/20 backdrop-blur-[2px] sm:bg-foreground/35" />
 
-          {/* Panel — bottom sheet on mobile, centered on desktop */}
           <motion.div
-            initial={{ y: 60, opacity: 0 }}
+            initial={{ y: 24, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 60, opacity: 0 }}
+            exit={{ y: 24, opacity: 0 }}
             transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
             onClick={(e) => e.stopPropagation()}
-            className="absolute bottom-0 left-0 right-0 sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-md bg-background border border-border/70 rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col"
-            style={{ maxHeight: "min(85vh, 85dvh)" }}
+            className="absolute inset-0 h-[100dvh] sm:inset-auto sm:top-1/2 sm:left-1/2 sm:h-auto sm:w-full sm:max-w-md sm:max-h-[min(85vh,85dvh)] sm:-translate-x-1/2 sm:-translate-y-1/2 bg-background border-0 sm:border sm:border-border/70 sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden"
           >
-            {/* Header */}
-            <div className="flex items-center gap-3 px-4 py-3 border-b border-border/50">
+            <div className="flex items-center gap-3 px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-3 border-b border-border/50">
+              <div className="w-10 h-10 rounded-2xl bg-primary/10 border border-primary/15 grid place-items-center shrink-0">
+                <Send size={17} className="text-primary" />
+              </div>
               <div className="flex-1">
-                <div className="text-sm font-semibold">Compartir publicación</div>
-                <div className="text-[10px] text-muted-foreground mt-0.5">
-                  Elige un chat para compartir
+                <div className="text-base font-semibold">Compartir publicación</div>
+                <div className="text-xs text-muted-foreground mt-0.5">
+                  Elige el chat donde quieres enviarla
                 </div>
               </div>
               <button
                 onClick={onClose}
-                className="w-8 h-8 rounded-lg grid place-items-center hover:bg-muted/60 transition-colors"
+                className="w-10 h-10 rounded-2xl grid place-items-center border border-border/60 bg-muted/25 hover:bg-muted/60 transition-colors"
+                aria-label="Cerrar selector para compartir"
               >
-                <X size={15} />
+                <X size={17} />
               </button>
             </div>
 
-            {/* Search */}
-            <div className="px-4 pt-3 pb-2">
+            <div className="px-5 pt-4 pb-3">
               <div className="relative">
                 <Search
                   size={14}
@@ -177,8 +180,7 @@ export function SharePostModal({
               </div>
             </div>
 
-            {/* List */}
-            <div className="flex-1 overflow-y-auto px-2 pb-2 space-y-0.5">
+            <div className="flex-1 overflow-y-auto px-3 pb-[max(1.25rem,env(safe-area-inset-bottom))] space-y-1">
               {loading ? (
                 <div className="flex items-center justify-center py-10 gap-2 text-xs text-muted-foreground">
                   <Loader2 size={14} className="animate-spin" />
@@ -186,40 +188,16 @@ export function SharePostModal({
                 </div>
               ) : (
                 <>
-                  {/* Copy link */}
-                  <button
-                    onClick={copyLink}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-muted/40 transition-colors text-left"
-                  >
-                    <div className="w-9 h-9 rounded-xl bg-primary/10 grid place-items-center shrink-0">
-                      <Link2 size={15} className="text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-medium">Copiar enlace</div>
-                      <div className="text-[10px] text-muted-foreground truncate">
-                        Compartir enlace de la publicación
-                      </div>
-                    </div>
-                  </button>
-
-                  {/* Community chat */}
-                  {community && (
-                    <ShareRow
-                      target={community}
-                      sending={sending}
-                      onShare={handleShare}
-                    />
+                  {showCommunity && (
+                    <>
+                      <ShareSectionLabel icon={<Globe size={12} />} label="Chat comunitario" />
+                      <ShareRow target={showCommunity} sending={sending} onShare={handleShare} />
+                    </>
                   )}
 
-                  {/* Group chats */}
-                  {filteredGroups.length > 0 && (
+                  <ShareSectionLabel icon={<Users size={12} />} label="Chats grupales" />
+                  {filteredGroups.length > 0 ? (
                     <>
-                      <div className="flex items-center gap-2 px-3 pt-2 pb-1">
-                        <Users size={11} className="text-muted-foreground/50" />
-                        <span className="text-[10px] font-semibold text-muted-foreground/50 uppercase tracking-wider">
-                          Grupos
-                        </span>
-                      </div>
                       {filteredGroups.map((g) => (
                         <ShareRow
                           key={g.chatId}
@@ -229,20 +207,15 @@ export function SharePostModal({
                         />
                       ))}
                     </>
-                  )}
+                  ) : !query ? (
+                    <div className="mx-3 rounded-xl border border-dashed border-border/55 bg-muted/15 px-3 py-2.5 text-[10px] leading-relaxed text-muted-foreground">
+                      Aún no tienes chats grupales. Cuando formes parte de uno, aparecerá aquí como destino para compartir.
+                    </div>
+                  ) : null}
 
-                  {/* DMs */}
                   {filteredDms.length > 0 && (
                     <>
-                      <div className="flex items-center gap-2 px-3 pt-2 pb-1">
-                        <MessageCircle
-                          size={11}
-                          className="text-muted-foreground/50"
-                        />
-                        <span className="text-[10px] font-semibold text-muted-foreground/50 uppercase tracking-wider">
-                          Mensajes directos
-                        </span>
-                      </div>
+                      <ShareSectionLabel icon={<MessageCircle size={12} />} label="Mensajes directos" />
                       {filteredDms.map((d) => (
                         <ShareRow
                           key={d.chatId}
@@ -257,18 +230,43 @@ export function SharePostModal({
                   {!loading &&
                     filteredDms.length === 0 &&
                     filteredGroups.length === 0 &&
-                    !community && (
+                    !showCommunity && (
                       <div className="text-center py-8 text-xs text-muted-foreground/50">
                         No hay chats disponibles
                       </div>
                     )}
+
+                  <div className="pt-3 mt-2 border-t border-border/45">
+                    <button
+                      onClick={copyLink}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-muted/45 transition-colors text-left"
+                    >
+                      <div className="w-9 h-9 rounded-xl bg-muted/70 border border-border/50 grid place-items-center shrink-0">
+                        <Link2 size={15} className="text-muted-foreground" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-medium">Copiar enlace</div>
+                        <div className="text-[10px] text-muted-foreground truncate">Compartir fuera de Asternal</div>
+                      </div>
+                    </button>
+                  </div>
                 </>
               )}
             </div>
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
+  );
+}
+
+function ShareSectionLabel({ icon, label }: { icon: React.ReactNode; label: string }) {
+  return (
+    <div className="flex items-center gap-2 px-3 pt-3 pb-1 text-muted-foreground/65">
+      {icon}
+      <span className="text-[10px] font-semibold uppercase tracking-[0.14em]">{label}</span>
+    </div>
   );
 }
 
@@ -292,7 +290,7 @@ function ShareRow({
     );
   const subtitle =
     target.kind === "community"
-      ? "Comunidad"
+      ? "Enviar a toda la comunidad"
       : target.kind === "group"
         ? `${target.memberCount} miembros`
         : `@${target.kind === "dm" ? target.username : ""}`;
@@ -301,7 +299,7 @@ function ShareRow({
     <button
       onClick={() => onShare(target)}
       disabled={isSending}
-      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-muted/40 transition-colors text-left disabled:opacity-50"
+      className="group w-full flex items-center gap-3 px-3 py-3 rounded-2xl border border-border/55 bg-muted/25 hover:bg-muted/55 hover:border-primary/25 transition-[background-color,border-color,transform] duration-200 ease-out active:scale-[0.985] text-left disabled:opacity-50"
     >
       <div className="w-9 h-9 rounded-xl bg-primary/10 grid place-items-center shrink-0">
         {icon}

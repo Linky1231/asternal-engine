@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { Entity, EntityKind } from "@/lib/engine/core";
 import {
-  type Block, type BlockKind, type EventType, type Script,
+  type Block, type BlockKind, type EventType, type GenericProperty, type Script, type ScriptTarget, type VariableOperator, type VariableScope,
   ALL_BLOCKS, BLOCK_LABELS, EVENT_LABELS, uid,
 } from "@/lib/engine/scripts";
 import { SOUND_NAMES, type SoundName, playSound } from "@/lib/engine/sfx";
@@ -133,6 +133,13 @@ export function ScriptEditor({ entity, onChange, onClose }: Props) {
                           className="mt-1 w-full bg-input/60 border border-border rounded-md px-2 py-1.5 text-sm font-mono" />
                       </label>
                     )}
+                    {s.event === "onMessage" && (
+                      <label className="text-[10px] font-display tracking-widest text-muted-foreground">
+                        MENSAJE
+                        <input value={s.message ?? "message"} onChange={e => updateScript(s.id, { message: e.target.value })}
+                          className="mt-1 w-full bg-input/60 border border-border rounded-md px-2 py-1.5 text-sm font-mono" />
+                      </label>
+                    )}
                   </div>
 
                   <div className="space-y-1.5">
@@ -189,6 +196,13 @@ function defaultBlock(k: BlockKind): Block {
     case "setControllable": return { ...base, bool: true };
     case "setVisible": return { ...base, bool: true };
     case "if": return { ...base, cond: "scoreGte", value: 10, thenBlocks: [] };
+    case "setVariable": return { ...base, text: "variable", value: 0, scope: "entity" };
+    case "changeVariable": return { ...base, text: "variable", value: 1, scope: "entity" };
+    case "setProperty": return { ...base, target: "self", property: "x", value: 0 };
+    case "changeProperty": return { ...base, target: "self", property: "x", value: 10 };
+    case "broadcast": return { ...base, text: "message" };
+    case "ifVariable": return { ...base, text: "variable", value: 1, scope: "entity", operator: "gte", thenBlocks: [], elseBlocks: [] };
+    case "repeat": return { ...base, repeat: 2, thenBlocks: [] };
     // new
     case "setX": return { ...base, value: 100 };
     case "setY": return { ...base, value: 100 };
@@ -224,6 +238,13 @@ function BlockRow({ block, onChange, onRemove }: { block: Block; onChange: (p: P
         <button onClick={onRemove} className="ml-auto text-destructive text-sm px-1">✕</button>
       </div>
       <BlockFields block={block} onChange={onChange} />
+      {(block.kind === "if" || block.kind === "ifVariable" || block.kind === "repeat") && (
+        <NestedBlocks label={block.kind === "repeat" ? "REPETIR" : "ENTONCES"} blocks={block.thenBlocks ?? []}
+          onChange={thenBlocks => onChange({ thenBlocks })} />
+      )}
+      {block.kind === "ifVariable" && (
+        <NestedBlocks label="SI NO" blocks={block.elseBlocks ?? []} onChange={elseBlocks => onChange({ elseBlocks })} />
+      )}
     </div>
   );
 }
@@ -370,10 +391,61 @@ function BlockFields({ block, onChange }: { block: Block; onChange: (p: Partial<
         </div>
       );
 
+    case "setVariable":
+    case "changeVariable":
+      return <VariableFields block={block} onChange={onChange} />;
+
+    case "setProperty":
+    case "changeProperty":
+      return <PropertyFields block={block} onChange={onChange} />;
+
+    case "broadcast":
+      return (
+        <input value={block.text ?? "message"} onChange={e => onChange({ text: e.target.value })}
+          className="w-full bg-input/60 border border-border rounded px-2 py-1 text-sm font-mono" />
+      );
+
+    case "ifVariable":
+      return <VariableFields block={block} onChange={onChange} conditional />;
+
+    case "repeat":
+      return (
+        <input type="number" min="0" max="100" value={block.repeat ?? 1} onChange={e => onChange({ repeat: Number(e.target.value) })}
+          className="w-full bg-input/60 border border-border rounded px-2 py-1 text-sm font-mono" />
+      );
+
     // no fields
     default:
       return <div className="text-[10px] font-mono text-muted-foreground">no parameters</div>;
   }
+}
+
+function VariableFields({ block, onChange, conditional = false }: { block: Block; onChange: (p: Partial<Block>) => void; conditional?: boolean }) {
+  return <div className="grid grid-cols-3 gap-1.5">
+    <input value={block.text ?? "variable"} onChange={e => onChange({ text: e.target.value })} placeholder="nombre" className="bg-input/60 border border-border rounded px-2 py-1 text-xs font-mono" />
+    <select value={block.scope ?? "entity"} onChange={e => onChange({ scope: e.target.value as VariableScope })} className="bg-input/60 border border-border rounded px-2 py-1 text-xs font-mono"><option value="entity">objeto</option><option value="scene">escena</option></select>
+    {conditional ? <select value={block.operator ?? "gte"} onChange={e => onChange({ operator: e.target.value as VariableOperator })} className="bg-input/60 border border-border rounded px-2 py-1 text-xs font-mono"><option value="gte">≥</option><option value="lte">≤</option><option value="eq">=</option><option value="neq">≠</option></select> : <input type="number" value={block.value ?? 0} onChange={e => onChange({ value: Number(e.target.value) })} className="bg-input/60 border border-border rounded px-2 py-1 text-xs font-mono" />}
+    {conditional && <input type="number" value={block.value ?? 0} onChange={e => onChange({ value: Number(e.target.value) })} className="col-span-3 bg-input/60 border border-border rounded px-2 py-1 text-xs font-mono" />}
+  </div>;
+}
+
+function PropertyFields({ block, onChange }: { block: Block; onChange: (p: Partial<Block>) => void }) {
+  const booleanProperties: GenericProperty[] = ["visible", "solid", "gravity", "controllable", "hazard", "collectible", "goal"];
+  const properties: GenericProperty[] = ["x", "y", "vx", "vy", "w", "h", "opacity", "rotation", "visible", "solid", "gravity", "controllable", "hazard", "collectible", "goal"];
+  const boolean = booleanProperties.includes(block.property ?? "x");
+  return <div className="grid grid-cols-3 gap-1.5">
+    <select value={block.target ?? "self"} onChange={e => onChange({ target: e.target.value as ScriptTarget })} className="bg-input/60 border border-border rounded px-2 py-1 text-xs font-mono"><option value="self">este objeto</option><option value="other">otro objeto</option><option value="scene">escena</option></select>
+    <select value={block.property ?? "x"} onChange={e => onChange({ property: e.target.value as GenericProperty })} className="bg-input/60 border border-border rounded px-2 py-1 text-xs font-mono">{properties.map(property => <option key={property} value={property}>{property}</option>)}</select>
+    {boolean ? <button type="button" onClick={() => onChange({ bool: !block.bool })} className="rounded border border-primary/40 text-xs font-mono text-primary-glow">{block.bool ? "sí" : "no"}</button> : <input type="number" value={block.value ?? 0} onChange={e => onChange({ value: Number(e.target.value) })} className="bg-input/60 border border-border rounded px-2 py-1 text-xs font-mono" />}
+  </div>;
+}
+
+function NestedBlocks({ label, blocks, onChange }: { label: string; blocks: Block[]; onChange: (blocks: Block[]) => void }) {
+  return <div className="ml-2 border-l-2 border-primary/30 pl-2 space-y-1.5">
+    <div className="text-[9px] font-display tracking-widest text-primary-glow">{label}</div>
+    {blocks.map((nested, index) => <BlockRow key={nested.id} block={nested} onChange={patch => onChange(blocks.map((item, i) => i === index ? { ...item, ...patch } : item))} onRemove={() => onChange(blocks.filter((_, i) => i !== index))} />)}
+    <AddBlock onAdd={kind => onChange([...blocks, defaultBlock(kind)])} />
+  </div>;
 }
 
 function AddBlock({ onAdd }: { onAdd: (k: BlockKind) => void }) {

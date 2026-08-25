@@ -35,7 +35,7 @@ function ProfilePage() {
 
   if (!myId) return null;
   return (
-    <div className="min-h-screen w-full flex flex-col text-foreground">
+    <div className="min-h-screen w-full flex flex-col bg-background text-foreground">
       <SubPageHeader
         title="MI PERFIL"
         subtitle={me ? `@${me.username ?? "…"}` : undefined}

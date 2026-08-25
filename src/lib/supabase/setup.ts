@@ -230,17 +230,3 @@ create policy plays_insert on public.game_plays for insert with check (auth.uid(
 export async function runGamePlaysSchemaSetup(accessToken: string): Promise<SetupResult> {
   return runSqlOnProject(accessToken, GAME_PLAYS_SCHEMA_SQL);
 }
-
-/**
- * DDL idempotente: garantiza la columna `parent_id` en `comments` (respuestas
- * anidadas). Las instalaciones antiguas del esquema pueden no tenerla, lo que
- * hace que responder comentarios falle siempre.
- */
-export const COMMENTS_PARENT_ID_SQL = `
-alter table public.comments add column if not exists parent_id uuid references public.comments(id) on delete cascade;
-`;
-
-/** Ejecuta SQL arbitrario en el proyecto (para auto-reparaciones puntuales). */
-export async function runSql(accessToken: string, sql: string): Promise<SetupResult> {
-  return runSqlOnProject(accessToken, sql);
-}

@@ -1,11 +1,12 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { Avatar } from "@/components/social/Avatar";
-import { Component, useEffect, useState, useCallback } from "react";
+import { Component, useEffect, useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Gamepad2, Newspaper, Search, LogOut, Wrench, Plus, ShieldCheck, User, Sparkles, Star, Menu, MessageCircle, Bell, X, Home, Users, Flame, MessageSquare, Compass, Palette, Trophy, BarChart3, ChevronRight, Megaphone, Bot, Store, FileText, TrendingUp } from "lucide-react";
+import { Gamepad2, Newspaper, Search, LogOut, Wrench, Plus, ShieldCheck, User, Sparkles, Star, Menu, MessageCircle, Bell, X, Home, Users, Flame, MessageSquare, Compass, Palette, Trophy, BarChart3, ChevronRight, Megaphone, Bot, FileText, TrendingUp, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { fetchFeed, fetchGames, getMyProfile, isMod, isAdmin, type PostWithMeta, type Profile } from "@/lib/social/api";
+import { fetchFeed, fetchGames, fetchFollowing, getMyProfile, isMod, isAdmin, type PostWithMeta, type Profile } from "@/lib/social/api";
+import { rankFeedWithOrion } from "@/lib/ai/community-orion";
 import { syncAllProjects } from "@/lib/engine/cloud-sync";
 import { PostComposer } from "@/components/social/PostComposer";
 import { PostCard } from "@/components/social/PostCard";
@@ -19,6 +20,7 @@ import { ForumSection } from "@/components/social/ForumSection";
 import { StoreSection } from "@/components/social/StoreSection";
 import { EventsSection } from "@/components/social/EventsSection";
 import { GamePageSection } from "@/components/social/GamePageSection";
+import { isTabLoading, shouldFetchPrimaryTab } from "@/lib/social/tab-switch";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -95,7 +97,9 @@ function HomePage() {
   const [feedSub, setFeedSub] = useState<FeedSub>("forYou");
   const [games, setGames] = useState<PostWithMeta[]>([]);
   const [posts, setPosts] = useState<PostWithMeta[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [followingIds, setFollowingIds] = useState<string[]>([]);
+  const [loadingTab, setLoadingTab] = useState<Tab | null>("games");
+  const loadedTabsRef = useRef<Set<Tab>>(new Set());
   const [search, setSearch] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -154,14 +158,20 @@ function HomePage() {
   }, [tab]);
 
   const reload = useCallback(async (which: Tab) => {
-    if (which === "profile") return;
-    setLoading(true);
+    if (which !== "games" && which !== "feed") return;
+    setLoadingTab(which);
     try {
       if (which === "games") setGames(await fetchGames({ search: search || undefined }));
-      else setPosts(await fetchFeed({ search: search || undefined }));
+      else {
+        const feed = await fetchFeed({ search: search || undefined });
+        setPosts(await rankFeedWithOrion(feed, followingIds));
+      }
+      loadedTabsRef.current.add(which);
       getMyProfile().then(p => p && setMe(p)).catch(() => {/* ignore */});
-    } finally { setLoading(false); }
-  }, [search]);
+    } finally {
+      setLoadingTab(current => current === which ? null : current);
+    }
+  }, [search, followingIds]);
 
   // Callback estable para PostCard (memoizado): no cambia de identidad en cada
   // render, así abrir un menú en una tarjeta no fuerza a re-renderizar el resto.
@@ -196,6 +206,9 @@ function HomePage() {
         }
         if (!uid) { navigate({ to: "/auth" }); return; }
         setMyId(uid);
+        void fetchFollowing(uid)
+          .then(profiles => setFollowingIds(profiles.map(profile => profile.id)))
+          .catch(() => setFollowingIds([]));
         // Estado de la nube: conectada (claves reales + cuenta real), cuenta
         // local con Supabase conectado, o modo local puro (todo en el navegador).
         // Sincroniza los proyectos con la nube (sube los locales sin respaldo y
@@ -222,7 +235,8 @@ function HomePage() {
         if (prof) setMe(prof);
         try { setMod(await isMod()); } catch { /* noop */ }
         try { setAdmin(await isAdmin()); } catch { /* noop */ }
-        await reload(tab);
+        // Las listas se cargan desde el efecto dependiente de `myId`, después de
+        // que React haya confirmado el identificador de sesión.
       } catch (e) {
         // No romper la preview si el esquema aún no está creado en Supabase.
         console.warn("[home] error de carga inicial (¿esquema sin crear?):", e);
@@ -231,20 +245,23 @@ function HomePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => { if (myId) reload(tab); }, [tab, reload, myId]);
+  useEffect(() => {
+    if (myId && shouldFetchPrimaryTab(tab, loadedTabsRef.current)) {
+      void reload(tab);
+    }
+  }, [tab, reload, myId]);
 
   const logout = async () => { await supabase.auth.signOut(); navigate({ to: "/auth" }); };
   const closeMenu = () => { setMenuOpen(false); setNotifOpen(false); };
 
   return (
-    <div className="min-h-screen w-full flex flex-col text-foreground">
+    <div className="min-h-screen w-full flex flex-col bg-background text-foreground">
       {/* Header */}
-      {/* bg casi opaco + blur reducido: el backdrop-blur-xl sobre un header
-          sticky obligaba a re-desenfocar el fondo en cada frame de scroll → lag. */}
-      <header className="app-header sticky top-0 z-20 bg-background/70 backdrop-blur-xl border-b border-border/70">
+      {/* Material de vidrio contenido: blur moderado para mantener el scroll fluido. */}
+      <header className="app-header glass-header sticky top-0 z-20 border-b">
         <div className={`max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto flex items-center gap-2 sm:gap-2.5 px-3 sm:px-4 ${inPreview ? "pt-14 pb-3" : "py-2.5"}`}>
           <button onClick={() => navigate({ to: "/profile" })} title="Mi perfil"
-            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl overflow-hidden border border-slate-900/5  active:scale-95 transition shrink-0">
+            className="glass-control w-9 h-9 sm:w-10 sm:h-10 rounded-xl overflow-hidden active:scale-95 shrink-0">
             <Avatar p={me} className="w-full h-full" />
           </button>
           <div className="flex-1 min-w-0 header-name">
@@ -261,7 +278,7 @@ function HomePage() {
             </div>
           )}
           <button onClick={() => setMenuOpen(true)} title="Menú"
-            className="w-9 h-9 rounded-lg border border-line-strong bg-card text-ink-2 grid place-items-center hover:bg-muted/60 hover:text-foreground active:scale-95 transition shrink-0">
+            className="glass-control w-9 h-9 rounded-lg text-ink-2 grid place-items-center hover:text-foreground active:scale-95 shrink-0">
             <Menu size={16} />
           </button>
         </div>
@@ -271,7 +288,7 @@ function HomePage() {
             <input value={search} onChange={e => setSearch(e.target.value)}
               onKeyDown={e => e.key === "Enter" && reload(tab)}
               placeholder={tab === "games" ? "Buscar juegos…" : "Buscar publicaciones…"}
-              className="flex-1 bg-card border border-line-strong rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40 placeholder:text-muted-foreground" />
+              className="glass-control flex-1 rounded-lg px-3 py-2 text-sm outline-none placeholder:text-muted-foreground" />
             <button onClick={() => reload(tab)}
               className="px-4 py-2 rounded-lg btn-grad text-xs font-display tracking-widest shrink-0">IR</button>
           </div>
@@ -280,22 +297,18 @@ function HomePage() {
       </header>
 
       {/* Content */}
-      <main className="flex-1 max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto w-full px-3 py-3 space-y-3 pb-20">
-        {/* mode="wait" en vez de popLayout: el popLayout mantiene las dos pestañas
-            montadas y posicionadas de forma absoluta durante la transición (más DOM,
-            más medición de layout). Con wait solo existe una a la vez y el fade es
-            composited: cambio de pestaña sin lag. */}
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div
-            key={tab}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.12, ease: "easeOut" }}
-            className="space-y-3"
-          >
+      <main className="flex-1 max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto w-full px-3 py-3 space-y-3 pb-24">
+        {/* El contenido anterior se desmonta al instante: `mode="wait"` hacía que
+            varios toques consecutivos se encolaran detrás de la salida anterior. */}
+        <motion.div
+          key={tab}
+          initial={{ opacity: 0.92 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.1, ease: "easeOut" }}
+          className="space-y-3"
+        >
             {tab === "games" ? (
-              loading ? <SkeletonList /> : (
+              isTabLoading("games", loadingTab) ? <SkeletonList /> : (
                 <GamesHome games={games} myId={myId} isMod={mod} onChange={() => reload("games")} onOpenGame={(id) => setGamePageId(id)} />
               )
             ) : tab === "feed" ? (
@@ -320,8 +333,8 @@ function HomePage() {
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.12, ease: "easeOut" }}
                 >
-                  {loading ? <SkeletonList /> : (() => {
-                    const filtered = filterFeed(posts, feedSub, myId);
+                  {isTabLoading("feed", loadingTab) ? <SkeletonList /> : (() => {
+                    const filtered = filterFeed(posts, feedSub, myId, followingIds);
                     if (filtered.length === 0) {
                       return (
                         <div className="text-center text-xs text-muted-foreground py-10 space-y-2">
@@ -346,53 +359,22 @@ function HomePage() {
                       );
                     }
 
-                    // In explore tab, show some extra sections
+                    // Explorar también conserva el resultado completo: Orión solo
+                    // decide la posición. No hay cortes por categoría ni límites
+                    // que puedan hacer desaparecer publicaciones de la vista.
                     if (feedSub === "explore") {
-                      const gamesPosts = filtered.filter(p => p.pinned_game);
-                      const tutorials = filtered.filter(p => p.tags.some(t => ["tutorial","guide","tip","howto"].includes(t)));
-                      const withMedia = filtered.filter(p => (p.media_type === "image" || p.media_type === "video") && !gamesPosts.includes(p) && !tutorials.includes(p));
-
                       return (
-                        <div className="space-y-6">
-                          {gamesPosts.length > 0 && (
-                            <div>
-                              <h3 className="text-xs font-display font-bold tracking-wider text-primary/80 uppercase mb-3 flex items-center gap-2">
-                                <Gamepad2 size={13} /> Proyectos destacados
-                              </h3>
-                              <div className="space-y-3">
-                                {gamesPosts.slice(0, 3).map((p, i) => (
-                                  <div key={p.id} className="card-enter" style={{ animationDelay: `${i * 30}ms` }}>
-                                    <PostCard post={p} myId={myId} isMod={mod} onChange={onFeedChange} onOpenGame={(id) => setGamePageId(id)} />
-                                  </div>
-                                ))}
+                        <div>
+                          <h3 className="text-xs font-display font-bold tracking-wider text-primary/80 uppercase mb-1 flex items-center gap-2">
+                            <TrendingUp size={13} /> Recomendado por Orión
+                          </h3>
+                          <p className="text-[11px] text-muted-foreground mb-3">Todas las publicaciones aparecen aquí; Orión únicamente ajusta su orden.</p>
+                          <div className="space-y-3">
+                            {filtered.map((p, i) => (
+                              <div key={p.id} className="card-enter" style={{ animationDelay: `${Math.min(i * 25, 180)}ms` }}>
+                                <PostCard post={p} myId={myId} isMod={mod} onChange={onFeedChange} onOpenGame={(id) => setGamePageId(id)} />
                               </div>
-                            </div>
-                          )}
-                          {tutorials.length > 0 && (
-                            <div>
-                              <h3 className="text-xs font-display font-bold tracking-wider text-primary/80 uppercase mb-3 flex items-center gap-2">
-                                <FileText size={13} /> Tutoriales y guías
-                              </h3>
-                              <div className="space-y-3">
-                                {tutorials.slice(0, 3).map((p, i) => (
-                                  <div key={p.id} className="card-enter" style={{ animationDelay: `${i * 30}ms` }}>
-                                    <PostCard post={p} myId={myId} isMod={mod} onChange={onFeedChange} onOpenGame={(id) => setGamePageId(id)} />
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                          <div>
-                            <h3 className="text-xs font-display font-bold tracking-wider text-primary/80 uppercase mb-3 flex items-center gap-2">
-                              <TrendingUp size={13} /> Contenido popular
-                            </h3>
-                            <div className="space-y-3">
-                              {filtered.slice(0, 8).map((p, i) => (
-                                <div key={p.id} className="card-enter" style={{ animationDelay: `${i * 25}ms` }}>
-                                  <PostCard post={p} myId={myId} isMod={mod} onChange={onFeedChange} onOpenGame={(id) => setGamePageId(id)} />
-                                </div>
-                              ))}
-                            </div>
+                            ))}
                           </div>
                         </div>
                       );
@@ -421,8 +403,7 @@ function HomePage() {
                 )}
               </motion.div>
             )}
-          </motion.div>
-        </AnimatePresence>
+        </motion.div>
       </main>
 
 
@@ -446,13 +427,13 @@ function HomePage() {
           <motion.div
             key="menu-drawer"
             onClick={e => e.stopPropagation()}
-            className="fixed right-0 top-0 z-[101] h-full w-[86vw] max-w-xs bg-card border-l border-border shadow-md p-4 flex flex-col gap-0.5 overflow-y-auto"
+            className="menu-drawer fixed right-0 top-0 z-[101] h-full w-[86vw] max-w-xs bg-card border-l border-border shadow-md px-4 py-4 flex flex-col overflow-y-auto"
             initial={{ x: "100%", opacity: 0.4 }}
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: "100%", opacity: 0 }}
             transition={{ type: "tween", duration: 0.26, ease: [0.16, 1, 0.3, 1] }}
           >
-            <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center justify-between mb-3">
               <div className="section-label">MENÚ</div>
               <button onClick={closeMenu}
                 className="w-8 h-8 rounded-lg border border-line-strong bg-card text-ink-2 grid place-items-center hover:bg-muted/60 hover:text-foreground active:scale-95 transition">
@@ -462,9 +443,9 @@ function HomePage() {
             {/* Acceso directo al perfil: al tocar la foto sales del menú y vas a tu perfil */}
             <button
               onClick={() => { closeMenu(); navigate({ to: "/profile" }); }}
-              className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-muted/50 active:scale-[0.98] transition mb-2 text-left group"
+              className="flex items-center gap-3 p-2.5 rounded-2xl border border-white/60 bg-white/30 hover:bg-white/55 hover:border-primary/15 active:scale-[0.98] transition mb-2 text-left group"
             >
-              <Avatar p={me} size={44} className="ring-2 ring-primary/15" />
+              <Avatar p={me} size={40} className="ring-2 ring-primary/15" />
               <div className="min-w-0 flex-1">
                 <div className="font-display text-sm truncate group-hover:text-primary transition-colors">{me?.display_name ?? me?.username ?? "Mi perfil"}</div>
                 <div className="text-[11px] font-mono text-muted-foreground truncate">@{me?.username ?? "…"} · Ver perfil</div>
@@ -473,28 +454,35 @@ function HomePage() {
             </button>
             {/* Categoría: SOCIAL */}
             <CategoryHeader label="SOCIAL" />
-            <MenuItem icon={<MessageCircle size={16} className="text-primary-glow"/>} label="Chats" onClick={() => { setChatOpen(true); closeMenu(); }} />
-            <MenuItem icon={<Bot size={16} className="text-primary-glow"/>} label="Asistencia · Orión" onClick={() => { setOrionOpen(true); closeMenu(); }} />
-            <MenuLink icon={<Search size={16} className="text-primary-glow"/>} label="Buscar" to="/search" onClick={closeMenu} />
-            <MenuItem icon={<Bell size={16} className="text-primary-glow"/>} label="Notificaciones" onClick={() => { setMenuOpen(false); setNotifOpen(true); }} />
+            <div className="menu-section-list">
+              <MenuItem icon={<MessageCircle size={16} className="text-primary/80"/>} label="Chats" onClick={() => { setChatOpen(true); closeMenu(); }} />
+              <MenuItem icon={<Bot size={16} className="text-primary/80"/>} label="Asistencia · Orión" onClick={() => { setOrionOpen(true); closeMenu(); }} />
+              <MenuLink icon={<Search size={16} className="text-primary/80"/>} label="Buscar" to="/search" onClick={closeMenu} />
+              <MenuItem icon={<Bell size={16} className="text-primary/80"/>} label="Notificaciones" onClick={() => { setMenuOpen(false); setNotifOpen(true); }} />
+            </div>
 
             {/* Categoría: COMUNIDAD */}
             <CategoryHeader label="COMUNIDAD" />
-            <MenuItem icon={<Trophy size={16} className="text-primary-glow"/>} label="Eventos" onClick={() => { setEventsOpen(true); closeMenu(); }} />
-            <MenuLink icon={<BarChart3 size={16} className="text-primary-glow"/>} label="Historial" to="/history" onClick={closeMenu} />
-            <MenuLink icon={<Megaphone size={16} className="text-primary-glow"/>} label="Panel de Orbes" to="/orbes" onClick={closeMenu} />
-            {(mod || admin) && (
-              <MenuLink icon={<ShieldCheck size={16} className="text-primary-glow"/>} label="Moderación" to="/admin" onClick={closeMenu} />
-            )}
+            <div className="menu-section-list">
+              <MenuItem icon={<Trophy size={16} className="text-primary/80"/>} label="Eventos" onClick={() => { setEventsOpen(true); closeMenu(); }} />
+              <MenuLink icon={<BarChart3 size={16} className="text-primary/80"/>} label="Historial" to="/history" onClick={closeMenu} />
+              <MenuLink icon={<Megaphone size={16} className="text-primary/80"/>} label="Panel de Orbes" to="/orbes" onClick={closeMenu} />
+              <MenuLink icon={<Info size={16} className="text-primary/80"/>} label="Acerca de nosotros" to="/about" onClick={closeMenu} />
+              {(mod || admin) && (
+                <MenuLink icon={<ShieldCheck size={16} className="text-primary/80"/>} label="Moderación" to="/admin" onClick={closeMenu} />
+              )}
+            </div>
 
             {/* Categoría: CREACIÓN */}
             <CategoryHeader label="CREACIÓN" />
-            <MenuLink icon={<Wrench size={16} className="text-primary-glow"/>} label="Editor" to="/editor" onClick={closeMenu} />
-            <MenuLink icon={<Star size={16} fill="currentColor" style={{ color: "var(--plus)" }}/>} label="Centro Plus" to="/plus" onClick={closeMenu} />
+            <div className="menu-section-list">
+              <MenuLink icon={<Wrench size={16} className="text-primary/80"/>} label="Editor" to="/editor" onClick={closeMenu} />
+              <MenuLink icon={<Star size={16} fill="currentColor" style={{ color: "var(--plus)" }}/>} label="Centro Plus" to="/plus" onClick={closeMenu} />
+            </div>
 
-            <div className="flex-1 min-h-4" />
+            <div className="mt-3" />
             <button onClick={() => { logout(); closeMenu(); }}
-              className="flex items-center gap-3 px-3 h-11 rounded-lg text-destructive hover:bg-destructive/10 active:scale-[0.98] transition">
+              className="mt-5 flex items-center gap-3 px-3 h-11 rounded-xl border border-destructive/15 bg-destructive/5 text-destructive hover:bg-destructive/10 active:scale-[0.98] transition">
               <LogOut size={16} /> <span className="text-sm font-medium">Cerrar sesión</span>
             </button>
           </motion.div>
@@ -534,10 +522,10 @@ function HomePage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="fixed inset-0 z-[90] bg-background/85 backdrop-blur-2xl flex flex-col"
+            className="fixed inset-0 z-[90] bg-background flex flex-col"
             style={{ height: "100dvh" }}
           >
-            <header className="shrink-0 border-b border-border/60 bg-background/60">
+            <header className="shrink-0 border-b border-border/60 bg-background">
               <div className="max-w-2xl md:max-w-3xl mx-auto flex items-center gap-2.5 px-4 py-3">
                 <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 text-primary grid place-items-center shrink-0">
                   <Trophy size={18} />
@@ -556,7 +544,7 @@ function HomePage() {
             </header>
             <div className="flex-1 overflow-y-auto no-scrollbar">
               <div className="max-w-2xl md:max-w-3xl mx-auto px-4 py-4">
-                <EventsSection isAdmin={admin} />
+                <EventsSection isAdmin={admin} showHeader={false} />
               </div>
             </div>
           </motion.div>
@@ -574,13 +562,13 @@ function HomePage() {
       )}
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 inset-x-0 z-30 bg-background/80 backdrop-blur-xl border-t border-border/70 safe-area-bottom">
-        <div className="max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto px-3 pt-2 pb-3">
+      <nav className="fixed bottom-0 inset-x-0 z-30 bg-background/95 backdrop-blur-md border-t border-border/70" style={{ paddingBottom: "env(safe-area-inset-bottom)" }} aria-label="Navegación principal">
+        <div className="max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto px-3 py-2">
           {/* Tabs with gray selector — Juegos | Feed | +CREAR | Tienda | Perfil */}
-          <div className="flex bg-muted/60 rounded-xl p-0.5 relative">
+          <div className="grid grid-cols-5 bg-muted/60 rounded-xl p-0.5 relative">
             {/* Single sliding pill — GPU-composited transform, no layout reflow */}
             <div
-              className="absolute top-0.5 bottom-0.5 w-[calc(20%-2px)] rounded-[10px] bg-white shadow-sm will-change-transform"
+              className="absolute top-0.5 bottom-0.5 w-[calc((100%-4px)/5)] rounded-[10px] bg-white shadow-sm will-change-transform transition-[transform,width] duration-300 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
               style={{
                 left: 0,
                 transform: `translateX(${
@@ -589,7 +577,6 @@ function HomePage() {
                   : tab === "gallery" ? 300
                   : 400
                 }%)`,
-                transition: "transform 280ms cubic-bezier(0.22, 1, 0.36, 1)",
                 pointerEvents: "none" as const,
               }}
             />
@@ -597,7 +584,7 @@ function HomePage() {
             {/* Juegos */}
             <button
               onClick={() => setTab("games")}
-              className={`relative z-10 flex-1 flex flex-col items-center gap-0.5 py-2 rounded-[10px] ${tab === "games" ? "text-foreground" : "text-muted-foreground/80"}`}
+              className={`relative z-10 flex flex-col items-center justify-center gap-0.5 min-h-14 rounded-[10px] transition-colors duration-200 motion-reduce:transition-none ${tab === "games" ? "text-foreground" : "text-muted-foreground/80 hover:text-foreground"}`}
             >
               <Gamepad2 size={18} />
               <span className="text-[9px] font-semibold tracking-wide">Juegos</span>
@@ -605,7 +592,7 @@ function HomePage() {
             {/* Feed */}
             <button
               onClick={() => setTab("feed")}
-              className={`relative z-10 flex-1 flex flex-col items-center gap-0.5 py-2 rounded-[10px] ${tab === "feed" ? "text-foreground" : "text-muted-foreground/80"}`}
+              className={`relative z-10 flex flex-col items-center justify-center gap-0.5 min-h-14 rounded-[10px] transition-colors duration-200 motion-reduce:transition-none ${tab === "feed" ? "text-foreground" : "text-muted-foreground/80 hover:text-foreground"}`}
             >
               <Newspaper size={18} />
               <span className="text-[9px] font-semibold tracking-wide">Feed</span>
@@ -614,26 +601,26 @@ function HomePage() {
             {/* Center CREAR button */}
             <Link
               to="/editor"
-              className="relative z-10 flex-1 flex flex-col items-center justify-center -mt-3"
+              className="relative z-10 flex flex-col items-center justify-center gap-1 min-h-14 rounded-[10px] text-primary hover:text-primary/80 active:scale-[0.97] transition-transform motion-reduce:transition-none"
             >
-              <div className="w-12 h-12 rounded-2xl grad-brand shadow-lg flex items-center justify-center active:scale-95 transition-transform">
-                <Plus size={22} strokeWidth={2.5} className="text-white" />
+              <div className="w-9 h-9 rounded-xl grad-brand shadow-[0_7px_16px_-10px_oklch(0.47_0.14_263_/_0.9)] flex items-center justify-center">
+                <Plus size={19} strokeWidth={2.5} className="text-white" />
               </div>
-              <span className="text-[9px] font-bold tracking-wide text-primary mt-0.5">Crear</span>
+              <span className="text-[9px] font-bold tracking-wide">Crear</span>
             </Link>
 
-            {/* Tienda (antes Eventos) */}
+            {/* Galería de artistas */}
             <button
               onClick={() => setTab("gallery")}
-              className={`relative z-10 flex-1 flex flex-col items-center gap-0.5 py-2 rounded-[10px] ${tab === "gallery" ? "text-foreground" : "text-muted-foreground/80"}`}
+              className={`relative z-10 flex flex-col items-center justify-center gap-0.5 min-h-14 rounded-[10px] transition-colors duration-200 motion-reduce:transition-none ${tab === "gallery" ? "text-foreground" : "text-muted-foreground/80 hover:text-foreground"}`}
             >
-              <Store size={18} />
-              <span className="text-[9px] font-semibold tracking-wide">Tienda</span>
+              <Palette size={18} />
+              <span className="text-[9px] font-semibold tracking-wide">Galería</span>
             </button>
             {/* Perfil */}
             <button
               onClick={() => setTab("profile")}
-              className={`relative z-10 flex-1 flex flex-col items-center gap-0.5 py-2 rounded-[10px] ${tab === "profile" ? "text-foreground" : "text-muted-foreground/80"}`}
+              className={`relative z-10 flex flex-col items-center justify-center gap-0.5 min-h-14 rounded-[10px] transition-colors duration-200 motion-reduce:transition-none ${tab === "profile" ? "text-foreground" : "text-muted-foreground/80 hover:text-foreground"}`}
             >
               <User size={18} />
               <span className="text-[9px] font-semibold tracking-wide">Perfil</span>
@@ -665,8 +652,8 @@ function SkeletonList() {
 function MenuLink({ icon, label, to, onClick }: { icon: React.ReactNode; label: string; to: string; onClick?: () => void }) {
   return (
     <Link to={to} onClick={onClick}
-      className="flex items-center gap-3 px-3 h-10 rounded-lg text-ink hover:bg-muted/60 active:scale-[0.98] transition">
-      {icon} <span className="text-sm font-medium">{label}</span>
+      className="menu-action flex items-center gap-3 px-3 h-10 rounded-xl text-ink hover:bg-muted/60 active:scale-[0.98] transition">
+      {icon} <span className="text-[13px] font-medium">{label}</span>
     </Link>
   );
 }
@@ -674,8 +661,8 @@ function MenuLink({ icon, label, to, onClick }: { icon: React.ReactNode; label: 
 function MenuItem({ icon, label, onClick, children }: { icon: React.ReactNode; label: string; onClick?: () => void; children?: React.ReactNode }) {
   return (
     <button onClick={onClick}
-      className="flex items-center gap-3 px-3 h-10 rounded-lg text-ink hover:bg-muted/60 active:scale-[0.98] transition w-full text-left">
-      {icon} <span className="text-sm font-medium flex-1">{label}</span>
+      className="menu-action flex items-center gap-3 px-3 h-10 rounded-xl text-ink hover:bg-muted/60 active:scale-[0.98] transition w-full text-left">
+      {icon} <span className="text-[13px] font-medium flex-1">{label}</span>
       {children}
     </button>
   );
@@ -683,7 +670,7 @@ function MenuItem({ icon, label, onClick, children }: { icon: React.ReactNode; l
 
 function CategoryHeader({ label }: { label: string }) {
   return (
-    <div className="flex items-center gap-2 pt-2 pb-1">
+    <div className="flex items-center gap-2 pt-3.5 pb-1.5">
       <div className="section-label">{label}</div>
       <div className="flex-1 h-px bg-border/60" />
     </div>
@@ -725,123 +712,13 @@ function FeedSubTabs({ value, onChange }: { value: FeedSub; onChange: (v: FeedSu
   );
 }
 
-function computeForYouScore(
-  p: PostWithMeta,
-  now: number,
-  authorCounts: Map<string, number>,
-): number {
-  // --- Raw engagement (weighted) ---
-  const likes = p.likes ?? 0;
-  const favs = p.favorites ?? 0;
-  const comments = p.comments_count ?? 0;
-  const reposts = p.reposts_count ?? 0;
-
-  const engagement =
-    likes * 1.0 +
-    favs * 2.5 +
-    comments * 3.0 +
-    reposts * 4.0;
-
-  // --- Recency: exponential decay (24h half-life) ---
-  const ageMs = now - new Date(p.created_at).getTime();
-  const ageH = Math.max(0.01, ageMs / 36e5);
-  const HALF_LIFE = 24; // hours
-  const recencyFactor = Math.pow(0.5, ageH / HALF_LIFE);
-
-  // --- Freshness burst: posts < 24h get a boost that fades linearly ---
-  const freshBoost = ageH < 24 ? 1 + (1 - ageH / 24) * 0.7 : 1;
-
-  // --- Media bonus ---
-  const hasMedia = p.media_type === "image" || p.media_type === "video";
-  const hasCover = !!p.cover_url;
-  const mediaBonus = hasMedia || hasCover ? 1.25 : 1;
-
-  // --- Engagement rate (interactions per hour) ---
-  const totalInteractions = likes + favs + comments + reposts;
-  const rateBonus = ageH > 0.5
-    ? 1 + Math.min(2, (totalInteractions / ageH) * 0.2)
-    : 2; // very fresh posts get a generous rate bonus
-
-  // --- Author diversity penalty ---
-  const authorCount = authorCounts.get(p.author_id) ?? 0;
-  // First post: no penalty. Second: -30%. Third+: -60%.
-  const diversityPenalty = authorCount === 0 ? 1
-    : authorCount === 1 ? 0.7
-    : 0.4;
-
-  // --- Base score ---
-  let score = engagement * recencyFactor * freshBoost * mediaBonus * rateBonus * diversityPenalty;
-
-  // --- Small chaotic jitter (±8%) for natural variety in ties ---
-  // Determinista por post: antes era Math.random() y cada re-render del feed
-  // re-ordenaba ligeramente las publicaciones (cambio brusco de posición).
-  score *= seededJitter(p.id);
-
-  return score;
-}
-
-// Hash FNV-1a estable por id: mismo post → mismo jitter en todos los renders,
-// así el orden del feed nunca cambia por re-renderizaciones ajenas (abrir un
-// menú, actualizar el perfil, etc.).
-function seededJitter(id: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < id.length; i++) {
-    h ^= id.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  const u = (h >>> 0) / 4294967295; // [0, 1)
-  return 0.92 + u * 0.16; // ±8%
-}
-
-function filterFeed(posts: PostWithMeta[], sub: FeedSub, myId: string | null): PostWithMeta[] {
-  const now = Date.now();
-
-  if (sub === "forYou") {
-    const authorCounts = new Map<string, number>();
-
-    const scored = [...posts]
-      .map(p => {
-        const score = computeForYouScore(p, now, authorCounts);
-        // Track author count AFTER scoring so the penalty is based on *prior* entries
-        authorCounts.set(p.author_id, (authorCounts.get(p.author_id) ?? 0) + 1);
-        return { p, score };
-      })
-      .sort((a, b) => b.score - a.score);
-
-    return scored.map(x => x.p);
-  }
-
-  if (sub === "explore") {
-    // Mix of trending + media-rich + project-linked posts for discovery
-    return [...posts]
-      .map(p => {
-        const likes = p.likes ?? 0;
-        const favs = p.favorites ?? 0;
-        const comments = p.comments_count ?? 0;
-        const reposts = p.reposts_count ?? 0;
-        const ageH = Math.max(1, (now - new Date(p.created_at).getTime()) / 36e5);
-        const velocity = (likes + favs * 3 + comments * 2 + reposts * 5) / Math.pow(ageH + 1, 0.6);
-        const hasMedia = p.media_type === "image" || p.media_type === "video" || !!p.cover_url;
-        const hasProject = !!p.pinned_game;
-        const mediaBoost = hasMedia ? 1.5 : 1;
-        const projectBoost = hasProject ? 1.3 : 1;
-        const hasTags = p.tags.length > 0;
-        const tagBoost = hasTags ? 1.1 : 1;
-        const score = velocity * mediaBoost * projectBoost * tagBoost;
-        return { p, score };
-      })
-      .sort((a, b) => b.score - a.score)
-      .map(x => x.p);
-  }
-
+function filterFeed(posts: PostWithMeta[], sub: FeedSub, myId: string | null, followingIds: string[]): PostWithMeta[] {
   if (sub === "following") {
     if (!myId) return [];
-    const engagedAuthors = new Set(
-      posts.filter(p => p.my_like || p.my_favorite || p.my_repost).map(p => p.author_id),
-    );
-    engagedAuthors.delete(myId);
-    return posts.filter(p => engagedAuthors.has(p.author_id));
+    const following = new Set(followingIds);
+    return posts.filter(post => following.has(post.author_id));
   }
-
+  // «Para ti» y «Explorar» conservan el orden semántico que entregó Orión.
+  // Los conteos de reacciones no participan en esta decisión.
   return posts;
 }

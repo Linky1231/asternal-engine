@@ -90,6 +90,9 @@ export interface Entity {
   texture?: string | null;
   animations?: AnimationClip[];
   scripts?: Script[];
+  /** Datos de autoría libres para que los scripts no dependan de casos por tipo. */
+  variables?: Record<string, string | number | boolean>;
+  tags?: string[];
   hitbox?: Hitbox | null;
   // advanced behaviors
   value?: number;
@@ -171,6 +174,8 @@ export interface Scene {
   width: number;
   height: number;
   entities: Entity[];
+  /** Estado compartido por escena, accesible desde los bloques visuales. */
+  variables?: Record<string, string | number | boolean>;
   timeLimit?: number;            // seconds; 0 = no limit
   parallax?: ParallaxLayer[];    // deprecated — ignored at runtime, kept for older saves
   layers?: SceneLayer[];         // Z-ordered scene layers

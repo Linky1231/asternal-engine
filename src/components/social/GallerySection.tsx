@@ -15,6 +15,7 @@ import {
 import { CommentSection } from "@/components/social/CommentSection";
 import type { SpriteAsset } from "@/lib/engine/core";
 import { GalleryCanvasPanel } from "@/components/social/GalleryCanvasPanel";
+import { makeOrionImagePreview, reviewArtworkWithOrion } from "@/lib/ai/community-orion";
 
 const TABS: { id: string; label: string; icon: typeof Clock }[] = [
   { id: "recent", label: "Recientes", icon: Clock },
@@ -46,6 +47,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
   const [pubTitle, setPubTitle] = useState("");
   const [pubPrice, setPubPrice] = useState(0);
   const [publishing, setPublishing] = useState(false);
+  const [reviewingArtwork, setReviewingArtwork] = useState(false);
   const [pubErr, setPubErr] = useState<string | null>(null);
   const [pubDone, setPubDone] = useState(false);
 
@@ -96,10 +98,21 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
     try {
       const composite = savedSprite.frames?.[0]?.composite;
       if (!composite) throw new Error("No hay imagen en el dibujo");
+      setReviewingArtwork(true);
+      const review = await reviewArtworkWithOrion({
+        kind: "artwork",
+        title: pubTitle.trim(),
+        priceOrbes: pubPrice,
+        artwork: { width: savedSprite.width, height: savedSprite.height, frameCount: savedSprite.frames.length },
+        previewImage: await makeOrionImagePreview(composite),
+      });
+      setReviewingArtwork(false);
+      if (!review.allowed) throw new Error(review.reason || "Orión no aprobó esta obra para publicarla.");
       await publishArtwork({ title: pubTitle.trim(), imageDataUrl: composite, priceOrbes: pubPrice });
       setPubDone(true);
       setTimeout(() => { setSavedSprite(null); setPubDone(false); setPublishing(false); load(); }, 1200);
     } catch (e) { setPubErr((e as Error).message); setPublishing(false); }
+    finally { setReviewingArtwork(false); }
   };
 
   // --- Like ---
@@ -795,7 +808,7 @@ export function GallerySection({ myId, isMod: _isMod, onRefresh }: {
                   disabled={publishing || !pubTitle.trim()}
                   className="flex-1 h-10 rounded-lg grad-brand text-white text-xs font-semibold active:scale-95 disabled:opacity-50 transition"
                 >
-                  {publishing ? <Loader2 size={14} className="animate-spin mx-auto" /> : "PUBLICAR"}
+                  {publishing ? <span className="inline-flex items-center gap-1.5"><Loader2 size={14} className="animate-spin" />{reviewingArtwork ? "REVISANDO…" : "PUBLICANDO…"}</span> : "PUBLICAR"}
                 </button>
               </div>
             </div>

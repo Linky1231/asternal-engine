@@ -16,7 +16,8 @@ export type EventType =
   | "onLeaveScreen"
   | "onLand"
   | "onWin"
-  | "onLose";
+  | "onLose"
+  | "onMessage";
 
 export type BlockKind =
   // existing
@@ -76,7 +77,19 @@ export type BlockKind =
   | "wait"
   | "setFacing"
   | "knockback"
-  | "pushAway";
+  | "pushAway"
+  | "setVariable"
+  | "changeVariable"
+  | "setProperty"
+  | "changeProperty"
+  | "broadcast"
+  | "ifVariable"
+  | "repeat";
+
+export type ScriptTarget = "self" | "other" | "scene";
+export type VariableScope = "entity" | "scene";
+export type GenericProperty = "x" | "y" | "vx" | "vy" | "w" | "h" | "opacity" | "rotation" | "visible" | "solid" | "gravity" | "controllable" | "hazard" | "collectible" | "goal";
+export type VariableOperator = "eq" | "neq" | "gte" | "lte";
 
 export interface Block {
   id: string;
@@ -92,6 +105,12 @@ export interface Block {
   bool?: boolean;
   cond?: "scoreGte" | "scoreLte";
   thenBlocks?: Block[];
+  elseBlocks?: Block[];
+  target?: ScriptTarget;
+  scope?: VariableScope;
+  property?: GenericProperty;
+  operator?: VariableOperator;
+  repeat?: number;
 }
 
 export interface Script {
@@ -101,6 +120,7 @@ export interface Script {
   key?: "left" | "right" | "jump";        // onKeyDown
   threshold?: number;                     // onScoreReach
   interval?: number;                      // onTimer (ms)
+  message?: string;                       // onMessage
   blocks: Block[];
 }
 
@@ -118,6 +138,7 @@ export const EVENT_LABELS: Record<EventType, string> = {
   onLand: "On Land",
   onWin: "On Win",
   onLose: "On Lose",
+  onMessage: "On Message",
 };
 
 export const BLOCK_LABELS: Record<BlockKind, string> = {
@@ -178,6 +199,13 @@ export const BLOCK_LABELS: Record<BlockKind, string> = {
   setFacing: "Set facing (-1/1)",
   knockback: "Knockback (x,y)",
   pushAway: "Push away from player",
+  setVariable: "Set variable",
+  changeVariable: "Change variable by",
+  setProperty: "Set property",
+  changeProperty: "Change property by",
+  broadcast: "Broadcast message",
+  ifVariable: "If variable",
+  repeat: "Repeat",
 };
 
 export const ALL_BLOCKS: BlockKind[] = [
@@ -191,7 +219,7 @@ export const ALL_BLOCKS: BlockKind[] = [
   "setGravity", "setControllable", "setHazard", "setSolid", "setCollectible", "setGoalFlag",
   "setSceneGravity", "setHitbox", "clearHitbox",
   "faceTarget", "chase", "knockback", "setFacing", "pushAway",
-  "log", "comment", "if", "wait",
+  "log", "comment", "if", "wait", "setVariable", "changeVariable", "setProperty", "changeProperty", "broadcast", "ifVariable", "repeat",
 ];
 
 export interface RuntimeHooks {
@@ -205,6 +233,39 @@ interface ExecCtx {
   scene: Scene;
   state: RuntimeState;
   hooks: RuntimeHooks;
+  emitMessage?: (message: string) => void;
+}
+
+export function nextVariableValue(current: number | undefined, delta: number): number {
+  return (current ?? 0) + delta;
+}
+
+function variableBag(ctx: ExecCtx, scope: VariableScope = "entity") {
+  if (scope === "scene") return (ctx.scene.variables ??= {});
+  return (ctx.self.variables ??= {});
+}
+
+function targetFor(ctx: ExecCtx, target: ScriptTarget = "self"): Entity | Scene | null {
+  if (target === "scene") return ctx.scene;
+  if (target === "other") return ctx.other ?? null;
+  return ctx.self;
+}
+
+export function applyGenericProperty(target: Entity | Scene, property: GenericProperty, value: number | boolean, mode: "set" | "change" = "set") {
+  const record = target as unknown as Record<string, unknown>;
+  if (typeof value === "boolean") { record[property] = value; return; }
+  const previous = typeof record[property] === "number" ? record[property] as number : 0;
+  const next = mode === "change" ? previous + value : value;
+  if (property === "w" || property === "h") record[property] = Math.max(1, next);
+  else if (property === "opacity") record[property] = Math.max(0, Math.min(1, next > 1 ? next / 100 : next));
+  else record[property] = next;
+}
+
+function variablePasses(current: string | number | boolean | undefined, operator: VariableOperator = "gte", expected = 0) {
+  const numberCurrent = typeof current === "number" ? current : Number(current ?? 0);
+  if (operator === "eq") return numberCurrent === expected;
+  if (operator === "neq") return numberCurrent !== expected;
+  return operator === "lte" ? numberCurrent <= expected : numberCurrent >= expected;
 }
 
 function findFirstOfKind(scene: Scene, kind: EntityKind) {
@@ -349,6 +410,34 @@ function execBlock(b: Block, ctx: ExecCtx) {
       }
       break;
     }
+    case "setVariable": {
+      variableBag(ctx, b.scope)[b.text?.trim() || "variable"] = b.value ?? 0;
+      break;
+    }
+    case "changeVariable": {
+      const bag = variableBag(ctx, b.scope);
+      const key = b.text?.trim() || "variable";
+      bag[key] = nextVariableValue(typeof bag[key] === "number" ? bag[key] : undefined, b.value ?? 1);
+      break;
+    }
+    case "setProperty":
+    case "changeProperty": {
+      const target = targetFor(ctx, b.target);
+      if (target && b.property) applyGenericProperty(target, b.property, b.bool ?? b.value ?? 0, b.kind === "changeProperty" ? "change" : "set");
+      break;
+    }
+    case "broadcast": ctx.emitMessage?.(b.text?.trim() || "message"); break;
+    case "ifVariable": {
+      const current = variableBag(ctx, b.scope)[b.text?.trim() || "variable"];
+      const branch = variablePasses(current, b.operator, b.value ?? 0) ? b.thenBlocks : b.elseBlocks;
+      for (const sub of branch ?? []) execBlock(sub, ctx);
+      break;
+    }
+    case "repeat": {
+      const amount = Math.min(100, Math.max(0, Math.floor(b.repeat ?? b.value ?? 1)));
+      for (let i = 0; i < amount; i++) for (const sub of b.thenBlocks ?? []) execBlock(sub, ctx);
+      break;
+    }
 
     case "if": {
       const v = b.value ?? 0;
@@ -383,6 +472,9 @@ export function createScriptRunner(): ScriptRunner {
 
   return {
     step(scene, state, input, hooks, dt) {
+      const messages = new Set<string>();
+      const run = (script: Script, self: Entity, other?: Entity) =>
+        runScript(script, { self, other, scene, state, hooks, emitMessage: message => messages.add(message) });
       const live = scene.entities;
       const keyEdges = {
         left: input.left && !prevInput.left,
@@ -401,7 +493,7 @@ export function createScriptRunner(): ScriptRunner {
         if (e.x < -9000 && !destroyed.has(e.id)) {
           destroyed.add(e.id);
           for (const s of scripts) if (s.event === "onDestroyed" || s.event === "onDestroy")
-            runScript(s, { self: e, scene, state, hooks });
+            run(s, e);
         }
         if (e.x < -9000) continue;
 
@@ -409,14 +501,14 @@ export function createScriptRunner(): ScriptRunner {
         if (outside && !left.has(e.id)) {
           left.add(e.id);
           for (const s of scripts) if (s.event === "onLeaveScreen")
-            runScript(s, { self: e, scene, state, hooks });
+            run(s, e);
         } else if (!outside) {
           left.delete(e.id);
         }
 
         if (!started.has(e.id)) {
           for (const s of scripts) if (s.event === "onStart" || s.event === "onCreate")
-            runScript(s, { self: e, scene, state, hooks });
+            run(s, e);
           started.add(e.id);
         }
 
@@ -425,24 +517,24 @@ export function createScriptRunner(): ScriptRunner {
 
         for (const s of scripts) {
           if (s.event === "onUpdate") {
-            runScript(s, { self: e, scene, state, hooks });
+            run(s, e);
           } else if (s.event === "onKeyDown" && s.key && keyEdges[s.key]) {
-            runScript(s, { self: e, scene, state, hooks });
+            run(s, e);
           } else if (s.event === "onScoreReach") {
             const t = s.threshold ?? 0;
             if (prevScore < t && state.score >= t)
-              runScript(s, { self: e, scene, state, hooks });
+              run(s, e);
           } else if (s.event === "onTimer") {
             const iv = Math.max(0.05, (s.interval ?? 1000) / 1000);
             const acc = (timerAcc.get(s.id) ?? 0) + dt;
-            if (acc >= iv) { timerAcc.set(s.id, 0); runScript(s, { self: e, scene, state, hooks }); }
+            if (acc >= iv) { timerAcc.set(s.id, 0); run(s, e); }
             else timerAcc.set(s.id, acc);
           } else if (s.event === "onLand" && landed) {
-            runScript(s, { self: e, scene, state, hooks });
+            run(s, e);
           } else if (s.event === "onWin" && winEdge) {
-            runScript(s, { self: e, scene, state, hooks });
+            run(s, e);
           } else if (s.event === "onLose" && loseEdge) {
-            runScript(s, { self: e, scene, state, hooks });
+            run(s, e);
           }
         }
 
@@ -466,13 +558,22 @@ export function createScriptRunner(): ScriptRunner {
           if (colliding.has(key)) continue;
           for (const s of aScripts) {
             if (!s.withKind || s.withKind === "any" || s.withKind === b.kind) {
-              runScript(s, { self: a, other: b, scene, state, hooks });
+              run(s, a, b);
             }
           }
         }
       }
       colliding.clear();
       now.forEach(k => colliding.add(k));
+
+      for (const message of messages) {
+        for (const entity of live) {
+          if (entity.x < -9000) continue;
+          for (const script of entity.scripts ?? []) {
+            if (script.event === "onMessage" && script.message === message) run(script, entity);
+          }
+        }
+      }
 
       prevInput = { ...input };
       prevScore = state.score;

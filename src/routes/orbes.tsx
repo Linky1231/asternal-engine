@@ -159,7 +159,7 @@ function OrbesPage() {
   );
 
   return (
-    <div className="min-h-screen w-full flex flex-col text-foreground">
+    <div className="min-h-screen w-full flex flex-col bg-background text-foreground">
       <SubPageHeader
         title="MIS ORBES"
         icon={<Sparkles size={14} fill="currentColor" />}
@@ -217,7 +217,7 @@ function OrbesPage() {
                 <a
                   key={id}
                   href={`/?g=${id}`}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-display tracking-wide text-primary-glow hover:border-primary/50 hover:bg-primary/15 transition"
+                  className="orbes-game-link inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/45 border border-border/60 text-[10px] font-display tracking-wide text-foreground hover:border-primary/35 hover:bg-card transition"
                 >
                   <Gamepad2 size={10} /> {gameTitles.get(id) ?? "Juego"} <ExternalLink size={9} className="opacity-60" />
                 </a>

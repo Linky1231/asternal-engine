@@ -2,6 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { PostWithMeta, PostRow, Profile } from "./api";
 import { signMediaUrls } from "./api";
+import { refreshPlayedGameCoverSessions, type PlayedGameMedia } from "./history-cover";
 
 export type PlaySession = {
   gameId: string;
@@ -29,6 +30,20 @@ export function getPlayHistory(): PlaySession[] {
     const raw = localStorage.getItem("play_history");
     return raw ? JSON.parse(raw) : [];
   } catch { return []; }
+}
+
+/** Sincroniza las portadas de sesiones previas con los metadatos reales del juego publicado. */
+export function refreshPlayHistoryCovers(games: readonly PlayedGameMedia[]): boolean {
+  const current = getPlayHistory();
+  const refreshed = refreshPlayedGameCoverSessions(current, games);
+  if (!refreshed.changed) return false;
+
+  try {
+    localStorage.setItem("play_history", JSON.stringify(refreshed.sessions));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /** Get aggregated play time per game (total seconds) */
@@ -216,6 +231,7 @@ export function getUsageStats(): UsageStats {
 export function getTopGame(period: "total" | "today" | "week" | "month" | "year"): {
   title: string;
   seconds: number;
+  coverUrl: string | null;
 } | null {
   const sessions = getPlayHistory();
   const now = new Date();
@@ -226,17 +242,18 @@ export function getTopGame(period: "total" | "today" | "week" | "month" | "year"
     : period === "year" ? now.getTime() - 364 * 24 * 3600 * 1000
     : 0;
 
-  const byGame = new Map<string, { title: string; seconds: number }>();
+  const byGame = new Map<string, { title: string; seconds: number; coverUrl: string | null }>();
   for (const s of sessions) {
     const t = new Date(s.startedAt).getTime();
     if (Number.isNaN(t)) continue;
     if (period === "today" && dayKey(s.startedAt) !== todayKey) continue;
     if (period !== "today" && period !== "total" && t < threshold) continue;
-    const cur = byGame.get(s.gameId) ?? { title: s.gameTitle, seconds: 0 };
+    const cur = byGame.get(s.gameId) ?? { title: s.gameTitle, seconds: 0, coverUrl: s.coverUrl };
     cur.seconds += s.durationSeconds;
+    if (!cur.coverUrl && s.coverUrl) cur.coverUrl = s.coverUrl;
     byGame.set(s.gameId, cur);
   }
-  let top: { title: string; seconds: number } | null = null;
+  let top: { title: string; seconds: number; coverUrl: string | null } | null = null;
   for (const g of byGame.values()) {
     if (!top || g.seconds > top.seconds) top = g;
   }

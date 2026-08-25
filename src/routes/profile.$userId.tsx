@@ -28,7 +28,7 @@ function ProfileByIdPage() {
   if (!myId) return null;
   const viewingOwn = myId === userId;
   return (
-    <div className="min-h-screen w-full flex flex-col text-foreground">
+    <div className="min-h-screen w-full flex flex-col bg-background text-foreground">
       <SubPageHeader
         title={viewingOwn ? "MI PERFIL" : "PERFIL"}
         subtitle={`@${userId.slice(0, 10)}…`}
