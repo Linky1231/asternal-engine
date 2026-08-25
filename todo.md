@@ -1315,10 +1315,3 @@ Las filas del menú se compactaron a 40 px, los grupos redujeron su separación 
 # Visibilidad pública del repositorio
 - [x] Cambiar el repositorio nuevo de GitHub a visibilidad pública.
 - [x] Verificar el acceso público y confirmar la nueva visibilidad.
-
----
-# Orión portable fuera de Manus
-- [x] Auditar las dependencias actuales de Orión respecto a los servicios integrados de Manus.
-- [x] Crear un adaptador de proveedor configurable mediante variables de entorno seguras.
-- [x] Documentar la configuración para despliegues externos y conservar el comportamiento de moderación y recomendaciones.
-- [x] Añadir pruebas de compatibilidad, validar y publicar la migración.
