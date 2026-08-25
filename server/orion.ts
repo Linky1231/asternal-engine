@@ -28,7 +28,7 @@ export function sanitizeHistory(history: unknown): OrionMessage[] {
   });
 }
 
-/** Ejecuta una consulta a Orión en el servidor usando exclusivamente la IA integrada de Manus. */
+/** Ejecuta una consulta a Orión en el servidor mediante el proveedor configurado. */
 export async function completeOrionChat(history: unknown, options?: { temperature?: unknown }): Promise<OrionResult> {
   const cleanHistory = sanitizeHistory(history);
   if (!cleanHistory.some(message => message.role === "user")) throw new Error("Escribe un mensaje para Orión.");
@@ -36,6 +36,6 @@ export async function completeOrionChat(history: unknown, options?: { temperatur
   const temperature = typeof options?.temperature === "number" ? Math.max(0, Math.min(1, options.temperature)) : 0.35;
   const response = await invokeLLM({ model, messages: buildOrionMessages(cleanHistory), temperature });
   const content = response.choices?.[0]?.message?.content?.trim();
-  if (!content) throw new Error("Manus no devolvió una respuesta para Orión.");
+  if (!content) throw new Error("El proveedor de IA configurado no devolvió una respuesta para Orión.");
   return { content, model: response.model ?? model, costUsd: 0, balanceUsd: 0 };
 }
