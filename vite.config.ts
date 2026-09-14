@@ -34,12 +34,41 @@ function manusOrionDevEndpoint(): Plugin {
   };
 }
 
+function prexzyProxy(): Plugin {
+  return {
+    name: "prexzy-proxy",
+    configureServer(server) {
+      server.middlewares.use("/api/prexzy/aiwriter", (request, response, next) => {
+        if (request.method !== "GET" && request.method !== "POST") return next();
+        const url = new URL(request.url ?? "/", "http://localhost");
+        const prompt = url.searchParams.get("prompt") ?? "";
+        const model = url.searchParams.get("model") ?? "gpt-4o-mini";
+        const target = `https://prexzyapis.com/ai/aiwriter-chat?prompt=${encodeURIComponent(prompt)}&model=${encodeURIComponent(model)}`;
+        void fetch(target, { headers: { Accept: "application/json" } })
+          .then(async r => {
+            const body = await r.text();
+            response.statusCode = r.status;
+            response.setHeader("Content-Type", r.headers.get("content-type") ?? "application/json");
+            response.setHeader("Access-Control-Allow-Origin", "*");
+            response.end(body);
+          })
+          .catch(err => {
+            const msg = err instanceof Error ? err.message : "No se pudo consultar Prexzy.";
+            response.statusCode = 502;
+            response.setHeader("Content-Type", "application/json");
+            response.end(JSON.stringify({ error: msg }));
+          });
+      });
+    },
+  };
+}
+
 // https://vite.dev/config/
 export default defineConfig({
   // Exponer también V1/V2/V3 (variables personalizadas del tab Keys) en
   // import.meta.env además del prefijo estándar VITE_.
   envPrefix: ["VITE_", "V1", "V2", "V3"],
-  plugins: [vlyPlugin(), react(), manusOrionDevEndpoint(), tailwindcss()],
+  plugins: [vlyPlugin(), react(), manusOrionDevEndpoint(), prexzyProxy(), tailwindcss()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

@@ -5,6 +5,8 @@ import {
   ALL_BLOCKS, BLOCK_LABELS, EVENT_LABELS, uid,
 } from "@/lib/engine/scripts";
 import { SOUND_NAMES, type SoundName, playSound } from "@/lib/engine/sfx";
+import { ENGINE_KNOWLEDGE } from "@/lib/ai/engine-knowledge";
+import { buildPrexzyScriptPrompt, prexzyChat } from "@/lib/ai/prexzy-provider";
 
 const KIND_OPTIONS: (EntityKind | "any")[] = ["any", "player", "platform", "enemy", "coin", "goal"];
 const KIND_ONLY: EntityKind[] = ["player", "platform", "enemy", "coin", "goal"];
@@ -18,6 +20,9 @@ interface Props {
 export function ScriptEditor({ entity, onChange, onClose }: Props) {
   const [scripts, setScripts] = useState<Script[]>(entity.scripts ?? []);
   const [openId, setOpenId] = useState<string | null>(scripts[0]?.id ?? null);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiErr, setAiErr] = useState<string | null>(null);
 
   const commit = (next: Script[]) => {
     setScripts(next);
@@ -54,6 +59,58 @@ export function ScriptEditor({ entity, onChange, onClose }: Props) {
         </div>
         <button onClick={onClose} className="px-3 py-1.5 rounded-md panel glow-border text-xs font-display">CLOSE</button>
       </header>
+
+      <div className="mx-3 mt-3 rounded-xl border border-border/60 bg-card p-3 space-y-2">
+        <div className="text-[10px] font-display tracking-widest text-ink-2">IA · GENERAR SCRIPTS (Prexzy)</div>
+        <p className="text-[11px] leading-relaxed text-muted-foreground">
+          La IA conoce todo el motor (tipos, eventos, bloques, capas 1-10). Describe qué quieres y la IA generará scripts válidos para esta entidad.
+        </p>
+        <textarea
+          value={aiPrompt}
+          onChange={e => setAiPrompt(e.target.value)}
+          placeholder="Ej: haz que este enemigo persiga al jugador y que al tocarlo reste una vida…"
+          rows={2}
+          className="w-full rounded-lg border border-border bg-input/50 px-3 py-2 text-xs outline-none focus:border-primary/40 min-h-[56px] resize-none"
+        />
+        {aiErr && <div className="text-[11px] text-destructive bg-destructive/10 border border-destructive/30 rounded-lg px-2.5 py-2">{aiErr}</div>}
+        <button
+          disabled={aiBusy || !aiPrompt.trim()}
+          onClick={async () => {
+            setAiBusy(true);
+            setAiErr(null);
+            try {
+              const prompt = buildPrexzyScriptPrompt({
+                userRequest: aiPrompt.trim(),
+                engineKnowledge: ENGINE_KNOWLEDGE,
+                targetEntityKind: entity.kind,
+                projectSummary: `Entidad ${entity.kind} en ${entity.x},${entity.y} ${entity.w}x${entity.h}. Scripts actuales: ${scripts.length}.`,
+              });
+              const res = await prexzyChat({ prompt, model: "gpt-4o-mini" });
+              const jsonText = res.text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/,"" );
+              const parsed = JSON.parse(jsonText) as unknown;
+              const arr = Array.isArray(parsed) ? parsed : (parsed as { scripts?: unknown }).scripts;
+              if (!Array.isArray(arr)) throw new Error("La IA no devolvió un array de scripts.");
+              const normalized: Script[] = (arr as Script[]).map(s => ({
+                ...s,
+                id: typeof s.id === "string" && s.id ? s.id : uid(),
+                blocks: Array.isArray(s.blocks) ? s.blocks.map((b: Block) => ({ ...b, id: typeof b.id === "string" && b.id ? b.id : uid() })) : [],
+              }));
+              commit([...scripts, ...normalized]);
+              setAiPrompt("");
+            } catch (e) {
+              setAiErr(e instanceof Error ? e.message : "No se pudo generar con IA.");
+            } finally {
+              setAiBusy(false);
+            }
+          }}
+          className="w-full h-9 rounded-xl btn-grad text-primary-foreground text-[11px] font-display tracking-widest disabled:opacity-40 active:scale-[0.98] transition"
+        >
+          {aiBusy ? "GENERANDO…" : "GENERAR CON IA"}
+        </button>
+        <div className="text-[9px] font-mono text-muted-foreground text-center">
+          Usa Prexzy API: <span className="text-ink-2">prexzyapis.com/ai/aiwriter-chat?prompt=&amp;model=</span> · vía <span className="text-ink-2">/api/prexzy/aiwriter</span>
+        </div>
+      </div>
 
       <div className="flex-1 overflow-auto p-3 space-y-3">
         {scripts.length === 0 && (
