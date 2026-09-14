@@ -50,22 +50,7 @@ app.post("/api/orion/rank-feed", async (req, res) => {
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
-app.get("/api/prexzy/aiwriter", async (req, res) => {
-  try {
-    const q = req.query as Record<string, unknown>;
-    const prompt = String(q.prompt ?? "");
-    const model = String(q.model ?? "gpt-4o-mini");
-    if (!prompt.trim()) { res.status(400).json({ error: "prompt requerido" }); return; }
-    const target = `https://prexzyapis.com/ai/aiwriter-chat?prompt=${encodeURIComponent(prompt)}&model=${encodeURIComponent(model)}`;
-    const r = await fetch(target, { headers: { Accept: "application/json" } });
-    const body = await r.text();
-    res.status(r.status);
-    res.setHeader("content-type", r.headers.get("content-type") ?? "application/json");
-    res.send(body);
-  } catch (e) {
-    res.status(502).json({ error: e instanceof Error ? e.message : "No se pudo consultar Prexzy." });
-  }
-});
+
 
 // El bundle del servidor queda en `dist/index.js` y Vite genera el cliente en
 // `dist/public`, que también es el directorio exigido por el publicador.

@@ -6,7 +6,7 @@ import {
 } from "@/lib/engine/scripts";
 import { SOUND_NAMES, type SoundName, playSound } from "@/lib/engine/sfx";
 import { ENGINE_KNOWLEDGE } from "@/lib/ai/engine-knowledge";
-import { buildPrexzyScriptPrompt, prexzyChat } from "@/lib/ai/prexzy-provider";
+import { buildGeminiScriptPrompt, geminiChat, hasGeminiConfig } from "@/lib/ai/gemini-provider";
 
 const KIND_OPTIONS: (EntityKind | "any")[] = ["any", "player", "platform", "enemy", "coin", "goal"];
 const KIND_ONLY: EntityKind[] = ["player", "platform", "enemy", "coin", "goal"];
@@ -61,7 +61,7 @@ export function ScriptEditor({ entity, onChange, onClose }: Props) {
       </header>
 
       <div className="mx-3 mt-3 rounded-xl border border-border/60 bg-card p-3 space-y-2">
-        <div className="text-[10px] font-display tracking-widest text-ink-2">IA · GENERAR SCRIPTS (Prexzy)</div>
+        <div className="text-[10px] font-display tracking-widest text-ink-2">IA · GENERAR SCRIPTS (Gemini)</div>
         <p className="text-[11px] leading-relaxed text-muted-foreground">
           La IA conoce todo el motor (tipos, eventos, bloques, capas 1-10). Describe qué quieres y la IA generará scripts válidos para esta entidad.
         </p>
@@ -79,14 +79,14 @@ export function ScriptEditor({ entity, onChange, onClose }: Props) {
             setAiBusy(true);
             setAiErr(null);
             try {
-              const prompt = buildPrexzyScriptPrompt({
+              const prompt = buildGeminiScriptPrompt({
                 userRequest: aiPrompt.trim(),
                 engineKnowledge: ENGINE_KNOWLEDGE,
                 targetEntityKind: entity.kind,
                 projectSummary: `Entidad ${entity.kind} en ${entity.x},${entity.y} ${entity.w}x${entity.h}. Scripts actuales: ${scripts.length}.`,
               });
-              const res = await prexzyChat({ prompt, model: "gpt-4o-mini" });
-              const jsonText = res.text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/,"" );
+              const res = await geminiChat([{ role: "user", content: prompt }]);
+              const jsonText = (res.text ?? res.content ?? "").trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/,"" );
               const parsed = JSON.parse(jsonText) as unknown;
               const arr = Array.isArray(parsed) ? parsed : (parsed as { scripts?: unknown }).scripts;
               if (!Array.isArray(arr)) throw new Error("La IA no devolvió un array de scripts.");
@@ -108,7 +108,7 @@ export function ScriptEditor({ entity, onChange, onClose }: Props) {
           {aiBusy ? "GENERANDO…" : "GENERAR CON IA"}
         </button>
         <div className="text-[9px] font-mono text-muted-foreground text-center">
-          Usa Prexzy API: <span className="text-ink-2">prexzyapis.com/ai/aiwriter-chat?prompt=&amp;model=</span> · vía <span className="text-ink-2">/api/prexzy/aiwriter</span>
+          Conectado directamente a Google AI Studio (Gemini BYOK). Configura tu clave en Ajustes de IA.
         </div>
       </div>
 

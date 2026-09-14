@@ -616,9 +616,76 @@ export function drawEntity(ctx: CanvasRenderingContext2D, e: Entity, time: numbe
     ctx.fill();
     if (e.kind === "player") {
       ctx.shadowBlur = 0;
-      ctx.fillStyle = "#020617";
-      ctx.fillRect(e.x + 10, e.y + 16, 6, 6);
-      ctx.fillRect(e.x + 24, e.y + 16, 6, 6);
+      const px = e.x, py = e.y, pw = e.w, ph = e.h;
+      const facing = e.facing ?? 1;
+
+      // Body shine/gloss
+      const bodyGrad = ctx.createLinearGradient(px, py, px + pw, py + ph);
+      bodyGrad.addColorStop(0, "rgba(255,255,255,0.18)");
+      bodyGrad.addColorStop(0.5, "rgba(255,255,255,0)");
+      bodyGrad.addColorStop(1, "rgba(0,0,0,0.12)");
+      ctx.fillStyle = bodyGrad;
+      roundRect(ctx, px, py, pw, ph, 6);
+      ctx.fill();
+
+      // Face plate (slightly lighter panel)
+      const faceY = py + ph * 0.22;
+      const faceH = ph * 0.35;
+      ctx.fillStyle = "rgba(255,255,255,0.08)";
+      roundRect(ctx, px + 4, faceY, pw - 8, faceH, 4);
+      ctx.fill();
+
+      // Eyes — animated blinking + look direction
+      const tSec = performance.now() / 1000;
+      const blinkCycle = tSec % 4; // blink every 4s
+      const blinking = blinkCycle > 3.85;
+      const eyeH = blinking ? 1 : 5;
+      const eyeW = 5;
+      const eyeY = faceY + faceH / 2 - eyeH / 2 + 1;
+      const eyeOffset = facing > 0 ? 1 : -1;
+
+      // Left eye
+      ctx.fillStyle = "#e2e8f0";
+      roundRect(ctx, px + 10 + eyeOffset, eyeY, eyeW, eyeH, 2);
+      ctx.fill();
+      // Left pupil
+      if (!blinking) {
+        ctx.fillStyle = "#0f172a";
+        ctx.fillRect(px + 11 + eyeOffset, eyeY + 1, 3, 3);
+        // Eye highlight
+        ctx.fillStyle = "rgba(255,255,255,0.8)";
+        ctx.fillRect(px + 11 + eyeOffset, eyeY + 1, 1.5, 1.5);
+      }
+
+      // Right eye
+      ctx.fillStyle = "#e2e8f0";
+      roundRect(ctx, px + pw - 15 + eyeOffset, eyeY, eyeW, eyeH, 2);
+      ctx.fill();
+      // Right pupil
+      if (!blinking) {
+        ctx.fillStyle = "#0f172a";
+        ctx.fillRect(px + pw - 14 + eyeOffset, eyeY + 1, 3, 3);
+        ctx.fillStyle = "rgba(255,255,255,0.8)";
+        ctx.fillRect(px + pw - 14 + eyeOffset, eyeY + 1, 1.5, 1.5);
+      }
+
+      // Mouth — small curve
+      ctx.strokeStyle = "rgba(15,23,42,0.5)";
+      ctx.lineWidth = 1.2;
+      const mouthY = faceY + faceH + 3;
+      ctx.beginPath();
+      ctx.arc(px + pw / 2, mouthY, 4, 0.1 * Math.PI, 0.9 * Math.PI);
+      ctx.stroke();
+
+      // Belt / waist band
+      const beltY = py + ph * 0.62;
+      ctx.fillStyle = "rgba(15,23,42,0.25)";
+      ctx.fillRect(px + 2, beltY, pw - 4, 3);
+
+      // Feet (subtle)
+      ctx.fillStyle = "rgba(0,0,0,0.15)";
+      ctx.fillRect(px + 4, py + ph - 5, 8, 5);
+      ctx.fillRect(px + pw - 12, py + ph - 5, 8, 5);
     }
   }
   ctx.restore();

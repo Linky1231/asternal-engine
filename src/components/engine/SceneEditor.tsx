@@ -322,9 +322,35 @@ export function SceneEditor({ scene, tool, selectedId, onSelect, onChange }: Pro
             ctx.fill();
             if (e.kind === "player") {
               ctx.shadowBlur = 0;
-              ctx.fillStyle = "#020617";
-              ctx.fillRect(10, 16, 6, 6);
-              ctx.fillRect(24, 16, 6, 6);
+              const pw2 = e.w, ph2 = e.h;
+              // face plate
+              ctx.fillStyle = "rgba(255,255,255,0.08)";
+              roundRectPath(ctx, 4, ph2 * 0.22, pw2 - 8, ph2 * 0.35, 4);
+              ctx.fill();
+              // eyes
+              const ey = ph2 * 0.38;
+              ctx.fillStyle = "#e2e8f0";
+              ctx.fillRect(10, ey, 5, 5);
+              ctx.fillRect(pw2 - 15, ey, 5, 5);
+              ctx.fillStyle = "#0f172a";
+              ctx.fillRect(11, ey + 1, 3, 3);
+              ctx.fillRect(pw2 - 14, ey + 1, 3, 3);
+              ctx.fillStyle = "rgba(255,255,255,0.8)";
+              ctx.fillRect(11, ey + 1, 1.5, 1.5);
+              ctx.fillRect(pw2 - 14, ey + 1, 1.5, 1.5);
+              // mouth
+              ctx.strokeStyle = "rgba(15,23,42,0.5)";
+              ctx.lineWidth = 1.2;
+              ctx.beginPath();
+              ctx.arc(pw2 / 2, ph2 * 0.63, 4, 0.1 * Math.PI, 0.9 * Math.PI);
+              ctx.stroke();
+              // belt
+              ctx.fillStyle = "rgba(15,23,42,0.25)";
+              ctx.fillRect(2, ph2 * 0.62, pw2 - 4, 3);
+              // feet
+              ctx.fillStyle = "rgba(0,0,0,0.15)";
+              ctx.fillRect(4, ph2 - 5, 8, 5);
+              ctx.fillRect(pw2 - 12, ph2 - 5, 8, 5);
             }
           }
           ctx.restore();

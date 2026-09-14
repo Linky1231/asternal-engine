@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  X, Send, Sparkles, Loader2, Trash2, Bot, Rocket, HelpCircle, Plus, MessageSquare, ChevronDown, Check, Zap,
+  X, Send, Sparkles, Loader2, Trash2, Bot, Rocket, HelpCircle, Plus, MessageSquare, ChevronDown, Check, Zap, Settings, Eye, EyeOff,
 } from "lucide-react";
 import { orionChatStream, needsCodingModel, type OrionMessage } from "@/lib/ai/orion";
+import {
+  loadGeminiConfig, saveGeminiConfig, clearGeminiConfig, hasGeminiConfig,
+  GEMINI_MODELS, type GeminiConfig
+} from "@/lib/ai/gemini-provider";
 import {
   loadOrionChats,
   saveOrionChats,
@@ -58,6 +62,12 @@ export default function OrionPanel({ onClose }: { onClose: () => void }) {
   const endRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const busyRef = useRef(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [geminiKey, setGeminiKey] = useState(() => loadGeminiConfig()?.apiKey ?? "");
+  const [geminiModel, setGeminiModel] = useState(() => loadGeminiConfig()?.model ?? GEMINI_MODELS[0].id);
+  const [keyVisible, setKeyVisible] = useState(false);
+  const [keyStatus, setKeyStatus] = useState<"idle" | "testing" | "ok" | "error">("idle");
+  const [keyError, setKeyError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const messagesRef = useRef<OrionStoredMsg[]>([]);
 
@@ -125,6 +135,25 @@ export default function OrionPanel({ onClose }: { onClose: () => void }) {
   const patchActiveMessages = useCallback((fn: (prev: OrionStoredMsg[]) => OrionStoredMsg[]) => {
     setChats(prev => prev.map(c => (c.id === activeId ? { ...c, messages: fn(c.messages), updatedAt: new Date().toISOString() } : c)));
   }, [activeId]);
+
+  const saveGeminiSettings = () => {
+    try {
+      saveGeminiConfig({ apiKey: geminiKey.trim(), model: geminiModel });
+      setKeyStatus("ok");
+      setTimeout(() => setKeyStatus("idle"), 2000);
+    } catch (e) { setKeyStatus("error"); setKeyError(e instanceof Error ? e.message : "Error"); }
+  };
+
+  const testGeminiKey_ = async () => {
+    if (!geminiKey.trim()) return;
+    setKeyStatus("testing"); setKeyError(null);
+    try {
+      const { testGeminiKey } = await import("@/lib/ai/gemini-provider");
+      const models = await testGeminiKey(geminiKey.trim());
+      if (models.length > 0) setKeyStatus("ok");
+      else { setKeyStatus("error"); setKeyError("La clave fue aceptada pero no devolvió modelos."); }
+    } catch (e) { setKeyStatus("error"); setKeyError(e instanceof Error ? e.message : "Clave inválida."); }
+  };
 
   const send = useCallback(
     async (text: string) => {
@@ -263,12 +292,12 @@ export default function OrionPanel({ onClose }: { onClose: () => void }) {
             <div className="text-[15px] leading-tight font-semibold flex items-center gap-1.5">
               Orión
               <span className="shrink-0 text-[8px] font-display tracking-widest px-1.5 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20">
-                ASISTENTE IA
+                GEMINI BYOK
               </span>
             </div>
             <div className="text-[10px] text-muted-foreground truncate flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-              Ayuda profesional para crear juegos · motor de Asternal
+              Powered by Gemini · Asistente de desarrollo de juegos
               {balance !== null && (
                 <span className="ml-1 text-[9px] font-mono text-muted-foreground/70">
                   · saldo ${balance.toFixed(2)}
@@ -351,6 +380,13 @@ export default function OrionPanel({ onClose }: { onClose: () => void }) {
             <Plus size={15} />
           </button>
           <button
+            onClick={() => setShowSettings(o => !o)}
+            title="Configurar IA"
+            className={`w-9 h-9 rounded-xl border grid place-items-center active:scale-95 transition shrink-0 ${showSettings ? "border-primary bg-primary/10 text-primary" : "border-border/70 bg-background text-muted-foreground hover:text-primary"}`}
+          >
+            <Settings size={15} />
+          </button>
+          <button
             onClick={onClose}
             className="w-9 h-9 rounded-xl border border-border/70 bg-background grid place-items-center active:scale-95 transition shrink-0"
           >
@@ -359,10 +395,81 @@ export default function OrionPanel({ onClose }: { onClose: () => void }) {
         </div>
       </header>
 
+
+      {/* Panel de configuración de Gemini */}
+      {showSettings && (
+        <div className="shrink-0 border-b border-border/60 bg-card">
+          <div className="max-w-2xl md:max-w-3xl mx-auto px-4 py-3 space-y-3">
+            <div className="flex items-center gap-2">
+              <Settings size={14} className="text-primary" />
+              <span className="text-[11px] font-semibold">Configuración de IA</span>
+              {hasGeminiConfig() && <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 font-medium">ACTIVA</span>}
+            </div>
+            <p className="text-[10px] text-muted-foreground">
+              Introduce tu clave de Google AI Studio. La clave se guarda localmente y nunca se envía a nuestros servidores.
+            </p>
+            <div className="flex gap-2">
+              <div className="flex-1 relative">
+                <input
+                  type={keyVisible ? "text" : "password"}
+                  value={geminiKey}
+                  onChange={e => { setGeminiKey(e.target.value); setKeyStatus("idle"); setKeyError(null); }}
+                  placeholder="AIzaSy..."
+                  className="w-full bg-input/50 rounded-lg px-3 py-2 pr-9 text-[11px] font-mono outline-none focus:ring-2 focus:ring-primary/40 border border-border/60"
+                />
+                <button
+                  onClick={() => setKeyVisible(v => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-muted-foreground"
+                >
+                  {keyVisible ? <EyeOff size={13} /> : <Eye size={13} />}
+                </button>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <select
+                value={geminiModel}
+                onChange={e => setGeminiModel(e.target.value)}
+                className="flex-1 bg-input/50 rounded-lg px-3 py-2 text-[11px] font-mono border border-border/60 outline-none"
+              >
+                {GEMINI_MODELS.map(m => (
+                  <option key={m.id} value={m.id}>{m.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={testGeminiKey_}
+                disabled={keyStatus === "testing" || !geminiKey.trim()}
+                className="px-3 py-1.5 rounded-lg border border-border text-[10px] font-medium active:scale-[0.98] transition disabled:opacity-40"
+              >
+                {keyStatus === "testing" ? "Probando…" : "Probar clave"}
+              </button>
+              <button
+                onClick={saveGeminiSettings}
+                disabled={!geminiKey.trim()}
+                className="px-3 py-1.5 rounded-lg btn-grad text-[10px] font-medium text-primary-foreground active:scale-[0.98] transition disabled:opacity-40"
+              >
+                {keyStatus === "ok" ? "✓ Guardada" : "Guardar"}
+              </button>
+              {hasGeminiConfig() && (
+                <button
+                  onClick={() => { clearGeminiConfig(); setGeminiKey(""); setGeminiModel(GEMINI_MODELS[0].id); }}
+                  className="px-3 py-1.5 rounded-lg border border-destructive/40 text-destructive text-[10px] font-medium active:scale-[0.98] transition"
+                >
+                  Borrar
+                </button>
+              )}
+            </div>
+            {keyStatus === "ok" && <div className="text-[10px] text-emerald-600">✓ Configuración guardada.</div>}
+            {keyError && <div className="text-[10px] text-destructive">{keyError}</div>}
+          </div>
+        </div>
+      )}
+
       {/* Mensajes */}
       <div className="flex-1 overflow-y-auto no-scrollbar">
         <div className="max-w-2xl md:max-w-3xl mx-auto px-4 py-4 space-y-4">
-          {messages.length === 0 && !busy && (
+          {messages.length === 0 && !busy && hasGeminiConfig() && (
             <div className="flex flex-col items-center justify-center pt-10 pb-4 text-center">
               <div
                 className="w-16 h-16 rounded-full grid place-items-center text-primary-foreground mb-3"
@@ -484,7 +591,7 @@ export default function OrionPanel({ onClose }: { onClose: () => void }) {
             </button>
           </div>
           <div className="flex items-center justify-center gap-1 pt-2 text-[9px] text-muted-foreground/50">
-            <Rocket size={9} /> Orión conoce el motor de Asternal · recuerda tus conversaciones
+            <Rocket size={9} /> Gemini BYOK · tu clave nunca sale del navegador
             <HelpCircle size={9} className="ml-1" />
           </div>
         </div>
