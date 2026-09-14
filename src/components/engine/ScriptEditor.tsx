@@ -86,7 +86,7 @@ export function ScriptEditor({ entity, onChange, onClose }: Props) {
                 projectSummary: `Entidad ${entity.kind} en ${entity.x},${entity.y} ${entity.w}x${entity.h}. Scripts actuales: ${scripts.length}.`,
               });
               const res = await geminiChat([{ role: "user", content: prompt }]);
-              const jsonText = (res.text ?? res.content ?? "").trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/,"" );
+              const jsonText = (res.text).trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/,"" );
               const parsed = JSON.parse(jsonText) as unknown;
               const arr = Array.isArray(parsed) ? parsed : (parsed as { scripts?: unknown }).scripts;
               if (!Array.isArray(arr)) throw new Error("La IA no devolvió un array de scripts.");

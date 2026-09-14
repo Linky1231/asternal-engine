@@ -4,9 +4,6 @@ import react from "@vitejs/plugin-react";
 import path from "path";
 import { defineConfig, type Plugin } from "vite";
 
-
-}
-
 }
 
 // https://vite.dev/config/
