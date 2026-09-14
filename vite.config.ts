@@ -4,8 +4,6 @@ import react from "@vitejs/plugin-react";
 import path from "path";
 import { defineConfig, type Plugin } from "vite";
 
-}
-
 // https://vite.dev/config/
 export default defineConfig({
   // Exponer también V1/V2/V3 (variables personalizadas del tab Keys) en
